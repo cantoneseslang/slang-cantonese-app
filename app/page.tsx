@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface SearchResult {
   jyutping: string;
   katakana: string;
   jyutpingMulti: string;
   katakanaMulti: string;
+  audioBase64?: string;
 }
 
 export default function Home() {
@@ -14,6 +15,40 @@ export default function Home() {
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [categories, setCategories] = useState<any[]>([]);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  // 音声再生速度
+  const [playbackSpeed, setPlaybackSpeed] = useState('1');
+
+  useEffect(() => {
+    // カテゴリデータを読み込む（簡易版）
+    setCategories([
+      {
+        id: "greetings",
+        name: "🙋 挨拶編",
+        words: [
+          { chinese: "早晨", japanese: "おはよう" },
+          { chinese: "午安", japanese: "こんにちは" },
+          { chinese: "早唞", japanese: "おやすみ" },
+          { chinese: "再見", japanese: "さようなら" },
+          { chinese: "拜拜", japanese: "バイバイ" },
+        ]
+      },
+      {
+        id: "numbers",
+        name: "🔢 数字編",
+        words: [
+          { chinese: "一", japanese: "1" },
+          { chinese: "二", japanese: "2" },
+          { chinese: "三", japanese: "3" },
+          { chinese: "四", japanese: "4" },
+          { chinese: "五", japanese: "5" },
+        ]
+      }
+    ]);
+  }, []);
 
   const handleSearch = async (query: string) => {
     if (!query || query.trim() === '') {
@@ -38,13 +73,32 @@ export default function Home() {
       }
 
       const data = await response.json();
-      setResult(data);
+      
+      // 音声も生成
+      const audioResponse = await fetch('/api/generate-speech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: query }),
+      });
+
+      if (audioResponse.ok) {
+        const audioData = await audioResponse.json();
+        setResult({ ...data, audioBase64: audioData.audioContent });
+      } else {
+        setResult(data);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
       setResult(null);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleWordClick = async (word: string) => {
+    await handleSearch(word);
   };
 
   const handleTranslateAndConvert = async (query: string) => {
@@ -67,6 +121,13 @@ export default function Home() {
       setLoading(false);
     }
   };
+
+  // 音声再生速度変更
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = parseFloat(playbackSpeed);
+    }
+  }, [playbackSpeed]);
 
   return (
     <div style={{ padding: '3rem', background: '#f3f4f6', minHeight: '100vh' }}>
@@ -167,6 +228,67 @@ export default function Home() {
               <p><strong style={{ textDecoration: 'underline' }}>粤ピン： {result.jyutping}</strong></p>
               <p><strong style={{ textDecoration: 'underline' }}>スラング式カタカナ： {result.katakana}</strong></p>
             </div>
+            
+            {/* 音声プレーヤー */}
+            {result.audioBase64 && (
+              <div style={{ marginTop: '1rem' }}>
+                <p style={{ fontSize: '18px', fontWeight: 'bold' }}>単語音声: {searchQuery}</p>
+                <audio 
+                  ref={audioRef}
+                  controls 
+                  controlsList="nodownload nofullscreen noremoteplayback"
+                  style={{ width: '100%', height: '100px' }}
+                  src={`data:audio/mp3;base64,${result.audioBase64}`}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px' }}>
+                  <label style={{ fontSize: '24px' }}>カスタム再生速度: </label>
+                  <select 
+                    value={playbackSpeed}
+                    onChange={(e) => setPlaybackSpeed(e.target.value)}
+                    style={{ padding: '24px', fontSize: '24px', borderRadius: '8px', border: '1px solid #ccc', width: 'auto' }}
+                  >
+                    <option value="0.5">0.5x</option>
+                    <option value="0.75">0.75x</option>
+                    <option value="1">1x</option>
+                    <option value="1.25">1.25x</option>
+                    <option value="1.5">1.5x</option>
+                    <option value="2">2x</option>
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* カテゴリ表示 */}
+        {categories.length > 0 && (
+          <div style={{ marginBottom: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem' }}>
+            {categories.map(category => (
+              <div key={category.id}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>{category.name}</h3>
+                {category.words.map((word: any, idx: number) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleWordClick(word.chinese)}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      padding: '10px',
+                      marginBottom: '0.5rem',
+                      fontSize: '1rem',
+                      borderRadius: '6px',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    {word.chinese}
+                  </button>
+                ))}
+              </div>
+            ))}
           </div>
         )}
 
