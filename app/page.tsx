@@ -227,7 +227,10 @@ export default function Home() {
       <div style={{ 
         width: '100%', 
         maxWidth: '1200px',
-        margin: '0 auto'
+        margin: '0 auto',
+        display: isMobile ? 'block' : 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 200px',
+        gap: isMobile ? '1rem' : '2rem'
       }}>
         {/* メインコンテンツエリア */}
         <div>
@@ -708,10 +711,6 @@ export default function Home() {
         ) : (
           // デスクトップ: 通常のサイドバー
           <div style={{ 
-            position: 'absolute',
-            top: isMobile ? '1rem' : '3rem',
-            right: 0,
-            width: '200px',
             borderLeft: '1px solid #d1d5db',
             paddingLeft: '1rem'
           }}>
