@@ -19,7 +19,7 @@ interface Word {
 interface Category {
   id: string;
   name: string;
-  words: Word[];
+  words?: Word[];
   introContent?: string;
   practiceGroups?: any[];
   style?: string;
@@ -40,10 +40,13 @@ export default function Home() {
     // カテゴリデータを読み込む
     setCategories(categoriesData as Category[]);
     
-    // 最初のカテゴリを選択
+    // 最初のカテゴリを選択（wordsがあるカテゴリを探す）
     if (categoriesData.length > 0 && !selectedCategory) {
-      setSelectedCategory(categoriesData[0].id);
-      setCurrentWords(categoriesData[0].words);
+      const firstCategoryWithWords = categoriesData.find(cat => cat.words);
+      if (firstCategoryWithWords) {
+        setSelectedCategory(firstCategoryWithWords.id);
+        setCurrentWords(firstCategoryWithWords.words || []);
+      }
     }
   }, []);
 
@@ -51,7 +54,7 @@ export default function Home() {
     if (selectedCategory && categories.length > 0) {
       const category = categories.find(c => c.id === selectedCategory);
       if (category) {
-        setCurrentWords(category.words);
+        setCurrentWords(category.words || []);
       }
     }
   }, [selectedCategory, categories]);
