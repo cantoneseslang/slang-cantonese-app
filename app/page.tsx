@@ -2,8 +2,71 @@
 
 import { useState } from 'react';
 
+interface SearchResult {
+  jyutping: string;
+  katakana: string;
+  jyutpingMulti: string;
+  katakanaMulti: string;
+}
+
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [result, setResult] = useState<SearchResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSearch = async (query: string) => {
+    if (!query || query.trim() === '') {
+      setError('検索文字を入力してください');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/process-phrase', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phrase: query }),
+      });
+
+      if (!response.ok) {
+        throw new Error('検索に失敗しました');
+      }
+
+      const data = await response.json();
+      setResult(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エラーが発生しました');
+      setResult(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTranslateAndConvert = async (query: string) => {
+    if (!query || query.trim() === '') {
+      setError('検索文字を入力してください');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // まず日本語を広東語に翻訳
+      // TODO: 翻訳APIを実装
+      alert('翻訳機能は今後実装予定です');
+      setLoading(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エラーが発生しました');
+      setResult(null);
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={{ padding: '3rem', background: '#f3f4f6', minHeight: '100vh' }}>
@@ -29,6 +92,11 @@ export default function Home() {
             placeholder="広東語または日本語のフレーズを入力"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                handleSearch(searchQuery);
+              }
+            }}
             style={{
               height: '4rem',
               fontSize: '1rem',
@@ -39,28 +107,32 @@ export default function Home() {
             }}
           />
           <button
+            onClick={() => handleSearch(searchQuery)}
+            disabled={loading}
             style={{
               padding: '10px 20px',
               fontSize: '1rem',
               borderRadius: '6px',
-              backgroundColor: '#3b82f6',
+              backgroundColor: loading ? '#9ca3af' : '#3b82f6',
               color: 'white',
               border: 'none',
-              cursor: 'pointer',
+              cursor: loading ? 'not-allowed' : 'pointer',
               fontWeight: 'bold'
             }}
           >
-            広東語発音
+            {loading ? '検索中...' : '広東語発音'}
           </button>
           <button
+            onClick={() => handleTranslateAndConvert(searchQuery)}
+            disabled={loading}
             style={{
               padding: '10px 20px',
               fontSize: '1rem',
               borderRadius: '6px',
-              backgroundColor: '#10b981',
+              backgroundColor: loading ? '#9ca3af' : '#10b981',
               color: 'white',
               border: 'none',
-              cursor: 'pointer',
+              cursor: loading ? 'not-allowed' : 'pointer',
               fontWeight: 'bold'
             }}
           >
@@ -68,10 +140,35 @@ export default function Home() {
           </button>
         </div>
 
+        {/* エラー表示 */}
+        {error && (
+          <div style={{ 
+            marginBottom: '1rem', 
+            padding: '1rem', 
+            border: '1px solid #ef4444', 
+            borderRadius: '4px', 
+            background: '#fee2e2', 
+            color: '#991b1b'
+          }}>
+            {error}
+          </div>
+        )}
+
         {/* 結果エリア */}
-        <div style={{ marginBottom: '1rem', padding: '1rem', border: '1px solid #d1d5db', borderRadius: '4px', background: 'white', display: 'none' }}>
-          <p style={{ fontSize: '1.5rem' }}>検索結果がここに表示されます</p>
-        </div>
+        {result && (
+          <div style={{ 
+            marginBottom: '1rem', 
+            padding: '1.5rem', 
+            border: '1px solid #d1d5db', 
+            borderRadius: '8px', 
+            background: 'white'
+          }}>
+            <div style={{ fontSize: '1.5rem' }}>
+              <p><strong style={{ textDecoration: 'underline' }}>粤ピン： {result.jyutping}</strong></p>
+              <p><strong style={{ textDecoration: 'underline' }}>スラング式カタカナ： {result.katakana}</strong></p>
+            </div>
+          </div>
+        )}
 
         {/* 説明 */}
         <div style={{ marginTop: '1rem', background: 'white', padding: '1.5rem', borderRadius: '8px', fontSize: '1rem', lineHeight: '1.75' }}>
