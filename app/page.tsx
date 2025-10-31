@@ -581,55 +581,6 @@ export default function Home() {
         {isMobile ? (
           // モバイル: フロートメニュー
           <>
-            {/* 常に見える右端のカテゴリーリスト部分 */}
-            <div 
-              style={{
-                position: 'fixed',
-                right: 0,
-                top: 0,
-                bottom: 0,
-                width: '50px',
-                backgroundColor: 'white',
-                borderLeft: '2px solid #6366f1',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'flex-start',
-                paddingTop: '1rem',
-                overflowY: 'auto',
-                boxShadow: '-2px 0 8px rgba(0,0,0,0.2)',
-                zIndex: 1001
-              }}
-            >
-              {categories.map((category, idx) => (
-                <div 
-                  key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    padding: '0.5rem 0',
-                    cursor: 'pointer',
-                    borderBottom: '1px solid #e5e7eb'
-                  }}
-                  title={category.name}
-                >
-                  <div style={{
-                    fontSize: '0.75rem',
-                    whiteSpace: 'nowrap',
-                    transform: 'rotate(-90deg)',
-                    transformOrigin: 'center',
-                    maxWidth: '40px',
-                    overflow: 'hidden'
-                  }}>
-                    {category.name.split('\n')[0]}
-                  </div>
-                </div>
-              ))}
-            </div>
-
             {/* オーバーレイ */}
             {isMenuOpen && (
               <div 
@@ -731,6 +682,31 @@ export default function Home() {
               </div>
             </div>
 
+            {/* フロートボタン */}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              style={{
+                position: 'fixed',
+                right: '10px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: '#6366f1',
+                color: 'white',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                zIndex: 997,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '24px'
+              }}
+            >
+              ≡
+            </button>
           </>
         ) : (
           // デスクトップ: 通常のサイドバー
@@ -787,32 +763,6 @@ export default function Home() {
               ))}
             </div>
 
-            {/* クイズボタン */}
-            <div style={{ marginTop: '1.5rem' }}>
-              <h3 style={{ 
-                fontSize: '1.125rem', 
-                fontWeight: 'bold', 
-                marginBottom: '0.5rem' 
-              }}>
-                学習ゲーム
-              </h3>
-              <button
-                style={{
-                  width: '100%',
-                  padding: '10px 20px',
-                  fontSize: '1rem',
-                  borderRadius: '6px',
-                  backgroundColor: '#f59e0b',
-                  color: 'white',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontWeight: 'bold'
-                }}
-                onClick={() => alert('クイズ機能は今後実装予定です')}
-              >
-                復習確認クイズ
-              </button>
-            </div>
           </div>
         )}
       </div>
