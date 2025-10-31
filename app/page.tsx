@@ -16,12 +16,17 @@ interface Word {
   japanese: string;
 }
 
+interface PracticeGroup {
+  name: string;
+  words: Word[];
+}
+
 interface Category {
   id: string;
   name: string;
   words?: Word[];
   introContent?: string;
-  practiceGroups?: any[];
+  practiceGroups?: PracticeGroup[];
   style?: string;
 }
 
@@ -33,6 +38,7 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentWords, setCurrentWords] = useState<Word[]>([]);
+  const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playbackSpeed, setPlaybackSpeed] = useState('1');
 
@@ -40,13 +46,11 @@ export default function Home() {
     // カテゴリデータを読み込む
     setCategories(categoriesData as Category[]);
     
-    // 最初のカテゴリを選択（wordsがあるカテゴリを探す）
+    // 最初のカテゴリを選択（pronunciationを最初に表示）
     if (categoriesData.length > 0 && !selectedCategory) {
-      const firstCategoryWithWords = categoriesData.find(cat => cat.words);
-      if (firstCategoryWithWords) {
-        setSelectedCategory(firstCategoryWithWords.id);
-        setCurrentWords(firstCategoryWithWords.words || []);
-      }
+      setSelectedCategory(categoriesData[0].id);
+      setCurrentCategory(categoriesData[0]);
+      setCurrentWords(categoriesData[0].words || []);
     }
   }, []);
 
@@ -54,6 +58,7 @@ export default function Home() {
     if (selectedCategory && categories.length > 0) {
       const category = categories.find(c => c.id === selectedCategory);
       if (category) {
+        setCurrentCategory(category);
         setCurrentWords(category.words || []);
       }
     }
@@ -282,37 +287,105 @@ export default function Home() {
             </div>
           )}
 
-          {/* 単語ボタングリッド */}
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(4, 1fr)', 
-            gap: '0.5rem',
-            marginBottom: '1.5rem'
-          }}>
-            {currentWords.map((word, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleWordClick(word)}
-                style={{
-                  background: 'white',
-                  padding: '0.5rem',
-                  borderRadius: '4px',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                  height: '128px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  textAlign: 'center',
-                  border: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                <strong style={{ fontSize: '1.875rem' }}>{word.chinese}</strong>
-                <div>{word.japanese}</div>
-              </button>
-            ))}
-          </div>
+          {/* practiceGroups表示（pronunciation用） */}
+          {currentCategory && currentCategory.introContent && currentCategory.practiceGroups && (
+            <div style={{ 
+              background: 'white', 
+              padding: '1.5rem', 
+              borderRadius: '8px', 
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              marginBottom: '1.5rem'
+            }}>
+              <div dangerouslySetInnerHTML={{ __html: currentCategory.introContent }} />
+              {currentCategory.practiceGroups.map((group, gIdx) => (
+                <div key={gIdx}>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginTop: '1rem', marginBottom: '0.5rem' }}>
+                    {group.name}
+                  </h3>
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(3, 1fr)', 
+                    gap: '0.5rem',
+                    marginBottom: '0.5rem'
+                  }}>
+                    {group.words.map((word, wIdx) => (
+                      <button
+                        key={wIdx}
+                        onClick={() => handleWordClick(word)}
+                        style={{
+                          background: 'white',
+                          padding: '0.5rem',
+                          borderRadius: '4px',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          textAlign: 'center',
+                          border: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <strong style={{ fontSize: '1.875rem' }}>{word.chinese}</strong>
+                        <div>{word.japanese}</div>
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ 
+                    marginBottom: '1rem', 
+                    marginTop: '0.5rem', 
+                    padding: '0.75rem', 
+                    background: '#f9fafb', 
+                    borderRadius: '4px', 
+                    border: '1px solid #e5e7eb' 
+                  }}>
+                    <div style={{ marginBottom: '0.25rem' }}>
+                      <span style={{ fontWeight: '600' }}>中国語：</span>
+                      {group.words.map(word => word.chinese).join('、')}
+                    </div>
+                    <div>
+                      <span style={{ fontWeight: '600' }}>発音：</span>
+                      {group.words.map(word => word.japanese).join('、')}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 通常の単語ボタングリッド */}
+          {currentWords.length > 0 && (
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(4, 1fr)', 
+              gap: '0.5rem',
+              marginBottom: '1.5rem'
+            }}>
+              {currentWords.map((word, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleWordClick(word)}
+                  style={{
+                    background: 'white',
+                    padding: '0.5rem',
+                    borderRadius: '4px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    height: '128px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <strong style={{ fontSize: '1.875rem' }}>{word.chinese}</strong>
+                  <div>{word.japanese}</div>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* 説明 */}
           <div style={{ marginTop: '1rem', background: 'white', padding: '1.5rem', borderRadius: '8px', fontSize: '1rem', lineHeight: '1.75' }}>
