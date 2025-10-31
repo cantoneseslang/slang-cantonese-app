@@ -9,6 +9,10 @@ interface SearchResult {
   jyutpingMulti: string;
   katakanaMulti: string;
   audioBase64?: string;
+  exampleCantonese?: string;
+  exampleJapanese?: string;
+  exampleFull?: string;
+  exampleAudioBase64?: string;
 }
 
 interface Word {
@@ -40,7 +44,9 @@ export default function Home() {
   const [currentWords, setCurrentWords] = useState<Word[]>([]);
   const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const exampleAudioRef = useRef<HTMLAudioElement>(null);
   const [playbackSpeed, setPlaybackSpeed] = useState('1');
+  const [examplePlaybackSpeed, setExamplePlaybackSpeed] = useState('1');
 
   useEffect(() => {
     // カテゴリデータを読み込む
@@ -88,7 +94,7 @@ export default function Home() {
 
       const data = await response.json();
       
-      // 音声も生成
+      // 単語音声を生成
       const audioResponse = await fetch('/api/generate-speech', {
         method: 'POST',
         headers: {
@@ -97,12 +103,30 @@ export default function Home() {
         body: JSON.stringify({ text: query }),
       });
 
+      let resultData = { ...data };
+      
       if (audioResponse.ok) {
         const audioData = await audioResponse.json();
-        setResult({ ...data, audioBase64: audioData.audioContent });
-      } else {
-        setResult(data);
+        resultData.audioBase64 = audioData.audioContent;
       }
+
+      // 例文音声を生成
+      if (data.exampleCantonese && data.exampleCantonese !== '例文生成エラーが発生しました') {
+        const exampleAudioResponse = await fetch('/api/generate-speech', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text: data.exampleCantonese }),
+        });
+
+        if (exampleAudioResponse.ok) {
+          const exampleAudioData = await exampleAudioResponse.json();
+          resultData.exampleAudioBase64 = exampleAudioData.audioContent;
+        }
+      }
+
+      setResult(resultData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
       setResult(null);
@@ -135,12 +159,19 @@ export default function Home() {
     }
   };
 
-  // 音声再生速度変更
+  // 単語音声再生速度変更
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.playbackRate = parseFloat(playbackSpeed);
     }
   }, [playbackSpeed]);
+
+  // 例文音声再生速度変更
+  useEffect(() => {
+    if (exampleAudioRef.current) {
+      exampleAudioRef.current.playbackRate = parseFloat(examplePlaybackSpeed);
+    }
+  }, [examplePlaybackSpeed]);
 
   return (
     <div style={{ 
@@ -256,7 +287,17 @@ export default function Home() {
               <p><strong style={{ textDecoration: 'underline' }}>粤ピン： {result.jyutping}</strong></p>
               <p><strong style={{ textDecoration: 'underline' }}>スラング式カタカナ： {result.katakana}</strong></p>
               
-              {/* 音声プレーヤー */}
+              {/* 例文表示 */}
+              {result.exampleCantonese && (
+                <div style={{ marginTop: '1rem' }}>
+                  <p><strong>例文： {result.exampleCantonese}</strong></p>
+                  {result.exampleJapanese && (
+                    <p><strong>例文日本語翻訳： {result.exampleJapanese}</strong></p>
+                  )}
+                </div>
+              )}
+              
+              {/* 単語音声プレーヤー */}
               {result.audioBase64 && (
                 <div style={{ marginTop: '1rem' }}>
                   <p style={{ fontSize: '18px', fontWeight: 'bold' }}>単語音声: {searchQuery}</p>
@@ -272,6 +313,35 @@ export default function Home() {
                     <select 
                       value={playbackSpeed}
                       onChange={(e) => setPlaybackSpeed(e.target.value)}
+                      style={{ padding: '24px', fontSize: '24px', borderRadius: '8px', border: '1px solid #ccc', width: 'auto' }}
+                    >
+                      <option value="0.5">0.5x</option>
+                      <option value="0.75">0.75x</option>
+                      <option value="1">1x</option>
+                      <option value="1.25">1.25x</option>
+                      <option value="1.5">1.5x</option>
+                      <option value="2">2x</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* 例文音声プレーヤー */}
+              {result.exampleAudioBase64 && result.exampleCantonese && (
+                <div style={{ marginTop: '1rem' }}>
+                  <p style={{ fontSize: '18px', fontWeight: 'bold' }}>例文音声: {result.exampleCantonese}</p>
+                  <audio 
+                    ref={exampleAudioRef}
+                    controls 
+                    controlsList="nodownload nofullscreen noremoteplayback"
+                    style={{ width: '100%', height: '100px' }}
+                    src={`data:audio/mp3;base64,${result.exampleAudioBase64}`}
+                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px' }}>
+                    <label style={{ fontSize: '24px' }}>カスタム再生速度: </label>
+                    <select 
+                      value={examplePlaybackSpeed}
+                      onChange={(e) => setExamplePlaybackSpeed(e.target.value)}
                       style={{ padding: '24px', fontSize: '24px', borderRadius: '8px', border: '1px solid #ccc', width: 'auto' }}
                     >
                       <option value="0.5">0.5x</option>
