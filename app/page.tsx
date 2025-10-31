@@ -1,65 +1,96 @@
-import Image from "next/image";
+'use client';
+
+import { useState } from 'react';
 
 export default function Home() {
+  const [searchQuery, setSearchQuery] = useState('');
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div style={{ padding: '3rem', background: '#f3f4f6', minHeight: '100vh' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        {/* ヘッダー */}
+        <div style={{ marginBottom: '2rem' }}>
+          <div style={{ background: 'white', padding: '1.5rem', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+            <div style={{ borderLeft: '4px solid #6366f1', paddingLeft: '1rem' }}>
+              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', margin: '0 0 0.25rem 0' }}>
+                スラング式カントン語音れん
+              </h1>
+              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
+                粤ピン/スラング式カタカナ/音声検索
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 検索エリア */}
+        <div style={{ marginBottom: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+          <input
+            type="text"
+            placeholder="広東語または日本語のフレーズを入力"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              height: '4rem',
+              fontSize: '1rem',
+              width: '50%',
+              paddingLeft: '1rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '4px'
+            }}
+          />
+          <button
+            style={{
+              padding: '10px 20px',
+              fontSize: '1rem',
+              borderRadius: '6px',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            広東語発音
+          </button>
+          <button
+            style={{
+              padding: '10px 20px',
+              fontSize: '1rem',
+              borderRadius: '6px',
+              backgroundColor: '#10b981',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            日訳+広東語発音
+          </button>
+        </div>
+
+        {/* 結果エリア */}
+        <div style={{ marginBottom: '1rem', padding: '1rem', border: '1px solid #d1d5db', borderRadius: '4px', background: 'white', display: 'none' }}>
+          <p style={{ fontSize: '1.5rem' }}>検索結果がここに表示されます</p>
+        </div>
+
+        {/* 説明 */}
+        <div style={{ marginTop: '1rem', background: 'white', padding: '1.5rem', borderRadius: '8px', fontSize: '1rem', lineHeight: '1.75' }}>
+          <p style={{ fontWeight: '600' }}>広東語初心の方へ！ようこそスラング式広東語万能辞書へ！</p>
+          <p>スラング先生考案!簡単指差し広東語☝️(全974単語)収録！</p>
+          <ul style={{ paddingLeft: '1.5rem' }}>
+            <li>画面中央の広東語ボタンを押すと発音、音声が自動で表示されます</li>
+            <li>広東語の漢字の意味・発音を調べたい時は入力欄に広東語を入れて「広東語発音」を押してください</li>
+            <li>日本語から広東語の文章・意味・発音を調べたい時は入力欄に日本語を入れて「日訳+広東語発音」を押してください</li>
+            <li>ジャンル分け(トータル45ジャンル収録)は右側で押して切り替えを行なってください</li>
+            <li>粤ピンとは香港語言学学会粤語拼音方案、略称粤拼 (えつぴん、Jyutping)</li>
+            <li>近年香港で最も使用されている香港語言学学会（LSHK）によって制定された数字とアルファベットを用いた声調表記法です。</li>
+            <li>スラング式カタカナとは広東語未学習者、初心者の日本語話者に容易に発音できる様に制作した独自変換ルールに則った表記法です。</li>
+          </ul>
+          <p style={{ fontSize: '0.625rem', lineHeight: '1.5' }}>
+            この文書に記載されている繁体字は、国際標準の『ISO/IEC 10646-1:2000』および『香港補助文字セット – 2001』（Hong Kong Supplementary Character Set – 2001）に含まれる全ての漢字、合計29,145個を含んでいます。
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
