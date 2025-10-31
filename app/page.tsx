@@ -216,7 +216,7 @@ export default function Home() {
       style={{ 
         margin: 0, 
         padding: isMobile ? '1rem' : '3rem', 
-        backgroundColor: '#f3f4f6', 
+        background: 'linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 50%, #e17055 100%)',
         minHeight: '100vh',
         position: 'relative'
       }}
@@ -237,31 +237,36 @@ export default function Home() {
           {/* ヘッダー */}
           <div style={{ marginBottom: isMobile ? '1rem' : '2rem' }}>
             <div style={{ 
-              background: 'white', 
-              padding: isMobile ? '1rem' : '1.5rem', 
-              borderRadius: '8px', 
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)' 
+              background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)', 
+              padding: isMobile ? '1.5rem' : '2rem', 
+              borderRadius: '20px', 
+              boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+              border: '2px solid rgba(255,255,255,0.8)'
             }}>
-              <div style={{ borderLeft: '4px solid #6366f1', paddingLeft: '1rem' }}>
+              <div style={{ borderLeft: '6px solid #667eea', paddingLeft: '1.5rem' }}>
                 <h1 style={{ 
-                  fontSize: isMobile ? '1.5rem' : '2.5rem', 
-                  fontWeight: 'bold', 
-                  margin: '0 0 0.25rem 0' 
+                  fontSize: isMobile ? '1.75rem' : '3rem', 
+                  fontWeight: '900', 
+                  margin: '0 0 0.5rem 0',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
                 }}>
-                  スラング式カントン語音れん
+                  スラング式カントン語音れん 🎵
                 </h1>
-                <p style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: '#6b7280', margin: 0 }}>
-                  粤ピン/スラング式カタカナ/音声検索
+                <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', color: '#64748b', margin: 0, fontWeight: '500' }}>
+                  💬 粤ピン / 🎯 スラング式カタカナ / 🔊 音声検索
                 </p>
               </div>
             </div>
           </div>
 
           {/* 検索エリア */}
-          <div style={{ marginBottom: '1rem' }}>
+          <div style={{ marginBottom: '1.5rem' }}>
             <input
               type="text"
-              placeholder="広東語または日本語のフレーズを入力"
+              placeholder="💭 広東語または日本語のフレーズを入力"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={(e) => {
@@ -271,12 +276,23 @@ export default function Home() {
               }}
               style={{
                 height: isMobile ? '3rem' : '4rem',
-                fontSize: isMobile ? '1rem' : '1rem',
+                fontSize: isMobile ? '1rem' : '1.125rem',
                 width: '100%',
-                paddingLeft: '1rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '4px',
-                marginBottom: '0.5rem'
+                paddingLeft: '1.5rem',
+                border: '2px solid #e5e7eb',
+                borderRadius: '16px',
+                marginBottom: '0.75rem',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                transition: 'all 0.3s ease',
+                outline: 'none'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#667eea';
+                e.target.style.boxShadow = '0 4px 20px rgba(102, 126, 234, 0.3)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#e5e7eb';
+                e.target.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
               }}
             />
             <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -285,16 +301,36 @@ export default function Home() {
                 disabled={loading}
                 style={{
                   flex: 1,
-                  padding: isMobile ? '0.75rem 1rem' : '10px 20px',
+                  padding: isMobile ? '0.875rem 1rem' : '12px 20px',
                   fontSize: isMobile ? '0.875rem' : '1rem',
-                  borderRadius: '6px',
-                  backgroundColor: loading ? '#9ca3af' : '#3b82f6',
+                  borderRadius: '12px',
+                  background: loading ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
                   border: 'none',
                   cursor: loading ? 'not-allowed' : 'pointer',
-                  fontWeight: 'bold'
+                  fontWeight: 'bold',
+                  boxShadow: loading ? 'none' : '0 4px 15px rgba(102, 126, 234, 0.4)',
+                  transition: 'all 0.3s ease',
+                  transform: 'translateY(0)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.5)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!loading) {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
+                  }
                 }}
               >
+                <span>🎧</span>
                 {loading ? '検索中...' : '広東語発音'}
               </button>
               <button
@@ -302,16 +338,36 @@ export default function Home() {
                 disabled={loading}
                 style={{
                   flex: 1,
-                  padding: isMobile ? '0.75rem 1rem' : '10px 20px',
+                  padding: isMobile ? '0.875rem 1rem' : '12px 20px',
                   fontSize: isMobile ? '0.875rem' : '1rem',
-                  borderRadius: '6px',
-                  backgroundColor: loading ? '#9ca3af' : '#10b981',
+                  borderRadius: '12px',
+                  background: loading ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)' : 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
                   color: 'white',
                   border: 'none',
                   cursor: loading ? 'not-allowed' : 'pointer',
-                  fontWeight: 'bold'
+                  fontWeight: 'bold',
+                  boxShadow: loading ? 'none' : '0 4px 15px rgba(240, 147, 251, 0.4)',
+                  transition: 'all 0.3s ease',
+                  transform: 'translateY(0)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(240, 147, 251, 0.5)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!loading) {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(240, 147, 251, 0.4)';
+                  }
                 }}
               >
+                <span>🔊</span>
                 日訳+広東語発音
               </button>
             </div>
@@ -322,24 +378,26 @@ export default function Home() {
             <div style={{ 
               marginBottom: '1rem', 
               padding: '1rem', 
-              border: '1px solid #ef4444', 
-              borderRadius: '4px', 
-              background: '#fee2e2', 
+              border: '2px solid #ef4444', 
+              borderRadius: '16px', 
+              background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)', 
               color: '#991b1b',
-              fontSize: isMobile ? '0.875rem' : '1rem'
+              fontSize: isMobile ? '0.875rem' : '1rem',
+              boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)'
             }}>
-              {error}
+              ⚠️ {error}
             </div>
           )}
 
           {/* 結果エリア */}
           {result && (
             <div style={{ 
-              marginBottom: '1rem', 
-              padding: isMobile ? '1rem' : '1.5rem', 
-              border: '1px solid #d1d5db', 
-              borderRadius: '8px', 
-              background: 'white'
+              marginBottom: '1.5rem', 
+              padding: isMobile ? '1.5rem' : '2rem', 
+              border: 'none',
+              borderRadius: '24px', 
+              background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+              boxShadow: '0 10px 40px rgba(0,0,0,0.1)'
             }}>
               <p style={{ fontSize: isMobile ? '1rem' : '1.5rem' }}>
                 <strong style={{ textDecoration: 'underline' }}>粤ピン： {result.jyutping}</strong>
@@ -461,7 +519,7 @@ export default function Home() {
                   <div style={{ 
                     display: 'grid', 
                     gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
-                    gap: '0.5rem',
+                    gap: '1rem',
                     marginBottom: '0.5rem'
                   }}>
                     {group.words.map((word, wIdx) => (
@@ -469,25 +527,39 @@ export default function Home() {
                         key={wIdx}
                         onClick={() => handleWordClick(word)}
                         style={{
-                          background: 'white',
-                          padding: '0.5rem',
-                          borderRadius: '4px',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                          background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                          padding: '1rem',
+                          borderRadius: '16px',
+                          boxShadow: '0 4px 15px rgba(240, 147, 251, 0.3)',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
                           justifyContent: 'center',
                           textAlign: 'center',
                           border: 'none',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          color: 'white',
+                          transition: 'all 0.3s ease',
+                          transform: 'translateY(0)',
+                          position: 'relative',
+                          overflow: 'hidden'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)';
+                          e.currentTarget.style.boxShadow = '0 8px 25px rgba(240, 147, 251, 0.5)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                          e.currentTarget.style.boxShadow = '0 4px 15px rgba(240, 147, 251, 0.3)';
                         }}
                       >
-                        <strong style={{ fontSize: isMobile ? '1.25rem' : '1.875rem' }}>
+                        <strong style={{ fontSize: isMobile ? '1.25rem' : '1.875rem', fontWeight: 'bold', textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
                           {word.chinese}
                         </strong>
-                        <div style={{ fontSize: isMobile ? '0.75rem' : '1rem' }}>
+                        <div style={{ fontSize: isMobile ? '0.75rem' : '1rem', marginTop: '0.25rem', opacity: 0.95 }}>
                           {word.japanese}
                         </div>
+                        <span style={{ fontSize: isMobile ? '1.5rem' : '2rem', position: 'absolute', right: '0.5rem', bottom: '0.5rem' }}>🔊</span>
                       </button>
                     ))}
                   </div>
@@ -513,12 +585,12 @@ export default function Home() {
             </div>
           )}
 
-          {/* 通常の単語ボタングリッド */}
+              {/* 通常の単語ボタングリッド */}
           {currentWords.length > 0 && (
             <div style={{ 
               display: 'grid', 
               gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', 
-              gap: '0.5rem',
+              gap: '1rem',
               marginBottom: '1.5rem'
             }}>
               {currentWords.map((word, idx) => (
@@ -526,10 +598,10 @@ export default function Home() {
                   key={idx}
                   onClick={() => handleWordClick(word)}
                   style={{
-                    background: 'white',
-                    padding: '0.5rem',
-                    borderRadius: '4px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    padding: '1rem',
+                    borderRadius: '16px',
+                    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
                     height: isMobile ? '100px' : '128px',
                     display: 'flex',
                     flexDirection: 'column',
@@ -537,15 +609,29 @@ export default function Home() {
                     justifyContent: 'center',
                     textAlign: 'center',
                     border: 'none',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    color: 'white',
+                    transition: 'all 0.3s ease',
+                    transform: 'translateY(0)',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)';
+                    e.currentTarget.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.5)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.3)';
                   }}
                 >
-                  <strong style={{ fontSize: isMobile ? '1.5rem' : '1.875rem' }}>
+                  <strong style={{ fontSize: isMobile ? '1.5rem' : '1.875rem', fontWeight: 'bold', textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
                     {word.chinese}
                   </strong>
-                  <div style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
+                  <div style={{ fontSize: isMobile ? '0.875rem' : '1rem', marginTop: '0.25rem', opacity: 0.95 }}>
                     {word.japanese}
                   </div>
+                  <span style={{ fontSize: isMobile ? '1.5rem' : '2rem', position: 'absolute', right: '0.5rem', bottom: '0.5rem' }}>🔊</span>
                 </button>
               ))}
             </div>
@@ -553,26 +639,32 @@ export default function Home() {
 
           {/* 説明 */}
           <div style={{ 
-            marginTop: '1rem', 
-            background: 'white', 
-            padding: isMobile ? '1rem' : '1.5rem', 
-            borderRadius: '8px', 
+            marginTop: '1.5rem', 
+            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)', 
+            padding: isMobile ? '1.5rem' : '2rem', 
+            borderRadius: '24px',
             fontSize: isMobile ? '0.875rem' : '1rem', 
-            lineHeight: '1.75' 
+            lineHeight: '1.75',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+            border: '2px solid rgba(255,255,255,0.8)'
           }}>
-            <p style={{ fontWeight: '600' }}>広東語初心の方へ！ようこそスラング式広東語万能辞書へ！</p>
-            <p>スラング先生考案!簡単指差し広東語☝️(全974単語)収録！</p>
-            <ul style={{ paddingLeft: '1.5rem' }}>
-              <li>画面中央の広東語ボタンを押すと発音、音声が自動で表示されます</li>
-              <li>広東語の漢字の意味・発音を調べたい時は入力欄に広東語を入れて「広東語発音」を押してください</li>
-              <li>日本語から広東語の文章・意味・発音を調べたい時は入力欄に日本語を入れて「日訳+広東語発音」を押してください</li>
-              <li>ジャンル分け(トータル73ジャンル収録)は右側で押して切り替えを行なってください</li>
-              <li>粤ピンとは香港語言学学会粤語拼音方案、略称粤拼 (えつぴん、Jyutping)</li>
-              <li>近年香港で最も使用されている香港語言学学会（LSHK）によって制定された数字とアルファベットを用いた声調表記法です。</li>
-              <li>スラング式カタカナとは広東語未学習者、初心者の日本語話者に容易に発音できる様に制作した独自変換ルールに則った表記法です。</li>
+            <p style={{ fontWeight: '700', fontSize: isMobile ? '1.125rem' : '1.25rem', color: '#667eea', marginBottom: '0.75rem' }}>
+              🎉 広東語初心の方へ！ようこそスラング式広東語万能辞書へ！
+            </p>
+            <p style={{ fontWeight: '600', color: '#764ba2', marginBottom: '1rem' }}>
+              💡 スラング先生考案!簡単指差し広東語☝️(全974単語)収録！
+            </p>
+            <ul style={{ paddingLeft: '1.5rem', listStyleType: 'none' }}>
+              <li style={{ marginBottom: '0.5rem' }}>🔘 画面中央の広東語ボタンを押すと発音、音声が自動で表示されます</li>
+              <li style={{ marginBottom: '0.5rem' }}>🔘 広東語の漢字の意味・発音を調べたい時は入力欄に広東語を入れて「広東語発音」を押してください</li>
+              <li style={{ marginBottom: '0.5rem' }}>🔘 日本語から広東語の文章・意味・発音を調べたい時は入力欄に日本語を入れて「日訳+広東語発音」を押してください</li>
+              <li style={{ marginBottom: '0.5rem' }}>🔘 ジャンル分け(トータル73ジャンル収録)は右側で押して切り替えを行なってください</li>
+              <li style={{ marginBottom: '0.5rem' }}>🔘 粤ピンとは香港語言学学会粤語拼音方案、略称粤拼 (えつぴん、Jyutping)</li>
+              <li style={{ marginBottom: '0.5rem' }}>🔘 近年香港で最も使用されている香港語言学学会（LSHK）によって制定された数字とアルファベットを用いた声調表記法です。</li>
+              <li style={{ marginBottom: '0.5rem' }}>🔘 スラング式カタカナとは広東語未学習者、初心者の日本語話者に容易に発音できる様に制作した独自変換ルールに則った表記法です。</li>
             </ul>
-            <p style={{ fontSize: isMobile ? '0.5rem' : '0.625rem', lineHeight: '1.5' }}>
-              この文書に記載されている繁体字は、国際標準の『ISO/IEC 10646-1:2000』および『香港補助文字セット – 2001』（Hong Kong Supplementary Character Set – 2001）に含まれる全ての漢字、合計29,145個を含んでいます。
+            <p style={{ fontSize: isMobile ? '0.5rem' : '0.625rem', lineHeight: '1.5', color: '#9ca3af', fontStyle: 'italic' }}>
+              * この文書に記載されている繁体字は、国際標準の『ISO/IEC 10646-1:2000』および『香港補助文字セット – 2001』（Hong Kong Supplementary Character Set – 2001）に含まれる全ての漢字、合計29,145個を含んでいます。
             </p>
           </div>
         </div>
@@ -630,7 +722,11 @@ export default function Home() {
               <h3 style={{ 
                 fontSize: '1.125rem', 
                 fontWeight: 'bold', 
-                marginBottom: '0.5rem' 
+                marginBottom: '0.75rem',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
               }}>
                 ジャンル分け
               </h3>
@@ -640,13 +736,29 @@ export default function Home() {
                     key={category.id}
                     onClick={() => setSelectedCategory(category.id)}
                     style={{
-                      padding: '0.5rem',
+                      padding: '0.75rem',
                       textAlign: 'left',
-                      borderRadius: '4px',
-                      backgroundColor: selectedCategory === category.id ? '#e5e7eb' : 'transparent',
-                      border: 'none',
+                      borderRadius: '12px',
+                      background: selectedCategory === category.id ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white',
+                      color: selectedCategory === category.id ? 'white' : '#374151',
+                      border: selectedCategory === category.id ? 'none' : '2px solid #e5e7eb',
                       cursor: 'pointer',
-                      fontSize: '1rem'
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      transition: 'all 0.3s ease',
+                      boxShadow: selectedCategory === category.id ? '0 4px 15px rgba(102, 126, 234, 0.3)' : '0 2px 8px rgba(0,0,0,0.05)'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (selectedCategory !== category.id) {
+                        e.currentTarget.style.transform = 'translateX(4px)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selectedCategory !== category.id) {
+                        e.currentTarget.style.transform = 'translateX(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
+                      }
                     }}
                   >
                     <span dangerouslySetInnerHTML={{ __html: category.name.replace(/\n/g, '<br>') }} />
@@ -711,8 +823,12 @@ export default function Home() {
         ) : (
           // デスクトップ: 通常のサイドバー
           <div style={{ 
-            borderLeft: '1px solid #d1d5db',
-            paddingLeft: '1rem'
+            borderLeft: '3px solid #667eea',
+            paddingLeft: '1.5rem',
+            background: 'linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%)',
+            padding: '1.5rem',
+            borderRadius: '24px',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.1)'
           }}>
             {/* ロゴ */}
             <div style={{ marginBottom: '0.5rem' }}>
@@ -727,9 +843,13 @@ export default function Home() {
 
             {/* ジャンル分け */}
             <h3 style={{ 
-              fontSize: '1.125rem', 
+              fontSize: '1.25rem', 
               fontWeight: 'bold', 
-              marginBottom: '0.5rem' 
+              marginBottom: '0.75rem',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
             }}>
               ジャンル分け
             </h3>
@@ -739,22 +859,28 @@ export default function Home() {
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
                   style={{
-                    padding: '0.5rem',
+                    padding: '0.75rem',
                     textAlign: 'left',
-                    borderRadius: '4px',
-                    backgroundColor: selectedCategory === category.id ? '#e5e7eb' : 'transparent',
-                    border: 'none',
+                    borderRadius: '12px',
+                    background: selectedCategory === category.id ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white',
+                    color: selectedCategory === category.id ? 'white' : '#374151',
+                    border: selectedCategory === category.id ? 'none' : '2px solid #e5e7eb',
                     cursor: 'pointer',
-                    fontSize: '1.5rem'
+                    fontSize: '1rem',
+                    fontWeight: '500',
+                    transition: 'all 0.3s ease',
+                    boxShadow: selectedCategory === category.id ? '0 4px 15px rgba(102, 126, 234, 0.3)' : '0 2px 8px rgba(0,0,0,0.05)'
                   }}
                   onMouseEnter={(e) => {
                     if (selectedCategory !== category.id) {
-                      e.currentTarget.style.backgroundColor = '#e5e7eb';
+                      e.currentTarget.style.transform = 'translateX(4px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (selectedCategory !== category.id) {
-                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.transform = 'translateX(0)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
                     }
                   }}
                 >
