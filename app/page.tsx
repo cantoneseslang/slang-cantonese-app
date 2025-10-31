@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import categoriesData from '@/data/categories.json';
 
 interface SearchResult {
   jyutping: string;
@@ -21,6 +22,7 @@ interface Category {
   words: Word[];
   introContent?: string;
   practiceGroups?: any[];
+  style?: string;
 }
 
 export default function Home() {
@@ -36,41 +38,12 @@ export default function Home() {
 
   useEffect(() => {
     // カテゴリデータを読み込む
-    setCategories([
-      {
-        id: "greetings",
-        name: "🙋 挨拶編",
-        words: [
-          { chinese: "早晨", japanese: "おはよう" },
-          { chinese: "午安", japanese: "こんにちは" },
-          { chinese: "早唞", japanese: "おやすみ" },
-          { chinese: "再見", japanese: "さようなら" },
-          { chinese: "拜拜", japanese: "バイバイ" },
-          { chinese: "好高興認識你", japanese: "はじめまして" },
-          { chinese: "唔該", japanese: "お願いします" },
-          { chinese: "多謝", japanese: "ありがとう" },
-        ]
-      },
-      {
-        id: "numbers",
-        name: "🔢 数字編",
-        words: [
-          { chinese: "零", japanese: "0" },
-          { chinese: "一", japanese: "1" },
-          { chinese: "二", japanese: "2" },
-          { chinese: "三", japanese: "3" },
-          { chinese: "四", japanese: "4" },
-          { chinese: "五", japanese: "5" },
-          { chinese: "六", japanese: "6" },
-          { chinese: "七", japanese: "7" },
-        ]
-      }
-    ]);
+    setCategories(categoriesData as Category[]);
     
     // 最初のカテゴリを選択
-    if (categories.length > 0 && !selectedCategory) {
-      setSelectedCategory(categories[0].id);
-      setCurrentWords(categories[0].words);
+    if (categoriesData.length > 0 && !selectedCategory) {
+      setSelectedCategory(categoriesData[0].id);
+      setCurrentWords(categoriesData[0].words);
     }
   }, []);
 
@@ -397,7 +370,7 @@ export default function Home() {
                   }
                 }}
               >
-                {category.name}
+                <span dangerouslySetInnerHTML={{ __html: category.name.replace(/\n/g, '<br>') }} />
               </button>
             ))}
           </div>
