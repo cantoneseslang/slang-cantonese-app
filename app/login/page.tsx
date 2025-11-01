@@ -91,18 +91,27 @@ export default function LoginPage() {
         <h1 style={{
           fontSize: '1.5rem',
           fontWeight: 'bold',
-          marginBottom: '1.5rem',
+          marginBottom: '0.75rem',
           textAlign: 'center'
         }}>
-          スラング式カントン語音れん
+          歡迎光臨
         </h1>
+        <p style={{
+          fontSize: '1rem',
+          color: '#374151',
+          marginBottom: '0.5rem',
+          textAlign: 'center',
+          fontWeight: '500'
+        }}>
+          ようこそ！スラング先生広東語プラットフォームへ🇭🇰
+        </p>
         <p style={{
           fontSize: '0.875rem',
           color: '#6b7280',
           marginBottom: '2rem',
           textAlign: 'center'
         }}>
-          {isSignUp ? '新規登録' : 'ログイン'}してアプリを使用
+          お手数ですがご登録の上ご使用ください。
         </p>
 
         {error && (
