@@ -56,7 +56,7 @@ export default function Home() {
   const [examplePlaybackSpeed, setExamplePlaybackSpeed] = useState('1');
   const sidebarRef = useRef<HTMLDivElement>(null);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
-  const [showHelpCard, setShowHelpCard] = useState(false);
+  const [showHelpCard, setShowHelpCard] = useState(true);
   const [dontShowHelpAgain, setDontShowHelpAgain] = useState(false);
 
   useEffect(() => {
