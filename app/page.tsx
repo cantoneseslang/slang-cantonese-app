@@ -49,6 +49,17 @@ export default function Home() {
   const [currentWords, setCurrentWords] = useState<Word[]>([]);
   const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
 
+  // ボタンクリック音のオーディオオブジェクト
+  const clickAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // 音声の初期化
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      clickAudioRef.current = new Audio('/button-click.mp3');
+      clickAudioRef.current.volume = 0.5; // 音量を50%に設定
+    }
+  }, []);
+
   // 振動とクリック音の関数
   const playHapticAndSound = () => {
     // 振動 (Android のみ対応。iOSは未対応)
@@ -56,46 +67,13 @@ export default function Home() {
       navigator.vibrate(10); // 10ミリ秒の短い振動
     }
     
-    // 触覚的なクリック音（Web Audio API）- iOSでも動作
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
-      // 高音の「ぷにっ」という音
-      const oscillator1 = audioContext.createOscillator();
-      const gainNode1 = audioContext.createGain();
-      
-      oscillator1.connect(gainNode1);
-      gainNode1.connect(audioContext.destination);
-      
-      oscillator1.type = 'sine';
-      oscillator1.frequency.setValueAtTime(1000, audioContext.currentTime);
-      oscillator1.frequency.exponentialRampToValueAtTime(500, audioContext.currentTime + 0.05);
-      
-      gainNode1.gain.setValueAtTime(0.15, audioContext.currentTime);
-      gainNode1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.08);
-      
-      oscillator1.start(audioContext.currentTime);
-      oscillator1.stop(audioContext.currentTime + 0.08);
-      
-      // 低音の「トン」という衝撃音を追加（振動の代わり）
-      const oscillator2 = audioContext.createOscillator();
-      const gainNode2 = audioContext.createGain();
-      
-      oscillator2.connect(gainNode2);
-      gainNode2.connect(audioContext.destination);
-      
-      oscillator2.type = 'triangle';
-      oscillator2.frequency.setValueAtTime(80, audioContext.currentTime);
-      oscillator2.frequency.exponentialRampToValueAtTime(40, audioContext.currentTime + 0.04);
-      
-      // より短く強い衝撃
-      gainNode2.gain.setValueAtTime(0.25, audioContext.currentTime);
-      gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.04);
-      
-      oscillator2.start(audioContext.currentTime);
-      oscillator2.stop(audioContext.currentTime + 0.04);
-    } catch (e) {
-      console.log('Audio playback not supported');
+    // MP3クリック音を再生
+    if (clickAudioRef.current) {
+      // 音声を最初から再生（前の再生が終わってなくても再度再生可能）
+      clickAudioRef.current.currentTime = 0;
+      clickAudioRef.current.play().catch(e => {
+        console.log('Audio playback failed:', e);
+      });
     }
   };
   const [isMobile, setIsMobile] = useState(false);
