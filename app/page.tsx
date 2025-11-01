@@ -53,6 +53,12 @@ export default function Home() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioBufferRef = useRef<AudioBuffer | null>(null);
   const [isClickSoundEnabled, setIsClickSoundEnabled] = useState(true);
+  
+  // 学習モードの状態（デフォルト: false = ノーマルモード）
+  const [isLearningMode, setIsLearningMode] = useState(false);
+  
+  // ノーマルモードでアクティブな単語のID（緑色のボタン）
+  const [activeWordIds, setActiveWordIds] = useState<Set<string>>(new Set());
 
   // 音声の初期化（Web Audio APIで100%音量）
   useEffect(() => {
@@ -84,6 +90,11 @@ export default function Home() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('clickSoundEnabled', String(newValue));
     }
+  };
+
+  // 学習モードのオン/オフを切り替える
+  const toggleLearningMode = () => {
+    setIsLearningMode(!isLearningMode);
   };
 
   // 振動とクリック音の関数
@@ -301,8 +312,50 @@ export default function Home() {
 
   const handleWordClick = async (word: Word) => {
     playHapticAndSound(); // 振動と音を再生
-    setSearchQuery(word.chinese);
-    await handleSearch(word.chinese);
+    
+    if (isLearningMode) {
+      // 学習モード：現在の動作（例文も表示）
+      setSearchQuery(word.chinese);
+      await handleSearch(word.chinese);
+    } else {
+      // ノーマルモード：単語のみの音声を再生、ボタンを緑色にする
+      const wordId = word.chinese;
+      
+      // 既にアクティブな場合は音声を再生
+      // 新規の場合はアクティブにして音声を生成・再生
+      setActiveWordIds(prev => {
+        const newSet = new Set(prev);
+        newSet.add(wordId);
+        return newSet;
+      });
+      
+      // 単語の音声のみを生成して再生
+      try {
+        const audioResponse = await fetch('/api/generate-speech', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text: word.chinese }),
+        });
+        
+        if (audioResponse.ok) {
+          const audioData = await audioResponse.json();
+          const audioBase64 = audioData.audioContent;
+          
+          // 音声を自動再生
+          if (audioRef.current && audioBase64) {
+            audioRef.current.src = `data:audio/mp3;base64,${audioBase64}`;
+            audioRef.current.playbackRate = 1.0; // ノーマルモードでは速度固定
+            audioRef.current.play().catch(e => {
+              console.log('Audio playback failed:', e);
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to generate word audio:', err);
+      }
+    }
   };
 
   const handleTranslateAndConvert = async (query: string) => {
@@ -403,6 +456,22 @@ export default function Home() {
               }}
             >
               {isClickSoundEnabled ? '🔊 クリック音オン' : '🔇 クリック音オフ'}
+            </button>
+            <button
+              onClick={toggleLearningMode}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: isLearningMode ? '#3b82f6' : '#6b7280',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              }}
+            >
+              {isLearningMode ? '📚 学習モード' : '🎵 ノーマルモード'}
             </button>
           </div>
         )}
@@ -778,8 +847,8 @@ export default function Home() {
             </div>
           )}
 
-          {/* 結果エリア */}
-          {result && (
+          {/* 結果エリア（学習モードのみ表示） */}
+          {isLearningMode && result && (
             <div style={{ 
               marginBottom: '1rem', 
               padding: isMobile ? '1rem' : '1.5rem', 
@@ -986,7 +1055,9 @@ export default function Home() {
               gap: '0.5rem',
               marginBottom: '1.5rem'
             }}>
-              {currentWords.map((word, idx) => (
+              {currentWords.map((word, idx) => {
+                const isActive = !isLearningMode && activeWordIds.has(word.chinese);
+                return (
                 <button
                   key={idx}
                   onClick={(e) => {
@@ -1000,7 +1071,9 @@ export default function Home() {
                     handleWordClick(word);
                   }}
                   style={{
-                    background: 'linear-gradient(145deg, #ffffff, #f5f5f7)',
+                    background: isActive 
+                      ? 'linear-gradient(145deg, #10b981, #059669)' 
+                      : 'linear-gradient(145deg, #ffffff, #f5f5f7)',
                     padding: isMobile ? '1rem' : '1.25rem',
                     borderRadius: '16px',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)',
@@ -1037,20 +1110,21 @@ export default function Home() {
                   <strong style={{ 
                     fontSize: isMobile ? '1.5rem' : '1.875rem',
                     fontWeight: '600',
-                    color: '#1d1d1f',
+                    color: isActive ? '#ffffff' : '#1d1d1f',
                     marginBottom: '0.25rem'
                   }}>
                     {word.chinese}
                   </strong>
                   <div style={{ 
                     fontSize: isMobile ? '0.875rem' : '1rem',
-                    color: '#6e6e73',
+                    color: isActive ? '#f0f0f0' : '#6e6e73',
                     fontWeight: '400'
                   }}>
                     {word.japanese}
                   </div>
                 </button>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -1137,10 +1211,27 @@ export default function Home() {
                       borderRadius: '6px',
                       fontSize: '0.875rem',
                       cursor: 'pointer',
-                      fontWeight: '500'
+                      fontWeight: '500',
+                      marginBottom: '0.5rem'
                     }}
                   >
                     {isClickSoundEnabled ? '🔊 クリック音オン' : '🔇 クリック音オフ'}
+                  </button>
+                  <button
+                    onClick={toggleLearningMode}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: isLearningMode ? '#3b82f6' : '#6b7280',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      cursor: 'pointer',
+                      fontWeight: '500'
+                    }}
+                  >
+                    {isLearningMode ? '📚 学習モード' : '🎵 ノーマルモード'}
                   </button>
                 </div>
               )}
