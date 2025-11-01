@@ -561,13 +561,25 @@ export default function Home() {
                 }
               }}
               style={{
-                height: isMobile ? '3rem' : '4rem',
-                fontSize: isMobile ? '1rem' : '1rem',
+                height: isMobile ? '3rem' : '3.5rem',
+                fontSize: isMobile ? '1rem' : '1.125rem',
                 width: '100%',
-                paddingLeft: '1rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '4px',
-                marginBottom: '0.5rem'
+                padding: '0 1.25rem',
+                border: '1px solid rgba(0,0,0,0.1)',
+                borderRadius: '12px',
+                marginBottom: '0.75rem',
+                backgroundColor: '#ffffff',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                outline: 'none'
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = '#007AFF';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,122,255,0.15), inset 0 1px 0 rgba(255,255,255,0.9)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(0,0,0,0.1)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)';
               }}
             />
             <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -576,14 +588,39 @@ export default function Home() {
                 disabled={loading}
                 style={{
                   flex: 1,
-                  padding: isMobile ? '0.75rem 1rem' : '10px 20px',
-                  fontSize: isMobile ? '0.875rem' : '1rem',
-                  borderRadius: '6px',
-                  backgroundColor: loading ? '#9ca3af' : '#3b82f6',
+                  padding: isMobile ? '0.875rem 1rem' : '1rem 1.5rem',
+                  fontSize: isMobile ? '0.9375rem' : '1rem',
+                  borderRadius: '12px',
+                  background: loading ? 'linear-gradient(145deg, #d1d5db, #9ca3af)' : 'linear-gradient(145deg, #007AFF, #0051D5)',
                   color: 'white',
                   border: 'none',
                   cursor: loading ? 'not-allowed' : 'pointer',
-                  fontWeight: 'bold'
+                  fontWeight: '600',
+                  boxShadow: loading ? '0 2px 6px rgba(0,0,0,0.1)' : '0 4px 12px rgba(0,122,255,0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transform: 'scale(1)'
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading) {
+                    e.currentTarget.style.transform = 'scale(1.02) translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,122,255,0.4), inset 0 1px 0 rgba(255,255,255,0.2)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  if (!loading) {
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,122,255,0.3), inset 0 1px 0 rgba(255,255,255,0.2)';
+                  }
+                }}
+                onMouseDown={(e) => {
+                  if (!loading) {
+                    e.currentTarget.style.transform = 'scale(0.98)';
+                  }
+                }}
+                onMouseUp={(e) => {
+                  if (!loading) {
+                    e.currentTarget.style.transform = 'scale(1.02) translateY(-1px)';
+                  }
                 }}
               >
                 {loading ? '検索中...' : '広東語発音'}
@@ -593,14 +630,39 @@ export default function Home() {
                 disabled={loading}
                 style={{
                   flex: 1,
-                  padding: isMobile ? '0.75rem 1rem' : '10px 20px',
-                  fontSize: isMobile ? '0.875rem' : '1rem',
-                  borderRadius: '6px',
-                  backgroundColor: loading ? '#9ca3af' : '#10b981',
+                  padding: isMobile ? '0.875rem 1rem' : '1rem 1.5rem',
+                  fontSize: isMobile ? '0.9375rem' : '1rem',
+                  borderRadius: '12px',
+                  background: loading ? 'linear-gradient(145deg, #d1d5db, #9ca3af)' : 'linear-gradient(145deg, #34C759, #248A3D)',
                   color: 'white',
                   border: 'none',
                   cursor: loading ? 'not-allowed' : 'pointer',
-                  fontWeight: 'bold'
+                  fontWeight: '600',
+                  boxShadow: loading ? '0 2px 6px rgba(0,0,0,0.1)' : '0 4px 12px rgba(52,199,89,0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transform: 'scale(1)'
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading) {
+                    e.currentTarget.style.transform = 'scale(1.02) translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(52,199,89,0.4), inset 0 1px 0 rgba(255,255,255,0.2)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  if (!loading) {
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(52,199,89,0.3), inset 0 1px 0 rgba(255,255,255,0.2)';
+                  }
+                }}
+                onMouseDown={(e) => {
+                  if (!loading) {
+                    e.currentTarget.style.transform = 'scale(0.98)';
+                  }
+                }}
+                onMouseUp={(e) => {
+                  if (!loading) {
+                    e.currentTarget.style.transform = 'scale(1.02) translateY(-1px)';
+                  }
                 }}
               >
                 日訳+広東語発音
