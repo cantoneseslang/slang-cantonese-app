@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import categoriesData from '@/data/categories.json';
 
 interface SearchResult {
@@ -35,6 +37,9 @@ interface Category {
 }
 
 export default function Home() {
+  const router = useRouter();
+  const supabase = createClient();
+  const [user, setUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -53,6 +58,15 @@ export default function Home() {
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   useEffect(() => {
+    // ユーザー情報の取得
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    getUser();
+  }, []);
+
+  useEffect(() => {
     // モバイル判定
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -61,6 +75,12 @@ export default function Home() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
 
   useEffect(() => {
     // カテゴリデータを読み込む
@@ -242,17 +262,42 @@ export default function Home() {
               borderRadius: '8px', 
               boxShadow: '0 1px 3px rgba(0,0,0,0.1)' 
             }}>
-              <div style={{ borderLeft: '4px solid #6366f1', paddingLeft: '1rem' }}>
-                <h1 style={{ 
-                  fontSize: isMobile ? '1.5rem' : '2.5rem', 
-                  fontWeight: 'bold', 
-                  margin: '0 0 0.25rem 0' 
-                }}>
-                  スラング式カントン語音れん
-                </h1>
-                <p style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: '#6b7280', margin: 0 }}>
-                  粤ピン/スラング式カタカナ/音声検索
-                </p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ borderLeft: '4px solid #6366f1', paddingLeft: '1rem', flex: 1 }}>
+                  <h1 style={{ 
+                    fontSize: isMobile ? '1.5rem' : '2.5rem', 
+                    fontWeight: 'bold', 
+                    margin: '0 0 0.25rem 0' 
+                  }}>
+                    スラング式カントン語音れん
+                  </h1>
+                  <p style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: '#6b7280', margin: 0 }}>
+                    粤ピン/スラング式カタカナ/音声検索
+                  </p>
+                  {user && (
+                    <p style={{ fontSize: isMobile ? '0.7rem' : '0.75rem', color: '#9ca3af', margin: '0.25rem 0 0 0' }}>
+                      {user.email && `ログイン中: ${user.email}`}
+                    </p>
+                  )}
+                </div>
+                {user && (
+                  <button
+                    onClick={handleLogout}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: isMobile ? '0.875rem' : '0.875rem',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      marginLeft: '1rem'
+                    }}
+                  >
+                    ログアウト
+                  </button>
+                )}
               </div>
             </div>
           </div>
