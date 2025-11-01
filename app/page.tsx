@@ -897,7 +897,30 @@ export default function Home() {
                 </div>
               )}
 
-              {/* ロゴ削除 - 画像が表示されず透明なリンクになっていたため削除 */}
+              {/* ロゴ */}
+              <div style={{ marginBottom: '0.5rem', textAlign: 'center' }}>
+                <a 
+                  href="https://line.me/R/ti/p/@298mwivr" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-block',
+                    textDecoration: 'none'
+                  }}
+                >
+                  <img 
+                    src="data:image/png;base64,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"
+                    alt="スラング先生ロゴ"
+                    style={{ 
+                      height: 'auto', 
+                      width: '100%',
+                      maxWidth: '200px',
+                      display: 'block',
+                      margin: '0 auto'
+                    }}
+                  />
+                </a>
+              </div>
 
               {/* ジャンル分け */}
               <h3 style={{ 
@@ -999,7 +1022,30 @@ export default function Home() {
             borderLeft: '1px solid #d1d5db',
             paddingLeft: '1rem'
           }}>
-            {/* ロゴ削除 - 画像が表示されず透明なリンクになっていたため削除 */}
+            {/* ロゴ */}
+            <div style={{ marginBottom: '0.5rem', textAlign: 'center' }}>
+              <a 
+                href="https://line.me/R/ti/p/@298mwivr" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-block',
+                  textDecoration: 'none'
+                }}
+              >
+                <img 
+                  src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlgAAAB4CAIAAAChNxuUAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAExGlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSfvu78nIGlkPSdXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQnPz4KPHg6eG1wbWV0YSB4bWxuczp4PSdhZG9iZTpuczptZXRhLyc+CjxyZGY6UkRGIHhtbG5zOnJkZj0naHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyc+CgogPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9JycKICB4bWxuczpBdHRyaWI9J2h0dHA6Ly9ucy5hdHRyaWJ1dGlvbi5jb20vYWRzLzEuMC8nPgogIDxBdHRyaWI6QWRzPgogICA8cmRmOlNlcT4KICAgIDxyZGY6bGkgcmRmOnBhcnNlVHlwZT0nUmVzb3VyY2UnPgogICAgIDxBdHRyaWI6Q3JlYXRlZD4yMDI1LTEwLTAxPC9BdHRyaWI6Q3JlYXRlZD4KICAgICA8QXR0cmliOkV4dElkPjE4NjA2MjY2LTVmNmItNDJiZC04OTAwLWYwN2Y1YWYzYTY4NzwvQXR0cmliOkV4dElkPgogICAgIDxBdHRyaWI6RmJJZD41MjUyNjU5MTQxNzk1ODA8L0F0dHJpYjpGYklkPgogICAgIDxBdHRyaWI6VG91Y2hUeXBlPjI8L0F0dHJpYjpUb3VjaFR5cGU+CiAgICA8L3JkZjpsaT4KICAgPC9yZGY6U2VxPgogIDwvQXR0cmliOkFkcz4KIDwvcmRmOkRlc2NyaXB0aW9uPgoKIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PScnCiAgeG1sbnM6ZGM9J2h0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvJz4KICA8ZGM6dGl0bGU+CiAgIDxyZGY6QWx0PgogICAgPHJkZjpsaSB4bWw6bGFuZz0neC1kZWZhdWx0Jz7jgJDlhazlvI/jgJHluoPmnbHoqp7jgrnjg6njg7PjgrDlhYjnlJ8gLSAxPC9yZGY6bGk+CiAgIDwvcmRmOkFsdD4KICA8L2RjOnRpdGxlPgogPC9yZGY6RGVzY3JpcHRpb24+CgogPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9JycKICB4bWxuczpwZGY9J2h0dHA6Ly9ucy5hZG9iZS5jb20vcGRmLzEuMy8nPgogIDxwZGY6QXV0aG9yPmhpcm9raSBTPC9wZGY6QXV0aG9yPgogPC9yZGY6RGVzY3JpcHRpb24+CgogPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9JycKICB4bWxuczp4bXA9J2h0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8nPgogIDx4bXA6Q3JlYXRvclRvb2w+Q2FudmEgZG9jPURBRzBVUm9uRFpZIHVzZXI9VUFENDdEQXJWclkgYnJhbmQ9QkFENDdPV1VKM00gdGVtcGxhdGU9PC94bXA6Q3JlYXRvclRvb2w+CiA8L3JkZjpEZXNjcmlwdGlvbj4KPC9yZGY6UkRGPgo8L3g6eG1wbWV0YT4KPD94cGFja2V0IGVuZD0ncic/Pt2sDS0AACAASURBVHic7Z0HdFTFGsc3BEhCUboiiEpT0aMPEcQCgjQhlASSEJD66AiH9gAPvR460qUjovQuXQHNZnfTgJCECIQkhAQCkkYayabs+907ybLZTWKUFzz3eb9zz565M3OnfP/v+38zc+9qTKooXDR/9wBUeVpRIVS8qBAqXlQIFS8qhIoXFULFiwqh4kWFUPGiQqh4USFUvKgQKl5UCBUvKoSKFxVCxYsKoeJFhVDxokKoeFEhVLyoECpeVAgVLyqEihcVQsWLCqHiRYVQ8fJfzw3WlxM8YccAAAAASUVORK5CYII="
+                  alt="スラング先生ロゴ"
+                  style={{ 
+                    height: 'auto', 
+                    width: '100%',
+                    maxWidth: '200px',
+                    display: 'block',
+                    margin: '0 auto'
+                  }}
+                />
+              </a>
+            </div>
 
             {/* ジャンル分け */}
             <h3 style={{ 
