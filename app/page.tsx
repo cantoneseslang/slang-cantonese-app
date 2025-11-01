@@ -424,34 +424,11 @@ export default function Home() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '0.75rem',
+                gap: '1rem',
                 pointerEvents: 'auto',
                 position: 'relative',
                 zIndex: 10000
               }}>
-                <input
-                  type="checkbox"
-                  id="dontShowHelpAgain"
-                  checked={dontShowHelpAgain}
-                  onChange={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleToggleDontShowHelp(e.target.checked);
-                  }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleToggleDontShowHelp(!dontShowHelpAgain);
-                  }}
-                  style={{
-                    width: isMobile ? '1.5rem' : '1.25rem',
-                    height: isMobile ? '1.5rem' : '1.25rem',
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                    pointerEvents: 'auto',
-                    touchAction: 'manipulation'
-                  }}
-                />
                 <label
                   htmlFor="dontShowHelpAgain"
                   onClick={(e) => {
@@ -460,15 +437,53 @@ export default function Home() {
                     handleToggleDontShowHelp(!dontShowHelpAgain);
                   }}
                   style={{
-                    fontSize: isMobile ? '1rem' : '1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
                     cursor: 'pointer',
                     userSelect: 'none',
-                    fontWeight: '500',
                     pointerEvents: 'auto',
-                    touchAction: 'manipulation'
+                    touchAction: 'manipulation',
+                    padding: isMobile ? '1rem' : '0.75rem',
+                    borderRadius: '8px',
+                    width: '100%',
+                    justifyContent: 'center',
+                    minHeight: isMobile ? '3.5rem'
                   }}
                 >
-                  ヘルプを表示しない
+                  <input
+                    type="checkbox"
+                    id="dontShowHelpAgain"
+                    checked={dontShowHelpAgain}
+                    onChange={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleToggleDontShowHelp(e.target.checked);
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleToggleDontShowHelp(!dontShowHelpAgain);
+                    }}
+                    style={{
+                      width: isMobile ? '2rem' : '1.75rem',
+                      height: isMobile ? '2rem' : '1.75rem',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                      pointerEvents: 'auto',
+                      touchAction: 'manipulation',
+                      margin: 0
+                    }}
+                  />
+                  <span style={{
+                    fontSize: isMobile ? '1.125rem' : '1rem',
+                    fontWeight: '500',
+                    pointerEvents: 'none',
+                    flex: 1,
+                    textAlign: 'center'
+                  }}>
+                    ヘルプを表示しない
+                  </span>
                 </label>
               </div>
             </div>
