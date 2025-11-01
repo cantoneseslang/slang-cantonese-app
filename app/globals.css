@@ -125,3 +125,18 @@ body {
   width: 100%;
   box-sizing: border-box;
 }
+
+/* モバイル用: introContent内のh1タグのフォントサイズ調整 */
+@media (max-width: 768px) {
+  .intro-content-mobile h1 {
+    font-size: 1.25rem !important;
+    line-height: 1.4 !important;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+  
+  .intro-content-mobile h2 {
+    font-size: 1.125rem !important;
+    line-height: 1.4 !important;
+  }
+}

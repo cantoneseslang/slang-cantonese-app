@@ -493,7 +493,13 @@ export default function Home() {
               boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
               marginBottom: '1.5rem'
             }}>
-              <div dangerouslySetInnerHTML={{ __html: currentCategory.introContent }} />
+              <div 
+                dangerouslySetInnerHTML={{ __html: currentCategory.introContent }} 
+                style={isMobile ? {
+                  fontSize: '0.875rem'
+                } : {}}
+                className={isMobile ? 'intro-content-mobile' : ''}
+              />
               {currentCategory.practiceGroups.map((group, gIdx) => (
                 <div key={gIdx}>
                   <h3 style={{ 
