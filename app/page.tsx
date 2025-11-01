@@ -52,8 +52,9 @@ export default function Home() {
   // ボタンクリック音のオーディオコンテキストとバッファ
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioBufferRef = useRef<AudioBuffer | null>(null);
+  const [isClickSoundEnabled, setIsClickSoundEnabled] = useState(true);
 
-  // 音声の初期化（Web Audio APIで200%音量）
+  // 音声の初期化（Web Audio APIで100%音量）
   useEffect(() => {
     if (typeof window !== 'undefined') {
       // AudioContextを作成
@@ -67,8 +68,23 @@ export default function Home() {
           audioBufferRef.current = audioBuffer;
         })
         .catch(e => console.log('Audio loading failed:', e));
+      
+      // localStorageからクリック音の設定を読み込み
+      const savedClickSound = localStorage.getItem('clickSoundEnabled');
+      if (savedClickSound !== null) {
+        setIsClickSoundEnabled(savedClickSound === 'true');
+      }
     }
   }, []);
+
+  // クリック音のオン/オフを切り替える
+  const toggleClickSound = () => {
+    const newValue = !isClickSoundEnabled;
+    setIsClickSoundEnabled(newValue);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('clickSoundEnabled', String(newValue));
+    }
+  };
 
   // 振動とクリック音の関数
   const playHapticAndSound = () => {
@@ -77,8 +93,8 @@ export default function Home() {
       navigator.vibrate(10); // 10ミリ秒の短い振動
     }
     
-    // MP3クリック音を200%音量で再生（Web Audio API）
-    if (audioContextRef.current && audioBufferRef.current) {
+    // MP3クリック音を100%音量で再生（Web Audio API） - オン/オフ切り替え可能
+    if (isClickSoundEnabled && audioContextRef.current && audioBufferRef.current) {
       try {
         const source = audioContextRef.current.createBufferSource();
         const gainNode = audioContextRef.current.createGain();
@@ -87,8 +103,8 @@ export default function Home() {
         source.connect(gainNode);
         gainNode.connect(audioContextRef.current.destination);
         
-        // 音量を200%に設定（ゲイン2.0）
-        gainNode.gain.value = 2.0;
+        // 音量を100%に設定（ゲイン1.0）
+        gainNode.gain.value = 1.0;
         
         source.start(0);
       } catch (e) {
@@ -347,26 +363,48 @@ export default function Home() {
       }}>
         {/* PC版: ログアウトボタン（右上固定） */}
         {!isMobile && user && (
-          <button
-            onClick={handleLogout}
-            style={{
-              position: 'fixed',
-              top: '1rem',
-              right: '1rem',
-              padding: '0.5rem 1rem',
-              backgroundColor: '#ef4444',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '0.875rem',
-              cursor: 'pointer',
-              fontWeight: '500',
-              zIndex: 1000,
-              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-            }}
-          >
-            ログアウト
-          </button>
+          <div style={{
+            position: 'fixed',
+            top: '1rem',
+            right: '1rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem',
+            zIndex: 1000
+          }}>
+            <button
+              onClick={handleLogout}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              }}
+            >
+              ログアウト
+            </button>
+            <button
+              onClick={toggleClickSound}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: isClickSoundEnabled ? '#10b981' : '#6b7280',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              }}
+            >
+              {isClickSoundEnabled ? '🔊 クリック音オン' : '🔇 クリック音オフ'}
+            </button>
+          </div>
         )}
 
         {/* フロートヘルプカードのオーバーレイ */}
@@ -1082,10 +1120,27 @@ export default function Home() {
                       borderRadius: '6px',
                       fontSize: '0.875rem',
                       cursor: 'pointer',
-                      fontWeight: '500'
+                      fontWeight: '500',
+                      marginBottom: '0.5rem'
                     }}
                   >
                     ログアウト
+                  </button>
+                  <button
+                    onClick={toggleClickSound}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: isClickSoundEnabled ? '#10b981' : '#6b7280',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      cursor: 'pointer',
+                      fontWeight: '500'
+                    }}
+                  >
+                    {isClickSoundEnabled ? '🔊 クリック音オン' : '🔇 クリック音オフ'}
                   </button>
                 </div>
               )}
