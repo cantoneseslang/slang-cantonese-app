@@ -454,7 +454,7 @@ export default function Home() {
                     borderRadius: '8px',
                     width: '100%',
                     justifyContent: 'center',
-                    minHeight: isMobile ? '3.5rem'
+                    minHeight: isMobile ? '3.5rem' : 'auto'
                   }}
                 >
                   <input
