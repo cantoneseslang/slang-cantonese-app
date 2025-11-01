@@ -186,7 +186,7 @@ export default function ResetPasswordPage() {
               marginBottom: '0.5rem',
               color: '#374151'
             }}>
-              パスワード（確認）
+              新しいパスワード（確認）
             </label>
             <input
               type="password"
@@ -196,12 +196,30 @@ export default function ResetPasswordPage() {
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                border: '1px solid #d1d5db',
+                border: password && confirmPassword && password !== confirmPassword ? '1px solid #ef4444' : '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '1rem'
               }}
-              placeholder="パスワードを再入力"
+              placeholder="新しいパスワードを再入力"
             />
+            {password && confirmPassword && password !== confirmPassword && (
+              <p style={{
+                fontSize: '0.75rem',
+                color: '#ef4444',
+                marginTop: '0.25rem'
+              }}>
+                パスワードが一致しません
+              </p>
+            )}
+            {password && confirmPassword && password === confirmPassword && (
+              <p style={{
+                fontSize: '0.75rem',
+                color: '#10b981',
+                marginTop: '0.25rem'
+              }}>
+                ✓ パスワードが一致しています
+              </p>
+            )}
           </div>
 
           <button
