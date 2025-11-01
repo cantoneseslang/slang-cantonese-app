@@ -845,28 +845,53 @@ export default function Home() {
                     handleWordClick(word);
                   }}
                   style={{
-                    background: 'white',
-                    padding: '0.5rem',
-                    borderRadius: '4px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                    height: isMobile ? '100px' : '128px',
+                    background: 'linear-gradient(145deg, #ffffff, #f5f5f7)',
+                    padding: isMobile ? '1rem' : '1.25rem',
+                    borderRadius: '16px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)',
+                    height: isMobile ? '110px' : '140px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     textAlign: 'center',
-                    border: 'none',
+                    border: '1px solid rgba(0,0,0,0.06)',
                     cursor: 'pointer',
                     pointerEvents: 'auto',
                     touchAction: 'manipulation',
                     position: 'relative',
-                    zIndex: 2
+                    zIndex: 2,
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transform: 'scale(1)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.03) translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)';
+                  }}
+                  onMouseDown={(e) => {
+                    e.currentTarget.style.transform = 'scale(0.98)';
+                  }}
+                  onMouseUp={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.03) translateY(-2px)';
                   }}
                 >
-                  <strong style={{ fontSize: isMobile ? '1.5rem' : '1.875rem' }}>
+                  <strong style={{ 
+                    fontSize: isMobile ? '1.5rem' : '1.875rem',
+                    fontWeight: '600',
+                    color: '#1d1d1f',
+                    marginBottom: '0.25rem'
+                  }}>
                     {word.chinese}
                   </strong>
-                  <div style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
+                  <div style={{ 
+                    fontSize: isMobile ? '0.875rem' : '1rem',
+                    color: '#6e6e73',
+                    fontWeight: '400'
+                  }}>
                     {word.japanese}
                   </div>
                 </button>
