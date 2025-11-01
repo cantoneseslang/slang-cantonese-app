@@ -1027,7 +1027,9 @@ export default function Home() {
                     gap: '0.5rem',
                     marginBottom: '0.5rem'
                   }}>
-                    {group.words.map((word, wIdx) => (
+                    {group.words.map((word, wIdx) => {
+                      const isActive = !isLearningMode && activeWordId === word.chinese;
+                      return (
                       <button
                         key={wIdx}
                         onClick={(e) => {
@@ -1041,7 +1043,9 @@ export default function Home() {
                           handleWordClick(word);
                         }}
                         style={{
-                          background: 'white',
+                          background: isActive 
+                            ? 'linear-gradient(145deg, #10b981, #059669)' 
+                            : 'white',
                           padding: '0.5rem',
                           borderRadius: '4px',
                           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
@@ -1058,14 +1062,21 @@ export default function Home() {
                           zIndex: 2
                         }}
                       >
-                        <strong style={{ fontSize: isMobile ? '1.25rem' : '1.875rem' }}>
+                        <strong style={{ 
+                          fontSize: isMobile ? '1.25rem' : '1.875rem',
+                          color: isActive ? '#ffffff' : '#1d1d1f'
+                        }}>
                           {word.chinese}
                         </strong>
-                        <div style={{ fontSize: isMobile ? '0.75rem' : '1rem' }}>
+                        <div style={{ 
+                          fontSize: isMobile ? '0.75rem' : '1rem',
+                          color: isActive ? '#f0f0f0' : '#6e6e73'
+                        }}>
                           {word.japanese}
                         </div>
                       </button>
-                    ))}
+                      );
+                    })}
                   </div>
                   <div style={{ 
                     marginBottom: '1rem', 
