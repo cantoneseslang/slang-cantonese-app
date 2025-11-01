@@ -85,7 +85,8 @@ export default function ResetPasswordPage() {
         borderRadius: '8px',
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
         width: '100%',
-        maxWidth: '400px'
+        maxWidth: '400px',
+        boxSizing: 'border-box'
       }}>
         <h1 style={{
           fontSize: '1.5rem',
@@ -132,7 +133,7 @@ export default function ResetPasswordPage() {
           </div>
         )}
 
-        <form onSubmit={handleResetPassword}>
+        <form onSubmit={handleResetPassword} style={{ width: '100%' }}>
           <div style={{ marginBottom: '1rem' }}>
             <label style={{
               display: 'block',
@@ -162,9 +163,10 @@ export default function ResetPasswordPage() {
                 border: passwordError ? '1px solid #ef4444' : '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '1rem',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                display: 'block'
               }}
-              placeholder="6文字以上（英文字・数字・記号の組み合わせ）"
+              placeholder="6文字以上（英数字・記号の組み合わせ）"
               minLength={6}
             />
             {passwordError && (
@@ -208,7 +210,8 @@ export default function ResetPasswordPage() {
                 border: password && confirmPassword && password !== confirmPassword ? '1px solid #ef4444' : '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '1rem',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                display: 'block'
               }}
               placeholder="新しいパスワードを再入力"
             />
