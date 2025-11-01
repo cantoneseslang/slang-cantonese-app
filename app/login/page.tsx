@@ -171,11 +171,29 @@ export default function LoginPage() {
         redirectTo: `${window.location.origin}/auth/reset-password`,
       });
 
-      if (error) throw error;
+      if (error) {
+        // レート制限エラーの場合、わかりやすいメッセージを表示
+        if (error.message.includes('rate limit') || error.message.includes('too many requests') || error.message.includes('rate_limit')) {
+          throw new Error('リクエストが多すぎます。しばらく待ってから再度お試しください（通常60秒以上間隔を空ける必要があります）。');
+        }
+        throw error;
+      }
 
       setMessage('パスワード再設定用のメールをSupabase Auth <noreply@mail.app.supabase.io>より送信しました。メールボックスを確認してください。');
     } catch (err: any) {
-      setError(err.message || 'エラーが発生しました');
+      // エラーメッセージを日本語でわかりやすく表示
+      let errorMessage = err.message || 'エラーが発生しました';
+      
+      // よくあるエラーメッセージを日本語に変換
+      if (errorMessage.includes('email address not authorized')) {
+        errorMessage = 'このメールアドレスは認証されていません。';
+      } else if (errorMessage.includes('User not found')) {
+        errorMessage = 'ユーザーが見つかりません。';
+      } else if (errorMessage.includes('rate limit') || errorMessage.includes('too many')) {
+        errorMessage = 'リクエストが多すぎます。60秒以上待ってから再度お試しください。';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
