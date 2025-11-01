@@ -56,6 +56,8 @@ export default function Home() {
   const [examplePlaybackSpeed, setExamplePlaybackSpeed] = useState('1');
   const sidebarRef = useRef<HTMLDivElement>(null);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [showHelpCard, setShowHelpCard] = useState(false);
+  const [dontShowHelpAgain, setDontShowHelpAgain] = useState(false);
 
   useEffect(() => {
     // ユーザー情報の取得
@@ -75,6 +77,34 @@ export default function Home() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  useEffect(() => {
+    // localStorageから「ヘルプを表示しない」設定を読み込む
+    const savedDontShowHelp = localStorage.getItem('dontShowHelpAgain');
+    if (savedDontShowHelp === 'true') {
+      setDontShowHelpAgain(true);
+      setShowHelpCard(false);
+    } else {
+      // 初回表示時のみヘルプカードを表示
+      setShowHelpCard(true);
+    }
+  }, []);
+
+  const handleCloseHelpCard = () => {
+    if (dontShowHelpAgain) {
+      localStorage.setItem('dontShowHelpAgain', 'true');
+    }
+    setShowHelpCard(false);
+  };
+
+  const handleToggleDontShowHelp = (checked: boolean) => {
+    setDontShowHelpAgain(checked);
+    if (checked) {
+      localStorage.setItem('dontShowHelpAgain', 'true');
+    } else {
+      localStorage.removeItem('dontShowHelpAgain');
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -274,6 +304,123 @@ export default function Home() {
           >
             ログアウト
           </button>
+        )}
+
+        {/* フロートヘルプカード */}
+        {showHelpCard && (
+          <div style={{
+            position: 'fixed',
+            bottom: isMobile ? '1rem' : '2rem',
+            right: isMobile ? '1rem' : '2rem',
+            width: isMobile ? 'calc(100% - 2rem)' : '400px',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            background: 'white',
+            padding: isMobile ? '1rem' : '1.5rem',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            zIndex: 1001,
+            fontSize: isMobile ? '0.875rem' : '0.9375rem',
+            lineHeight: '1.75'
+          }}>
+            {/* 閉じるボタン */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: '1rem'
+            }}>
+              <h3 style={{
+                fontSize: isMobile ? '1rem' : '1.125rem',
+                fontWeight: 'bold',
+                margin: 0
+              }}>
+                ヘルプ
+              </h3>
+              <button
+                onClick={handleCloseHelpCard}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  padding: 0,
+                  marginLeft: '1rem',
+                  lineHeight: 1
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* ヘルプ内容 */}
+            <div>
+              <p style={{ fontWeight: '600', marginBottom: '0.5rem' }}>
+                広東語初心の方へ！ようこそスラング式カントン語音れんへ！
+              </p>
+              <p style={{ marginBottom: '0.75rem' }}>
+                スラング先生考案!簡単指差し広東語☝️(全974単語)収録！
+              </p>
+              <ul style={{ paddingLeft: '1.5rem', marginBottom: '1rem' }}>
+                <li style={{ marginBottom: '0.5rem' }}>
+                  画面中央の広東語ボタンを押すと発音、音声が自動で表示されます
+                </li>
+                <li style={{ marginBottom: '0.5rem' }}>
+                  広東語の漢字の意味・発音を調べたい時は入力欄に広東語を入れて「広東語発音」を押してください
+                </li>
+                <li style={{ marginBottom: '0.5rem' }}>
+                  日本語から広東語の文章・意味・発音を調べたい時は入力欄に日本語を入れて「日訳+広東語発音」を押してください
+                </li>
+                <li style={{ marginBottom: '0.5rem' }}>
+                  ジャンル分け(トータル73ジャンル収録)は右側のサイドバーを押して切り替えを行なってください
+                </li>
+                <li style={{ marginBottom: '0.5rem' }}>
+                  粤ピンとは香港語言学学会粤語拼音方案、略称粤拼 (えつぴん、Jyutping)
+                </li>
+                <li style={{ marginBottom: '0.5rem' }}>
+                  近年香港で最も使用されている香港語言学学会（LSHK）によって制定された数字とアルファベットを用いた声調表記法です。
+                </li>
+                <li style={{ marginBottom: '0.5rem' }}>
+                  スラング式カタカナとは広東語未学習者、初心者の日本語話者に容易に発音できる様に制作した独自変換ルールに則った表記法です。
+                </li>
+              </ul>
+              <p style={{ fontSize: isMobile ? '0.625rem' : '0.6875rem', lineHeight: '1.5', marginBottom: '1rem' }}>
+                この文書に記載されている繁体字は、国際標準の『ISO/IEC 10646-1:2000』および『香港補助文字セット – 2001』（Hong Kong Supplementary Character Set – 2001）に含まれる全ての漢字、合計29,145個を含んでいます。
+              </p>
+
+              {/* チェックボックス */}
+              <div style={{
+                paddingTop: '1rem',
+                borderTop: '1px solid #e5e7eb',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <input
+                  type="checkbox"
+                  id="dontShowHelpAgain"
+                  checked={dontShowHelpAgain}
+                  onChange={(e) => handleToggleDontShowHelp(e.target.checked)}
+                  style={{
+                    width: '1rem',
+                    height: '1rem',
+                    cursor: 'pointer'
+                  }}
+                />
+                <label
+                  htmlFor="dontShowHelpAgain"
+                  style={{
+                    fontSize: isMobile ? '0.8125rem' : '0.875rem',
+                    cursor: 'pointer',
+                    userSelect: 'none'
+                  }}
+                >
+                  ヘルプを表示しない
+                </label>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* メインコンテンツエリア */}
@@ -603,30 +750,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* 説明 */}
-          <div style={{ 
-            marginTop: '1rem', 
-            background: 'white', 
-            padding: isMobile ? '1rem' : '1.5rem', 
-            borderRadius: '8px', 
-            fontSize: isMobile ? '0.875rem' : '1rem', 
-            lineHeight: '1.75' 
-          }}>
-            <p style={{ fontWeight: '600' }}>広東語初心の方へ！ようこそスラング式広東語万能辞書へ！</p>
-            <p>スラング先生考案!簡単指差し広東語☝️(全974単語)収録！</p>
-            <ul style={{ paddingLeft: '1.5rem' }}>
-              <li>画面中央の広東語ボタンを押すと発音、音声が自動で表示されます</li>
-              <li>広東語の漢字の意味・発音を調べたい時は入力欄に広東語を入れて「広東語発音」を押してください</li>
-              <li>日本語から広東語の文章・意味・発音を調べたい時は入力欄に日本語を入れて「日訳+広東語発音」を押してください</li>
-              <li>ジャンル分け(トータル73ジャンル収録)は右側で押して切り替えを行なってください</li>
-              <li>粤ピンとは香港語言学学会粤語拼音方案、略称粤拼 (えつぴん、Jyutping)</li>
-              <li>近年香港で最も使用されている香港語言学学会（LSHK）によって制定された数字とアルファベットを用いた声調表記法です。</li>
-              <li>スラング式カタカナとは広東語未学習者、初心者の日本語話者に容易に発音できる様に制作した独自変換ルールに則った表記法です。</li>
-            </ul>
-            <p style={{ fontSize: isMobile ? '0.5rem' : '0.625rem', lineHeight: '1.5' }}>
-              この文書に記載されている繁体字は、国際標準の『ISO/IEC 10646-1:2000』および『香港補助文字セット – 2001』（Hong Kong Supplementary Character Set – 2001）に含まれる全ての漢字、合計29,145個を含んでいます。
-            </p>
-          </div>
         </div>
 
         {/* サイドバー */}
