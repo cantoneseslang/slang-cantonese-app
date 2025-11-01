@@ -51,31 +51,49 @@ export default function Home() {
 
   // 振動とクリック音の関数
   const playHapticAndSound = () => {
-    // 振動 (モバイルのみ)
+    // 振動 (Android のみ対応。iOSは未対応)
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate(10); // 10ミリ秒の短い振動
     }
     
-    // クリック音（Web Audio API）
+    // 触覚的なクリック音（Web Audio API）- iOSでも動作
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
       
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
+      // 高音の「ぷにっ」という音
+      const oscillator1 = audioContext.createOscillator();
+      const gainNode1 = audioContext.createGain();
       
-      // ぷにっという柔らかい音
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(800, audioContext.currentTime); // 高めの周波数
-      oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.05); // 下がる
+      oscillator1.connect(gainNode1);
+      gainNode1.connect(audioContext.destination);
       
-      // 音量のエンベロープ
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+      oscillator1.type = 'sine';
+      oscillator1.frequency.setValueAtTime(1000, audioContext.currentTime);
+      oscillator1.frequency.exponentialRampToValueAtTime(500, audioContext.currentTime + 0.05);
       
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.1);
+      gainNode1.gain.setValueAtTime(0.15, audioContext.currentTime);
+      gainNode1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.08);
+      
+      oscillator1.start(audioContext.currentTime);
+      oscillator1.stop(audioContext.currentTime + 0.08);
+      
+      // 低音の「トン」という衝撃音を追加（振動の代わり）
+      const oscillator2 = audioContext.createOscillator();
+      const gainNode2 = audioContext.createGain();
+      
+      oscillator2.connect(gainNode2);
+      gainNode2.connect(audioContext.destination);
+      
+      oscillator2.type = 'triangle';
+      oscillator2.frequency.setValueAtTime(80, audioContext.currentTime);
+      oscillator2.frequency.exponentialRampToValueAtTime(40, audioContext.currentTime + 0.04);
+      
+      // より短く強い衝撃
+      gainNode2.gain.setValueAtTime(0.25, audioContext.currentTime);
+      gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.04);
+      
+      oscillator2.start(audioContext.currentTime);
+      oscillator2.stop(audioContext.currentTime + 0.04);
     } catch (e) {
       console.log('Audio playback not supported');
     }
