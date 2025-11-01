@@ -127,8 +127,9 @@ export default function Home() {
   };
   const [isMobile, setIsMobile] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const exampleAudioRef = useRef<HTMLAudioElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null); // 学習モード用
+  const exampleAudioRef = useRef<HTMLAudioElement>(null); // 学習モード用
+  const normalModeAudioRef = useRef<HTMLAudioElement>(null); // ノーマルモード用
   const [playbackSpeed, setPlaybackSpeed] = useState('1');
   const [examplePlaybackSpeed, setExamplePlaybackSpeed] = useState('1');
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -329,6 +330,8 @@ export default function Home() {
       
       // 単語の音声のみを生成して再生
       try {
+        console.log('ノーマルモード: API呼び出し開始', { text: word.chinese });
+        
         const audioResponse = await fetch('/api/generate-speech', {
           method: 'POST',
           headers: {
@@ -337,31 +340,56 @@ export default function Home() {
           body: JSON.stringify({ text: word.chinese }),
         });
         
+        console.log('ノーマルモード: APIレスポンス受信', { 
+          ok: audioResponse.ok, 
+          status: audioResponse.status 
+        });
+        
         if (audioResponse.ok) {
           const audioData = await audioResponse.json();
           const audioBase64 = audioData.audioContent;
+          console.log('ノーマルモード: 音声データ取得', { 
+            hasAudioContent: !!audioBase64,
+            audioLength: audioBase64?.length 
+          });
           
-          // 音声を自動再生
-          if (audioRef.current && audioBase64) {
+          // 音声を自動再生（ノーマルモード専用audio要素を使用）
+          if (normalModeAudioRef.current && audioBase64) {
+            console.log('ノーマルモード: 音声再生開始', { wordId, audioBase64Length: audioBase64.length });
+            
             // 既存の音声を停止
-            audioRef.current.pause();
-            audioRef.current.currentTime = 0;
+            normalModeAudioRef.current.pause();
+            normalModeAudioRef.current.currentTime = 0;
             
             // 新しい音声をセット
-            audioRef.current.src = `data:audio/mp3;base64,${audioBase64}`;
-            audioRef.current.playbackRate = 1.0; // ノーマルモードでは速度固定
+            normalModeAudioRef.current.src = `data:audio/mp3;base64,${audioBase64}`;
+            normalModeAudioRef.current.playbackRate = 1.0; // ノーマルモードでは速度固定
             
             // 再生を試みる
-            const playPromise = audioRef.current.play();
+            const playPromise = normalModeAudioRef.current.play();
             if (playPromise !== undefined) {
-              playPromise.catch(e => {
-                console.log('Audio playback failed:', e);
-              });
+              playPromise
+                .then(() => {
+                  console.log('ノーマルモード: 音声再生成功');
+                })
+                .catch(e => {
+                  console.error('ノーマルモード: 音声再生失敗', e);
+                });
             }
+          } else {
+            console.error('ノーマルモード: audio要素またはaudioBase64が存在しない', {
+              hasAudioRef: !!normalModeAudioRef.current,
+              hasAudioBase64: !!audioBase64
+            });
           }
+        } else {
+          console.error('ノーマルモード: API呼び出し失敗', { 
+            status: audioResponse.status,
+            statusText: audioResponse.statusText
+          });
         }
       } catch (err) {
-        console.error('Failed to generate word audio:', err);
+        console.error('ノーマルモード: エラー発生', err);
       }
     }
   };
@@ -854,6 +882,12 @@ export default function Home() {
               {error}
             </div>
           )}
+
+          {/* ノーマルモード用の非表示audio要素（常にDOMに存在） */}
+          <audio 
+            ref={normalModeAudioRef}
+            style={{ display: 'none' }}
+          />
 
           {/* 結果エリア（学習モードのみ表示） */}
           {isLearningMode && result && (
