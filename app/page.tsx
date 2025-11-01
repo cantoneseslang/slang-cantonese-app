@@ -56,7 +56,7 @@ export default function Home() {
   const [examplePlaybackSpeed, setExamplePlaybackSpeed] = useState('1');
   const sidebarRef = useRef<HTMLDivElement>(null);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
-  const [showHelpCard, setShowHelpCard] = useState(true);
+  const [showHelpCard, setShowHelpCard] = useState(false);
   const [dontShowHelpAgain, setDontShowHelpAgain] = useState(false);
 
   useEffect(() => {
@@ -82,17 +82,20 @@ export default function Home() {
     // localStorageから「ヘルプを表示しない」設定を読み込む
     // クライアント側でのみ実行
     if (typeof window !== 'undefined') {
-      // デバッグ用: 一時的にlocalStorageを無視して強制表示
       const savedDontShowHelp = localStorage.getItem('dontShowHelpAgain');
-      // 初回表示時は常にヘルプカードを表示
-      setShowHelpCard(true);
       if (savedDontShowHelp === 'true') {
+        // 既に「表示しない」が設定されている場合は表示しない
         setDontShowHelpAgain(true);
+        setShowHelpCard(false);
+      } else {
+        // 初回表示時のみヘルプカードを表示
+        setShowHelpCard(true);
       }
     }
   }, []);
 
   const handleCloseHelpCard = () => {
+    // チェックボックスがオンの場合のみlocalStorageに保存
     if (dontShowHelpAgain) {
       localStorage.setItem('dontShowHelpAgain', 'true');
     }
@@ -102,8 +105,11 @@ export default function Home() {
   const handleToggleDontShowHelp = (checked: boolean) => {
     setDontShowHelpAgain(checked);
     if (checked) {
+      // チェックを入れたら即座にlocalStorageに保存してヘルプカードを閉じる
       localStorage.setItem('dontShowHelpAgain', 'true');
+      setShowHelpCard(false);
     } else {
+      // チェックを外したらlocalStorageから削除
       localStorage.removeItem('dontShowHelpAgain');
     }
   };
