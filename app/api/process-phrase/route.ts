@@ -120,9 +120,9 @@ async function generateExampleSentence(word: string): Promise<{ cantonese: strin
     // パターン1: [広東語] ([日本語])
     const parenMatch1 = cleanedExample.match(/^(.+?)\s*\((.+?)\)\s*$/);
     // パターン2: [広東語] ([日本語])  改行あり
-    const parenMatch2 = cleanedExample.match(/^(.+?)\s*[\n\r]+\s*[（(](.+?)[）)]\s*$/s);
+    const parenMatch2 = cleanedExample.match(/^(.+?)\s*[\n\r]+\s*[（(](.+?)[）)]\s*$/);
     // パターン3: [広東語]  改行  ([日本語])
-    const parenMatch3 = cleanedExample.match(/^(.+?)\s*[\n\r]+.*?[（(](.+?)[）)]/s);
+    const parenMatch3 = cleanedExample.match(/^([\s\S]+?)[\n\r]+[\s\S]*?[（(](.+?)[）)]/);
     
     if (parenMatch1) {
       cantonesePart = parenMatch1[1].trim();
