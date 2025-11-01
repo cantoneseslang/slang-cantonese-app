@@ -82,13 +82,12 @@ export default function Home() {
     // localStorageから「ヘルプを表示しない」設定を読み込む
     // クライアント側でのみ実行
     if (typeof window !== 'undefined') {
+      // デバッグ用: 一時的にlocalStorageを無視して強制表示
       const savedDontShowHelp = localStorage.getItem('dontShowHelpAgain');
+      // 初回表示時は常にヘルプカードを表示
+      setShowHelpCard(true);
       if (savedDontShowHelp === 'true') {
         setDontShowHelpAgain(true);
-        setShowHelpCard(false);
-      } else {
-        // 初回表示時のみヘルプカードを表示
-        setShowHelpCard(true);
       }
     }
   }, []);
