@@ -956,7 +956,7 @@ export default function Home() {
                   }}
                 >
                   <img 
-                    src={`data:image/png;base64,${require('fs').readFileSync('/Users/sakonhiroki/スラング先生式広東語万能辞書/new_logo.txt', 'utf8').trim()}`}
+                    src="/line-logo.png"
                     alt="スラング先生ロゴ"
                     style={{ 
                       height: 'auto', 
