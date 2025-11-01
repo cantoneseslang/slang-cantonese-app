@@ -49,14 +49,24 @@ export default function Home() {
   const [currentWords, setCurrentWords] = useState<Word[]>([]);
   const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
 
-  // ボタンクリック音のオーディオオブジェクト
-  const clickAudioRef = useRef<HTMLAudioElement | null>(null);
+  // ボタンクリック音のオーディオコンテキストとバッファ
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioBufferRef = useRef<AudioBuffer | null>(null);
 
-  // 音声の初期化
+  // 音声の初期化（Web Audio APIで200%音量）
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      clickAudioRef.current = new Audio('/button-click.mp3');
-      clickAudioRef.current.volume = 1.0; // 音量を100%（最大）に設定
+      // AudioContextを作成
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // MP3ファイルを読み込み
+      fetch('/button-click.mp3')
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => audioContextRef.current!.decodeAudioData(arrayBuffer))
+        .then(audioBuffer => {
+          audioBufferRef.current = audioBuffer;
+        })
+        .catch(e => console.log('Audio loading failed:', e));
     }
   }, []);
 
@@ -67,13 +77,23 @@ export default function Home() {
       navigator.vibrate(10); // 10ミリ秒の短い振動
     }
     
-    // MP3クリック音を再生
-    if (clickAudioRef.current) {
-      // 音声を最初から再生（前の再生が終わってなくても再度再生可能）
-      clickAudioRef.current.currentTime = 0;
-      clickAudioRef.current.play().catch(e => {
+    // MP3クリック音を200%音量で再生（Web Audio API）
+    if (audioContextRef.current && audioBufferRef.current) {
+      try {
+        const source = audioContextRef.current.createBufferSource();
+        const gainNode = audioContextRef.current.createGain();
+        
+        source.buffer = audioBufferRef.current;
+        source.connect(gainNode);
+        gainNode.connect(audioContextRef.current.destination);
+        
+        // 音量を200%に設定（ゲイン2.0）
+        gainNode.gain.value = 2.0;
+        
+        source.start(0);
+      } catch (e) {
         console.log('Audio playback failed:', e);
-      });
+      }
     }
   };
   const [isMobile, setIsMobile] = useState(false);
