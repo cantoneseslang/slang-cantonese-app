@@ -225,7 +225,9 @@ export default function LoginPage() {
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: '#f3f4f6',
-      padding: '1rem'
+      padding: '1rem',
+      boxSizing: 'border-box',
+      width: '100%'
     }}>
       <div style={{
         background: 'white',
@@ -233,7 +235,8 @@ export default function LoginPage() {
         borderRadius: '8px',
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
         width: '100%',
-        maxWidth: '400px'
+        maxWidth: '400px',
+        boxSizing: 'border-box'
       }}>
         <h1 style={{
           fontSize: '1.5rem',
@@ -363,7 +366,8 @@ export default function LoginPage() {
                   padding: '0.75rem',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '1rem'
+                  fontSize: '1rem',
+                  boxSizing: 'border-box'
                 }}
                 placeholder="ユーザーネームまたはメールアドレス"
               />
@@ -431,7 +435,8 @@ export default function LoginPage() {
                   padding: '0.75rem',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '1rem'
+                  fontSize: '1rem',
+                  boxSizing: 'border-box'
                 }}
                 placeholder="ユーザーネーム"
               />
@@ -457,7 +462,8 @@ export default function LoginPage() {
                 padding: '0.75rem',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
-                fontSize: '1rem'
+                fontSize: '1rem',
+                boxSizing: 'border-box'
               }}
               placeholder={isSignUp ? 'email@example.com' : 'ユーザーネームまたはメールアドレス'}
             />
@@ -491,7 +497,8 @@ export default function LoginPage() {
                 padding: '0.75rem',
                 border: passwordError ? '1px solid #ef4444' : '1px solid #d1d5db',
                 borderRadius: '6px',
-                fontSize: '1rem'
+                fontSize: '1rem',
+                boxSizing: 'border-box'
               }}
               placeholder={isSignUp ? '6文字以上（英文字・数字・記号の組み合わせ）' : 'パスワード'}
               minLength={6}

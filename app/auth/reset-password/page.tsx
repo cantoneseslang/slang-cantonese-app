@@ -77,7 +77,9 @@ export default function ResetPasswordPage() {
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: '#f3f4f6',
-      padding: '1rem'
+      padding: '1rem',
+      boxSizing: 'border-box',
+      width: '100%'
     }}>
       <div style={{
         background: 'white',
@@ -133,7 +135,7 @@ export default function ResetPasswordPage() {
           </div>
         )}
 
-        <form onSubmit={handleResetPassword} style={{ width: '100%' }}>
+        <form onSubmit={handleResetPassword}>
           <div style={{ marginBottom: '1rem' }}>
             <label style={{
               display: 'block',
@@ -163,8 +165,7 @@ export default function ResetPasswordPage() {
                 border: passwordError ? '1px solid #ef4444' : '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '1rem',
-                boxSizing: 'border-box',
-                display: 'block'
+                boxSizing: 'border-box'
               }}
               placeholder="6文字以上（英数字・記号の組み合わせ）"
               minLength={6}
@@ -210,8 +211,7 @@ export default function ResetPasswordPage() {
                 border: password && confirmPassword && password !== confirmPassword ? '1px solid #ef4444' : '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '1rem',
-                boxSizing: 'border-box',
-                display: 'block'
+                boxSizing: 'border-box'
               }}
               placeholder="新しいパスワードを再入力"
             />
