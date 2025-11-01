@@ -34,7 +34,7 @@ export async function middleware(request: NextRequest) {
   // ログインページ、認証関連ページ、APIルートは認証不要
   if (request.nextUrl.pathname.startsWith('/login') || 
       request.nextUrl.pathname.startsWith('/auth') ||
-      request.nextUrl.pathname.startsWith('/api/auth') ||
+      request.nextUrl.pathname.startsWith('/api') ||
       request.nextUrl.pathname.startsWith('/_next')) {
     return supabaseResponse
   }
