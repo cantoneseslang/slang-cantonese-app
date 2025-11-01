@@ -151,7 +151,6 @@ body {
 }
 
 /* PC用も念のため */
-.intro-content-mobile iframe,
 .intro-content-mobile iframe {
   width: 100%;
   max-width: 560px;
