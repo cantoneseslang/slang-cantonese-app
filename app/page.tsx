@@ -138,13 +138,17 @@ export default function Home() {
       if (category) {
         setCurrentCategory(category);
         setCurrentWords(category.words || []);
+        // カテゴリーを切り替えた時に検索結果をクリア
+        setResult(null);
+        setError(null);
+        setSearchQuery('');
         // カテゴリーを選択したらメニューを閉じる
         if (isMobile) {
           setIsMenuOpen(false);
         }
       }
     }
-  }, [selectedCategory, categories]);
+  }, [selectedCategory, categories, isMobile]);
 
   // スワイプ検出
   const handleTouchStart = (e: React.TouchEvent) => {
