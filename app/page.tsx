@@ -56,7 +56,7 @@ export default function Home() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       clickAudioRef.current = new Audio('/button-click.mp3');
-      clickAudioRef.current.volume = 0.5; // 音量を50%に設定
+      clickAudioRef.current.volume = 1.0; // 音量を100%（最大）に設定
     }
   }, []);
 
