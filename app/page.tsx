@@ -48,6 +48,38 @@ export default function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentWords, setCurrentWords] = useState<Word[]>([]);
   const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
+
+  // 振動とクリック音の関数
+  const playHapticAndSound = () => {
+    // 振動 (モバイルのみ)
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(10); // 10ミリ秒の短い振動
+    }
+    
+    // クリック音（Web Audio API）
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // ぷにっという柔らかい音
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime); // 高めの周波数
+      oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.05); // 下がる
+      
+      // 音量のエンベロープ
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.1);
+    } catch (e) {
+      console.log('Audio playback not supported');
+    }
+  };
   const [isMobile, setIsMobile] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -236,6 +268,7 @@ export default function Home() {
   };
 
   const handleWordClick = async (word: Word) => {
+    playHapticAndSound(); // 振動と音を再生
     setSearchQuery(word.chinese);
     await handleSearch(word.chinese);
   };
@@ -584,7 +617,10 @@ export default function Home() {
             />
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button
-                onClick={() => handleSearch(searchQuery)}
+                onClick={() => {
+                  playHapticAndSound();
+                  handleSearch(searchQuery);
+                }}
                 disabled={loading}
                 style={{
                   flex: 1,
@@ -626,7 +662,10 @@ export default function Home() {
                 {loading ? '検索中...' : '広東語発音'}
               </button>
               <button
-                onClick={() => handleTranslateAndConvert(searchQuery)}
+                onClick={() => {
+                  playHapticAndSound();
+                  handleTranslateAndConvert(searchQuery);
+                }}
                 disabled={loading}
                 style={{
                   flex: 1,
@@ -1075,11 +1114,13 @@ export default function Home() {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      playHapticAndSound();
                       setSelectedCategory(category.id);
                     }}
                     onTouchStart={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      playHapticAndSound();
                       setSelectedCategory(category.id);
                     }}
                     style={{
@@ -1213,6 +1254,7 @@ export default function Home() {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    playHapticAndSound();
                     setSelectedCategory(category.id);
                   }}
                   style={{
