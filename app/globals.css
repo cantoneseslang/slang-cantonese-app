@@ -139,4 +139,24 @@ body {
     font-size: 1.125rem !important;
     line-height: 1.4 !important;
   }
+  
+  /* YouTube iframeをモバイルでレスポンシブに */
+  .intro-content-mobile iframe {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9 !important;
+    margin: 1rem 0 !important;
+  }
+}
+
+/* PC用も念のため */
+.intro-content-mobile iframe,
+.intro-content-mobile iframe {
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  margin: 1rem auto;
+  display: block;
 }
