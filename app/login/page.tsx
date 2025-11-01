@@ -244,7 +244,7 @@ export default function LoginPage() {
           marginBottom: '0.75rem',
           textAlign: 'center'
         }}>
-          歡迎光臨
+          歡迎光臨！ようこそ！
         </h1>
         <p style={{
           fontSize: '1rem',
@@ -253,7 +253,7 @@ export default function LoginPage() {
           textAlign: 'center',
           fontWeight: '500'
         }}>
-          ようこそ！スラング先生広東語プラットフォームへ🇭🇰
+          スラング先生広東語プラットフォームへ🇭🇰
         </p>
         <p style={{
           fontSize: '0.875rem',
