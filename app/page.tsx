@@ -310,22 +310,27 @@ export default function Home() {
 
         {/* フロートヘルプカード */}
         {showHelpCard && (
-          <div style={{
-            position: 'fixed',
-            bottom: isMobile ? '1rem' : '2rem',
-            right: isMobile ? '1rem' : '2rem',
-            width: isMobile ? 'calc(100% - 2rem)' : '400px',
-            maxHeight: '80vh',
-            overflowY: 'auto',
-            background: 'white',
-            padding: isMobile ? '1rem' : '1.5rem',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            zIndex: 9999,
-            fontSize: isMobile ? '0.875rem' : '0.9375rem',
-            lineHeight: '1.75',
-            display: 'block'
-          }}>
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'fixed',
+              bottom: isMobile ? '1rem' : '2rem',
+              right: isMobile ? '1rem' : '2rem',
+              width: isMobile ? 'calc(100% - 2rem)' : '400px',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              background: 'white',
+              padding: isMobile ? '1rem' : '1.5rem',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              zIndex: 9999,
+              fontSize: isMobile ? '0.875rem' : '0.9375rem',
+              lineHeight: '1.75',
+              display: 'block',
+              pointerEvents: 'auto',
+              touchAction: 'manipulation'
+            }}
+          >
             {/* 閉じるボタン */}
             <div style={{
               display: 'flex',
@@ -342,7 +347,16 @@ export default function Home() {
                 ヘルプ
               </h3>
               <button
-                onClick={handleCloseHelpCard}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleCloseHelpCard();
+                }}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleCloseHelpCard();
+                }}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -358,7 +372,10 @@ export default function Home() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
-                  touchAction: 'manipulation'
+                  touchAction: 'manipulation',
+                  pointerEvents: 'auto',
+                  zIndex: 10000,
+                  position: 'relative'
                 }}
               >
                 ×
@@ -407,27 +424,48 @@ export default function Home() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '0.75rem'
+                gap: '0.75rem',
+                pointerEvents: 'auto',
+                position: 'relative',
+                zIndex: 10000
               }}>
                 <input
                   type="checkbox"
                   id="dontShowHelpAgain"
                   checked={dontShowHelpAgain}
-                  onChange={(e) => handleToggleDontShowHelp(e.target.checked)}
+                  onChange={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleToggleDontShowHelp(e.target.checked);
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleToggleDontShowHelp(!dontShowHelpAgain);
+                  }}
                   style={{
                     width: isMobile ? '1.5rem' : '1.25rem',
                     height: isMobile ? '1.5rem' : '1.25rem',
                     cursor: 'pointer',
-                    flexShrink: 0
+                    flexShrink: 0,
+                    pointerEvents: 'auto',
+                    touchAction: 'manipulation'
                   }}
                 />
                 <label
                   htmlFor="dontShowHelpAgain"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleToggleDontShowHelp(!dontShowHelpAgain);
+                  }}
                   style={{
                     fontSize: isMobile ? '1rem' : '1rem',
                     cursor: 'pointer',
                     userSelect: 'none',
-                    fontWeight: '500'
+                    fontWeight: '500',
+                    pointerEvents: 'auto',
+                    touchAction: 'manipulation'
                   }}
                 >
                   ヘルプを表示しない
