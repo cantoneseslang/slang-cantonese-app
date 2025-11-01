@@ -11,17 +11,44 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
+
+  const validatePassword = (pwd: string): string | null => {
+    if (pwd.length < 6) {
+      return 'パスワードは6文字以上必要です';
+    }
+    // 英文字（大文字・小文字）、数字、記号のうち、少なくとも2種類以上を含む
+    const hasLetter = /[a-zA-Z]/.test(pwd);
+    const hasNumber = /[0-9]/.test(pwd);
+    const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd);
+    
+    const typeCount = [hasLetter, hasNumber, hasSymbol].filter(Boolean).length;
+    
+    if (typeCount < 2) {
+      return 'パスワードは英文字、数字、記号のうち少なくとも2種類以上を含む必要があります';
+    }
+    
+    return null;
+  };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     setMessage(null);
+    setPasswordError(null);
 
     try {
       if (isSignUp) {
+        // パスワードバリデーション
+        const passwordValidation = validatePassword(password);
+        if (passwordValidation) {
+          setPasswordError(passwordValidation);
+          setLoading(false);
+          return;
+        }
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -234,18 +261,53 @@ export default function LoginPage() {
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (isSignUp && e.target.value.length > 0) {
+                  const validationError = validatePassword(e.target.value);
+                  setPasswordError(validationError);
+                } else {
+                  setPasswordError(null);
+                }
+              }}
               required
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                border: '1px solid #d1d5db',
+                border: passwordError ? '1px solid #ef4444' : '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '1rem'
               }}
-              placeholder={isSignUp ? '6文字以上' : 'パスワード'}
+              placeholder={isSignUp ? '6文字以上（英文字・数字・記号の組み合わせ）' : 'パスワード'}
               minLength={6}
             />
+            {passwordError && (
+              <p style={{
+                fontSize: '0.75rem',
+                color: '#ef4444',
+                marginTop: '0.25rem'
+              }}>
+                {passwordError}
+              </p>
+            )}
+            {isSignUp && !passwordError && password.length > 0 && (
+              <p style={{
+                fontSize: '0.75rem',
+                color: '#10b981',
+                marginTop: '0.25rem'
+              }}>
+                ✓ パスワードの形式は有効です
+              </p>
+            )}
+            {isSignUp && password.length === 0 && (
+              <p style={{
+                fontSize: '0.75rem',
+                color: '#6b7280',
+                marginTop: '0.25rem'
+              }}>
+                6文字以上、英文字・数字・記号のうち少なくとも2種類以上を含む必要があります
+              </p>
+            )}
           </div>
 
           <button
@@ -273,6 +335,7 @@ export default function LoginPage() {
             setIsSignUp(!isSignUp);
             setError(null);
             setMessage(null);
+            setPasswordError(null);
           }}
           style={{
             width: '100%',
