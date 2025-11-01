@@ -173,7 +173,7 @@ export default function LoginPage() {
 
       if (error) throw error;
 
-      setMessage('パスワード再設定用のメールを送信しました。メールボックスを確認してください。');
+      setMessage('パスワード再設定用のメールをSupabase Auth <noreply@mail.app.supabase.io>より送信しました。メールボックスを確認してください。');
     } catch (err: any) {
       setError(err.message || 'エラーが発生しました');
     } finally {
