@@ -194,13 +194,6 @@ export default function Home() {
 
       const data = await response.json();
       
-      // デバッグ: APIレスポンスを確認
-      console.log('=== API Response ===');
-      console.log('Query:', query);
-      console.log('exampleCantonese:', data.exampleCantonese);
-      console.log('exampleJapanese:', data.exampleJapanese);
-      console.log('Full data:', data);
-      
       // 単語音声を生成
       const audioResponse = await fetch('/api/generate-speech', {
         method: 'POST',
@@ -233,12 +226,6 @@ export default function Home() {
         }
       }
 
-      // デバッグ: 最終的なresultDataを確認
-      console.log('=== Setting Result ===');
-      console.log('resultData.exampleCantonese:', resultData.exampleCantonese);
-      console.log('resultData.exampleJapanese:', resultData.exampleJapanese);
-      console.log('resultData.exampleAudioBase64:', resultData.exampleAudioBase64 ? 'EXISTS' : 'MISSING');
-      
       setResult(resultData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
