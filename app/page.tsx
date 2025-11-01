@@ -80,13 +80,16 @@ export default function Home() {
 
   useEffect(() => {
     // localStorageから「ヘルプを表示しない」設定を読み込む
-    const savedDontShowHelp = localStorage.getItem('dontShowHelpAgain');
-    if (savedDontShowHelp === 'true') {
-      setDontShowHelpAgain(true);
-      setShowHelpCard(false);
-    } else {
-      // 初回表示時のみヘルプカードを表示
-      setShowHelpCard(true);
+    // クライアント側でのみ実行
+    if (typeof window !== 'undefined') {
+      const savedDontShowHelp = localStorage.getItem('dontShowHelpAgain');
+      if (savedDontShowHelp === 'true') {
+        setDontShowHelpAgain(true);
+        setShowHelpCard(false);
+      } else {
+        // 初回表示時のみヘルプカードを表示
+        setShowHelpCard(true);
+      }
     }
   }, []);
 
