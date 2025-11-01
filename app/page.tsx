@@ -252,6 +252,30 @@ export default function Home() {
         gridTemplateColumns: isMobile ? '1fr' : '1fr 200px',
         gap: isMobile ? '1rem' : '2rem'
       }}>
+        {/* PC版: ログアウトボタン（右上固定） */}
+        {!isMobile && user && (
+          <button
+            onClick={handleLogout}
+            style={{
+              position: 'fixed',
+              top: '1rem',
+              right: '1rem',
+              padding: '0.5rem 1rem',
+              backgroundColor: '#ef4444',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '0.875rem',
+              cursor: 'pointer',
+              fontWeight: '500',
+              zIndex: 1000,
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+            }}
+          >
+            ログアウト
+          </button>
+        )}
+
         {/* メインコンテンツエリア */}
         <div>
           {/* ヘッダー */}
@@ -274,30 +298,7 @@ export default function Home() {
                   <p style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: '#6b7280', margin: 0 }}>
                     粤ピン/スラング式カタカナ/音声検索
                   </p>
-                  {user && (
-                    <p style={{ fontSize: isMobile ? '0.7rem' : '0.75rem', color: '#9ca3af', margin: '0.25rem 0 0 0' }}>
-                      {user.email && `ログイン中: ${user.email}`}
-                    </p>
-                  )}
                 </div>
-                {user && (
-                  <button
-                    onClick={handleLogout}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: isMobile ? '0.875rem' : '0.875rem',
-                      cursor: 'pointer',
-                      fontWeight: '500',
-                      marginLeft: '1rem'
-                    }}
-                  >
-                    ログアウト
-                  </button>
-                )}
               </div>
             </div>
           </div>
@@ -660,6 +661,28 @@ export default function Home() {
                 padding: '1rem'
               }}
             >
+              {/* ログアウトボタン（モバイル） */}
+              {user && (
+                <div style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid #e5e7eb' }}>
+                  <button
+                    onClick={handleLogout}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      cursor: 'pointer',
+                      fontWeight: '500'
+                    }}
+                  >
+                    ログアウト
+                  </button>
+                </div>
+              )}
+
               {/* ロゴ */}
               <div style={{ marginBottom: '0.5rem' }}>
                 <a href="https://line.me/R/ti/p/@298mwivr" target="_blank">
