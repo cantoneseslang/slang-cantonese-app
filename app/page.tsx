@@ -288,7 +288,9 @@ export default function Home() {
         margin: '0 auto',
         display: isMobile ? 'block' : 'grid',
         gridTemplateColumns: isMobile ? '1fr' : '1fr 200px',
-        gap: isMobile ? '1rem' : '2rem'
+        gap: isMobile ? '1rem' : '2rem',
+        position: 'relative',
+        zIndex: 1
       }}>
         {/* PC版: ログアウトボタン（右上固定） */}
         {!isMobile && user && (
@@ -312,6 +314,25 @@ export default function Home() {
           >
             ログアウト
           </button>
+        )}
+
+        {/* フロートヘルプカードのオーバーレイ */}
+        {showHelpCard && (
+          <div
+            onClick={handleCloseHelpCard}
+            onTouchStart={handleCloseHelpCard}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+              zIndex: 9998,
+              pointerEvents: 'auto',
+              touchAction: 'manipulation'
+            }}
+          />
         )}
 
         {/* フロートヘルプカード */}
@@ -739,7 +760,16 @@ export default function Home() {
                     {group.words.map((word, wIdx) => (
                       <button
                         key={wIdx}
-                        onClick={() => handleWordClick(word)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleWordClick(word);
+                        }}
+                        onTouchStart={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleWordClick(word);
+                        }}
                         style={{
                           background: 'white',
                           padding: '0.5rem',
@@ -751,7 +781,11 @@ export default function Home() {
                           justifyContent: 'center',
                           textAlign: 'center',
                           border: 'none',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          pointerEvents: 'auto',
+                          touchAction: 'manipulation',
+                          position: 'relative',
+                          zIndex: 2
                         }}
                       >
                         <strong style={{ fontSize: isMobile ? '1.25rem' : '1.875rem' }}>
@@ -796,7 +830,16 @@ export default function Home() {
               {currentWords.map((word, idx) => (
                 <button
                   key={idx}
-                  onClick={() => handleWordClick(word)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleWordClick(word);
+                  }}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleWordClick(word);
+                  }}
                   style={{
                     background: 'white',
                     padding: '0.5rem',
@@ -809,7 +852,11 @@ export default function Home() {
                     justifyContent: 'center',
                     textAlign: 'center',
                     border: 'none',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    pointerEvents: 'auto',
+                    touchAction: 'manipulation',
+                    position: 'relative',
+                    zIndex: 2
                   }}
                 >
                   <strong style={{ fontSize: isMobile ? '1.5rem' : '1.875rem' }}>
@@ -934,7 +981,16 @@ export default function Home() {
                 {categories.map((category) => (
                   <button
                     key={category.id}
-                    onClick={() => setSelectedCategory(category.id)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelectedCategory(category.id);
+                    }}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelectedCategory(category.id);
+                    }}
                     style={{
                       padding: '0.5rem',
                       textAlign: 'left',
@@ -942,7 +998,11 @@ export default function Home() {
                       backgroundColor: selectedCategory === category.id ? '#e5e7eb' : 'transparent',
                       border: 'none',
                       cursor: 'pointer',
-                      fontSize: '1rem'
+                      fontSize: '1rem',
+                      pointerEvents: 'auto',
+                      touchAction: 'manipulation',
+                      position: 'relative',
+                      zIndex: 2
                     }}
                   >
                     <span dangerouslySetInnerHTML={{ __html: category.name.replace(/\n/g, '<br>') }} />
@@ -1059,7 +1119,11 @@ export default function Home() {
               {categories.map((category) => (
                 <button
                   key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSelectedCategory(category.id);
+                  }}
                   style={{
                     padding: '0.5rem',
                     textAlign: 'left',
@@ -1067,7 +1131,11 @@ export default function Home() {
                     backgroundColor: selectedCategory === category.id ? '#e5e7eb' : 'transparent',
                     border: 'none',
                     cursor: 'pointer',
-                    fontSize: '1.5rem'
+                    fontSize: '1.5rem',
+                    pointerEvents: 'auto',
+                    touchAction: 'manipulation',
+                    position: 'relative',
+                    zIndex: 2
                   }}
                   onMouseEnter={(e) => {
                     if (selectedCategory !== category.id) {
