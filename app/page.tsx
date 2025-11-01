@@ -398,7 +398,8 @@ export default function Home() {
                 borderTop: '1px solid #e5e7eb',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem'
+                justifyContent: 'center',
+                gap: '0.75rem'
               }}>
                 <input
                   type="checkbox"
@@ -406,17 +407,19 @@ export default function Home() {
                   checked={dontShowHelpAgain}
                   onChange={(e) => handleToggleDontShowHelp(e.target.checked)}
                   style={{
-                    width: '1rem',
-                    height: '1rem',
-                    cursor: 'pointer'
+                    width: isMobile ? '1.5rem' : '1.25rem',
+                    height: isMobile ? '1.5rem' : '1.25rem',
+                    cursor: 'pointer',
+                    flexShrink: 0
                   }}
                 />
                 <label
                   htmlFor="dontShowHelpAgain"
                   style={{
-                    fontSize: isMobile ? '0.8125rem' : '0.875rem',
+                    fontSize: isMobile ? '1rem' : '1rem',
                     cursor: 'pointer',
-                    userSelect: 'none'
+                    userSelect: 'none',
+                    fontWeight: '500'
                   }}
                 >
                   ヘルプを表示しない
