@@ -336,7 +336,8 @@ export default function Home() {
               <h3 style={{
                 fontSize: isMobile ? '1rem' : '1.125rem',
                 fontWeight: 'bold',
-                margin: 0
+                margin: 0,
+                flex: 1
               }}>
                 ヘルプ
               </h3>
@@ -345,12 +346,19 @@ export default function Home() {
                 style={{
                   background: 'none',
                   border: 'none',
-                  fontSize: '1.5rem',
+                  fontSize: isMobile ? '2rem' : '1.75rem',
                   cursor: 'pointer',
                   color: '#6b7280',
-                  padding: 0,
+                  padding: isMobile ? '0.5rem' : '0.25rem',
                   marginLeft: '1rem',
-                  lineHeight: 1
+                  lineHeight: 1,
+                  width: isMobile ? '2.5rem' : '2rem',
+                  height: isMobile ? '2.5rem' : '2rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  touchAction: 'manipulation'
                 }}
               >
                 ×
@@ -447,7 +455,7 @@ export default function Home() {
                     margin: '0 0 0.25rem 0' 
                   }}>
                     スラング式カントン語音れん
-                  </h1>
+          </h1>
                   <p style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: '#6b7280', margin: 0 }}>
                     粤ピン/スラング式カタカナ/音声検索
                   </p>
@@ -925,8 +933,8 @@ export default function Home() {
                   alt="スラング先生ロゴ"
                   style={{ height: 'auto', maxWidth: '100%' }}
                 />
-              </a>
-            </div>
+          </a>
+        </div>
 
             {/* ジャンル分け */}
             <h3 style={{ 
