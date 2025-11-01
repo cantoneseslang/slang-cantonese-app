@@ -832,6 +832,16 @@ export default function Home() {
             {/* オーバーレイ */}
             {isMenuOpen && (
               <div 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsMenuOpen(false);
+                }}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsMenuOpen(false);
+                }}
                 style={{
                   position: 'fixed',
                   top: 0,
@@ -839,10 +849,11 @@ export default function Home() {
                   right: 0,
                   bottom: 0,
                   backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                  zIndex: 998,
-                  transition: 'opacity 0.3s ease'
+                  zIndex: 9998,
+                  transition: 'opacity 0.3s ease',
+                  pointerEvents: 'auto',
+                  touchAction: 'manipulation'
                 }}
-                onClick={() => setIsMenuOpen(false)}
               />
             )}
             {/* サイドバー */}
@@ -857,10 +868,11 @@ export default function Home() {
                 maxWidth: '300px',
                 backgroundColor: 'white',
                 boxShadow: '-2px 0 8px rgba(0,0,0,0.2)',
-                zIndex: 999,
+                zIndex: 9999,
                 transition: 'right 0.3s ease',
                 overflowY: 'auto',
-                padding: '1rem'
+                padding: '1rem',
+                pointerEvents: 'auto'
               }}
             >
               {/* ログアウトボタン（モバイル） */}
@@ -954,25 +966,37 @@ export default function Home() {
 
             {/* フロートボタン */}
             <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsMenuOpen(!isMenuOpen);
+              }}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsMenuOpen(!isMenuOpen);
+              }}
               style={{
                 position: 'fixed',
                 right: '10px',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                width: '48px',
-                height: '48px',
+                width: '56px',
+                height: '56px',
                 borderRadius: '50%',
                 backgroundColor: '#6366f1',
                 color: 'white',
                 border: 'none',
                 cursor: 'pointer',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                zIndex: 997,
+                zIndex: 9998,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '24px'
+                fontSize: '28px',
+                pointerEvents: 'auto',
+                touchAction: 'manipulation',
+                userSelect: 'none'
               }}
             >
               ≡
