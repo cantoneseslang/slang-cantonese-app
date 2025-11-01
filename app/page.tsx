@@ -321,9 +321,10 @@ export default function Home() {
             padding: isMobile ? '1rem' : '1.5rem',
             borderRadius: '8px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            zIndex: 1001,
+            zIndex: 9999,
             fontSize: isMobile ? '0.875rem' : '0.9375rem',
-            lineHeight: '1.75'
+            lineHeight: '1.75',
+            display: 'block'
           }}>
             {/* 閉じるボタン */}
             <div style={{
