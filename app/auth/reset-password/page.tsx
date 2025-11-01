@@ -90,11 +90,19 @@ export default function ResetPasswordPage() {
         <h1 style={{
           fontSize: '1.5rem',
           fontWeight: 'bold',
-          marginBottom: '1rem',
+          marginBottom: '0.75rem',
           textAlign: 'center'
         }}>
           パスワード再設定
         </h1>
+        <p style={{
+          fontSize: '0.875rem',
+          color: '#6b7280',
+          marginBottom: '2rem',
+          textAlign: 'center'
+        }}>
+          新しいパスワードを設定してください
+        </p>
 
         {error && (
           <div style={{
@@ -153,7 +161,8 @@ export default function ResetPasswordPage() {
                 padding: '0.75rem',
                 border: passwordError ? '1px solid #ef4444' : '1px solid #d1d5db',
                 borderRadius: '6px',
-                fontSize: '1rem'
+                fontSize: '1rem',
+                boxSizing: 'border-box'
               }}
               placeholder="6文字以上（英文字・数字・記号の組み合わせ）"
               minLength={6}
@@ -198,7 +207,8 @@ export default function ResetPasswordPage() {
                 padding: '0.75rem',
                 border: password && confirmPassword && password !== confirmPassword ? '1px solid #ef4444' : '1px solid #d1d5db',
                 borderRadius: '6px',
-                fontSize: '1rem'
+                fontSize: '1rem',
+                boxSizing: 'border-box'
               }}
               placeholder="新しいパスワードを再入力"
             />
@@ -234,7 +244,8 @@ export default function ResetPasswordPage() {
               borderRadius: '6px',
               fontSize: '1rem',
               fontWeight: 'bold',
-              cursor: loading ? 'not-allowed' : 'pointer'
+              cursor: loading ? 'not-allowed' : 'pointer',
+              marginBottom: '1rem'
             }}
           >
             {loading ? '更新中...' : 'パスワードを更新'}
