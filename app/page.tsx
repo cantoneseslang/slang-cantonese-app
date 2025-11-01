@@ -57,8 +57,8 @@ export default function Home() {
   // 学習モードの状態（デフォルト: false = ノーマルモード）
   const [isLearningMode, setIsLearningMode] = useState(false);
   
-  // ノーマルモードでアクティブな単語のID（緑色のボタン）
-  const [activeWordIds, setActiveWordIds] = useState<Set<string>>(new Set());
+  // ノーマルモードでアクティブな単語のID（緑色のボタン）- 1つだけアクティブ
+  const [activeWordId, setActiveWordId] = useState<string | null>(null);
 
   // 音声の初期化（Web Audio APIで100%音量）
   useEffect(() => {
@@ -95,6 +95,8 @@ export default function Home() {
   // 学習モードのオン/オフを切り替える
   const toggleLearningMode = () => {
     setIsLearningMode(!isLearningMode);
+    // モードを切り替えたらアクティブな単語をクリア
+    setActiveWordId(null);
   };
 
   // 振動とクリック音の関数
@@ -213,10 +215,11 @@ export default function Home() {
       if (category) {
         setCurrentCategory(category);
         setCurrentWords(category.words || []);
-        // カテゴリーを切り替えた時に検索結果をクリア
+        // カテゴリーを切り替えた時に検索結果とアクティブな単語をクリア
         setResult(null);
         setError(null);
         setSearchQuery('');
+        setActiveWordId(null);
         // カテゴリーを選択したらメニューを閉じる
         if (isMobile) {
           setIsMenuOpen(false);
@@ -318,16 +321,11 @@ export default function Home() {
       setSearchQuery(word.chinese);
       await handleSearch(word.chinese);
     } else {
-      // ノーマルモード：単語のみの音声を再生、ボタンを緑色にする
+      // ノーマルモード：単語のみの音声を再生、ボタンを緑色にする（1つだけ）
       const wordId = word.chinese;
       
-      // 既にアクティブな場合は音声を再生
-      // 新規の場合はアクティブにして音声を生成・再生
-      setActiveWordIds(prev => {
-        const newSet = new Set(prev);
-        newSet.add(wordId);
-        return newSet;
-      });
+      // 前のボタンの緑を消して、新しいボタンだけを緑にする
+      setActiveWordId(wordId);
       
       // 単語の音声のみを生成して再生
       try {
@@ -345,11 +343,21 @@ export default function Home() {
           
           // 音声を自動再生
           if (audioRef.current && audioBase64) {
+            // 既存の音声を停止
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+            
+            // 新しい音声をセット
             audioRef.current.src = `data:audio/mp3;base64,${audioBase64}`;
             audioRef.current.playbackRate = 1.0; // ノーマルモードでは速度固定
-            audioRef.current.play().catch(e => {
-              console.log('Audio playback failed:', e);
-            });
+            
+            // 再生を試みる
+            const playPromise = audioRef.current.play();
+            if (playPromise !== undefined) {
+              playPromise.catch(e => {
+                console.log('Audio playback failed:', e);
+              });
+            }
           }
         }
       } catch (err) {
@@ -1056,7 +1064,7 @@ export default function Home() {
               marginBottom: '1.5rem'
             }}>
               {currentWords.map((word, idx) => {
-                const isActive = !isLearningMode && activeWordIds.has(word.chinese);
+                const isActive = !isLearningMode && activeWordId === word.chinese;
                 return (
                 <button
                   key={idx}
