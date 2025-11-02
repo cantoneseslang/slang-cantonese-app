@@ -957,6 +957,11 @@ export default function Home() {
       source.start(0);
     }
 
+    // ノーマルモードの場合、緑色に変える
+    if (!isLearningMode) {
+      setActiveWordId(text);
+    }
+
     // 音声再生
     try {
       const audioResponse = await fetch('/api/generate-speech', {
@@ -1061,6 +1066,27 @@ export default function Home() {
       }
     }
   };
+
+  // 音声ボタンのスタイル更新（activeWordIdが変わった時）
+  useEffect(() => {
+    if (currentCategory?.id === 'pronunciation') {
+      // introContent内のボタンを探す（すべての.tone-audio-btn）
+      const toneButtons = document.querySelectorAll('.tone-audio-btn');
+      toneButtons.forEach((btn) => {
+        const text = btn.getAttribute('data-text');
+        if (!text) return;
+        
+        const isActive = !isLearningMode && activeWordId === text;
+        if (isActive) {
+          (btn as HTMLElement).style.background = 'linear-gradient(145deg, #10b981, #059669)';
+          (btn as HTMLElement).style.color = 'white';
+        } else {
+          (btn as HTMLElement).style.background = '#ffffff';
+          (btn as HTMLElement).style.color = '#111827';
+        }
+      });
+    }
+  }, [activeWordId, isLearningMode, currentCategory]);
 
   // 単語音声再生速度変更
   useEffect(() => {
