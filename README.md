@@ -72,6 +72,17 @@ http://localhost:3000/admin
 - 会員種別の変更（ブロンズ/シルバー/ゴールド）
 - 統計情報の表示
 
+## 🇨🇳 中国からのアクセス対策
+
+Vercelは中国からアクセスできない場合があります。
+
+**推奨解決策: Cloudflare経由のプロキシ**
+1. カスタムドメインを取得
+2. Cloudflareにドメインを追加（Proxied設定）
+3. Vercelでカスタムドメインを設定
+
+詳細は `/docs/vercel-china-setup.md` を参照してください。
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
