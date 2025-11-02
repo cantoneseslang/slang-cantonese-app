@@ -8,6 +8,10 @@
         "name": "練習①",
         "words": [
           {
+            "chinese": "<strong>1-6声</strong>",
+            "japanese": ""
+          },
+          {
             "chinese": "詩",
             "japanese": "si1"
           },
@@ -32,6 +36,10 @@
             "japanese": "si6"
           },
           {
+            "chinese": "<strong>入声(p,t,k)</strong>",
+            "japanese": ""
+          },
+          {
             "chinese": "濕",
             "japanese": "sap1"
           },
@@ -44,6 +52,10 @@
             "japanese": "sek3"
           },
           {
+            "chinese": "<strong>連続発音</strong>",
+            "japanese": ""
+          },
+          {
             "chinese": "詩、史、試、時、市、事、濕、失、噻",
             "japanese": "si1、si2、si3、si4、si5、si6、sap1、sat1、sek3"
           }
@@ -52,6 +64,10 @@
       {
         "name": "練習②",
         "words": [
+          {
+            "chinese": "<strong>1-6声</strong>",
+            "japanese": ""
+          },
           {
             "chinese": "夫",
             "japanese": "fu1"
@@ -77,19 +93,27 @@
             "japanese": "fu6"
           },
           {
-            "chinese": "濕",
-            "japanese": "sap1"
+            "chinese": "<strong>入声(p,t,k)</strong>",
+            "japanese": ""
           },
           {
-            "chinese": "筆",
-            "japanese": "bat1"
+            "chinese": "10",
+            "japanese": "sap6"
           },
           {
-            "chinese": "黑",
-            "japanese": "hak1"
+            "chinese": "7",
+            "japanese": "cat1"
           },
           {
-            "chinese": "夫、苦、富、乎、婦、父、濕、筆、黑",
+            "chinese": "6",
+            "japanese": "luk6"
+          },
+          {
+            "chinese": "<strong>連続発音</strong>",
+            "japanese": ""
+          },
+          {
+            "chinese": "3、9、4、同、5、2、10、7、6",
             "japanese": "fu1、fu2、fu3、fu4、fu5、fu6、sap1、bat1、hak1"
           }
         ]
@@ -188,6 +212,10 @@
         "name": "練習⑤",
         "words": [
           {
+            "chinese": "<strong>1-6声</strong>",
+            "japanese": ""
+          },
+          {
             "chinese": "香",
             "japanese": "hoeng1"
           },
@@ -212,6 +240,10 @@
             "japanese": "lai6"
           },
           {
+            "chinese": "<strong>入声(p,t,k)</strong>",
+            "japanese": ""
+          },
+          {
             "chinese": "急",
             "japanese": "gap1"
           },
@@ -224,6 +256,10 @@
             "japanese": "zoek3"
           },
           {
+            "chinese": "<strong>連続発音</strong>",
+            "japanese": ""
+          },
+          {
             "chinese": "香、港、腳、唔、美、麗、急、襪、着",
             "japanese": "hoeng1、gong2、goek3、m4、mei5、lai6、gap1、mat6、zoek3"
           }
@@ -232,6 +268,10 @@
       {
         "name": "練習⑥",
         "words": [
+          {
+            "chinese": "<strong>1-6声</strong>",
+            "japanese": ""
+          },
           {
             "chinese": "風",
             "japanese": "fung1"
@@ -257,6 +297,10 @@
             "japanese": "seon6"
           },
           {
+            "chinese": "<strong>入声(p,t,k)</strong>",
+            "japanese": ""
+          },
+          {
             "chinese": "劫",
             "japanese": "gip3"
           },
@@ -269,14 +313,22 @@
             "japanese": "cek3"
           },
           {
+            "chinese": "<strong>連続発音</strong>",
+            "japanese": ""
+          },
+          {
             "chinese": "風、水、到、時、我、順、劫、發、赤",
             "japanese": "fung1、seoi2、dou3、si4、ngo5、seon6、gip3、faat3、cek3"
           }
         ]
       },
       {
-        "name": "練習⑦",
+        "name": "おまけ",
         "words": [
+          {
+            "chinese": "<strong>連続発音</strong>",
+            "japanese": ""
+          },
           {
             "chinese": "三碗細牛腩麵不吃辣",
             "japanese": "saam1 wun2 sai3 ngau4 naai5 min6 bat1 hek3 laat6"
