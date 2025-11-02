@@ -67,6 +67,11 @@ export default function Home() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
+  
+  // 会員種別の状態
+  const [membershipType, setMembershipType] = useState<'free' | 'subscription' | 'lifetime'>('free');
+  const [showPricingModal, setShowPricingModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<'subscription' | 'lifetime' | null>(null);
 
   // 音声の初期化（Web Audio APIで100%音量）
   useEffect(() => {
@@ -107,6 +112,13 @@ export default function Home() {
     setActiveWordId(null);
   };
 
+  // ユーザーの会員種別を取得
+  useEffect(() => {
+    if (user?.user_metadata?.membership_type) {
+      setMembershipType(user.user_metadata.membership_type);
+    }
+  }, [user]);
+
   // パスワード変更処理
   const handlePasswordChange = async () => {
     setPasswordError(null);
@@ -144,6 +156,77 @@ export default function Home() {
       }, 2000);
     } catch (err: any) {
       setPasswordError(err.message || 'パスワード変更に失敗しました');
+    }
+  };
+
+  // 会員種別のラベル取得
+  const getMembershipLabel = (type: 'free' | 'subscription' | 'lifetime') => {
+    switch (type) {
+      case 'free':
+        return '普通会員';
+      case 'subscription':
+        return 'サブスク会員';
+      case 'lifetime':
+        return '永久買い切り会員';
+      default:
+        return '普通会員';
+    }
+  };
+
+  // 会員種別のアイコン取得
+  const getMembershipIcon = (type: 'free' | 'subscription' | 'lifetime') => {
+    switch (type) {
+      case 'free':
+        return '👤';
+      case 'subscription':
+        return '⭐';
+      case 'lifetime':
+        return '👑';
+      default:
+        return '👤';
+    }
+  };
+
+  // 会員種別の切り替え処理
+  const handleMembershipChange = async (newType: 'free' | 'subscription' | 'lifetime') => {
+    // 普通会員への変更は不可
+    if (newType === 'free') {
+      return;
+    }
+
+    // 現在の会員種別と同じ場合は何もしない
+    if (membershipType === newType) {
+      return;
+    }
+
+    // すでに購入済みの場合はそのまま変更
+    if (membershipType === 'lifetime' || (membershipType === 'subscription' && newType === 'subscription')) {
+      return;
+    }
+
+    // 未購入の場合は料金モーダルを表示
+    setSelectedPlan(newType);
+    setShowPricingModal(true);
+  };
+
+  // Stripe決済処理
+  const handleStripeCheckout = async (plan: 'subscription' | 'lifetime') => {
+    // TODO: Stripe統合
+    // 現在はデモ用にSupabaseのuser_metadataを更新
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          membership_type: plan
+        }
+      });
+
+      if (error) throw error;
+
+      setMembershipType(plan);
+      setShowPricingModal(false);
+      alert('会員種別が更新されました！');
+    } catch (err: any) {
+      alert('エラーが発生しました: ' + err.message);
     }
   };
 
@@ -1670,6 +1753,159 @@ export default function Home() {
 
         </div>
 
+        {/* 料金モーダル */}
+        {showPricingModal && selectedPlan && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10001,
+            padding: '1rem'
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '500px',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              {/* ヘッダー */}
+              <div style={{
+                padding: '1.5rem',
+                borderBottom: '1px solid #e5e7eb',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: selectedPlan === 'subscription' 
+                  ? 'linear-gradient(135deg, #fef3c7 0%, #fbbf24 100%)' 
+                  : 'linear-gradient(135deg, #ede9fe 0%, #a78bfa 100%)'
+              }}>
+                <h2 style={{
+                  fontSize: '1.5rem',
+                  fontWeight: 'bold',
+                  margin: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <span>{selectedPlan === 'subscription' ? '⭐' : '👑'}</span>
+                  <span>{selectedPlan === 'subscription' ? 'サブスク会員' : '永久買い切り会員'}</span>
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowPricingModal(false);
+                    setSelectedPlan(null);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '1.5rem',
+                    cursor: 'pointer',
+                    color: '#6b7280'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* コンテンツ */}
+              <div style={{ padding: '1.5rem' }}>
+                {/* 価格 */}
+                <div style={{
+                  textAlign: 'center',
+                  marginBottom: '2rem'
+                }}>
+                  <div style={{
+                    fontSize: '3rem',
+                    fontWeight: 'bold',
+                    color: selectedPlan === 'subscription' ? '#f59e0b' : '#8b5cf6'
+                  }}>
+                    {selectedPlan === 'subscription' ? '¥980' : '¥9,800'}
+                  </div>
+                  <div style={{
+                    fontSize: '1rem',
+                    color: '#6b7280',
+                    marginTop: '0.5rem'
+                  }}>
+                    {selectedPlan === 'subscription' ? '月額（自動更新）' : '買い切り（永久使用）'}
+                  </div>
+                </div>
+
+                {/* 特典 */}
+                <div style={{ marginBottom: '2rem' }}>
+                  <h3 style={{
+                    fontSize: '1.125rem',
+                    fontWeight: '600',
+                    marginBottom: '1rem',
+                    color: '#374151'
+                  }}>特典</h3>
+                  <ul style={{
+                    listStyle: 'none',
+                    padding: 0,
+                    margin: 0
+                  }}>
+                    {['全カテゴリーの単語へアクセス', '例文音声の速度調整機能', '広告なし', 'オフライン使用可能'].map((benefit, idx) => (
+                      <li key={idx} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        padding: '0.75rem',
+                        marginBottom: '0.5rem',
+                        backgroundColor: '#f9fafb',
+                        borderRadius: '8px'
+                      }}>
+                        <span style={{ color: '#10b981', fontSize: '1.25rem' }}>✓</span>
+                        <span style={{ color: '#1f2937' }}>{benefit}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* ボタン */}
+                <button
+                  onClick={() => handleStripeCheckout(selectedPlan)}
+                  style={{
+                    width: '100%',
+                    padding: '1rem',
+                    backgroundColor: selectedPlan === 'subscription' ? '#f59e0b' : '#8b5cf6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '1.125rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: selectedPlan === 'subscription' 
+                      ? '0 4px 12px rgba(245,158,11,0.4)' 
+                      : '0 4px 12px rgba(139,92,246,0.4)'
+                  }}
+                >
+                  今すぐアップグレード
+                </button>
+
+                <div style={{
+                  marginTop: '1rem',
+                  textAlign: 'center',
+                  fontSize: '0.75rem',
+                  color: '#9ca3af'
+                }}>
+                  {selectedPlan === 'subscription' 
+                    ? 'いつでもキャンセル可能です' 
+                    : '一度のお支払いで永久に使用できます'}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 設定画面モーダル */}
         {showSettings && user && (
           <div style={{
@@ -1968,21 +2204,113 @@ export default function Home() {
                       fontSize: '0.875rem',
                       fontWeight: '600',
                       color: '#6b7280',
-                      marginBottom: '0.5rem'
+                      marginBottom: '0.75rem'
                     }}>会員種別</label>
+                    
+                    {/* スライドトグル */}
                     <div style={{
-                      padding: '0.75rem',
-                      backgroundColor: '#f9fafb',
-                      borderRadius: '8px',
-                      border: '1px solid #e5e7eb',
-                      fontSize: '1rem',
-                      color: '#1f2937',
                       display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
+                      gap: '0.5rem',
+                      marginBottom: '1rem'
                     }}>
-                      <span>👤</span>
-                      <span>普通会員</span>
+                      {/* 普通会員 */}
+                      <button
+                        onClick={() => handleMembershipChange('free')}
+                        style={{
+                          flex: 1,
+                          padding: '1rem',
+                          borderRadius: '12px',
+                          border: membershipType === 'free' ? '2px solid #6b7280' : '2px solid #e5e7eb',
+                          backgroundColor: membershipType === 'free' ? '#f9fafb' : 'white',
+                          cursor: 'default',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <span style={{ fontSize: '1.5rem' }}>{getMembershipIcon('free')}</span>
+                        <span style={{
+                          fontSize: '0.875rem',
+                          fontWeight: membershipType === 'free' ? '600' : '400',
+                          color: membershipType === 'free' ? '#1f2937' : '#6b7280'
+                        }}>
+                          {getMembershipLabel('free')}
+                        </span>
+                      </button>
+
+                      {/* サブスク会員 */}
+                      <button
+                        onClick={() => handleMembershipChange('subscription')}
+                        style={{
+                          flex: 1,
+                          padding: '1rem',
+                          borderRadius: '12px',
+                          border: membershipType === 'subscription' ? '2px solid #f59e0b' : '2px solid #e5e7eb',
+                          backgroundColor: membershipType === 'subscription' ? '#fef3c7' : 'white',
+                          cursor: membershipType === 'subscription' ? 'default' : 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <span style={{ fontSize: '1.5rem' }}>{getMembershipIcon('subscription')}</span>
+                        <span style={{
+                          fontSize: '0.875rem',
+                          fontWeight: membershipType === 'subscription' ? '600' : '400',
+                          color: membershipType === 'subscription' ? '#1f2937' : '#6b7280'
+                        }}>
+                          {getMembershipLabel('subscription')}
+                        </span>
+                        {membershipType !== 'subscription' && membershipType !== 'lifetime' && (
+                          <span style={{
+                            fontSize: '0.75rem',
+                            color: '#f59e0b',
+                            fontWeight: '600'
+                          }}>
+                            ¥980/月
+                          </span>
+                        )}
+                      </button>
+
+                      {/* 永久買い切り会員 */}
+                      <button
+                        onClick={() => handleMembershipChange('lifetime')}
+                        style={{
+                          flex: 1,
+                          padding: '1rem',
+                          borderRadius: '12px',
+                          border: membershipType === 'lifetime' ? '2px solid #8b5cf6' : '2px solid #e5e7eb',
+                          backgroundColor: membershipType === 'lifetime' ? '#ede9fe' : 'white',
+                          cursor: membershipType === 'lifetime' ? 'default' : 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <span style={{ fontSize: '1.5rem' }}>{getMembershipIcon('lifetime')}</span>
+                        <span style={{
+                          fontSize: '0.875rem',
+                          fontWeight: membershipType === 'lifetime' ? '600' : '400',
+                          color: membershipType === 'lifetime' ? '#1f2937' : '#6b7280'
+                        }}>
+                          {getMembershipLabel('lifetime')}
+                        </span>
+                        {membershipType !== 'lifetime' && (
+                          <span style={{
+                            fontSize: '0.75rem',
+                            color: '#8b5cf6',
+                            fontWeight: '600'
+                          }}>
+                            ¥9,800
+                          </span>
+                        )}
+                      </button>
                     </div>
                   </div>
                 </div>
