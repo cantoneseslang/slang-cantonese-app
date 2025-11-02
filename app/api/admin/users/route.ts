@@ -76,17 +76,28 @@ export async function GET() {
 
       if (listError) {
         console.error('Supabase接続エラー:', listError);
+        console.error('サービスロールキーの形式:', serviceRoleKey?.substring(0, 20) + '...');
+        
+        // サービスロールキーの形式チェック
+        const isValidFormat = serviceRoleKey?.startsWith('eyJ') || serviceRoleKey?.length > 100;
+        const errorDetails = listError.message || 'Unknown error';
+        
         return NextResponse.json({
           success: false,
           error: 'ユーザー一覧の取得に失敗しました',
-          details: listError.message,
+          details: errorDetails,
           code: listError.status,
           debug: {
             hasUrl: !!supabaseUrl,
             hasServiceKey: !!serviceRoleKey,
             urlLength: supabaseUrl?.length,
-            keyLength: serviceRoleKey?.length
-          }
+            keyLength: serviceRoleKey?.length,
+            keyPrefix: serviceRoleKey?.substring(0, 10),
+            isValidFormat: isValidFormat,
+            errorCode: listError.status,
+            fullError: process.env.NODE_ENV === 'development' ? JSON.stringify(listError) : undefined
+          },
+          help: !isValidFormat ? 'サービスロールキーは "eyJ" で始まるJWTトークン形式である必要があります。Supabaseダッシュボードの Settings > API から正しいキーを取得してください。' : undefined
         }, { status: 500 });
       }
 

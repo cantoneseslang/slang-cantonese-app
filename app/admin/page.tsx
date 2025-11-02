@@ -78,7 +78,8 @@ export default function AdminPage() {
         const errorMsg = data.error || '不明なエラー';
         const details = data.details ? `\n詳細: ${data.details}` : '';
         const debug = data.debug ? `\nデバッグ情報: ${JSON.stringify(data.debug, null, 2)}` : '';
-        alert(`❌ ユーザー情報の取得に失敗しました\n\n${errorMsg}${details}${debug}`);
+        const help = data.help ? `\n\n💡 解決方法:\n${data.help}` : '';
+        alert(`❌ ユーザー情報の取得に失敗しました\n\n${errorMsg}${details}${debug}${help}`);
       }
     } catch (error: any) {
       console.error('ユーザー取得エラー:', error);
