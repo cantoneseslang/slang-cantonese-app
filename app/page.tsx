@@ -2670,8 +2670,6 @@ export default function Home() {
                     }
                   }}
                   onTouchStart={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
                     handleLongPressStart(word, currentCategory?.id || '', e);
                   }}
                   onTouchEnd={handleLongPressEnd}
