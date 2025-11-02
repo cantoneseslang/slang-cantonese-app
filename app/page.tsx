@@ -67,6 +67,8 @@ export default function Home() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   // 会員種別の状態
   const [membershipType, setMembershipType] = useState<'free' | 'subscription' | 'lifetime'>('free');
@@ -121,57 +123,96 @@ export default function Home() {
 
   // パスワード変更処理
   const handlePasswordChange = async () => {
-    console.log('パスワード変更開始');
+    console.log('=== パスワード変更開始 ===');
+    console.log('新しいパスワード:', newPassword ? '入力あり' : '入力なし');
+    console.log('確認パスワード:', confirmPassword ? '入力あり' : '入力なし');
+    
     setPasswordError(null);
     setPasswordSuccess(false);
 
+    // 入力チェック
+    if (!newPassword || !confirmPassword) {
+      const errorMsg = 'パスワードを入力してください';
+      console.log('エラー:', errorMsg);
+      setPasswordError(errorMsg);
+      alert(errorMsg);
+      return;
+    }
+
     // パスワードバリデーション
     if (newPassword.length < 6) {
-      console.log('エラー: パスワードが短すぎる');
-      setPasswordError('パスワードは6文字以上である必要があります');
+      const errorMsg = 'パスワードは6文字以上である必要があります';
+      console.log('エラー:', errorMsg);
+      setPasswordError(errorMsg);
+      alert(errorMsg);
       return;
     }
 
     if (!/(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*])/.test(newPassword)) {
-      console.log('エラー: パスワードの形式が不正');
-      setPasswordError('パスワードは英文字、数字、記号の組み合わせである必要があります');
+      const errorMsg = 'パスワードは英文字、数字、記号の組み合わせである必要があります';
+      console.log('エラー:', errorMsg);
+      setPasswordError(errorMsg);
+      alert(errorMsg);
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      console.log('エラー: パスワードが一致しない');
-      setPasswordError('パスワードが一致しません');
+      const errorMsg = 'パスワードが一致しません';
+      console.log('エラー:', errorMsg);
+      setPasswordError(errorMsg);
+      alert(errorMsg);
       return;
     }
 
     try {
-      console.log('Supabaseでパスワード更新中...');
-      const { error } = await supabase.auth.updateUser({
+      // セッション確認
+      console.log('現在のユーザー情報:', user?.email);
+      const { data: session } = await supabase.auth.getSession();
+      console.log('セッション状態:', session ? 'あり' : 'なし');
+      
+      if (!session?.session) {
+        throw new Error('ログインセッションが見つかりません。再度ログインしてください。');
+      }
+
+      console.log('Supabaseでパスワード更新を実行...');
+      const { data, error } = await supabase.auth.updateUser({
         password: newPassword
       });
 
+      console.log('Supabase応答 - data:', data);
+      console.log('Supabase応答 - error:', error);
+
       if (error) {
-        console.error('Supabaseエラー:', error);
+        console.error('Supabaseエラー詳細:', {
+          message: error.message,
+          status: error.status,
+          name: error.name
+        });
         throw error;
       }
 
-      console.log('パスワード変更成功！');
+      console.log('✅ パスワード変更成功！');
       setPasswordSuccess(true);
       setNewPassword('');
       setConfirmPassword('');
       
       // アラートで成功を通知
-      alert('パスワードが正常に変更されました！');
+      alert('✅ パスワードが正常に変更されました！');
       
       setTimeout(() => {
         setShowPasswordChange(false);
         setPasswordSuccess(false);
+        setShowNewPassword(false);
+        setShowConfirmPassword(false);
       }, 2000);
     } catch (err: any) {
-      console.error('パスワード変更エラー:', err);
-      setPasswordError(err.message || 'パスワード変更に失敗しました');
-      alert('エラー: ' + (err.message || 'パスワード変更に失敗しました'));
+      console.error('❌ パスワード変更エラー:', err);
+      const errorMsg = err.message || 'パスワード変更に失敗しました';
+      setPasswordError(errorMsg);
+      alert('❌ エラー: ' + errorMsg);
     }
+    
+    console.log('=== パスワード変更処理終了 ===');
   };
 
   // 会員種別のラベル取得
@@ -2172,19 +2213,41 @@ export default function Home() {
                           color: '#374151',
                           marginBottom: '0.5rem'
                         }}>新しいパスワード</label>
-                        <input
-                          type="password"
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '0.75rem',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '8px',
-                            fontSize: '1rem'
-                          }}
-                          placeholder="6文字以上、英数字記号"
-                        />
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            type={showNewPassword ? 'text' : 'password'}
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '0.75rem',
+                              paddingRight: '3rem',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '8px',
+                              fontSize: '1rem',
+                              boxSizing: 'border-box'
+                            }}
+                            placeholder="6文字以上、英数字記号"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                            style={{
+                              position: 'absolute',
+                              right: '0.75rem',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: '1.25rem',
+                              color: '#6b7280',
+                              padding: '0.25rem'
+                            }}
+                          >
+                            {showNewPassword ? '🙈' : '👁️'}
+                          </button>
+                        </div>
                       </div>
 
                       <div style={{ marginBottom: '1rem' }}>
@@ -2195,19 +2258,41 @@ export default function Home() {
                           color: '#374151',
                           marginBottom: '0.5rem'
                         }}>新しいパスワード（確認）</label>
-                        <input
-                          type="password"
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '0.75rem',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '8px',
-                            fontSize: '1rem'
-                          }}
-                          placeholder="もう一度入力"
-                        />
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '0.75rem',
+                              paddingRight: '3rem',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '8px',
+                              fontSize: '1rem',
+                              boxSizing: 'border-box'
+                            }}
+                            placeholder="もう一度入力"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            style={{
+                              position: 'absolute',
+                              right: '0.75rem',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: '1.25rem',
+                              color: '#6b7280',
+                              padding: '0.25rem'
+                            }}
+                          >
+                            {showConfirmPassword ? '🙈' : '👁️'}
+                          </button>
+                        </div>
                       </div>
 
                       <div style={{
@@ -2215,7 +2300,13 @@ export default function Home() {
                         gap: '0.5rem'
                       }}>
                         <button
-                          onClick={handlePasswordChange}
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('🔘 変更するボタンがクリックされました');
+                            handlePasswordChange();
+                          }}
                           style={{
                             flex: 1,
                             padding: '0.75rem',
@@ -2231,11 +2322,17 @@ export default function Home() {
                           変更する
                         </button>
                         <button
-                          onClick={() => {
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('🔘 キャンセルボタンがクリックされました');
                             setShowPasswordChange(false);
                             setPasswordError(null);
                             setNewPassword('');
                             setConfirmPassword('');
+                            setShowNewPassword(false);
+                            setShowConfirmPassword(false);
                           }}
                           style={{
                             flex: 1,
