@@ -938,6 +938,127 @@ export default function Home() {
     }
   };
 
+  // 音声ボタンのクリックハンドラー
+  const handleToneAudioClick = async (e: Event) => {
+    const button = e.target as HTMLButtonElement;
+    const text = button.getAttribute('data-text');
+    if (!text) return;
+
+    // ハプティックフィードバック
+    if ('vibrate' in navigator) {
+      navigator.vibrate(10);
+    }
+
+    // クリック音
+    if (isClickSoundEnabled && audioContextRef.current && audioBufferRef.current) {
+      const source = audioContextRef.current.createBufferSource();
+      source.buffer = audioBufferRef.current;
+      source.connect(audioContextRef.current.destination);
+      source.start(0);
+    }
+
+    // 音声再生
+    try {
+      const audioResponse = await fetch('/api/generate-speech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
+      });
+
+      if (audioResponse.ok) {
+        const audioData = await audioResponse.json();
+        const audioBase64 = audioData.audioContent;
+
+        if (normalModeAudioRef.current && audioBase64) {
+          normalModeAudioRef.current.pause();
+          normalModeAudioRef.current.currentTime = 0;
+          normalModeAudioRef.current.src = `data:audio/mp3;base64,${audioBase64}`;
+          normalModeAudioRef.current.play();
+        }
+      }
+    } catch (err) {
+      console.error('音声再生エラー:', err);
+    }
+  };
+
+  // 連続発音ボタンのクリックハンドラー
+  const handleToneSequenceClick = async (e: Event) => {
+    const button = e.target as HTMLButtonElement;
+    const sequence = button.getAttribute('data-sequence');
+    if (!sequence) return;
+
+    // ハプティックフィードバック
+    if ('vibrate' in navigator) {
+      navigator.vibrate(10);
+    }
+
+    // クリック音
+    if (isClickSoundEnabled && audioContextRef.current && audioBufferRef.current) {
+      const source = audioContextRef.current.createBufferSource();
+      source.buffer = audioBufferRef.current;
+      source.connect(audioContextRef.current.destination);
+      source.start(0);
+    }
+
+    // 連続発音（「同」は「tung4」に変換）
+    const texts = sequence.split(',').map(t => t.trim());
+    const textMap: { [key: string]: string } = {
+      '3': '3',
+      '9': '9',
+      '4': '4',
+      '同': '同',
+      '5': '5',
+      '2': '2'
+    };
+
+    for (let i = 0; i < texts.length; i++) {
+      const text = textMap[texts[i]] || texts[i];
+      
+      try {
+        const audioResponse = await fetch('/api/generate-speech', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text }),
+        });
+
+        if (audioResponse.ok) {
+          const audioData = await audioResponse.json();
+          const audioBase64 = audioData.audioContent;
+
+          if (normalModeAudioRef.current && audioBase64) {
+            normalModeAudioRef.current.pause();
+            normalModeAudioRef.current.currentTime = 0;
+            normalModeAudioRef.current.src = `data:audio/mp3;base64,${audioBase64}`;
+            
+            // 最後の音声でない場合は、次の音声まで待つ
+            if (i < texts.length - 1) {
+              await new Promise<void>((resolve) => {
+                if (normalModeAudioRef.current) {
+                  normalModeAudioRef.current.onended = () => {
+                    resolve();
+                  };
+                  normalModeAudioRef.current.play();
+                } else {
+                  resolve();
+                }
+              });
+              // 短い間隔を追加
+              await new Promise(resolve => setTimeout(resolve, 200));
+            } else {
+              normalModeAudioRef.current.play();
+            }
+          }
+        }
+      } catch (err) {
+        console.error('音声再生エラー:', err);
+      }
+    }
+  };
+
   // 単語音声再生速度変更
   useEffect(() => {
     if (audioRef.current) {
@@ -1748,6 +1869,27 @@ export default function Home() {
                   fontSize: '0.875rem'
                 } : {}}
                 className={isMobile ? 'intro-content-mobile' : ''}
+                ref={(el) => {
+                  if (el && currentCategory.id === 'pronunciation') {
+                    // 音声ボタンのイベントリスナーを設定
+                    const toneButtons = el.querySelectorAll('.tone-audio-btn');
+                    const sequenceButton = el.querySelector('.tone-sequence-btn');
+                    
+                    // 個別音声ボタン
+                    toneButtons.forEach((btn) => {
+                      const handler = (e: Event) => handleToneAudioClick(e);
+                      btn.removeEventListener('click', handler as EventListener);
+                      btn.addEventListener('click', handler as EventListener);
+                    });
+                    
+                    // 連続発音ボタン
+                    if (sequenceButton) {
+                      const handler = (e: Event) => handleToneSequenceClick(e);
+                      sequenceButton.removeEventListener('click', handler as EventListener);
+                      sequenceButton.addEventListener('click', handler as EventListener);
+                    }
+                  }
+                }}
               />
               {currentCategory.practiceGroups.map((group, gIdx) => {
                 // 練習⑦（おまけ）の場合は連続発音のみ
