@@ -16,6 +16,11 @@ interface User {
   last_sign_in_at: string | null;
   created_at: string;
   updated_at: string | null;
+  survey_gender: string | null;
+  survey_residence: string | null;
+  survey_residence_other: string | null;
+  survey_cantonese_level: string | null;
+  survey_completed: boolean;
 }
 
 export default function AdminPage() {
@@ -348,6 +353,27 @@ export default function AdminPage() {
                       fontWeight: '600',
                       fontSize: '0.875rem',
                       color: '#374151'
+                    }}>性別</th>
+                    <th style={{
+                      padding: '0.75rem',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      fontSize: '0.875rem',
+                      color: '#374151'
+                    }}>居住地</th>
+                    <th style={{
+                      padding: '0.75rem',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      fontSize: '0.875rem',
+                      color: '#374151'
+                    }}>広東語レベル</th>
+                    <th style={{
+                      padding: '0.75rem',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      fontSize: '0.875rem',
+                      color: '#374151'
                     }}>操作</th>
                   </tr>
                 </thead>
@@ -446,6 +472,29 @@ export default function AdminPage() {
                         color: '#6b7280'
                       }}>
                         {new Date(u.created_at).toLocaleDateString('ja-JP')}
+                      </td>
+                      <td style={{
+                        padding: '0.75rem',
+                        fontSize: '0.875rem',
+                        color: u.survey_gender ? '#1f2937' : '#9ca3af'
+                      }}>
+                        {u.survey_gender || '未回答'}
+                      </td>
+                      <td style={{
+                        padding: '0.75rem',
+                        fontSize: '0.875rem',
+                        color: u.survey_residence ? '#1f2937' : '#9ca3af'
+                      }}>
+                        {u.survey_residence === '海外' 
+                          ? `海外${u.survey_residence_other ? ` (${u.survey_residence_other})` : ''}`
+                          : (u.survey_residence || '未回答')}
+                      </td>
+                      <td style={{
+                        padding: '0.75rem',
+                        fontSize: '0.875rem',
+                        color: u.survey_cantonese_level ? '#1f2937' : '#9ca3af'
+                      }}>
+                        {u.survey_cantonese_level || '未回答'}
                       </td>
                       <td style={{
                         padding: '0.75rem'

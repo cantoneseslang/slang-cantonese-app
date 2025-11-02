@@ -110,7 +110,13 @@ export async function GET() {
         has_password: !!u.identities?.find((i: any) => i.provider === 'email'),
         last_sign_in_at: u.last_sign_in_at,
         created_at: u.created_at,
-        updated_at: u.updated_at
+        updated_at: u.updated_at,
+        // アンケートデータ
+        survey_gender: u.user_metadata?.survey_gender || null,
+        survey_residence: u.user_metadata?.survey_residence || null,
+        survey_residence_other: u.user_metadata?.survey_residence_other || null,
+        survey_cantonese_level: u.user_metadata?.survey_cantonese_level || null,
+        survey_completed: u.user_metadata?.survey_completed || false
       }));
 
       return NextResponse.json({
