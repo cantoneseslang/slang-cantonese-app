@@ -2563,11 +2563,12 @@ export default function Home() {
                       }}>
                         <button
                           type="button"
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.preventDefault();
                             e.stopPropagation();
                             console.log('🔘 変更するボタンがクリックされました');
-                            handlePasswordChange();
+                            console.log('現在の入力値:', { newPassword: newPassword ? 'あり' : 'なし', confirmPassword: confirmPassword ? 'あり' : 'なし' });
+                            await handlePasswordChange();
                           }}
                           style={{
                             flex: 1,
