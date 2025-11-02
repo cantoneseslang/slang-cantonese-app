@@ -249,6 +249,22 @@ export default function Home() {
     return () => window.removeEventListener('resize', checkScroll);
   }, [categories]);
 
+  // 初期スクロール位置を設定（左側のメニューボタンを隠す）
+  useEffect(() => {
+    if (categoryScrollRef.current && user) {
+      // ユーザーがログインしている場合、左側の3つのボタン分スクロール
+      // 各ボタンの幅 + gap を計算して初期位置を設定
+      const buttonWidth = isMobile ? 150 : 180; // おおよそのボタン幅
+      const gap = isMobile ? 8 : 12; // gap
+      const scrollAmount = (buttonWidth + gap) * 3; // 3つのボタン分
+      
+      categoryScrollRef.current.scrollLeft = scrollAmount;
+      
+      // スクロール後に矢印の状態を更新
+      handleCategoryScroll();
+    }
+  }, [user, isMobile]);
+
   const handleSearch = async (query: string) => {
     if (!query || query.trim() === '') {
       setError('検索文字を入力してください');
