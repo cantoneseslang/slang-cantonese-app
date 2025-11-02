@@ -20,13 +20,20 @@ export async function GET() {
 
     if (error) {
       console.error('お気に入り取得エラー:', error)
-      // テーブルが存在しない場合は空配列を返す
-      if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
-        return NextResponse.json({ success: true, favorites: [] })
+      // テーブルが存在しない場合は空配列を返す（エラーを出さない）
+      if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist') || error.message?.includes('no such table')) {
+        return NextResponse.json({ 
+          success: true, 
+          favorites: [],
+          favoriteSet: []
+        })
       }
+      // その他のエラーも静かに処理（空配列を返す）
       return NextResponse.json({ 
-        error: error.message || 'お気に入りの取得に失敗しました' 
-      }, { status: 500 })
+        success: true,
+        favorites: [],
+        favoriteSet: []
+      })
     }
 
     // word_chineseとcategory_idの組み合わせをSetとして返す（高速検索用）

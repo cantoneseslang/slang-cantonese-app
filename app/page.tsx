@@ -184,37 +184,44 @@ export default function Home() {
     initializeUserMetadata();
   }, [user]);
 
-  // お気に入りの読み込み
-  useEffect(() => {
-    const loadFavorites = async () => {
-      if (!user) {
-        setFavorites(new Set());
-        return;
-      }
-
-      try {
-        setLoadingFavorites(true);
-        const response = await fetch('/api/favorites/list');
-        const data = await response.json();
-        
-        if (data.success && data.favoriteSet) {
-          setFavorites(new Set(data.favoriteSet));
+    // お気に入りの読み込み
+    useEffect(() => {
+      const loadFavorites = async () => {
+        if (!user) {
+          setFavorites(new Set());
+          return;
         }
-      } catch (error) {
-        console.error('お気に入り読み込みエラー:', error);
-      } finally {
-        setLoadingFavorites(false);
-      }
-    };
 
-    loadFavorites();
-  }, [user]);
+        try {
+          setLoadingFavorites(true);
+          const response = await fetch('/api/favorites/list');
+          const data = await response.json();
+          
+          if (data.success && data.favoriteSet) {
+            setFavorites(new Set(data.favoriteSet));
+          } else if (data.error) {
+            // エラーがあっても静かに処理（テーブルが存在しない場合など）
+            console.warn('お気に入り読み込み警告:', data.error);
+            setFavorites(new Set());
+          } else {
+            setFavorites(new Set());
+          }
+        } catch (error) {
+          // ネットワークエラーなどは静かに処理
+          console.error('お気に入り読み込みエラー:', error);
+          setFavorites(new Set());
+        } finally {
+          setLoadingFavorites(false);
+        }
+      };
+
+      loadFavorites();
+    }, [user]);
 
   // お気に入りの追加/削除
   const toggleFavorite = async (word: Word, categoryId: string) => {
     if (!user) {
-      alert('お気に入り機能を使用するにはログインが必要です');
-      return;
+      return; // ログインしていない場合は静かに処理
     }
 
     const favoriteKey = `${categoryId}:${word.chinese}`;
@@ -238,10 +245,25 @@ export default function Home() {
           newFavorites.delete(favoriteKey);
           setFavorites(newFavorites);
         } else {
-          alert(data.error || 'お気に入りの削除に失敗しました');
+          // エラーがテーブル関連の場合は静かに処理
+          if (data.error && (data.error.includes('テーブル') || data.error.includes('テーブルを作成'))) {
+            console.warn('お気に入り削除エラー（テーブル未作成）:', data.error);
+            // ローカル状態から削除（テーブルが作成されたら再同期される）
+            const newFavorites = new Set(favorites);
+            newFavorites.delete(favoriteKey);
+            setFavorites(newFavorites);
+          } else {
+            console.error('お気に入り削除エラー:', data.error);
+          }
         }
       } else {
         // 追加
+        // 会員種別による制限チェック
+        if (membershipType === 'free' && favorites.size >= 6) {
+          alert('ブロンズ会員は6個までしかお気に入りを登録できません。');
+          return;
+        }
+
         const response = await fetch('/api/favorites/add', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -258,18 +280,24 @@ export default function Home() {
           newFavorites.add(favoriteKey);
           setFavorites(newFavorites);
         } else {
-          // エラーメッセージをより分かりやすく表示
-          const errorMsg = data.error || 'お気に入りの追加に失敗しました';
-          if (errorMsg.includes('テーブル') || errorMsg.includes('テーブルを作成')) {
-            alert(`⚠️ ${errorMsg}\n\n詳細: ${data.details || ''}\n\nSupabaseのSQL Editorで docs/favorites-table.sql を実行してください。`);
+          // エラーがテーブル関連の場合は静かに処理
+          if (data.error && (data.error.includes('テーブル') || data.error.includes('テーブルを作成'))) {
+            console.warn('お気に入り追加エラー（テーブル未作成）:', data.error);
+            // ローカル状態に追加（テーブルが作成されたら再同期される）
+            const newFavorites = new Set(favorites);
+            newFavorites.add(favoriteKey);
+            setFavorites(newFavorites);
+          } else if ((data.error || '').includes('既にお気に入りに登録されています')) {
+            // 既に登録されている場合は静かに処理
+            console.warn('既にお気に入りに登録されています');
           } else {
-            alert(errorMsg);
+            console.error('お気に入り追加エラー:', data.error);
           }
         }
       }
     } catch (error: any) {
+      // ネットワークエラーなどは静かに処理
       console.error('お気に入り操作エラー:', error);
-      alert('エラーが発生しました');
     }
   };
 
@@ -278,6 +306,11 @@ export default function Home() {
   
   // 長押し開始
   const handleLongPressStart = (word: Word, categoryId: string, e: React.TouchEvent | React.MouseEvent) => {
+    // 既に長押しが進行中の場合は処理しない
+    if (longPressTimerRef.current) {
+      return;
+    }
+    
     longPressCompletedRef.current = false;
     longPressWordRef.current = { word, categoryId };
     
@@ -292,7 +325,13 @@ export default function Home() {
   };
 
   // 長押し終了
-  const handleLongPressEnd = () => {
+  const handleLongPressEnd = (e?: React.TouchEvent | React.MouseEvent) => {
+    // イベントの伝播を防ぐ
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
@@ -302,7 +341,7 @@ export default function Home() {
     // 少し遅延させてからフラグをリセット（通常クリックを防ぐため）
     setTimeout(() => {
       longPressCompletedRef.current = false;
-    }, 100);
+    }, 150);
   };
 
   // ユーザーネーム変更処理
