@@ -76,12 +76,18 @@ http://localhost:3000/admin
 
 Vercelは中国からアクセスできない場合があります。
 
-**推奨解決策: Cloudflare経由のプロキシ**
-1. カスタムドメインを取得
+**推奨解決策: Vercelはそのまま使用 + Cloudflare経由のプロキシ**
+
+✅ **Vercel無料プランは変更不要**
+✅ **Cloudflareも完全無料**
+✅ **カスタムドメインのみ必要**（年間約$1-5）
+
+**手順:**
+1. カスタムドメインを取得（Cloudflare Registrarで最安価格）
 2. Cloudflareにドメインを追加（Proxied設定）
 3. Vercelでカスタムドメインを設定
 
-詳細は `/docs/vercel-china-setup.md` を参照してください。
+詳細は `/docs/vercel-china-setup.md` と `/docs/free-alternatives.md` を参照してください。
 
 ## Deploy on Vercel
 
