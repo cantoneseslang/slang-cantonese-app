@@ -319,34 +319,34 @@ export default function Home() {
         longPressCompletedRef.current = true;
         playHapticAndSound();
         toggleFavorite(longPressWordRef.current.word, longPressWordRef.current.categoryId);
+        // タイマーと参照をクリア
+        longPressTimerRef.current = null;
         longPressWordRef.current = null;
       }
-    }, 500); // 500ms長押し
+    }, 800); // 800ms長押し（少し長めに）
   };
 
   // 長押し終了
   const handleLongPressEnd = (e?: React.TouchEvent | React.MouseEvent) => {
     const wasLongPress = longPressCompletedRef.current;
     
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-    
     // 長押しが完了していた場合のみイベントを止める
-    if (wasLongPress && e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
-    longPressWordRef.current = null;
-    
-    // フラグをリセット（長押し完了時は少し遅延、それ以外は即座に）
     if (wasLongPress) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      // フラグを少し遅延してリセット（onClickを防ぐため）
       setTimeout(() => {
         longPressCompletedRef.current = false;
-      }, 100);
+      }, 200);
     } else {
+      // 長押しが完了していない場合はタイマーをクリア（通常クリックを許可）
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+      longPressWordRef.current = null;
       longPressCompletedRef.current = false;
     }
   };
@@ -2272,11 +2272,16 @@ export default function Home() {
                             <button
                               key={wIdx}
                               onClick={(e) => {
+                                // 長押しが完了していた場合は通常クリックを防ぐ
+                                if (longPressCompletedRef.current) {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  return;
+                                }
+                                // 通常クリックの場合は音声を再生
                                 e.preventDefault();
                                 e.stopPropagation();
-                                if (!longPressCompletedRef.current) {
-                                  handleWordClick(word);
-                                }
+                                handleWordClick(word);
                               }}
                               onTouchStart={(e) => {
                                 handleLongPressStart(word, currentCategory?.id || '', e);
@@ -2372,11 +2377,16 @@ export default function Home() {
                             <button
                               key={wIdx}
                               onClick={(e) => {
+                                // 長押しが完了していた場合は通常クリックを防ぐ
+                                if (longPressCompletedRef.current) {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  return;
+                                }
+                                // 通常クリックの場合は音声を再生
                                 e.preventDefault();
                                 e.stopPropagation();
-                                if (!longPressCompletedRef.current) {
-                                  handleWordClick(word);
-                                }
+                                handleWordClick(word);
                               }}
                               onTouchStart={(e) => {
                                 handleLongPressStart(word, currentCategory?.id || '', e);
@@ -2469,11 +2479,16 @@ export default function Home() {
                             <button
                               key={wIdx}
                               onClick={(e) => {
+                                // 長押しが完了していた場合は通常クリックを防ぐ
+                                if (longPressCompletedRef.current) {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  return;
+                                }
+                                // 通常クリックの場合は音声を再生
                                 e.preventDefault();
                                 e.stopPropagation();
-                                if (!longPressCompletedRef.current) {
-                                  handleWordClick(word);
-                                }
+                                handleWordClick(word);
                               }}
                               onTouchStart={(e) => {
                                 handleLongPressStart(word, currentCategory?.id || '', e);
@@ -2566,11 +2581,16 @@ export default function Home() {
                             <button
                               key={wIdx}
                               onClick={(e) => {
+                                // 長押しが完了していた場合は通常クリックを防ぐ
+                                if (longPressCompletedRef.current) {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  return;
+                                }
+                                // 通常クリックの場合は音声を再生
                                 e.preventDefault();
                                 e.stopPropagation();
-                                if (!longPressCompletedRef.current) {
-                                  handleWordClick(word);
-                                }
+                                handleWordClick(word);
                               }}
                               onTouchStart={(e) => {
                                 handleLongPressStart(word, currentCategory?.id || '', e);
@@ -2662,12 +2682,16 @@ export default function Home() {
                 <button
                   key={idx}
                   onClick={(e) => {
+                    // 長押しが完了していた場合は通常クリックを防ぐ
+                    if (longPressCompletedRef.current) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      return;
+                    }
+                    // 通常クリックの場合は音声を再生
                     e.preventDefault();
                     e.stopPropagation();
-                    // 長押しが完了していない場合のみ音声を再生
-                    if (!longPressCompletedRef.current) {
-                      handleWordClick(word);
-                    }
+                    handleWordClick(word);
                   }}
                   onTouchStart={(e) => {
                     handleLongPressStart(word, currentCategory?.id || '', e);
