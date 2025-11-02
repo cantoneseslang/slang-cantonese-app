@@ -335,9 +335,37 @@ export default function Home() {
       }, 2000);
     } catch (err: any) {
       console.error('❌ パスワード変更エラー:', err);
-      const errorMsg = err.message || 'パスワード変更に失敗しました';
+      
+      // Supabaseエラーを日本語化
+      let errorMsg = 'パスワード変更に失敗しました';
+      
+      if (err.message) {
+        const msg = err.message.toLowerCase();
+        
+        // 同じパスワードのエラー
+        if (msg.includes('same') && msg.includes('password')) {
+          errorMsg = '新しいパスワードは現在のパスワードと異なる必要があります';
+        }
+        // パスワードが弱すぎる
+        else if (msg.includes('weak') || msg.includes('strength')) {
+          errorMsg = 'パスワードが弱すぎます。より強力なパスワードを使用してください';
+        }
+        // セッションエラー
+        else if (msg.includes('session') || msg.includes('token')) {
+          errorMsg = 'セッションが無効です。再度ログインしてください';
+        }
+        // ネットワークエラー
+        else if (msg.includes('network') || msg.includes('fetch')) {
+          errorMsg = 'ネットワークエラーが発生しました。接続を確認してください';
+        }
+        // その他のエラー（英語メッセージも含める）
+        else {
+          errorMsg = `パスワード変更に失敗しました: ${err.message}`;
+        }
+      }
+      
       setPasswordError(errorMsg);
-      alert('❌ エラー: ' + errorMsg);
+      alert('❌ ' + errorMsg);
     }
     
     console.log('=== パスワード変更処理終了 ===');
