@@ -24,7 +24,16 @@ export async function POST(request: Request) {
     if (countError) {
       console.error('お気に入り数取得エラー:', countError)
       // テーブルが存在しない場合は空配列として処理
-      if (countError.code === 'PGRST116' || countError.message?.includes('relation') || countError.message?.includes('does not exist') || countError.message?.includes('no such table')) {
+      const isTableNotFound = 
+        countError.code === 'PGRST116' || 
+        countError.message?.includes('relation') || 
+        countError.message?.includes('does not exist') || 
+        countError.message?.includes('no such table') ||
+        countError.message?.includes('Could not find the table') ||
+        countError.message?.includes('schema cache') ||
+        countError.message?.includes('user_favorites');
+      
+      if (isTableNotFound) {
         // テーブルが存在しない場合でも、ローカル状態では動作するように成功レスポンスを返す
         return NextResponse.json({ 
           success: true,
@@ -35,6 +44,11 @@ export async function POST(request: Request) {
       // その他のエラーも静かに処理
       console.warn('お気に入り数取得エラー（無視）:', countError.message)
       // エラーを返さず、空として処理
+      return NextResponse.json({ 
+        success: true,
+        data: null,
+        message: 'お気に入り機能を利用できませんが、ローカル状態で保存されました。'
+      })
     }
 
     // existingFavoritesがnullまたはundefinedの場合は0として処理
@@ -60,7 +74,16 @@ export async function POST(request: Request) {
         .single()
 
       // テーブルが存在しない場合のエラーは無視
-      if (checkError && checkError.code !== 'PGRST116' && !checkError.message?.includes('relation') && !checkError.message?.includes('does not exist') && !checkError.message?.includes('no such table')) {
+      const isTableNotFoundCheck = 
+        checkError?.code === 'PGRST116' || 
+        checkError?.message?.includes('relation') || 
+        checkError?.message?.includes('does not exist') || 
+        checkError?.message?.includes('no such table') ||
+        checkError?.message?.includes('Could not find the table') ||
+        checkError?.message?.includes('schema cache') ||
+        checkError?.message?.includes('user_favorites');
+      
+      if (checkError && !isTableNotFoundCheck) {
         // その他のエラーは既存チェックの失敗として扱う（処理を続行）
         console.warn('お気に入り存在チェックエラー（無視）:', checkError.message)
       }
@@ -91,7 +114,16 @@ export async function POST(request: Request) {
     if (error) {
       console.error('お気に入り追加エラー:', error)
       // テーブルが存在しない場合は成功レスポンスを返す（ローカル状態で動作）
-      if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist') || error.message?.includes('no such table')) {
+      const isTableNotFound = 
+        error.code === 'PGRST116' || 
+        error.message?.includes('relation') || 
+        error.message?.includes('does not exist') || 
+        error.message?.includes('no such table') ||
+        error.message?.includes('Could not find the table') ||
+        error.message?.includes('schema cache') ||
+        error.message?.includes('user_favorites');
+      
+      if (isTableNotFound) {
         return NextResponse.json({ 
           success: true,
           data: null,
