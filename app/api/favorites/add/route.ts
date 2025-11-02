@@ -23,9 +23,15 @@ export async function POST(request: Request) {
     
     if (countError) {
       console.error('お気に入り数取得エラー:', countError)
-      // テーブルが存在しない場合は作成を促す
+      // テーブルが存在しない場合は空配列として処理し、エラーを返さない
+      if (countError.code === 'PGRST116' || countError.message?.includes('relation') || countError.message?.includes('does not exist')) {
+        return NextResponse.json({ 
+          error: 'お気に入り機能を使用するには、Supabaseでテーブルを作成する必要があります。',
+          details: 'docs/favorites-table.sqlのSQLをSupabaseのSQL Editorで実行してください。'
+        }, { status: 500 })
+      }
       return NextResponse.json({ 
-        error: 'お気に入りテーブルが存在しません。Supabaseでテーブルを作成してください。',
+        error: 'お気に入りの取得に失敗しました。',
         details: countError.message
       }, { status: 500 })
     }

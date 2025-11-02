@@ -628,6 +628,66 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
+
+        {/* お気に入りデータ統計 */}
+        <div style={{
+          marginTop: '3rem',
+          padding: '1.5rem',
+          backgroundColor: '#f9fafb',
+          borderRadius: '12px'
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '1rem'
+          }}>
+            <h3 style={{
+              fontSize: '1.25rem',
+              fontWeight: '600',
+              marginBottom: '1rem'
+            }}>
+              ⭐️ お気に入りデータ分析
+            </h3>
+            <button
+              onClick={async () => {
+                try {
+                  const response = await fetch('/api/admin/favorites');
+                  const data = await response.json();
+                  
+                  if (data.success) {
+                    // お気に入りデータを表示（簡易版）
+                    alert(`総ユーザー数: ${data.total_users}\n総お気に入り数: ${data.total_favorites}\n\n詳細はコンソールを確認してください。`);
+                    console.log('お気に入りデータ:', data);
+                  } else {
+                    alert('エラー: ' + data.error);
+                  }
+                } catch (error: any) {
+                  alert('エラー: ' + error.message);
+                }
+              }}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#f59e0b',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '600'
+              }}
+            >
+              お気に入りデータ取得
+            </button>
+          </div>
+          <p style={{
+            fontSize: '0.875rem',
+            color: '#6b7280',
+            margin: 0
+          }}>
+            全ユーザーのお気に入りデータを取得し、ユーザーの嗜好を分析できます。
+          </p>
+        </div>
       </div>
     </div>
   );

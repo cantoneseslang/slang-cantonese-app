@@ -258,7 +258,13 @@ export default function Home() {
           newFavorites.add(favoriteKey);
           setFavorites(newFavorites);
         } else {
-          alert(data.error || 'お気に入りの追加に失敗しました');
+          // エラーメッセージをより分かりやすく表示
+          const errorMsg = data.error || 'お気に入りの追加に失敗しました';
+          if (errorMsg.includes('テーブル') || errorMsg.includes('テーブルを作成')) {
+            alert(`⚠️ ${errorMsg}\n\n詳細: ${data.details || ''}\n\nSupabaseのSQL Editorで docs/favorites-table.sql を実行してください。`);
+          } else {
+            alert(errorMsg);
+          }
         }
       }
     } catch (error: any) {
