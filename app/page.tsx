@@ -120,11 +120,58 @@ export default function Home() {
     setActiveWordId(null);
   };
 
-  // ユーザーの会員種別を取得
+  // ユーザーの会員種別を取得と初期値設定
   useEffect(() => {
-    if (user?.user_metadata?.membership_type) {
-      setMembershipType(user.user_metadata.membership_type);
-    }
+    const initializeUserMetadata = async () => {
+      if (!user) return;
+
+      // 会員種別の設定
+      if (user.user_metadata?.membership_type) {
+        setMembershipType(user.user_metadata.membership_type);
+      } else {
+        // 会員種別がない場合、デフォルト値を設定
+        setMembershipType('free');
+      }
+
+      // ユーザーネームまたは会員種別がない場合、Supabaseに初期値を設定
+      const needsUsername = !user.user_metadata?.username;
+      const needsMembershipType = !user.user_metadata?.membership_type;
+
+      if (needsUsername || needsMembershipType) {
+        console.log('初期値を設定中...');
+        try {
+          const updates: any = {};
+          
+          if (needsUsername) {
+            // メールのローカル部分をユーザーネームとして使用
+            const defaultUsername = user.email?.split('@')[0] || 'user';
+            updates.username = defaultUsername;
+          }
+          
+          if (needsMembershipType) {
+            updates.membership_type = 'free';
+          }
+
+          const { error } = await supabase.auth.updateUser({
+            data: updates
+          });
+
+          if (error) {
+            console.error('初期値設定エラー:', error);
+          } else {
+            console.log('✅ 初期値設定完了:', updates);
+            // ページをリロードして最新情報を取得
+            setTimeout(() => {
+              window.location.reload();
+            }, 500);
+          }
+        } catch (err) {
+          console.error('初期値設定失敗:', err);
+        }
+      }
+    };
+
+    initializeUserMetadata();
   }, [user]);
 
   // ユーザーネーム変更処理
