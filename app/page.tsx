@@ -1351,13 +1351,14 @@ export default function Home() {
           {/* 横スクロール可能なカテゴリーバー */}
           <div style={{ 
             marginBottom: '1rem',
-            position: 'relative'
+            position: 'relative',
+            padding: isMobile ? '0 1rem' : '0 1.5rem'
           }}>
             {/* 左スクロールインジケーター */}
             {showLeftArrow && (
               <div style={{
                 position: 'absolute',
-                left: 0,
+                left: isMobile ? '1rem' : '1.5rem',
                 top: '50%',
                 transform: 'translateY(-50%)',
                 zIndex: 10,
@@ -1374,7 +1375,7 @@ export default function Home() {
             {showRightArrow && (
               <div style={{
                 position: 'absolute',
-                right: 0,
+                right: isMobile ? '1rem' : '1.5rem',
                 top: '50%',
                 transform: 'translateY(-50%)',
                 zIndex: 10,
@@ -1629,7 +1630,10 @@ export default function Home() {
         </div>
 
           {/* 検索エリア */}
-          <div style={{ marginBottom: '1rem' }}>
+          <div style={{ 
+            marginBottom: '1rem',
+            padding: isMobile ? '0 1rem' : '0 1.5rem'
+          }}>
             <input
               type="text"
               placeholder="広東語または日本語のフレーズを入力"
