@@ -60,6 +60,14 @@ export default function Home() {
   // ノーマルモードでアクティブな単語のID（緑色のボタン）- 1つだけアクティブ
   const [activeWordId, setActiveWordId] = useState<string | null>(null);
 
+  // 設定画面の状態
+  const [showSettings, setShowSettings] = useState(false);
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
   // 音声の初期化（Web Audio APIで100%音量）
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -97,6 +105,46 @@ export default function Home() {
     setIsLearningMode(!isLearningMode);
     // モードを切り替えたらアクティブな単語をクリア
     setActiveWordId(null);
+  };
+
+  // パスワード変更処理
+  const handlePasswordChange = async () => {
+    setPasswordError(null);
+    setPasswordSuccess(false);
+
+    // パスワードバリデーション
+    if (newPassword.length < 6) {
+      setPasswordError('パスワードは6文字以上である必要があります');
+      return;
+    }
+
+    if (!/(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*])/.test(newPassword)) {
+      setPasswordError('パスワードは英文字、数字、記号の組み合わせである必要があります');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('パスワードが一致しません');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      setPasswordSuccess(true);
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => {
+        setShowPasswordChange(false);
+        setPasswordSuccess(false);
+      }, 2000);
+    } catch (err: any) {
+      setPasswordError(err.message || 'パスワード変更に失敗しました');
+    }
   };
 
   // 振動とクリック音の関数
@@ -252,11 +300,11 @@ export default function Home() {
   // 初期スクロール位置を設定（左側のメニューボタンを隠す）
   useEffect(() => {
     if (categoryScrollRef.current && user) {
-      // ユーザーがログインしている場合、左側の3つのボタン分スクロール
+      // ユーザーがログインしている場合、左側の4つのボタン分スクロール
       // 各ボタンの幅 + gap を計算して初期位置を設定
       const buttonWidth = isMobile ? 150 : 180; // おおよそのボタン幅
       const gap = isMobile ? 8 : 12; // gap
-      const scrollAmount = (buttonWidth + gap) * 3; // 3つのボタン分
+      const scrollAmount = (buttonWidth + gap) * 4; // 4つのボタン分（ログアウト、クリック音、ノーマルモード、設定）
       
       categoryScrollRef.current.scrollLeft = scrollAmount;
       
@@ -873,6 +921,41 @@ export default function Home() {
                     >
                       {isLearningMode ? '📚 学習モード' : '🎵 ノーマルモード'}
                     </button>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowSettings(true);
+                      }}
+                      style={{
+                        padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
+                        fontSize: isMobile ? '0.875rem' : '1rem',
+                        fontWeight: '600',
+                        borderRadius: '16px',
+                        background: 'linear-gradient(145deg, #f59e0b, #d97706)',
+                        color: 'white',
+                        border: 'none',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        boxShadow: '0 4px 12px rgba(245,158,11,0.4), inset 0 1px 0 rgba(255,255,255,0.2)',
+                        transform: 'scale(1)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)';
+                      }}
+                      onMouseDown={(e) => {
+                        e.currentTarget.style.transform = 'scale(0.98)';
+                      }}
+                      onMouseUp={(e) => {
+                        e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                      }}
+                    >
+                      ⚙️ 設定
+                    </button>
                   </>
                 )}
                 
@@ -932,7 +1015,7 @@ export default function Home() {
                 ))}
               </div>
             </div>
-          </div>
+        </div>
 
           {/* 検索エリア */}
           <div style={{ marginBottom: '1rem' }}>
@@ -1586,6 +1669,327 @@ export default function Home() {
           )}
 
         </div>
+
+        {/* 設定画面モーダル */}
+        {showSettings && user && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '1rem'
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '500px',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              position: 'relative'
+            }}>
+              {/* ヘッダー */}
+              <div style={{
+                padding: '1.5rem',
+                borderBottom: '1px solid #e5e7eb',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <h2 style={{
+                  fontSize: '1.5rem',
+                  fontWeight: 'bold',
+                  margin: 0
+                }}>⚙️ 設定</h2>
+                <button
+                  onClick={() => {
+                    setShowSettings(false);
+                    setShowPasswordChange(false);
+                    setPasswordError(null);
+                    setPasswordSuccess(false);
+                    setNewPassword('');
+                    setConfirmPassword('');
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '1.5rem',
+                    cursor: 'pointer',
+                    color: '#6b7280'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* コンテンツ */}
+              <div style={{ padding: '1.5rem' }}>
+                {/* ユーザー情報 */}
+                <div style={{ marginBottom: '2rem' }}>
+                  <h3 style={{
+                    fontSize: '1.125rem',
+                    fontWeight: '600',
+                    marginBottom: '1rem',
+                    color: '#374151'
+                  }}>アカウント情報</h3>
+
+                  {/* ユーザーネーム */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#6b7280',
+                      marginBottom: '0.5rem'
+                    }}>ユーザーネーム</label>
+                    <div style={{
+                      padding: '0.75rem',
+                      backgroundColor: '#f9fafb',
+                      borderRadius: '8px',
+                      border: '1px solid #e5e7eb',
+                      fontSize: '1rem',
+                      color: '#1f2937'
+                    }}>
+                      {user.user_metadata?.username || 'ユーザーネーム未設定'}
+                    </div>
+                  </div>
+
+                  {/* 登録メール */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#6b7280',
+                      marginBottom: '0.5rem'
+                    }}>登録メール</label>
+                    <div style={{
+                      padding: '0.75rem',
+                      backgroundColor: '#f9fafb',
+                      borderRadius: '8px',
+                      border: '1px solid #e5e7eb',
+                      fontSize: '1rem',
+                      color: '#1f2937'
+                    }}>
+                      {user.email}
+                    </div>
+                  </div>
+
+                  {/* パスワード */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#6b7280',
+                      marginBottom: '0.5rem'
+                    }}>パスワード</label>
+                    <div style={{
+                      display: 'flex',
+                      gap: '0.5rem',
+                      alignItems: 'center'
+                    }}>
+                      <div style={{
+                        flex: 1,
+                        padding: '0.75rem',
+                        backgroundColor: '#f9fafb',
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb',
+                        fontSize: '1rem',
+                        color: '#1f2937'
+                      }}>
+                        ••••••••
+                      </div>
+                      <button
+                        onClick={() => setShowPasswordChange(!showPasswordChange)}
+                        style={{
+                          padding: '0.75rem 1rem',
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        変更
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* パスワード変更フォーム */}
+                  {showPasswordChange && (
+                    <div style={{
+                      marginTop: '1rem',
+                      padding: '1rem',
+                      backgroundColor: '#f0f9ff',
+                      borderRadius: '8px',
+                      border: '1px solid #bfdbfe'
+                    }}>
+                      <h4 style={{
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        marginBottom: '1rem',
+                        color: '#1e40af'
+                      }}>パスワード変更</h4>
+
+                      {passwordError && (
+                        <div style={{
+                          padding: '0.75rem',
+                          backgroundColor: '#fee2e2',
+                          border: '1px solid #fecaca',
+                          borderRadius: '8px',
+                          color: '#dc2626',
+                          fontSize: '0.875rem',
+                          marginBottom: '1rem'
+                        }}>
+                          {passwordError}
+                        </div>
+                      )}
+
+                      {passwordSuccess && (
+                        <div style={{
+                          padding: '0.75rem',
+                          backgroundColor: '#dcfce7',
+                          border: '1px solid #bbf7d0',
+                          borderRadius: '8px',
+                          color: '#16a34a',
+                          fontSize: '0.875rem',
+                          marginBottom: '1rem'
+                        }}>
+                          パスワードが正常に変更されました
+                        </div>
+                      )}
+
+                      <div style={{ marginBottom: '1rem' }}>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          color: '#374151',
+                          marginBottom: '0.5rem'
+                        }}>新しいパスワード</label>
+                        <input
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '8px',
+                            fontSize: '1rem'
+                          }}
+                          placeholder="6文字以上、英数字記号"
+                        />
+                      </div>
+
+                      <div style={{ marginBottom: '1rem' }}>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          color: '#374151',
+                          marginBottom: '0.5rem'
+                        }}>新しいパスワード（確認）</label>
+                        <input
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '8px',
+                            fontSize: '1rem'
+                          }}
+                          placeholder="もう一度入力"
+                        />
+                      </div>
+
+                      <div style={{
+                        display: 'flex',
+                        gap: '0.5rem'
+                      }}>
+                        <button
+                          onClick={handlePasswordChange}
+                          style={{
+                            flex: 1,
+                            padding: '0.75rem',
+                            backgroundColor: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '1rem',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          変更する
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowPasswordChange(false);
+                            setPasswordError(null);
+                            setNewPassword('');
+                            setConfirmPassword('');
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: '0.75rem',
+                            backgroundColor: '#6b7280',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '1rem',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          キャンセル
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 会員種別 */}
+                  <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #e5e7eb' }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#6b7280',
+                      marginBottom: '0.5rem'
+                    }}>会員種別</label>
+                    <div style={{
+                      padding: '0.75rem',
+                      backgroundColor: '#f9fafb',
+                      borderRadius: '8px',
+                      border: '1px solid #e5e7eb',
+                      fontSize: '1rem',
+                      color: '#1f2937',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      <span>👤</span>
+                      <span>普通会員</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
