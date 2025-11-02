@@ -133,6 +133,11 @@ export default function Home() {
   const [examplePlaybackSpeed, setExamplePlaybackSpeed] = useState('1');
   const [showHelpCard, setShowHelpCard] = useState(false);
   const [dontShowHelpAgain, setDontShowHelpAgain] = useState(false);
+  
+  // カテゴリーバーのスクロール状態
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(true);
 
   useEffect(() => {
     // ユーザー情報の取得
@@ -221,6 +226,28 @@ export default function Home() {
       }
     }
   }, [selectedCategory, categories]);
+
+  // カテゴリーバーのスクロール状態を更新
+  const handleCategoryScroll = () => {
+    if (categoryScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = categoryScrollRef.current;
+      setShowLeftArrow(scrollLeft > 0);
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 5);
+    }
+  };
+
+  // カテゴリーバーのスクロール状態を初期化
+  useEffect(() => {
+    const checkScroll = () => {
+      if (categoryScrollRef.current) {
+        const { scrollWidth, clientWidth } = categoryScrollRef.current;
+        setShowRightArrow(scrollWidth > clientWidth);
+      }
+    };
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, [categories]);
 
   const handleSearch = async (query: string) => {
     if (!query || query.trim() === '') {
@@ -710,22 +737,67 @@ export default function Home() {
           {/* 横スクロール可能なカテゴリーバー */}
           <div style={{ 
             marginBottom: '1rem',
-            background: 'white',
-            borderRadius: '8px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            padding: isMobile ? '0.75rem' : '1rem'
+            position: 'relative'
           }}>
-            <div style={{ 
-              overflowX: 'auto',
-              overflowY: 'hidden',
-              whiteSpace: 'nowrap',
-              WebkitOverflowScrolling: 'touch',
-              scrollbarWidth: 'thin',
-              msOverflowStyle: 'auto'
-            }}>
+            {/* 左スクロールインジケーター */}
+            {showLeftArrow && (
+              <div style={{
+                position: 'absolute',
+                left: 0,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                zIndex: 10,
+                fontSize: isMobile ? '1.5rem' : '2rem',
+                opacity: 0.5,
+                pointerEvents: 'none',
+                textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              }}>
+                ⏪
+              </div>
+            )}
+            
+            {/* 右スクロールインジケーター */}
+            {showRightArrow && (
+              <div style={{
+                position: 'absolute',
+                right: 0,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                zIndex: 10,
+                fontSize: isMobile ? '1.5rem' : '2rem',
+                opacity: 0.5,
+                pointerEvents: 'none',
+                textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              }}>
+                ⏩
+              </div>
+            )}
+            
+            <div 
+              ref={categoryScrollRef}
+              onScroll={handleCategoryScroll}
+              style={{ 
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                whiteSpace: 'nowrap',
+                WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                paddingLeft: showLeftArrow ? '2.5rem' : '0',
+                paddingRight: showRightArrow ? '2.5rem' : '0',
+                transition: 'padding 0.3s ease'
+              }}
+            >
+              <style dangerouslySetInnerHTML={{
+                __html: `
+                  div::-webkit-scrollbar {
+                    display: none;
+                  }
+                `
+              }} />
               <div style={{ 
                 display: 'inline-flex',
-                gap: '0.5rem',
+                gap: isMobile ? '0.5rem' : '0.75rem',
                 paddingBottom: '0.25rem'
               }}>
                 {categories.map((category) => (
@@ -738,38 +810,44 @@ export default function Home() {
                       setSelectedCategory(category.id);
                     }}
                     style={{
-                      padding: isMobile ? '0.5rem 1rem' : '0.625rem 1.25rem',
+                      padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
                       fontSize: isMobile ? '0.875rem' : '1rem',
-                      fontWeight: selectedCategory === category.id ? '600' : '400',
-                      borderRadius: '20px',
-                      backgroundColor: selectedCategory === category.id ? '#6366f1' : '#f3f4f6',
-                      color: selectedCategory === category.id ? 'white' : '#374151',
+                      fontWeight: '600',
+                      borderRadius: '16px',
+                      background: selectedCategory === category.id 
+                        ? 'linear-gradient(145deg, #6366f1, #4f46e5)' 
+                        : 'linear-gradient(145deg, #ffffff, #f5f5f7)',
+                      color: selectedCategory === category.id ? 'white' : '#1d1d1f',
                       border: 'none',
                       cursor: 'pointer',
                       whiteSpace: 'nowrap',
-                      transition: 'all 0.2s ease',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                       boxShadow: selectedCategory === category.id 
-                        ? '0 2px 8px rgba(99,102,241,0.3)' 
-                        : '0 1px 3px rgba(0,0,0,0.1)',
+                        ? '0 4px 12px rgba(99,102,241,0.4), inset 0 1px 0 rgba(255,255,255,0.2)' 
+                        : '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)',
                       transform: 'scale(1)'
                     }}
                     onMouseEnter={(e) => {
-                      if (selectedCategory !== category.id) {
-                        e.currentTarget.style.backgroundColor = '#e5e7eb';
+                      e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                      if (selectedCategory === category.id) {
+                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(99,102,241,0.5), inset 0 1px 0 rgba(255,255,255,0.2)';
+                      } else {
+                        e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)';
                       }
-                      e.currentTarget.style.transform = 'scale(1.05)';
                     }}
                     onMouseLeave={(e) => {
-                      if (selectedCategory !== category.id) {
-                        e.currentTarget.style.backgroundColor = '#f3f4f6';
-                      }
                       e.currentTarget.style.transform = 'scale(1)';
+                      if (selectedCategory === category.id) {
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(99,102,241,0.4), inset 0 1px 0 rgba(255,255,255,0.2)';
+                      } else {
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)';
+                      }
                     }}
                     onMouseDown={(e) => {
-                      e.currentTarget.style.transform = 'scale(0.95)';
+                      e.currentTarget.style.transform = 'scale(0.98)';
                     }}
                     onMouseUp={(e) => {
-                      e.currentTarget.style.transform = 'scale(1.05)';
+                      e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
                     }}
                   >
                     {category.name}
