@@ -2314,10 +2314,13 @@ export default function Home() {
                                     cursor: 'pointer',
                                     zIndex: 10,
                                     userSelect: 'none',
-                                    pointerEvents: 'none'
+                                    pointerEvents: 'none',
+                                    color: isFavorite ? '#fbbf24' : '#9ca3af',
+                                    WebkitTextStroke: isFavorite ? 'none' : '1px #9ca3af',
+                                    WebkitTextFillColor: isFavorite ? '#fbbf24' : 'transparent'
                                   }}
                                 >
-                                  {isFavorite ? '⭐️' : '★'}
+                                  ★
                                 </div>
                               )}
                               <strong style={{ 
@@ -2413,10 +2416,13 @@ export default function Home() {
                                     cursor: 'pointer',
                                     zIndex: 10,
                                     userSelect: 'none',
-                                    pointerEvents: 'none'
+                                    pointerEvents: 'none',
+                                    color: isFavorite ? '#fbbf24' : '#9ca3af',
+                                    WebkitTextStroke: isFavorite ? 'none' : '1px #9ca3af',
+                                    WebkitTextFillColor: isFavorite ? '#fbbf24' : 'transparent'
                                   }}
                                 >
-                                  {isFavorite ? '⭐️' : '★'}
+                                  ★
                                 </div>
                               )}
                               <strong style={{ 
@@ -2509,10 +2515,13 @@ export default function Home() {
                                     cursor: 'pointer',
                                     zIndex: 10,
                                     userSelect: 'none',
-                                    pointerEvents: 'none'
+                                    pointerEvents: 'none',
+                                    color: isFavorite ? '#fbbf24' : '#9ca3af',
+                                    WebkitTextStroke: isFavorite ? 'none' : '1px #9ca3af',
+                                    WebkitTextFillColor: isFavorite ? '#fbbf24' : 'transparent'
                                   }}
                                 >
-                                  {isFavorite ? '⭐️' : '★'}
+                                  ★
                                 </div>
                               )}
                               <strong style={{ 
@@ -2605,10 +2614,13 @@ export default function Home() {
                                     cursor: 'pointer',
                                     zIndex: 10,
                                     userSelect: 'none',
-                                    pointerEvents: 'none'
+                                    pointerEvents: 'none',
+                                    color: isFavorite ? '#fbbf24' : '#9ca3af',
+                                    WebkitTextStroke: isFavorite ? 'none' : '1px #9ca3af',
+                                    WebkitTextFillColor: isFavorite ? '#fbbf24' : 'transparent'
                                   }}
                                 >
-                                  {isFavorite ? '⭐️' : '★'}
+                                  ★
                                 </div>
                               )}
                               <strong style={{ 
@@ -2716,10 +2728,13 @@ export default function Home() {
                         cursor: 'pointer',
                         zIndex: 10,
                         userSelect: 'none',
-                        pointerEvents: 'none'
+                        pointerEvents: 'none',
+                        color: isFavorite ? '#fbbf24' : '#9ca3af',
+                        WebkitTextStroke: isFavorite ? 'none' : '1px #9ca3af',
+                        WebkitTextFillColor: isFavorite ? '#fbbf24' : 'transparent'
                       }}
                     >
-                      {isFavorite ? '⭐️' : '★'}
+                      ★
                     </div>
                   )}
                   <strong style={{ 
