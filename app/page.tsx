@@ -70,6 +70,12 @@ export default function Home() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
+  // ユーザーネーム編集の状態
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [usernameSuccess, setUsernameSuccess] = useState(false);
+  
   // 会員種別の状態
   const [membershipType, setMembershipType] = useState<'free' | 'subscription' | 'lifetime'>('free');
   const [showPricingModal, setShowPricingModal] = useState(false);
@@ -120,6 +126,73 @@ export default function Home() {
       setMembershipType(user.user_metadata.membership_type);
     }
   }, [user]);
+
+  // ユーザーネーム変更処理
+  const handleUsernameChange = async () => {
+    console.log('=== ユーザーネーム変更開始 ===');
+    setUsernameError(null);
+    setUsernameSuccess(false);
+
+    // 入力チェック
+    if (!newUsername || newUsername.trim() === '') {
+      const errorMsg = 'ユーザーネームを入力してください';
+      console.log('エラー:', errorMsg);
+      setUsernameError(errorMsg);
+      alert(errorMsg);
+      return;
+    }
+
+    // 長さチェック
+    if (newUsername.length < 2) {
+      const errorMsg = 'ユーザーネームは2文字以上である必要があります';
+      console.log('エラー:', errorMsg);
+      setUsernameError(errorMsg);
+      alert(errorMsg);
+      return;
+    }
+
+    if (newUsername.length > 50) {
+      const errorMsg = 'ユーザーネームは50文字以内である必要があります';
+      console.log('エラー:', errorMsg);
+      setUsernameError(errorMsg);
+      alert(errorMsg);
+      return;
+    }
+
+    try {
+      console.log('Supabaseでユーザーネーム更新を実行...');
+      const { data, error } = await supabase.auth.updateUser({
+        data: {
+          username: newUsername.trim()
+        }
+      });
+
+      console.log('Supabase応答 - data:', data);
+      console.log('Supabase応答 - error:', error);
+
+      if (error) {
+        console.error('Supabaseエラー詳細:', error);
+        throw error;
+      }
+
+      console.log('✅ ユーザーネーム変更成功！');
+      setUsernameSuccess(true);
+      setIsEditingUsername(false);
+      alert('✅ ユーザーネームが正常に変更されました！');
+      
+      // ページをリロードしてユーザー情報を更新
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (err: any) {
+      console.error('❌ ユーザーネーム変更エラー:', err);
+      const errorMsg = err.message || 'ユーザーネーム変更に失敗しました';
+      setUsernameError(errorMsg);
+      alert('❌ エラー: ' + errorMsg);
+    }
+    
+    console.log('=== ユーザーネーム変更処理終了 ===');
+  };
 
   // パスワード変更処理
   const handlePasswordChange = async () => {
@@ -2092,16 +2165,122 @@ export default function Home() {
                       color: '#6b7280',
                       marginBottom: '0.5rem'
                     }}>ユーザーネーム</label>
-                    <div style={{
-                      padding: '0.75rem',
-                      backgroundColor: '#f9fafb',
-                      borderRadius: '8px',
-                      border: '1px solid #e5e7eb',
-                      fontSize: '1rem',
-                      color: '#1f2937'
-                    }}>
-                      {user.user_metadata?.username || 'ユーザーネーム未設定'}
-                    </div>
+                    
+                    {!isEditingUsername ? (
+                      <div style={{
+                        display: 'flex',
+                        gap: '0.5rem',
+                        alignItems: 'center'
+                      }}>
+                        <div style={{
+                          flex: 1,
+                          padding: '0.75rem',
+                          backgroundColor: '#f9fafb',
+                          borderRadius: '8px',
+                          border: '1px solid #e5e7eb',
+                          fontSize: '1rem',
+                          color: '#1f2937'
+                        }}>
+                          {user.user_metadata?.username || 'ユーザーネーム未設定'}
+                        </div>
+                        <button
+                          onClick={() => {
+                            setIsEditingUsername(true);
+                            setNewUsername(user.user_metadata?.username || '');
+                            setUsernameError(null);
+                          }}
+                          style={{
+                            padding: '0.75rem 1rem',
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '0.875rem',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          変更
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        {usernameError && (
+                          <div style={{
+                            padding: '0.75rem',
+                            backgroundColor: '#fee2e2',
+                            border: '1px solid #fecaca',
+                            borderRadius: '8px',
+                            color: '#dc2626',
+                            fontSize: '0.875rem',
+                            marginBottom: '0.75rem'
+                          }}>
+                            {usernameError}
+                          </div>
+                        )}
+                        
+                        <input
+                          type="text"
+                          value={newUsername}
+                          onChange={(e) => setNewUsername(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '8px',
+                            fontSize: '1rem',
+                            marginBottom: '0.75rem',
+                            boxSizing: 'border-box'
+                          }}
+                          placeholder="新しいユーザーネーム"
+                        />
+                        
+                        <div style={{
+                          display: 'flex',
+                          gap: '0.5rem'
+                        }}>
+                          <button
+                            type="button"
+                            onClick={handleUsernameChange}
+                            style={{
+                              flex: 1,
+                              padding: '0.75rem',
+                              backgroundColor: '#10b981',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '8px',
+                              fontSize: '1rem',
+                              fontWeight: '600',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            保存
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsEditingUsername(false);
+                              setUsernameError(null);
+                              setNewUsername('');
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '0.75rem',
+                              backgroundColor: '#6b7280',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '8px',
+                              fontSize: '1rem',
+                              fontWeight: '600',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            キャンセル
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* 登録メール */}
