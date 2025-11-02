@@ -326,22 +326,29 @@ export default function Home() {
 
   // 長押し終了
   const handleLongPressEnd = (e?: React.TouchEvent | React.MouseEvent) => {
-    // イベントの伝播を防ぐ
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+    const wasLongPress = longPressCompletedRef.current;
     
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+    
+    // 長押しが完了していた場合のみイベントを止める
+    if (wasLongPress && e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     longPressWordRef.current = null;
     
-    // 少し遅延させてからフラグをリセット（通常クリックを防ぐため）
-    setTimeout(() => {
+    // フラグをリセット（長押し完了時は少し遅延、それ以外は即座に）
+    if (wasLongPress) {
+      setTimeout(() => {
+        longPressCompletedRef.current = false;
+      }, 100);
+    } else {
       longPressCompletedRef.current = false;
-    }, 150);
+    }
   };
 
   // ユーザーネーム変更処理
@@ -2272,8 +2279,6 @@ export default function Home() {
                                 }
                               }}
                               onTouchStart={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
                                 handleLongPressStart(word, currentCategory?.id || '', e);
                               }}
                               onTouchEnd={handleLongPressEnd}
@@ -2374,8 +2379,6 @@ export default function Home() {
                                 }
                               }}
                               onTouchStart={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
                                 handleLongPressStart(word, currentCategory?.id || '', e);
                               }}
                               onTouchEnd={handleLongPressEnd}
@@ -2473,8 +2476,6 @@ export default function Home() {
                                 }
                               }}
                               onTouchStart={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
                                 handleLongPressStart(word, currentCategory?.id || '', e);
                               }}
                               onTouchEnd={handleLongPressEnd}
@@ -2572,8 +2573,6 @@ export default function Home() {
                                 }
                               }}
                               onTouchStart={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
                                 handleLongPressStart(word, currentCategory?.id || '', e);
                               }}
                               onTouchEnd={handleLongPressEnd}
