@@ -1733,6 +1733,61 @@ export default function Home() {
                   </>
                 )}
                 
+                {/* 「発音表記について」カテゴリーボタン（最初に表示） */}
+                {categories.find(c => c.id === 'pronunciation') && (
+                  <button
+                    key="pronunciation"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      playHapticAndSound();
+                      setSelectedCategory('pronunciation');
+                    }}
+                    style={{
+                      padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
+                      fontSize: isMobile ? '0.875rem' : '1rem',
+                      fontWeight: '600',
+                      borderRadius: '16px',
+                      background: selectedCategory === 'pronunciation' 
+                        ? 'linear-gradient(145deg, #6366f1, #4f46e5)' 
+                        : 'linear-gradient(145deg, #ffffff, #f5f5f7)',
+                      color: selectedCategory === 'pronunciation' ? 'white' : '#1d1d1f',
+                      border: 'none',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: selectedCategory === 'pronunciation' 
+                        ? '0 4px 12px rgba(99,102,241,0.4), inset 0 1px 0 rgba(255,255,255,0.2)' 
+                        : '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)',
+                      transform: 'scale(1)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                      if (selectedCategory === 'pronunciation') {
+                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(99,102,241,0.5), inset 0 1px 0 rgba(255,255,255,0.2)';
+                      } else {
+                        e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      if (selectedCategory === 'pronunciation') {
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(99,102,241,0.4), inset 0 1px 0 rgba(255,255,255,0.2)';
+                      } else {
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)';
+                      }
+                    }}
+                    onMouseDown={(e) => {
+                      e.currentTarget.style.transform = 'scale(0.98)';
+                    }}
+                    onMouseUp={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                    }}
+                  >
+                    発音表記について
+                  </button>
+                )}
+                
                 {/* お気に入りボタン */}
                 {user && (
                   <button
@@ -1777,8 +1832,8 @@ export default function Home() {
                   </button>
                 )}
                 
-                {/* カテゴリーボタン */}
-                {categories.map((category) => (
+                {/* カテゴリーボタン（発音表記についてを除く） */}
+                {categories.filter(c => c.id !== 'pronunciation').map((category) => (
                   <button
                     key={category.id}
                     onClick={(e) => {
