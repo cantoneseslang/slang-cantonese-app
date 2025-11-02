@@ -163,13 +163,13 @@ export default function Home() {
   const getMembershipLabel = (type: 'free' | 'subscription' | 'lifetime') => {
     switch (type) {
       case 'free':
-        return '普通会員';
+        return 'ブロンズ会員';
       case 'subscription':
-        return 'サブスク会員';
+        return 'シルバー会員';
       case 'lifetime':
-        return '永久買い切り会員';
+        return 'ゴールド会員';
       default:
-        return '普通会員';
+        return 'ブロンズ会員';
     }
   };
 
@@ -177,13 +177,43 @@ export default function Home() {
   const getMembershipIcon = (type: 'free' | 'subscription' | 'lifetime') => {
     switch (type) {
       case 'free':
-        return '👤';
+        return '🥉';
       case 'subscription':
-        return '⭐';
+        return '🥈';
       case 'lifetime':
-        return '👑';
+        return '🏆';
       default:
-        return '👤';
+        return '🥉';
+    }
+  };
+
+  // 会員種別の色取得
+  const getMembershipColor = (type: 'free' | 'subscription' | 'lifetime') => {
+    switch (type) {
+      case 'free':
+        return {
+          border: '#cd7f32',
+          bg: '#fef3c7',
+          gradient: 'linear-gradient(135deg, #fef3c7 0%, #f59e0b 100%)'
+        };
+      case 'subscription':
+        return {
+          border: '#c0c0c0',
+          bg: '#f3f4f6',
+          gradient: 'linear-gradient(135deg, #f3f4f6 0%, #9ca3af 100%)'
+        };
+      case 'lifetime':
+        return {
+          border: '#ffd700',
+          bg: '#fef9c3',
+          gradient: 'linear-gradient(135deg, #fef9c3 0%, #fbbf24 100%)'
+        };
+      default:
+        return {
+          border: '#cd7f32',
+          bg: '#fef3c7',
+          gradient: 'linear-gradient(135deg, #fef3c7 0%, #f59e0b 100%)'
+        };
     }
   };
 
@@ -1785,8 +1815,8 @@ export default function Home() {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 background: selectedPlan === 'subscription' 
-                  ? 'linear-gradient(135deg, #fef3c7 0%, #fbbf24 100%)' 
-                  : 'linear-gradient(135deg, #ede9fe 0%, #a78bfa 100%)'
+                  ? 'linear-gradient(145deg, #e8e8e8 0%, #c0c0c0 50%, #a8a8a8 100%)' 
+                  : 'linear-gradient(145deg, #ffe066 0%, #ffd700 50%, #ffb700 100%)'
               }}>
                 <h2 style={{
                   fontSize: '1.5rem',
@@ -1794,10 +1824,15 @@ export default function Home() {
                   margin: 0,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem'
+                  gap: '0.5rem',
+                  textShadow: selectedPlan === 'subscription' 
+                    ? '0 1px 2px rgba(255,255,255,0.5)' 
+                    : '0 1px 2px rgba(255,255,255,0.5)'
                 }}>
-                  <span>{selectedPlan === 'subscription' ? '⭐' : '👑'}</span>
-                  <span>{selectedPlan === 'subscription' ? 'サブスク会員' : '永久買い切り会員'}</span>
+                  <span style={{ fontSize: '2rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>
+                    {selectedPlan === 'subscription' ? '🥈' : '🏆'}
+                  </span>
+                  <span>{selectedPlan === 'subscription' ? 'シルバー会員' : 'ゴールド会員'}</span>
                 </h2>
                 <button
                   onClick={() => {
@@ -1826,7 +1861,10 @@ export default function Home() {
                   <div style={{
                     fontSize: '3rem',
                     fontWeight: 'bold',
-                    color: selectedPlan === 'subscription' ? '#f59e0b' : '#8b5cf6'
+                    color: selectedPlan === 'subscription' ? '#6b7280' : '#d97706',
+                    textShadow: selectedPlan === 'subscription' 
+                      ? '0 2px 4px rgba(0,0,0,0.1)' 
+                      : '0 2px 4px rgba(255,215,0,0.3)'
                   }}>
                     {selectedPlan === 'subscription' ? '¥980' : '¥9,800'}
                   </div>
@@ -1875,17 +1913,22 @@ export default function Home() {
                   style={{
                     width: '100%',
                     padding: '1rem',
-                    backgroundColor: selectedPlan === 'subscription' ? '#f59e0b' : '#8b5cf6',
-                    color: 'white',
+                    background: selectedPlan === 'subscription' 
+                      ? 'linear-gradient(145deg, #e8e8e8 0%, #c0c0c0 50%, #a8a8a8 100%)' 
+                      : 'linear-gradient(145deg, #ffe066 0%, #ffd700 50%, #ffb700 100%)',
+                    color: selectedPlan === 'subscription' ? '#1f2937' : '#1f2937',
                     border: 'none',
                     borderRadius: '12px',
                     fontSize: '1.125rem',
-                    fontWeight: '600',
+                    fontWeight: '700',
                     cursor: 'pointer',
-                    transition: 'all 0.2s',
+                    transition: 'all 0.3s',
                     boxShadow: selectedPlan === 'subscription' 
-                      ? '0 4px 12px rgba(245,158,11,0.4)' 
-                      : '0 4px 12px rgba(139,92,246,0.4)'
+                      ? '0 4px 12px rgba(192,192,192,0.4), inset 0 1px 0 rgba(255,255,255,0.4)' 
+                      : '0 4px 12px rgba(255,215,0,0.5), inset 0 1px 0 rgba(255,255,255,0.4)',
+                    textShadow: selectedPlan === 'subscription' 
+                      ? '0 1px 2px rgba(255,255,255,0.5)' 
+                      : '0 1px 2px rgba(255,255,255,0.5)'
                   }}
                 >
                   今すぐアップグレード
@@ -2213,99 +2256,152 @@ export default function Home() {
                       gap: '0.5rem',
                       marginBottom: '1rem'
                     }}>
-                      {/* 普通会員 */}
+                      {/* ブロンズ会員 */}
                       <button
                         onClick={() => handleMembershipChange('free')}
                         style={{
                           flex: 1,
-                          padding: '1rem',
-                          borderRadius: '12px',
-                          border: membershipType === 'free' ? '2px solid #6b7280' : '2px solid #e5e7eb',
-                          backgroundColor: membershipType === 'free' ? '#f9fafb' : 'white',
+                          padding: '1.25rem 0.75rem',
+                          borderRadius: '16px',
+                          border: 'none',
+                          background: membershipType === 'free' 
+                            ? 'linear-gradient(145deg, #d4a574 0%, #cd7f32 50%, #a85f1f 100%)' 
+                            : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
                           cursor: 'default',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
                           gap: '0.5rem',
-                          transition: 'all 0.2s'
+                          transition: 'all 0.3s',
+                          boxShadow: membershipType === 'free' 
+                            ? '0 8px 20px rgba(205,127,50,0.4), inset 0 1px 0 rgba(255,255,255,0.3)' 
+                            : '0 2px 8px rgba(0,0,0,0.1)',
+                          transform: membershipType === 'free' ? 'scale(1.05)' : 'scale(1)'
                         }}
                       >
-                        <span style={{ fontSize: '1.5rem' }}>{getMembershipIcon('free')}</span>
+                        <span style={{ fontSize: '2rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>
+                          {getMembershipIcon('free')}
+                        </span>
                         <span style={{
                           fontSize: '0.875rem',
-                          fontWeight: membershipType === 'free' ? '600' : '400',
-                          color: membershipType === 'free' ? '#1f2937' : '#6b7280'
+                          fontWeight: '700',
+                          color: membershipType === 'free' ? '#ffffff' : '#6b7280',
+                          textShadow: membershipType === 'free' ? '0 1px 2px rgba(0,0,0,0.3)' : 'none'
                         }}>
                           {getMembershipLabel('free')}
                         </span>
                       </button>
 
-                      {/* サブスク会員 */}
+                      {/* シルバー会員 */}
                       <button
                         onClick={() => handleMembershipChange('subscription')}
                         style={{
                           flex: 1,
-                          padding: '1rem',
-                          borderRadius: '12px',
-                          border: membershipType === 'subscription' ? '2px solid #f59e0b' : '2px solid #e5e7eb',
-                          backgroundColor: membershipType === 'subscription' ? '#fef3c7' : 'white',
+                          padding: '1.25rem 0.75rem',
+                          borderRadius: '16px',
+                          border: 'none',
+                          background: membershipType === 'subscription' 
+                            ? 'linear-gradient(145deg, #e8e8e8 0%, #c0c0c0 50%, #a8a8a8 100%)' 
+                            : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
                           cursor: membershipType === 'subscription' ? 'default' : 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
                           gap: '0.5rem',
-                          transition: 'all 0.2s'
+                          transition: 'all 0.3s',
+                          boxShadow: membershipType === 'subscription' 
+                            ? '0 8px 20px rgba(192,192,192,0.4), inset 0 1px 0 rgba(255,255,255,0.4)' 
+                            : '0 2px 8px rgba(0,0,0,0.1)',
+                          transform: membershipType === 'subscription' ? 'scale(1.05)' : 'scale(1)'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (membershipType !== 'subscription') {
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                            e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (membershipType !== 'subscription') {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                          }
                         }}
                       >
-                        <span style={{ fontSize: '1.5rem' }}>{getMembershipIcon('subscription')}</span>
+                        <span style={{ fontSize: '2rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>
+                          {getMembershipIcon('subscription')}
+                        </span>
                         <span style={{
                           fontSize: '0.875rem',
-                          fontWeight: membershipType === 'subscription' ? '600' : '400',
-                          color: membershipType === 'subscription' ? '#1f2937' : '#6b7280'
+                          fontWeight: '700',
+                          color: membershipType === 'subscription' ? '#1f2937' : '#6b7280',
+                          textShadow: membershipType === 'subscription' ? '0 1px 2px rgba(255,255,255,0.5)' : 'none'
                         }}>
                           {getMembershipLabel('subscription')}
                         </span>
                         {membershipType !== 'subscription' && membershipType !== 'lifetime' && (
                           <span style={{
-                            fontSize: '0.75rem',
-                            color: '#f59e0b',
-                            fontWeight: '600'
+                            fontSize: '0.8rem',
+                            color: '#6b7280',
+                            fontWeight: '700'
                           }}>
                             ¥980/月
                           </span>
                         )}
                       </button>
 
-                      {/* 永久買い切り会員 */}
+                      {/* ゴールド会員 */}
                       <button
                         onClick={() => handleMembershipChange('lifetime')}
                         style={{
                           flex: 1,
-                          padding: '1rem',
-                          borderRadius: '12px',
-                          border: membershipType === 'lifetime' ? '2px solid #8b5cf6' : '2px solid #e5e7eb',
-                          backgroundColor: membershipType === 'lifetime' ? '#ede9fe' : 'white',
+                          padding: '1.25rem 0.75rem',
+                          borderRadius: '16px',
+                          border: 'none',
+                          background: membershipType === 'lifetime' 
+                            ? 'linear-gradient(145deg, #ffe066 0%, #ffd700 50%, #ffb700 100%)' 
+                            : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
                           cursor: membershipType === 'lifetime' ? 'default' : 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
                           gap: '0.5rem',
-                          transition: 'all 0.2s'
+                          transition: 'all 0.3s',
+                          boxShadow: membershipType === 'lifetime' 
+                            ? '0 8px 20px rgba(255,215,0,0.5), inset 0 1px 0 rgba(255,255,255,0.4)' 
+                            : '0 2px 8px rgba(0,0,0,0.1)',
+                          transform: membershipType === 'lifetime' ? 'scale(1.05)' : 'scale(1)',
+                          position: 'relative',
+                          overflow: 'hidden'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (membershipType !== 'lifetime') {
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                            e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (membershipType !== 'lifetime') {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                          }
                         }}
                       >
-                        <span style={{ fontSize: '1.5rem' }}>{getMembershipIcon('lifetime')}</span>
+                        <span style={{ fontSize: '2rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>
+                          {getMembershipIcon('lifetime')}
+                        </span>
                         <span style={{
                           fontSize: '0.875rem',
-                          fontWeight: membershipType === 'lifetime' ? '600' : '400',
-                          color: membershipType === 'lifetime' ? '#1f2937' : '#6b7280'
+                          fontWeight: '700',
+                          color: membershipType === 'lifetime' ? '#1f2937' : '#6b7280',
+                          textShadow: membershipType === 'lifetime' ? '0 1px 2px rgba(255,255,255,0.5)' : 'none'
                         }}>
                           {getMembershipLabel('lifetime')}
                         </span>
                         {membershipType !== 'lifetime' && (
                           <span style={{
-                            fontSize: '0.75rem',
-                            color: '#8b5cf6',
-                            fontWeight: '600'
+                            fontSize: '0.8rem',
+                            color: '#6b7280',
+                            fontWeight: '700'
                           }}>
                             ¥9,800
                           </span>
