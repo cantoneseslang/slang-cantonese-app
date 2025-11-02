@@ -1002,15 +1002,18 @@ export default function Home() {
       source.start(0);
     }
 
-    // 連続発音（「同」は「tung4」に変換）
+    // 連続発音
     const texts = sequence.split(',').map(t => t.trim());
     const textMap: { [key: string]: string } = {
       '3': '3',
       '9': '9',
       '4': '4',
-      '同': '同',
+      '0': '0',
       '5': '5',
-      '2': '2'
+      '2': '2',
+      '7': '7',
+      '8': '8',
+      '6': '6'
     };
 
     for (let i = 0; i < texts.length; i++) {
