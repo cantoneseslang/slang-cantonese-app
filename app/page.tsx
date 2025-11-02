@@ -80,6 +80,10 @@ export default function Home() {
   const [membershipType, setMembershipType] = useState<'free' | 'subscription' | 'lifetime'>('free');
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'subscription' | 'lifetime' | null>(null);
+  
+  // デバッグ情報の状態
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [loadingDebugInfo, setLoadingDebugInfo] = useState(false);
 
   // 音声の初期化（Web Audio APIで100%音量）
   useEffect(() => {
@@ -233,9 +237,40 @@ export default function Home() {
       }, 1000);
     } catch (err: any) {
       console.error('❌ ユーザーネーム変更エラー:', err);
-      const errorMsg = err.message || 'ユーザーネーム変更に失敗しました';
+      
+      // エラーを完全に日本語化
+      const errorMessage = err?.message || err?.error?.message || '';
+      const msg = errorMessage.toLowerCase();
+      
+      let errorMsg = 'ユーザーネーム変更に失敗しました';
+      
+      // 既に使用されている
+      if (msg.includes('already') || msg.includes('exists') || msg.includes('taken')) {
+        errorMsg = 'このユーザーネームは既に使用されています';
+      }
+      // 無効な文字
+      else if (msg.includes('invalid') || msg.includes('forbidden') || msg.includes('not allowed')) {
+        errorMsg = 'ユーザーネームに使用できない文字が含まれています';
+      }
+      // 長さエラー
+      else if (msg.includes('length') || msg.includes('too long') || msg.includes('too short')) {
+        errorMsg = 'ユーザーネームは2文字以上50文字以内である必要があります';
+      }
+      // セッションエラー
+      else if (msg.includes('session') || msg.includes('token') || msg.includes('unauthorized') || msg.includes('unauthenticated')) {
+        errorMsg = 'セッションが無効です。再度ログインしてください';
+      }
+      // ネットワークエラー
+      else if (msg.includes('network') || msg.includes('fetch') || msg.includes('connection')) {
+        errorMsg = 'ネットワークエラーが発生しました。接続を確認してください';
+      }
+      // その他のエラー（英語メッセージは表示しない）
+      else if (errorMessage) {
+        errorMsg = 'ユーザーネーム変更に失敗しました。入力内容を確認してください';
+      }
+      
       setUsernameError(errorMsg);
-      alert('❌ エラー: ' + errorMsg);
+      alert('❌ ' + errorMsg);
     }
     
     console.log('=== ユーザーネーム変更処理終了 ===');
@@ -309,14 +344,17 @@ export default function Home() {
 
       console.log('Supabase応答 - data:', data);
       console.log('Supabase応答 - error:', error);
+      console.log('Supabase応答 - error (full):', JSON.stringify(error, null, 2));
 
       if (error) {
         console.error('Supabaseエラー詳細:', {
           message: error.message,
           status: error.status,
-          name: error.name
+          name: error.name,
+          full_error: error
         });
-        throw error;
+        // エラーオブジェクト全体をthrowして、catch節で完全な情報を取得できるようにする
+        throw { ...error, originalError: error };
       }
 
       console.log('✅ パスワード変更成功！');
@@ -335,37 +373,94 @@ export default function Home() {
       }, 2000);
     } catch (err: any) {
       console.error('❌ パスワード変更エラー:', err);
+      console.error('❌ パスワード変更エラー（完全）:', JSON.stringify(err, null, 2));
       
-      // Supabaseエラーを日本語化
-      let errorMsg = 'パスワード変更に失敗しました';
-      
-      if (err.message) {
-        const msg = err.message.toLowerCase();
-        
-        // 同じパスワードのエラー
-        if (msg.includes('same') && msg.includes('password')) {
-          errorMsg = '新しいパスワードは現在のパスワードと異なる必要があります';
-        }
-        // パスワードが弱すぎる
-        else if (msg.includes('weak') || msg.includes('strength')) {
-          errorMsg = 'パスワードが弱すぎます。より強力なパスワードを使用してください';
-        }
-        // セッションエラー
-        else if (msg.includes('session') || msg.includes('token')) {
-          errorMsg = 'セッションが無効です。再度ログインしてください';
-        }
-        // ネットワークエラー
-        else if (msg.includes('network') || msg.includes('fetch')) {
-          errorMsg = 'ネットワークエラーが発生しました。接続を確認してください';
-        }
-        // その他のエラー（英語メッセージも含める）
-        else {
-          errorMsg = `パスワード変更に失敗しました: ${err.message}`;
-        }
+      // errorオブジェクトからメッセージを取得（様々なパターンを試す）
+      let errorMessage = '';
+      if (err?.message) {
+        errorMessage = String(err.message);
+      } else if (err?.error?.message) {
+        errorMessage = String(err.error.message);
+      } else if (err?.originalError?.message) {
+        errorMessage = String(err.originalError.message);
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err?.toString && err.toString() !== '[object Object]') {
+        errorMessage = err.toString();
       }
       
-      setPasswordError(errorMsg);
-      alert('❌ ' + errorMsg);
+      console.log('🔍 抽出したエラーメッセージ:', errorMessage);
+      
+      // Supabaseエラーを完全に日本語化（英語メッセージは絶対に表示しない）
+      const msg = errorMessage.toLowerCase();
+      let errorMsg = 'パスワード変更に失敗しました';
+      
+      // 同じパスワードのエラー（様々な表現を完全カバー）
+      if (msg.includes('different') || 
+          msg.includes('should be different') ||
+          msg.includes('must be different') ||
+          msg.includes('new password should be different') ||
+          msg.includes('new password must be different') ||
+          (msg.includes('same') && msg.includes('password'))) {
+        errorMsg = '新しいパスワードは現在のパスワードと異なる必要があります';
+      }
+      // パスワードが弱すぎる
+      else if (msg.includes('weak') || msg.includes('strength') || msg.includes('too simple')) {
+        errorMsg = 'パスワードが弱すぎます。より強力なパスワードを使用してください';
+      }
+      // パスワード長エラー
+      else if (msg.includes('length') || msg.includes('too short') || msg.includes('too long')) {
+        errorMsg = 'パスワードの長さが不正です。6文字以上で設定してください';
+      }
+      // パスワード形式エラー
+      else if (msg.includes('format') || msg.includes('invalid') || msg.includes('must contain')) {
+        errorMsg = 'パスワードの形式が不正です。英文字、数字、記号を含めてください';
+      }
+      // セッションエラー
+      else if (msg.includes('session') || msg.includes('token') || msg.includes('unauthorized') || msg.includes('unauthenticated')) {
+        errorMsg = 'セッションが無効です。再度ログインしてください';
+      }
+      // ユーザーが見つからない
+      else if (msg.includes('user not found') || msg.includes('user does not exist')) {
+        errorMsg = 'ユーザーが見つかりません。再度ログインしてください';
+      }
+      // ネットワークエラー
+      else if (msg.includes('network') || msg.includes('fetch') || msg.includes('connection')) {
+        errorMsg = 'ネットワークエラーが発生しました。接続を確認してください';
+      }
+      // レート制限
+      else if (msg.includes('rate limit') || msg.includes('too many requests')) {
+        errorMsg = 'リクエストが多すぎます。しばらく待ってから再度お試しください';
+      }
+      // その他のエラー（必ず日本語メッセージを返す）
+      // 何があっても英語メッセージは表示しない
+      
+      console.log('🔍 エラーメッセージ判定前:', { errorMsg, msg, errorMessage });
+      
+      // 最終チェック：英語が含まれている場合は必ず日本語に置き換え
+      // エラーメッセージに英語が含まれている場合、完全に日本語化する
+      let finalErrorMessage = errorMsg;
+      
+      // 英語文字が含まれているかチェック（絵文字や記号は除外）
+      const hasEnglish = /[a-zA-Z]/.test(finalErrorMessage);
+      
+      if (hasEnglish && !finalErrorMessage.includes('✅') && !finalErrorMessage.includes('❌')) {
+        // 英語が含まれている場合は、完全に日本語の汎用メッセージに置き換え
+        finalErrorMessage = 'パスワード変更に失敗しました。入力内容を確認してください';
+        console.log('⚠️ 英語が検出されたため、日本語メッセージに置き換えました');
+      }
+      
+      // さらに厳密にチェック：英語のみのメッセージがないか確認
+      if (finalErrorMessage.match(/^[a-zA-Z\s:.,!?-]+$/)) {
+        finalErrorMessage = 'パスワード変更に失敗しました。入力内容を確認してください';
+        console.log('⚠️ 英語のみのメッセージが検出されたため、日本語メッセージに置き換えました');
+      }
+      
+      console.log('✅ 最終エラーメッセージ（日本語保証）:', finalErrorMessage);
+      
+      // 確実に日本語のみのメッセージを設定
+      setPasswordError(finalErrorMessage);
+      alert('❌ ' + finalErrorMessage);
     }
     
     console.log('=== パスワード変更処理終了 ===');
@@ -515,8 +610,25 @@ export default function Home() {
   useEffect(() => {
     // ユーザー情報の取得
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) {
+        console.error('ユーザー取得エラー:', error);
+      } else {
+        setUser(user);
+        // デバッグ: ユーザー情報を詳細にログ出力
+        if (user) {
+          console.log('=== 現在のユーザー情報（Supabase） ===');
+          console.log('Email:', user.email);
+          console.log('User ID:', user.id);
+          console.log('Username (metadata):', user.user_metadata?.username);
+          console.log('Membership Type (metadata):', user.user_metadata?.membership_type);
+          console.log('Has Password:', user.identities?.some(i => i.provider === 'email'));
+          console.log('Last Sign In:', user.last_sign_in_at);
+          console.log('Updated At:', user.updated_at);
+          console.log('Full Metadata:', JSON.stringify(user.user_metadata, null, 2));
+          console.log('====================================');
+        }
+      }
     };
     getUser();
   }, []);
@@ -637,6 +749,30 @@ export default function Home() {
       handleCategoryScroll();
     }
   }, [user, isMobile]);
+
+  // 設定画面が開かれたときにデバッグ情報を自動取得
+  useEffect(() => {
+    if (showSettings && user) {
+      const fetchDebugInfo = async () => {
+        setLoadingDebugInfo(true);
+        try {
+          const response = await fetch('/api/debug-user');
+          const data = await response.json();
+          if (data.success) {
+            setDebugInfo(data.user);
+            console.log('✅ Supabaseデータ確認完了:', data.user);
+          } else {
+            console.error('デバッグ情報取得エラー:', data.error);
+          }
+        } catch (error: any) {
+          console.error('デバッグ情報取得エラー:', error.message);
+        } finally {
+          setLoadingDebugInfo(false);
+        }
+      };
+      fetchDebugInfo();
+    }
+  }, [showSettings, user]);
 
   const handleSearch = async (query: string) => {
     if (!query || query.trim() === '') {
@@ -2784,6 +2920,59 @@ export default function Home() {
                       </button>
                     </div>
                   </div>
+                </div>
+
+                {/* デバッグ情報（自動表示） */}
+                <div style={{
+                  marginTop: '2rem',
+                  padding: '1rem',
+                  backgroundColor: '#f0f9ff',
+                  borderRadius: '8px',
+                  border: '1px solid #bfdbfe'
+                }}>
+                  <h3 style={{
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    marginBottom: '0.75rem',
+                    color: '#1e40af'
+                  }}>🔍 Supabaseデータ確認結果</h3>
+                  
+                  {loadingDebugInfo ? (
+                    <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                      確認中...
+                    </div>
+                  ) : debugInfo ? (
+                    <div style={{ fontSize: '0.875rem', lineHeight: '1.6' }}>
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <strong>Email:</strong> {debugInfo.email}
+                      </div>
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <strong>Username:</strong> {debugInfo.username ? `✅ ${debugInfo.username}` : '❌ 未設定'}
+                      </div>
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <strong>Membership:</strong> {debugInfo.membership_type ? `✅ ${debugInfo.membership_type}` : '❌ 未設定'}
+                      </div>
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <strong>Password:</strong> {debugInfo.has_password ? '✅ 設定済み' : '❌ 未設定'}
+                      </div>
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <strong>Last Sign In:</strong> {debugInfo.last_sign_in_at ? new Date(debugInfo.last_sign_in_at).toLocaleString('ja-JP') : '❌ 未設定'}
+                      </div>
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <strong>Updated At:</strong> {debugInfo.updated_at ? new Date(debugInfo.updated_at).toLocaleString('ja-JP') : '❌ 未設定'}
+                      </div>
+                      <div style={{ marginTop: '0.75rem', padding: '0.5rem', backgroundColor: '#fff', borderRadius: '4px', fontSize: '0.75rem', fontFamily: 'monospace', overflow: 'auto' }}>
+                        <strong>Full Metadata:</strong>
+                        <pre style={{ margin: '0.5rem 0 0 0', whiteSpace: 'pre-wrap' }}>
+                          {JSON.stringify(debugInfo.full_metadata, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ color: '#dc2626', fontSize: '0.875rem' }}>
+                      ❌ データ取得に失敗しました
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

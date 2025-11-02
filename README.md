@@ -1,5 +1,22 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## ⚠️ 重要な初期設定チェック
+
+**新しいプロジェクトで作業を始める前に、必ずSupabase設定を確認してください：**
+
+```bash
+npm run check-supabase
+```
+
+このコマンドは以下を自動チェックします：
+- `.env.local` のプロジェクトID
+- `~/.cursor/mcp.json` のMCP設定
+
+**設定が一致しない場合：**
+1. エラーメッセージに従ってMCP設定を更新
+2. Cursorを再起動
+3. 再度チェックコマンドを実行
+
 ## Getting Started
 
 First, run the development server:
@@ -28,6 +45,32 @@ To learn more about Next.js, take a look at the following resources:
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## 🔐 管理者ページ
+
+管理者ページにアクセスするには、以下のURLにアクセスしてください：
+
+```
+http://localhost:3000/admin
+```
+
+**管理者権限:**
+- Email: `bestinksalesman@gmail.com` が管理者として設定されています
+- 他のユーザーを管理者にするには、Supabaseの`user_metadata`に`is_admin: true`を設定してください
+
+**全ユーザー情報を取得するには:**
+1. Supabaseダッシュボードにアクセス
+2. Settings > API から「service_role」キーをコピー
+3. `.env.local`に以下を追加：
+   ```
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+   ```
+
+**管理者ページの機能:**
+- 会員情報一覧表示
+- ユーザーネームの編集
+- 会員種別の変更（ブロンズ/シルバー/ゴールド）
+- 統計情報の表示
 
 ## Deploy on Vercel
 

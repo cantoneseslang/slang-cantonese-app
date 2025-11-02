@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function LoginPage() {
+function LoginForm() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,7 +16,17 @@ export default function LoginPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
+  
+  const redirectPath = searchParams.get('redirect');
+  const redirectMessage = searchParams.get('message');
+  
+  useEffect(() => {
+    if (redirectMessage) {
+      setMessage(redirectMessage);
+    }
+  }, [redirectMessage]);
 
   const validatePassword = (pwd: string): string | null => {
     if (pwd.length < 6) {
@@ -135,7 +145,8 @@ export default function LoginPage() {
         if (error) throw error;
 
         if (data.user) {
-          router.push('/');
+          // リダイレクト先がある場合はそこに、なければホームに
+          router.push(redirectPath || '/');
           router.refresh();
         }
       }
@@ -578,5 +589,25 @@ export default function LoginPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#f3f4f6'
+      }}>
+        <div style={{ textAlign: 'center', color: '#6b7280' }}>
+          読み込み中...
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

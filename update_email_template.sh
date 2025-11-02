@@ -31,3 +31,4 @@ curl -X PATCH "https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth" \
 echo ""
 echo "更新完了！"
 
+

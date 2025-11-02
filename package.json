@@ -6,7 +6,9 @@
     "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check-supabase": "node scripts/check-supabase-config.js",
+    "check-user": "node scripts/auto-check-user.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
