@@ -84,6 +84,12 @@ export default function Home() {
   // デバッグ情報の状態
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [loadingDebugInfo, setLoadingDebugInfo] = useState(false);
+  
+  // お気に入りの状態
+  const [favorites, setFavorites] = useState<Set<string>>(new Set()); // "categoryId:wordChinese" 形式
+  const [loadingFavorites, setLoadingFavorites] = useState(false);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressWordRef = useRef<{word: Word, categoryId: string} | null>(null);
 
   // 音声の初期化（Web Audio APIで100%音量）
   useEffect(() => {
@@ -177,6 +183,121 @@ export default function Home() {
 
     initializeUserMetadata();
   }, [user]);
+
+  // お気に入りの読み込み
+  useEffect(() => {
+    const loadFavorites = async () => {
+      if (!user) {
+        setFavorites(new Set());
+        return;
+      }
+
+      try {
+        setLoadingFavorites(true);
+        const response = await fetch('/api/favorites/list');
+        const data = await response.json();
+        
+        if (data.success && data.favoriteSet) {
+          setFavorites(new Set(data.favoriteSet));
+        }
+      } catch (error) {
+        console.error('お気に入り読み込みエラー:', error);
+      } finally {
+        setLoadingFavorites(false);
+      }
+    };
+
+    loadFavorites();
+  }, [user]);
+
+  // お気に入りの追加/削除
+  const toggleFavorite = async (word: Word, categoryId: string) => {
+    if (!user) {
+      alert('お気に入り機能を使用するにはログインが必要です');
+      return;
+    }
+
+    const favoriteKey = `${categoryId}:${word.chinese}`;
+    const isFavorite = favorites.has(favoriteKey);
+
+    try {
+      if (isFavorite) {
+        // 削除
+        const response = await fetch('/api/favorites/remove', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            wordChinese: word.chinese,
+            categoryId: categoryId
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          const newFavorites = new Set(favorites);
+          newFavorites.delete(favoriteKey);
+          setFavorites(newFavorites);
+        } else {
+          alert(data.error || 'お気に入りの削除に失敗しました');
+        }
+      } else {
+        // 追加
+        const response = await fetch('/api/favorites/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            wordChinese: word.chinese,
+            wordJapanese: word.japanese,
+            categoryId: categoryId
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          const newFavorites = new Set(favorites);
+          newFavorites.add(favoriteKey);
+          setFavorites(newFavorites);
+        } else {
+          alert(data.error || 'お気に入りの追加に失敗しました');
+        }
+      }
+    } catch (error: any) {
+      console.error('お気に入り操作エラー:', error);
+      alert('エラーが発生しました');
+    }
+  };
+
+  // 長押し処理用のフラグ
+  const longPressCompletedRef = useRef(false);
+  
+  // 長押し開始
+  const handleLongPressStart = (word: Word, categoryId: string, e: React.TouchEvent | React.MouseEvent) => {
+    longPressCompletedRef.current = false;
+    longPressWordRef.current = { word, categoryId };
+    
+    longPressTimerRef.current = setTimeout(() => {
+      if (longPressWordRef.current) {
+        longPressCompletedRef.current = true;
+        playHapticAndSound();
+        toggleFavorite(longPressWordRef.current.word, longPressWordRef.current.categoryId);
+        longPressWordRef.current = null;
+      }
+    }, 500); // 500ms長押し
+  };
+
+  // 長押し終了
+  const handleLongPressEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressWordRef.current = null;
+    
+    // 少し遅延させてからフラグをリセット（通常クリックを防ぐため）
+    setTimeout(() => {
+      longPressCompletedRef.current = false;
+    }, 100);
+  };
 
   // ユーザーネーム変更処理
   const handleUsernameChange = async () => {
@@ -698,7 +819,42 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (selectedCategory && categories.length > 0) {
+    if (selectedCategory === 'favorites') {
+      // お気に入りカテゴリーの場合
+      if (favorites.size === 0) {
+        setCurrentWords([]);
+        setCurrentCategory(null);
+      } else {
+        // お気に入り単語を取得
+        const favoriteWords: Word[] = [];
+        favorites.forEach((favoriteKey) => {
+          const [categoryId, wordChinese] = favoriteKey.split(':');
+          const category = categories.find(c => c.id === categoryId);
+          if (category && category.words) {
+            const word = category.words.find(w => w.chinese === wordChinese);
+            if (word) {
+              favoriteWords.push({ ...word, chinese: word.chinese });
+            }
+          }
+          // practiceGroupsからも検索
+          if (category && category.practiceGroups) {
+            category.practiceGroups.forEach(group => {
+              const word = group.words.find(w => w.chinese === wordChinese);
+              if (word && !favoriteWords.find(w => w.chinese === wordChinese)) {
+                favoriteWords.push({ ...word, chinese: word.chinese });
+              }
+            });
+          }
+        });
+        setCurrentWords(favoriteWords);
+        setCurrentCategory({ id: 'favorites', name: 'お気に入り', words: favoriteWords });
+      }
+      // カテゴリーを切り替えた時に検索結果とアクティブな単語をクリア
+      setResult(null);
+      setError(null);
+      setSearchQuery('');
+      setActiveWordId(null);
+    } else if (selectedCategory && categories.length > 0) {
       const category = categories.find(c => c.id === selectedCategory);
       if (category) {
         setCurrentCategory(category);
@@ -710,7 +866,7 @@ export default function Home() {
         setActiveWordId(null);
       }
     }
-  }, [selectedCategory, categories]);
+  }, [selectedCategory, categories, favorites]);
 
   // カテゴリーバーのスクロール状態を更新
   const handleCategoryScroll = () => {
@@ -1571,6 +1727,50 @@ export default function Home() {
                   </>
                 )}
                 
+                {/* お気に入りボタン */}
+                {user && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      playHapticAndSound();
+                      setSelectedCategory('favorites');
+                    }}
+                    style={{
+                      padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
+                      fontSize: isMobile ? '0.875rem' : '1rem',
+                      fontWeight: '600',
+                      borderRadius: '16px',
+                      background: selectedCategory === 'favorites'
+                        ? 'linear-gradient(145deg, #f59e0b, #d97706)'
+                        : 'linear-gradient(145deg, #ffffff, #f5f5f7)',
+                      color: selectedCategory === 'favorites' ? 'white' : '#1d1d1f',
+                      border: 'none',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: selectedCategory === 'favorites'
+                        ? '0 4px 12px rgba(245,158,11,0.4), inset 0 1px 0 rgba(255,255,255,0.2)'
+                        : '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)',
+                      transform: 'scale(1)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                    onMouseDown={(e) => {
+                      e.currentTarget.style.transform = 'scale(0.98)';
+                    }}
+                    onMouseUp={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                    }}
+                  >
+                    ⭐️ お気に入り
+                  </button>
+                )}
+                
                 {/* カテゴリーボタン */}
                 {categories.map((category) => (
                   <button
@@ -1959,19 +2159,30 @@ export default function Home() {
                       }}>
                         {group.words.map((word, wIdx) => {
                           const isActive = !isLearningMode && activeWordId === word.chinese;
+                          const favoriteKey = `${currentCategory?.id || ''}:${word.chinese}`;
+                          const isFavorite = favorites.has(favoriteKey);
                           return (
                             <button
                               key={wIdx}
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                handleWordClick(word);
+                                if (!longPressCompletedRef.current) {
+                                  handleWordClick(word);
+                                }
                               }}
                               onTouchStart={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                handleWordClick(word);
+                                handleLongPressStart(word, currentCategory?.id || '', e);
                               }}
+                              onTouchEnd={handleLongPressEnd}
+                              onTouchCancel={handleLongPressEnd}
+                              onMouseDown={(e) => {
+                                handleLongPressStart(word, currentCategory?.id || '', e);
+                              }}
+                              onMouseUp={handleLongPressEnd}
+                              onMouseLeave={handleLongPressEnd}
                               style={{
                                 background: isActive 
                                   ? 'linear-gradient(145deg, #10b981, #059669)' 
@@ -1992,6 +2203,23 @@ export default function Home() {
                                 zIndex: 2
                               }}
                             >
+                              {/* 星マーク（右上） */}
+                              {user && (
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    top: '0.125rem',
+                                    right: '0.125rem',
+                                    fontSize: isMobile ? '0.75rem' : '0.875rem',
+                                    cursor: 'pointer',
+                                    zIndex: 10,
+                                    userSelect: 'none',
+                                    pointerEvents: 'none'
+                                  }}
+                                >
+                                  {isFavorite ? '⭐️' : '★'}
+                                </div>
+                              )}
                               <strong style={{ 
                                 fontSize: isMobile ? '1.25rem' : '1.875rem',
                                 color: isActive ? '#ffffff' : '#1d1d1f'
@@ -2030,19 +2258,30 @@ export default function Home() {
                       }}>
                         {group.words.slice(0, 6).map((word, wIdx) => {
                           const isActive = !isLearningMode && activeWordId === word.chinese;
+                          const favoriteKey = `${currentCategory?.id || ''}:${word.chinese}`;
+                          const isFavorite = favorites.has(favoriteKey);
                           return (
                             <button
                               key={wIdx}
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                handleWordClick(word);
+                                if (!longPressCompletedRef.current) {
+                                  handleWordClick(word);
+                                }
                               }}
                               onTouchStart={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                handleWordClick(word);
+                                handleLongPressStart(word, currentCategory?.id || '', e);
                               }}
+                              onTouchEnd={handleLongPressEnd}
+                              onTouchCancel={handleLongPressEnd}
+                              onMouseDown={(e) => {
+                                handleLongPressStart(word, currentCategory?.id || '', e);
+                              }}
+                              onMouseUp={handleLongPressEnd}
+                              onMouseLeave={handleLongPressEnd}
                               style={{
                                 background: isActive 
                                   ? 'linear-gradient(145deg, #10b981, #059669)' 
@@ -2063,6 +2302,23 @@ export default function Home() {
                                 zIndex: 2
                               }}
                             >
+                              {/* 星マーク（右上） */}
+                              {user && (
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    top: '0.125rem',
+                                    right: '0.125rem',
+                                    fontSize: isMobile ? '0.75rem' : '0.875rem',
+                                    cursor: 'pointer',
+                                    zIndex: 10,
+                                    userSelect: 'none',
+                                    pointerEvents: 'none'
+                                  }}
+                                >
+                                  {isFavorite ? '⭐️' : '★'}
+                                </div>
+                              )}
                               <strong style={{ 
                                 fontSize: isMobile ? '1.25rem' : '1.875rem',
                                 color: isActive ? '#ffffff' : '#1d1d1f'
@@ -2098,19 +2354,30 @@ export default function Home() {
                       }}>
                         {group.words.slice(6, 9).map((word, wIdx) => {
                           const isActive = !isLearningMode && activeWordId === word.chinese;
+                          const favoriteKey = `${currentCategory?.id || ''}:${word.chinese}`;
+                          const isFavorite = favorites.has(favoriteKey);
                           return (
                             <button
                               key={wIdx}
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                handleWordClick(word);
+                                if (!longPressCompletedRef.current) {
+                                  handleWordClick(word);
+                                }
                               }}
                               onTouchStart={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                handleWordClick(word);
+                                handleLongPressStart(word, currentCategory?.id || '', e);
                               }}
+                              onTouchEnd={handleLongPressEnd}
+                              onTouchCancel={handleLongPressEnd}
+                              onMouseDown={(e) => {
+                                handleLongPressStart(word, currentCategory?.id || '', e);
+                              }}
+                              onMouseUp={handleLongPressEnd}
+                              onMouseLeave={handleLongPressEnd}
                               style={{
                                 background: isActive 
                                   ? 'linear-gradient(145deg, #10b981, #059669)' 
@@ -2131,6 +2398,23 @@ export default function Home() {
                                 zIndex: 2
                               }}
                             >
+                              {/* 星マーク（右上） */}
+                              {user && (
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    top: '0.125rem',
+                                    right: '0.125rem',
+                                    fontSize: isMobile ? '0.75rem' : '0.875rem',
+                                    cursor: 'pointer',
+                                    zIndex: 10,
+                                    userSelect: 'none',
+                                    pointerEvents: 'none'
+                                  }}
+                                >
+                                  {isFavorite ? '⭐️' : '★'}
+                                </div>
+                              )}
                               <strong style={{ 
                                 fontSize: isMobile ? '1.25rem' : '1.875rem',
                                 color: isActive ? '#ffffff' : '#1d1d1f'
@@ -2166,19 +2450,30 @@ export default function Home() {
                       }}>
                         {group.words.slice(9).map((word, wIdx) => {
                           const isActive = !isLearningMode && activeWordId === word.chinese;
+                          const favoriteKey = `${currentCategory?.id || ''}:${word.chinese}`;
+                          const isFavorite = favorites.has(favoriteKey);
                           return (
                             <button
                               key={wIdx}
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                handleWordClick(word);
+                                if (!longPressCompletedRef.current) {
+                                  handleWordClick(word);
+                                }
                               }}
                               onTouchStart={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                handleWordClick(word);
+                                handleLongPressStart(word, currentCategory?.id || '', e);
                               }}
+                              onTouchEnd={handleLongPressEnd}
+                              onTouchCancel={handleLongPressEnd}
+                              onMouseDown={(e) => {
+                                handleLongPressStart(word, currentCategory?.id || '', e);
+                              }}
+                              onMouseUp={handleLongPressEnd}
+                              onMouseLeave={handleLongPressEnd}
                               style={{
                                 background: isActive 
                                   ? 'linear-gradient(145deg, #10b981, #059669)' 
@@ -2199,6 +2494,23 @@ export default function Home() {
                                 zIndex: 2
                               }}
                             >
+                              {/* 星マーク（右上） */}
+                              {user && (
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    top: '0.125rem',
+                                    right: '0.125rem',
+                                    fontSize: isMobile ? '0.75rem' : '0.875rem',
+                                    cursor: 'pointer',
+                                    zIndex: 10,
+                                    userSelect: 'none',
+                                    pointerEvents: 'none'
+                                  }}
+                                >
+                                  {isFavorite ? '⭐️' : '★'}
+                                </div>
+                              )}
                               <strong style={{ 
                                 fontSize: isMobile ? '1.25rem' : '1.875rem',
                                 color: isActive ? '#ffffff' : '#1d1d1f'
@@ -2233,19 +2545,26 @@ export default function Home() {
             }}>
               {currentWords.map((word, idx) => {
                 const isActive = !isLearningMode && activeWordId === word.chinese;
+                const favoriteKey = `${currentCategory?.id || ''}:${word.chinese}`;
+                const isFavorite = favorites.has(favoriteKey);
                 return (
                 <button
                   key={idx}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    handleWordClick(word);
+                    // 長押しが完了していない場合のみ音声を再生
+                    if (!longPressCompletedRef.current) {
+                      handleWordClick(word);
+                    }
                   }}
                   onTouchStart={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    handleWordClick(word);
+                    handleLongPressStart(word, currentCategory?.id || '', e);
                   }}
+                  onTouchEnd={handleLongPressEnd}
+                  onTouchCancel={handleLongPressEnd}
                   style={{
                     background: isActive 
                       ? 'linear-gradient(145deg, #10b981, #059669)' 
@@ -2275,14 +2594,34 @@ export default function Home() {
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'scale(1)';
                     e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)';
+                    handleLongPressEnd();
                   }}
                   onMouseDown={(e) => {
                     e.currentTarget.style.transform = 'scale(0.98)';
+                    handleLongPressStart(word, currentCategory?.id || '', e);
                   }}
                   onMouseUp={(e) => {
                     e.currentTarget.style.transform = 'scale(1.03) translateY(-2px)';
+                    handleLongPressEnd();
                   }}
                 >
+                  {/* 星マーク（右上） */}
+                  {user && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '0.25rem',
+                        right: '0.25rem',
+                        fontSize: isMobile ? '0.875rem' : '1rem',
+                        cursor: 'pointer',
+                        zIndex: 10,
+                        userSelect: 'none',
+                        pointerEvents: 'none'
+                      }}
+                    >
+                      {isFavorite ? '⭐️' : '★'}
+                    </div>
+                  )}
                   <strong style={{ 
                     fontSize: isMobile ? '1.5rem' : '1.875rem',
                     fontWeight: '600',
