@@ -1,6 +1,33 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
+// テーブルが存在しないエラーかどうかを判定する関数
+function isTableNotFoundError(error: any): boolean {
+  if (!error) return false
+  
+  const errorMessage = error.message || ''
+  const errorCode = error.code || ''
+  
+  // テーブル未検出エラーのパターンを網羅的にチェック
+  const tableNotFoundPatterns = [
+    'PGRST116', // Supabaseのテーブル未検出エラーコード
+    'relation',
+    'does not exist',
+    'no such table',
+    'Could not find the table',
+    'schema cache',
+    'user_favorites',
+    'Table',
+    'table',
+    'not found',
+    'NotFound'
+  ]
+  
+  return tableNotFoundPatterns.some(pattern => 
+    errorMessage.includes(pattern) || errorCode.includes(pattern)
+  )
+}
+
 export async function POST(request: Request) {
   try {
     const { wordChinese, wordJapanese, categoryId } = await request.json()
@@ -12,7 +39,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
 
-    // 会員種別を取得
+    // テーブル存在確認を最初に行う（軽量なクエリで確認）
+    const { error: tableCheckError } = await supabase
+      .from('user_favorites')
+      .select('id')
+      .limit(0)
+    
+    // テーブルが存在しない場合は早期リターン
+    if (tableCheckError && isTableNotFoundError(tableCheckError)) {
+      console.warn('テーブルが存在しません。ローカル状態で動作します。')
+      return NextResponse.json({ 
+        success: true,
+        data: null,
+        message: 'テーブルが存在しませんが、ローカル状態でお気に入りが保存されました。'
+      })
+    }
+    
+    // テーブルが存在する場合のみ、通常の処理を実行
     const membershipType = user.user_metadata?.membership_type || 'free'
     
     // 現在のお気に入り数を取得
@@ -21,37 +64,23 @@ export async function POST(request: Request) {
       .select('id', { count: 'exact' })
       .eq('user_id', user.id)
     
+    // エラーが発生した場合はテーブル未検出の可能性を再チェック
     if (countError) {
-      console.error('お気に入り数取得エラー:', countError)
-      // テーブルが存在しない場合は空配列として処理
-      const isTableNotFound = 
-        countError.code === 'PGRST116' || 
-        countError.message?.includes('relation') || 
-        countError.message?.includes('does not exist') || 
-        countError.message?.includes('no such table') ||
-        countError.message?.includes('Could not find the table') ||
-        countError.message?.includes('schema cache') ||
-        countError.message?.includes('user_favorites');
-      
-      if (isTableNotFound) {
-        // テーブルが存在しない場合でも、ローカル状態では動作するように成功レスポンスを返す
+      if (isTableNotFoundError(countError)) {
         return NextResponse.json({ 
           success: true,
           data: null,
           message: 'テーブルが存在しませんが、ローカル状態でお気に入りが保存されました。'
         })
       }
-      // その他のエラーも静かに処理
-      console.warn('お気に入り数取得エラー（無視）:', countError.message)
-      // エラーを返さず、空として処理
+      // その他のエラーは500を返す
+      console.error('お気に入り数取得エラー:', countError)
       return NextResponse.json({ 
-        success: true,
-        data: null,
-        message: 'お気に入り機能を利用できませんが、ローカル状態で保存されました。'
-      })
+        error: 'お気に入りの取得に失敗しました',
+        details: countError.message
+      }, { status: 500 })
     }
 
-    // existingFavoritesがnullまたはundefinedの場合は0として処理
     const favoriteCount = (existingFavorites && Array.isArray(existingFavorites)) ? existingFavorites.length : 0
     
     // ブロンズ会員は6個まで
@@ -63,43 +92,35 @@ export async function POST(request: Request) {
       }, { status: 403 })
     }
 
-    // 既に存在するかチェック（テーブルが存在する場合のみ）
-    try {
-      const { data: existing, error: checkError } = await supabase
-        .from('user_favorites')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('word_chinese', wordChinese)
-        .eq('category_id', categoryId)
-        .single()
+    // 既に存在するかチェック
+    const { data: existing, error: checkError } = await supabase
+      .from('user_favorites')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('word_chinese', wordChinese)
+      .eq('category_id', categoryId)
+      .maybeSingle() // single()の代わりにmaybeSingle()を使用（レコードが存在しない場合はnullを返す）
 
-      // テーブルが存在しない場合のエラーは無視
-      const isTableNotFoundCheck = 
-        checkError?.code === 'PGRST116' || 
-        checkError?.message?.includes('relation') || 
-        checkError?.message?.includes('does not exist') || 
-        checkError?.message?.includes('no such table') ||
-        checkError?.message?.includes('Could not find the table') ||
-        checkError?.message?.includes('schema cache') ||
-        checkError?.message?.includes('user_favorites');
-      
-      if (checkError && !isTableNotFoundCheck) {
-        // その他のエラーは既存チェックの失敗として扱う（処理を続行）
-        console.warn('お気に入り存在チェックエラー（無視）:', checkError.message)
-      }
-
-      if (existing) {
+    if (checkError) {
+      if (isTableNotFoundError(checkError)) {
         return NextResponse.json({ 
-          error: '既にお気に入りに登録されています' 
-        }, { status: 400 })
+          success: true,
+          data: null,
+          message: 'テーブルが存在しませんが、ローカル状態でお気に入りが保存されました。'
+        })
       }
-    } catch (checkErr) {
-      // エラーが発生しても処理を続行（テーブルが存在しない可能性）
-      console.warn('お気に入り存在チェックエラー（処理続行）:', checkErr)
+      // その他のエラーは警告ログに記録して処理を続行
+      console.warn('お気に入り存在チェックエラー（処理続行）:', checkError.message)
+    }
+
+    if (existing) {
+      return NextResponse.json({ 
+        error: '既にお気に入りに登録されています' 
+      }, { status: 400 })
     }
 
     // お気に入りを追加
-    const { data, error } = await supabase
+    const { data, error: insertError } = await supabase
       .from('user_favorites')
       .insert({
         user_id: user.id,
@@ -111,35 +132,38 @@ export async function POST(request: Request) {
       .select()
       .single()
 
-    if (error) {
-      console.error('お気に入り追加エラー:', error)
-      // テーブルが存在しない場合は成功レスポンスを返す（ローカル状態で動作）
-      const isTableNotFound = 
-        error.code === 'PGRST116' || 
-        error.message?.includes('relation') || 
-        error.message?.includes('does not exist') || 
-        error.message?.includes('no such table') ||
-        error.message?.includes('Could not find the table') ||
-        error.message?.includes('schema cache') ||
-        error.message?.includes('user_favorites');
-      
-      if (isTableNotFound) {
+    if (insertError) {
+      // テーブル未検出エラーの場合は成功レスポンスを返す
+      if (isTableNotFoundError(insertError)) {
         return NextResponse.json({ 
           success: true,
           data: null,
           message: 'テーブルが存在しませんが、ローカル状態でお気に入りが保存されました。'
         })
       }
+      
+      console.error('お気に入り追加エラー:', insertError)
       return NextResponse.json({ 
-        error: error.message || 'お気に入りの追加に失敗しました' 
+        error: insertError.message || 'お気に入りの追加に失敗しました' 
       }, { status: 500 })
     }
 
     return NextResponse.json({ success: true, data })
   } catch (error: any) {
     console.error('APIエラー:', error)
+    
+    // キャッチされたエラーもテーブル未検出の可能性をチェック
+    const errorMessage = error?.message || String(error)
+    if (isTableNotFoundError({ message: errorMessage })) {
+      return NextResponse.json({ 
+        success: true,
+        data: null,
+        message: 'テーブルが存在しませんが、ローカル状態でお気に入りが保存されました。'
+      })
+    }
+    
     return NextResponse.json({ 
-      error: error.message || 'エラーが発生しました' 
+      error: errorMessage || 'エラーが発生しました' 
     }, { status: 500 })
   }
 }
