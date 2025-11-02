@@ -126,14 +126,11 @@ export default function Home() {
     }
   };
   const [isMobile, setIsMobile] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null); // 学習モード用
   const exampleAudioRef = useRef<HTMLAudioElement>(null); // 学習モード用
   const normalModeAudioRef = useRef<HTMLAudioElement>(null); // ノーマルモード用
   const [playbackSpeed, setPlaybackSpeed] = useState('1');
   const [examplePlaybackSpeed, setExamplePlaybackSpeed] = useState('1');
-  const sidebarRef = useRef<HTMLDivElement>(null);
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [showHelpCard, setShowHelpCard] = useState(false);
   const [dontShowHelpAgain, setDontShowHelpAgain] = useState(false);
 
@@ -221,33 +218,9 @@ export default function Home() {
         setError(null);
         setSearchQuery('');
         setActiveWordId(null);
-        // カテゴリーを選択したらメニューを閉じる
-        if (isMobile) {
-          setIsMenuOpen(false);
-        }
       }
     }
-  }, [selectedCategory, categories, isMobile]);
-
-  // スワイプ検出
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStartX(e.touches[0].clientX);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX === null) return;
-    const touchEndX = e.touches[0].clientX;
-    const diff = touchEndX - touchStartX;
-
-    // 右に30px以上スワイプしたらメニューを開く
-    if (diff > 30 && !isMenuOpen) {
-      setIsMenuOpen(true);
-    }
-  };
-
-  const handleTouchEnd = () => {
-    setTouchStartX(null);
-  };
+  }, [selectedCategory, categories]);
 
   const handleSearch = async (query: string) => {
     if (!query || query.trim() === '') {
@@ -436,22 +409,16 @@ export default function Home() {
         minHeight: '100vh',
         position: 'relative'
       }}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
     >
       <div style={{ 
         width: '100%', 
         maxWidth: '1200px',
         margin: '0 auto',
-        display: isMobile ? 'block' : 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : '1fr 200px',
-        gap: isMobile ? '1rem' : '2rem',
         position: 'relative',
         zIndex: 1
       }}>
-        {/* PC版: ログアウトボタン（右上固定） */}
-        {!isMobile && user && (
+        {/* ログアウト・設定ボタン（右上固定） - PC・モバイル共通 */}
+        {user && (
           <div style={{
             position: 'fixed',
             top: '1rem',
@@ -509,7 +476,7 @@ export default function Home() {
             >
               {isLearningMode ? '📚 学習モード' : '🎵 ノーマルモード'}
             </button>
-          </div>
+        </div>
         )}
 
         {/* フロートヘルプカードのオーバーレイ */}
@@ -624,7 +591,7 @@ export default function Home() {
                   日本語から広東語の文章・意味・発音を調べたい時は入力欄に日本語を入れて「日訳+広東語発音」を押してください
                 </li>
                 <li style={{ marginBottom: '0.5rem' }}>
-                  ジャンル分け(トータル73ジャンル収録)は右側のサイドバーを押して切り替えを行なってください
+                  ジャンル分け(トータル73ジャンル収録)は横スクロールできるカテゴリーバーから選択してください
                 </li>
                 <li style={{ marginBottom: '0.5rem' }}>
                   粤ピンとは香港語言学学会粤語拼音方案、略称粤拼 (えつぴん、Jyutping)
@@ -736,6 +703,78 @@ export default function Home() {
                     粤ピン/スラング式カタカナ/音声検索
                   </p>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 横スクロール可能なカテゴリーバー */}
+          <div style={{ 
+            marginBottom: '1rem',
+            background: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            padding: isMobile ? '0.75rem' : '1rem'
+          }}>
+            <div style={{ 
+              overflowX: 'auto',
+              overflowY: 'hidden',
+              whiteSpace: 'nowrap',
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'thin',
+              msOverflowStyle: 'auto'
+            }}>
+              <div style={{ 
+                display: 'inline-flex',
+                gap: '0.5rem',
+                paddingBottom: '0.25rem'
+              }}>
+                {categories.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      playHapticAndSound();
+                      setSelectedCategory(category.id);
+                    }}
+                    style={{
+                      padding: isMobile ? '0.5rem 1rem' : '0.625rem 1.25rem',
+                      fontSize: isMobile ? '0.875rem' : '1rem',
+                      fontWeight: selectedCategory === category.id ? '600' : '400',
+                      borderRadius: '20px',
+                      backgroundColor: selectedCategory === category.id ? '#6366f1' : '#f3f4f6',
+                      color: selectedCategory === category.id ? 'white' : '#374151',
+                      border: 'none',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.2s ease',
+                      boxShadow: selectedCategory === category.id 
+                        ? '0 2px 8px rgba(99,102,241,0.3)' 
+                        : '0 1px 3px rgba(0,0,0,0.1)',
+                      transform: 'scale(1)'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (selectedCategory !== category.id) {
+                        e.currentTarget.style.backgroundColor = '#e5e7eb';
+                      }
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selectedCategory !== category.id) {
+                        e.currentTarget.style.backgroundColor = '#f3f4f6';
+                      }
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                    onMouseDown={(e) => {
+                      e.currentTarget.style.transform = 'scale(0.95)';
+                    }}
+                    onMouseUp={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                    }}
+                  >
+                    {category.name}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -1183,326 +1222,6 @@ export default function Home() {
 
         </div>
 
-        {/* サイドバー */}
-        {isMobile ? (
-          // モバイル: フロートメニュー
-          <>
-            {/* オーバーレイ */}
-            {isMenuOpen && (
-              <div 
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setIsMenuOpen(false);
-                }}
-                onTouchStart={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setIsMenuOpen(false);
-                }}
-                style={{
-                  position: 'fixed',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                  zIndex: 9998,
-                  transition: 'opacity 0.3s ease',
-                  pointerEvents: 'auto',
-                  touchAction: 'manipulation'
-                }}
-              />
-            )}
-            {/* サイドバー */}
-            <div 
-              ref={sidebarRef}
-              style={{
-                position: 'fixed',
-                top: 0,
-                right: isMenuOpen ? 0 : '-85%',
-                bottom: 0,
-                width: '85%',
-                maxWidth: '300px',
-                backgroundColor: 'white',
-                boxShadow: '-2px 0 8px rgba(0,0,0,0.2)',
-                zIndex: 9999,
-                transition: 'right 0.3s ease',
-                overflowY: 'auto',
-                padding: '1rem',
-                pointerEvents: 'auto'
-              }}
-            >
-              {/* ログアウトボタン（モバイル） */}
-              {user && (
-                <div style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid #e5e7eb' }}>
-                  <button
-                    onClick={handleLogout}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem',
-                      cursor: 'pointer',
-                      fontWeight: '500',
-                      marginBottom: '0.5rem'
-                    }}
-                  >
-                    ログアウト
-                  </button>
-                  <button
-                    onClick={toggleClickSound}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: isClickSoundEnabled ? '#10b981' : '#6b7280',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem',
-                      cursor: 'pointer',
-                      fontWeight: '500',
-                      marginBottom: '0.5rem'
-                    }}
-                  >
-                    {isClickSoundEnabled ? '🔊 クリック音オン' : '🔇 クリック音オフ'}
-                  </button>
-                  <button
-                    onClick={toggleLearningMode}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: isLearningMode ? '#3b82f6' : '#6b7280',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem',
-                      cursor: 'pointer',
-                      fontWeight: '500'
-                    }}
-                  >
-                    {isLearningMode ? '📚 学習モード' : '🎵 ノーマルモード'}
-                  </button>
-                </div>
-              )}
-
-              {/* ロゴ */}
-              <div style={{ marginBottom: '0.5rem', textAlign: 'center' }}>
-                <a 
-                  href="https://line.me/R/ti/p/@298mwivr" 
-            target="_blank"
-            rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-block',
-                    textDecoration: 'none'
-                  }}
-                >
-                  <img 
-                    src="/line-logo.png"
-                    alt="スラング先生ロゴ"
-                    style={{ 
-                      height: 'auto', 
-                      width: '100%',
-                      maxWidth: '200px',
-                      display: 'block',
-                      margin: '0 auto'
-                    }}
-                  />
-                </a>
-              </div>
-
-              {/* ジャンル分け */}
-              <h3 style={{ 
-                fontSize: '1.125rem', 
-                fontWeight: 'bold', 
-                marginBottom: '0.5rem' 
-              }}>
-                ジャンル分け
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {categories.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      playHapticAndSound();
-                      setSelectedCategory(category.id);
-                    }}
-                    onTouchStart={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      playHapticAndSound();
-                      setSelectedCategory(category.id);
-                    }}
-                    style={{
-                      padding: '0.5rem',
-                      textAlign: 'left',
-                      borderRadius: '4px',
-                      backgroundColor: selectedCategory === category.id ? '#e5e7eb' : 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '1rem',
-                      pointerEvents: 'auto',
-                      touchAction: 'manipulation',
-                      position: 'relative',
-                      zIndex: 2
-                    }}
-                  >
-                    <span dangerouslySetInnerHTML={{ __html: category.name.replace(/\n/g, '<br>') }} />
-                  </button>
-                ))}
-              </div>
-
-              {/* クイズボタン */}
-              <div style={{ marginTop: '1.5rem' }}>
-                <h3 style={{ 
-                  fontSize: '1.125rem', 
-                  fontWeight: 'bold', 
-                  marginBottom: '0.5rem' 
-                }}>
-                  学習ゲーム
-                </h3>
-                <button
-                  style={{
-                    width: '100%',
-                    padding: '10px 20px',
-                    fontSize: '1rem',
-                    borderRadius: '6px',
-                    backgroundColor: '#f59e0b',
-                    color: 'white',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontWeight: 'bold'
-                  }}
-                  onClick={() => alert('クイズ機能は今後実装予定です')}
-                >
-                  復習確認クイズ
-                </button>
-              </div>
-            </div>
-
-            {/* フロートボタン */}
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsMenuOpen(!isMenuOpen);
-              }}
-              onTouchStart={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsMenuOpen(!isMenuOpen);
-              }}
-              style={{
-                position: 'fixed',
-                right: '10px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: '56px',
-                height: '56px',
-                borderRadius: '50%',
-                backgroundColor: '#6366f1',
-                color: 'white',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                zIndex: 9998,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '28px',
-                pointerEvents: 'auto',
-                touchAction: 'manipulation',
-                userSelect: 'none'
-              }}
-            >
-              ≡
-            </button>
-          </>
-        ) : (
-          // デスクトップ: 通常のサイドバー
-          <div style={{ 
-            borderLeft: '1px solid #d1d5db',
-            paddingLeft: '1rem'
-          }}>
-            {/* ロゴ */}
-            <div style={{ marginBottom: '0.5rem', textAlign: 'center' }}>
-              <a 
-                href="https://line.me/R/ti/p/@298mwivr" 
-            target="_blank"
-            rel="noopener noreferrer"
-                style={{
-                  display: 'inline-block',
-                  textDecoration: 'none'
-                }}
-              >
-                  <img 
-                    src="/line-logo.png"
-                    alt="スラング先生ロゴ"
-                    style={{
-                      height: 'auto',
-                      width: '100%',
-                      maxWidth: '200px',
-                      display: 'block',
-                      margin: '0 auto'
-                    }}
-                  />
-          </a>
-        </div>
-
-            {/* ジャンル分け */}
-            <h3 style={{ 
-              fontSize: '1.125rem', 
-              fontWeight: 'bold', 
-              marginBottom: '0.5rem' 
-            }}>
-              ジャンル分け
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {categories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    playHapticAndSound();
-                    setSelectedCategory(category.id);
-                  }}
-                  style={{
-                    padding: '0.5rem',
-                    textAlign: 'left',
-                    borderRadius: '4px',
-                    backgroundColor: selectedCategory === category.id ? '#e5e7eb' : 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '1.5rem',
-                    pointerEvents: 'auto',
-                    touchAction: 'manipulation',
-                    position: 'relative',
-                    zIndex: 2
-                  }}
-                  onMouseEnter={(e) => {
-                    if (selectedCategory !== category.id) {
-                      e.currentTarget.style.backgroundColor = '#e5e7eb';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (selectedCategory !== category.id) {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
-                  }}
-                >
-                  <span dangerouslySetInnerHTML={{ __html: category.name.replace(/\n/g, '<br>') }} />
-                </button>
-              ))}
-            </div>
-
-          </div>
-        )}
       </div>
     </div>
   );
