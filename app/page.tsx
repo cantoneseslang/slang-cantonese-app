@@ -1272,23 +1272,6 @@ export default function Home() {
                       );
                     })}
                   </div>
-                  <div style={{ 
-                    marginBottom: '1rem', 
-                    marginTop: '0.5rem', 
-                    padding: '0.75rem', 
-                    background: '#f9fafb', 
-                    borderRadius: '4px', 
-                    border: '1px solid #e5e7eb' 
-                  }}>
-                    <div style={{ marginBottom: '0.25rem', fontSize: isMobile ? '0.875rem' : '1rem' }}>
-                      <span style={{ fontWeight: '600' }}>中国語：</span>
-                      {group.words.map(word => word.chinese).join('、')}
-                    </div>
-                    <div style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
-                      <span style={{ fontWeight: '600' }}>発音：</span>
-                      {group.words.map(word => word.japanese).join('、')}
-                    </div>
-                  </div>
                 </div>
               ))}
             </div>
