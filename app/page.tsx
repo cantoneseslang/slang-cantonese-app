@@ -121,41 +121,56 @@ export default function Home() {
 
   // パスワード変更処理
   const handlePasswordChange = async () => {
+    console.log('パスワード変更開始');
     setPasswordError(null);
     setPasswordSuccess(false);
 
     // パスワードバリデーション
     if (newPassword.length < 6) {
+      console.log('エラー: パスワードが短すぎる');
       setPasswordError('パスワードは6文字以上である必要があります');
       return;
     }
 
     if (!/(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*])/.test(newPassword)) {
+      console.log('エラー: パスワードの形式が不正');
       setPasswordError('パスワードは英文字、数字、記号の組み合わせである必要があります');
       return;
     }
 
     if (newPassword !== confirmPassword) {
+      console.log('エラー: パスワードが一致しない');
       setPasswordError('パスワードが一致しません');
       return;
     }
 
     try {
+      console.log('Supabaseでパスワード更新中...');
       const { error } = await supabase.auth.updateUser({
         password: newPassword
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabaseエラー:', error);
+        throw error;
+      }
 
+      console.log('パスワード変更成功！');
       setPasswordSuccess(true);
       setNewPassword('');
       setConfirmPassword('');
+      
+      // アラートで成功を通知
+      alert('パスワードが正常に変更されました！');
+      
       setTimeout(() => {
         setShowPasswordChange(false);
         setPasswordSuccess(false);
       }, 2000);
     } catch (err: any) {
+      console.error('パスワード変更エラー:', err);
       setPasswordError(err.message || 'パスワード変更に失敗しました');
+      alert('エラー: ' + (err.message || 'パスワード変更に失敗しました'));
     }
   };
 
