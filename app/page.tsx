@@ -148,9 +148,17 @@ export default function Home() {
       return;
     }
 
-    if (!/(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*])/.test(newPassword)) {
+    // 英文字、数字、記号（英数字以外の文字）の組み合わせをチェック
+    const hasLetter = /[a-zA-Z]/.test(newPassword);
+    const hasNumber = /\d/.test(newPassword);
+    const hasSpecialChar = /[^a-zA-Z0-9]/.test(newPassword); // 英数字以外を記号として認識
+    
+    if (!hasLetter || !hasNumber || !hasSpecialChar) {
       const errorMsg = 'パスワードは英文字、数字、記号の組み合わせである必要があります';
       console.log('エラー:', errorMsg);
+      console.log('  - 英文字:', hasLetter ? '✓' : '✗');
+      console.log('  - 数字:', hasNumber ? '✓' : '✗');
+      console.log('  - 記号:', hasSpecialChar ? '✓' : '✗');
       setPasswordError(errorMsg);
       alert(errorMsg);
       return;
