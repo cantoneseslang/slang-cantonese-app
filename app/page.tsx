@@ -1205,7 +1205,11 @@ export default function Home() {
                 } : {}}
                 className={isMobile ? 'intro-content-mobile' : ''}
               />
-              {currentCategory.practiceGroups.map((group, gIdx) => (
+              {currentCategory.practiceGroups.map((group, gIdx) => {
+                // 練習⑦（おまけ）の場合は連続発音のみ
+                const isOmake = group.name === '練習⑦';
+                
+                return (
                 <div key={gIdx}>
                   <h3 style={{ 
                     fontSize: isMobile ? '1rem' : '1.25rem', 
@@ -1213,67 +1217,290 @@ export default function Home() {
                     marginTop: '1rem', 
                     marginBottom: '0.5rem' 
                   }}>
-                    {group.name}
+                    {group.name === '練習⑦' ? 'おまけ' : group.name}
                   </h3>
-                  <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
-                    gap: '0.5rem',
-                    marginBottom: '0.5rem'
-                  }}>
-                    {group.words.map((word, wIdx) => {
-                      const isActive = !isLearningMode && activeWordId === word.chinese;
-                      return (
-                      <button
-                        key={wIdx}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleWordClick(word);
-                        }}
-                        onTouchStart={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleWordClick(word);
-                        }}
-                        style={{
-                          background: isActive 
-                            ? 'linear-gradient(145deg, #10b981, #059669)' 
-                            : 'white',
-                          padding: '0.5rem',
-                          borderRadius: '4px',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          textAlign: 'center',
-                          border: 'none',
-                          cursor: 'pointer',
-                          pointerEvents: 'auto',
-                          touchAction: 'manipulation',
-                          position: 'relative',
-                          zIndex: 2
-                        }}
-                      >
-                        <strong style={{ 
-                          fontSize: isMobile ? '1.25rem' : '1.875rem',
-                          color: isActive ? '#ffffff' : '#1d1d1f'
-                        }}>
-                          {word.chinese}
-                        </strong>
-                        <div style={{ 
-                          fontSize: isMobile ? '0.75rem' : '1rem',
-                          color: isActive ? '#f0f0f0' : '#6e6e73'
-                        }}>
-                          {word.japanese}
-                        </div>
-                      </button>
-                      );
-                    })}
-                  </div>
+                  
+                  {/* おまけの場合 */}
+                  {isOmake ? (
+                    <>
+                      <div style={{ 
+                        fontSize: isMobile ? '0.875rem' : '1rem',
+                        fontWeight: 'bold',
+                        marginTop: '0.75rem',
+                        marginBottom: '0.5rem',
+                        color: '#374151'
+                      }}>
+                        連続発音
+                      </div>
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
+                        gap: '0.5rem',
+                        marginBottom: '0.5rem'
+                      }}>
+                        {group.words.map((word, wIdx) => {
+                          const isActive = !isLearningMode && activeWordId === word.chinese;
+                          return (
+                            <button
+                              key={wIdx}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleWordClick(word);
+                              }}
+                              onTouchStart={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleWordClick(word);
+                              }}
+                              style={{
+                                background: isActive 
+                                  ? 'linear-gradient(145deg, #10b981, #059669)' 
+                                  : 'white',
+                                padding: '0.5rem',
+                                borderRadius: '4px',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                textAlign: 'center',
+                                border: 'none',
+                                cursor: 'pointer',
+                                pointerEvents: 'auto',
+                                touchAction: 'manipulation',
+                                position: 'relative',
+                                zIndex: 2
+                              }}
+                            >
+                              <strong style={{ 
+                                fontSize: isMobile ? '1.25rem' : '1.875rem',
+                                color: isActive ? '#ffffff' : '#1d1d1f'
+                              }}>
+                                {word.chinese}
+                              </strong>
+                              <div style={{ 
+                                fontSize: isMobile ? '0.75rem' : '1rem',
+                                color: isActive ? '#f0f0f0' : '#6e6e73'
+                              }}>
+                                {word.japanese}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    /* 通常の練習（①-⑥） */
+                    <>
+                      {/* 1-6声 */}
+                      <div style={{ 
+                        fontSize: isMobile ? '0.875rem' : '1rem',
+                        fontWeight: 'bold',
+                        marginTop: '0.75rem',
+                        marginBottom: '0.5rem',
+                        color: '#374151'
+                      }}>
+                        1-6声
+                      </div>
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
+                        gap: '0.5rem',
+                        marginBottom: '0.5rem'
+                      }}>
+                        {group.words.slice(0, 6).map((word, wIdx) => {
+                          const isActive = !isLearningMode && activeWordId === word.chinese;
+                          return (
+                            <button
+                              key={wIdx}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleWordClick(word);
+                              }}
+                              onTouchStart={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleWordClick(word);
+                              }}
+                              style={{
+                                background: isActive 
+                                  ? 'linear-gradient(145deg, #10b981, #059669)' 
+                                  : 'white',
+                                padding: '0.5rem',
+                                borderRadius: '4px',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                textAlign: 'center',
+                                border: 'none',
+                                cursor: 'pointer',
+                                pointerEvents: 'auto',
+                                touchAction: 'manipulation',
+                                position: 'relative',
+                                zIndex: 2
+                              }}
+                            >
+                              <strong style={{ 
+                                fontSize: isMobile ? '1.25rem' : '1.875rem',
+                                color: isActive ? '#ffffff' : '#1d1d1f'
+                              }}>
+                                {word.chinese}
+                              </strong>
+                              <div style={{ 
+                                fontSize: isMobile ? '0.75rem' : '1rem',
+                                color: isActive ? '#f0f0f0' : '#6e6e73'
+                              }}>
+                                {word.japanese}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* 入声(p,t,k) */}
+                      <div style={{ 
+                        fontSize: isMobile ? '0.875rem' : '1rem',
+                        fontWeight: 'bold',
+                        marginTop: '0.75rem',
+                        marginBottom: '0.5rem',
+                        color: '#374151'
+                      }}>
+                        入声(p,t,k)
+                      </div>
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
+                        gap: '0.5rem',
+                        marginBottom: '0.5rem'
+                      }}>
+                        {group.words.slice(6, 9).map((word, wIdx) => {
+                          const isActive = !isLearningMode && activeWordId === word.chinese;
+                          return (
+                            <button
+                              key={wIdx}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleWordClick(word);
+                              }}
+                              onTouchStart={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleWordClick(word);
+                              }}
+                              style={{
+                                background: isActive 
+                                  ? 'linear-gradient(145deg, #10b981, #059669)' 
+                                  : 'white',
+                                padding: '0.5rem',
+                                borderRadius: '4px',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                textAlign: 'center',
+                                border: 'none',
+                                cursor: 'pointer',
+                                pointerEvents: 'auto',
+                                touchAction: 'manipulation',
+                                position: 'relative',
+                                zIndex: 2
+                              }}
+                            >
+                              <strong style={{ 
+                                fontSize: isMobile ? '1.25rem' : '1.875rem',
+                                color: isActive ? '#ffffff' : '#1d1d1f'
+                              }}>
+                                {word.chinese}
+                              </strong>
+                              <div style={{ 
+                                fontSize: isMobile ? '0.75rem' : '1rem',
+                                color: isActive ? '#f0f0f0' : '#6e6e73'
+                              }}>
+                                {word.japanese}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* 連続発音 */}
+                      <div style={{ 
+                        fontSize: isMobile ? '0.875rem' : '1rem',
+                        fontWeight: 'bold',
+                        marginTop: '0.75rem',
+                        marginBottom: '0.5rem',
+                        color: '#374151'
+                      }}>
+                        連続発音
+                      </div>
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
+                        gap: '0.5rem',
+                        marginBottom: '0.5rem'
+                      }}>
+                        {group.words.slice(9).map((word, wIdx) => {
+                          const isActive = !isLearningMode && activeWordId === word.chinese;
+                          return (
+                            <button
+                              key={wIdx}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleWordClick(word);
+                              }}
+                              onTouchStart={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleWordClick(word);
+                              }}
+                              style={{
+                                background: isActive 
+                                  ? 'linear-gradient(145deg, #10b981, #059669)' 
+                                  : 'white',
+                                padding: '0.5rem',
+                                borderRadius: '4px',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                textAlign: 'center',
+                                border: 'none',
+                                cursor: 'pointer',
+                                pointerEvents: 'auto',
+                                touchAction: 'manipulation',
+                                position: 'relative',
+                                zIndex: 2
+                              }}
+                            >
+                              <strong style={{ 
+                                fontSize: isMobile ? '1.25rem' : '1.875rem',
+                                color: isActive ? '#ffffff' : '#1d1d1f'
+                              }}>
+                                {word.chinese}
+                              </strong>
+                              <div style={{ 
+                                fontSize: isMobile ? '0.75rem' : '1rem',
+                                color: isActive ? '#f0f0f0' : '#6e6e73'
+                              }}>
+                                {word.japanese}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
