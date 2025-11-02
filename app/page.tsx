@@ -2730,6 +2730,33 @@ export default function Home() {
                     </div>
                   </div>
 
+                  {/* ご登録期日 */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#6b7280',
+                      marginBottom: '0.5rem'
+                    }}>ご登録期日</label>
+                    <div style={{
+                      padding: '0.75rem',
+                      backgroundColor: '#f9fafb',
+                      borderRadius: '8px',
+                      border: '1px solid #e5e7eb',
+                      fontSize: '1rem',
+                      color: '#1f2937'
+                    }}>
+                      {user.created_at ? (() => {
+                        const date = new Date(user.created_at);
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        return `${year}年${month}月${day}日`;
+                      })() : '登録日不明'}
+                    </div>
+                  </div>
+
                   {/* パスワード変更フォーム */}
                   {showPasswordChange && (
                     <div style={{
