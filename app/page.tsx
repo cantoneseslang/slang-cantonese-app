@@ -1677,7 +1677,7 @@ export default function Home() {
 
         {/* メインコンテンツエリア */}
         <div>
-          {/* ヘッダー（簡素・中央寄せ） */}
+          {/* ヘッダー（中央寄せ・3行構成） */}
           <div style={{ 
             marginBottom: isMobile ? '1rem' : '2rem',
             padding: isMobile ? '0 1rem' : '0 1.5rem',
@@ -1686,13 +1686,32 @@ export default function Home() {
             alignItems: 'center',
             textAlign: 'center'
           }}>
+            {/* タイトル */}
             <div style={{ 
-              fontSize: isMobile ? '1.5rem' : '2rem', 
+              fontSize: isMobile ? '1.625rem' : '2.25rem', 
               fontWeight: 800,
               letterSpacing: '-0.02em',
               color: '#111827'
             }}>
+              廣東語音れん🎵
+            </div>
+            {/* サブ見出し（薄い灰色・小さめ） */}
+            <div style={{
+              marginTop: '0.35rem',
+              fontSize: isMobile ? '0.9rem' : '1rem',
+              color: '#6b7280',
+              fontWeight: 600
+            }}>
               ボタンを押すだけでスパッと発音！
+            </div>
+            {/* 参照デザインの一行 */}
+            <div style={{
+              marginTop: '0.35rem',
+              fontSize: isMobile ? '1rem' : '1.125rem',
+              fontWeight: 700,
+              color: '#111827'
+            }}>
+              AIが解説付きでバシッと翻訳！
             </div>
           </div>
 
