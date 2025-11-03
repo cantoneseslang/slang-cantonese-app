@@ -1810,6 +1810,7 @@ export default function Home() {
                 {/* 左側の隠れメニュー */}
                 {user && (
                   <>
+                    {false && (
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -1847,6 +1848,7 @@ export default function Home() {
                     >
                       ログアウト
                     </button>
+                    )}
                     {false && (
                     <button
                       onClick={(e) => {
