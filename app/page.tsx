@@ -2334,12 +2334,12 @@ export default function Home() {
                   }
                 }}
               style={{
-                height: isMobile ? '3rem' : '3.5rem',
-                fontSize: isMobile ? '1rem' : '1.125rem',
+                height: isMobile ? '3.5rem' : '3.5rem',
+                fontSize: isMobile ? '1.125rem' : '1.125rem',
                 width: '100%',
                 maxWidth: '100%',
                 boxSizing: 'border-box',
-                padding: '0 3.5rem 0 1.25rem',
+                padding: '0 4.25rem 0 1.25rem',
                 border: '1px solid rgba(0,0,0,0.1)',
                 borderRadius: '12px',
                 marginBottom: '0.75rem',
@@ -2396,7 +2396,7 @@ export default function Home() {
                   onFocus={(e) => { (e.currentTarget as HTMLButtonElement).style.outline = 'none'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(0,122,255,0.25)'; e.currentTarget.style.background = '#f3f4f6'; }}
                   onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <ClipIcon size={isMobile ? 40 : 44} yOffset={0} />
+                  <ClipIcon size={isMobile ? 44 : 48} yOffset={-1} />
                 </button>
                 {isMobile && (
                 <button
@@ -2410,8 +2410,8 @@ export default function Home() {
                       padding: 0,
                       lineHeight: 1,
                       color: '#6b7280',
-                      width: 36,
-                      height: 36,
+                      width: 48,
+                      height: 48,
                       borderRadius: 9999,
                       display: 'flex',
                       alignItems: 'center',
@@ -2422,7 +2422,7 @@ export default function Home() {
                     onFocus={(e) => { (e.currentTarget as HTMLButtonElement).style.outline = 'none'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(0,122,255,0.25)'; e.currentTarget.style.background = '#f3f4f6'; }}
                     onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'transparent'; }}
                   >
-                    <CameraIcon size={isMobile ? 22 : 24} yOffset={0} />
+                    <CameraIcon size={isMobile ? 40 : 44} yOffset={-1} />
                   </button>
                 )}
               </div>
