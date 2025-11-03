@@ -629,9 +629,87 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* お気に入りデータ統計 */}
+        {/* お気に入りテーブル作成 */}
         <div style={{
           marginTop: '3rem',
+          padding: '1.5rem',
+          backgroundColor: '#fef3c7',
+          borderRadius: '12px',
+          border: '2px solid #fbbf24'
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '1rem'
+          }}>
+            <h3 style={{
+              fontSize: '1.25rem',
+              fontWeight: '600',
+              marginBottom: '0.5rem'
+            }}>
+              🗄️ お気に入りテーブル作成
+            </h3>
+            <button
+              onClick={async () => {
+                try {
+                  const response = await fetch('/api/admin/create-table', { method: 'POST' });
+                  const data = await response.json();
+                  
+                  if (data.success) {
+                    alert('✅ ' + data.message);
+                  } else if (data.requiresManualCreation) {
+                    // SQLを表示してコピーできるようにする
+                    const sql = data.sql;
+                    const instructions = data.instructions.join('\n');
+                    const message = `${data.message}\n\n${instructions}\n\nSQL:\n\n${sql}\n\n※ SQLをコピーしてSupabaseのSQL Editorで実行してください。`;
+                    
+                    // テキストエリアで表示
+                    const textarea = document.createElement('textarea');
+                    textarea.value = sql;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    
+                    alert(message + '\n\n✅ SQLをクリップボードにコピーしました。');
+                  } else {
+                    alert('❌ エラー: ' + (data.error || data.message));
+                  }
+                } catch (error: any) {
+                  alert('❌ エラー: ' + error.message);
+                }
+              }}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#f59e0b',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '600'
+              }}
+            >
+              テーブル作成SQL取得
+            </button>
+          </div>
+          <p style={{
+            fontSize: '0.875rem',
+            color: '#78350f',
+            margin: 0,
+            lineHeight: '1.5'
+          }}>
+            お気に入り機能を使用するには、Supabaseでテーブルを作成する必要があります。<br/>
+            上記ボタンをクリックすると、SQLをコピーできます。SupabaseのSQL Editorで実行してください。
+          </p>
+        </div>
+
+        {/* お気に入りデータ統計 */}
+        <div style={{
+          marginTop: '2rem',
           padding: '1.5rem',
           backgroundColor: '#f9fafb',
           borderRadius: '12px'
