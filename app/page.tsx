@@ -1595,13 +1595,18 @@ export default function Home() {
                   画面中央の広東語ボタンを押すと発音、音声が自動で表示されます
                 </li>
                 <li style={{ marginBottom: '0.5rem' }}>
-                  広東語の漢字の意味・発音を調べたい時は入力欄に広東語を入れて「広東語発音」を押してください
+                  広東語の発音、意味を調べたい時、広東語を入力して🟦ボタンを押してください
                 </li>
                 <li style={{ marginBottom: '0.5rem' }}>
-                  日本語から広東語の文章・意味・発音を調べたい時は入力欄に日本語を入れて「日訳+広東語発音」を押してください
+                  日本語を広東語に翻訳したい時、日本語を入力して🟩ボタンを押してください
                 </li>
                 <li style={{ marginBottom: '0.5rem' }}>
-                  ジャンル分け(トータル45ジャンル収録)は右側で押して切り替えを行なってください
+                  ジャンル分け(トータル45ジャンル収録)はスライドさせて切り替えを行なってください
+                </li>
+                <li style={{ marginBottom: '0.5rem' }}>
+                  noteと連携し、教材となるボタンがどんどん追加されていきます（
+                  <a href="https://note.com/bestinksalesman/m/m6e10d2bd5411" target="_blank" rel="noopener noreferrer">note マガジン</a>
+                  ）
                 </li>
                 <li style={{ marginBottom: '0.5rem' }}>
                   音声練習用に音声再生スピードの変更可能です

@@ -33,7 +33,7 @@ export default function AboutPage() {
           <li>シーンに応じた複数表現の提案や検索も可能です</li>
           <li>入力テキストの発音（粤ピン/カタカナ）を再生して確認できます</li>
           <li>音声練習用に音声再生スピードの変更可能です</li>
-          <li>noteと連携し、教材となるボタンがどんどん追加されていきます</li>
+          <li>noteと連携し、教材となるボタンがどんどん追加されていきます（<a href="https://note.com/bestinksalesman/m/m6e10d2bd5411" target="_blank" rel="noopener noreferrer">note マガジン</a>）</li>
         </ul>
         <p>スラング先生考案!カントン語音れん☝️(全{totalButtons}単語)収録！</p>
 
@@ -49,7 +49,7 @@ export default function AboutPage() {
         <p>スラング式カタカナ変換表必要な方はページ最下部のリンクよりダウンロードください(商用/転載は禁止としております)</p>
         <p>多音時の場合、複数声調およびカタカナに()が表示されます。</p>
         <p>変調は考慮されていない発音記号が表示されます。</p>
-        <p>広東語特有の表現でgoogle翻訳が正確でない場合があります。</p>
+        <p>広東語特有の表現でDeepSeek翻訳が正確でない場合があります。</p>
         <p>この文書に記載されている繁体字は、国際標準の『ISO/IEC 10646-1:2000』および『香港補助文字セット – 2001』（Hong Kong Supplementary Character Set – 2001）に含まれる全ての漢字、合計29,145個を含んでいます。</p>
       </section>
 
