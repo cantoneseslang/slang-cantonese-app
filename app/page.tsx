@@ -1695,6 +1695,15 @@ export default function Home() {
             </div>
           </div>
 
+          {/* ラベル: カテゴリー選択 */}
+          <div style={{
+            padding: isMobile ? '0 1rem' : '0 1.5rem',
+            marginBottom: '0.25rem',
+            color: '#6b7280',
+            fontSize: isMobile ? '0.75rem' : '0.875rem',
+            fontWeight: 600
+          }}>カテゴリー選択</div>
+
           {/* 横スクロール可能なカテゴリーバー */}
           <div style={{ 
             marginBottom: '1rem',
@@ -2087,7 +2096,6 @@ export default function Home() {
               margin: '0 0 0.375rem 0',
               lineHeight: 1.6
             }}>
-              <div style={{ fontWeight: 600, color: '#4b5563', marginBottom: '0.125rem' }}>ボタン以外の翻訳機能📚（追加）</div>
               <div>・広東語の発音、意味を調べたい時、広東語を入力して🟦ボタン</div>
               <div>・日本語を広東語に翻訳したい時、日本語を入力して🟩ボタン</div>
             </div>
