@@ -2169,7 +2169,7 @@ export default function Home() {
                 </div>
                 <div style={{ padding: '10px 14px', display: 'grid', gap: 10 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontSize: 13, color: '#374151' }}>プラン</div>
+                    <div style={{ fontSize: 13, color: '#374151' }}>現在ご加入プラン</div>
                     <div style={{ fontSize: 13, fontWeight: 700 }}>
                       {membershipType === 'free' ? '無料プラン' : membershipType === 'subscription' ? 'シルバー（月額）' : 'ゴールド（買い切り）'}
                     </div>
@@ -2188,7 +2188,7 @@ export default function Home() {
                     <button
                       onClick={() => { setIsDowngrade(false); setSelectedPlan('lifetime'); setShowPricingModal(true); setShowAccountMenu(false); }}
                       style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700, color: '#111827' }}
-                    >🏆 ゴールド会員 ¥9,800</button>
+                    >🏆 ゴールド会員</button>
                   </div>
                   <button
                     onClick={() => setShowMiniCompare(v=>!v)}
