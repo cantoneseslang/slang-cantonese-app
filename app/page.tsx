@@ -103,6 +103,7 @@ export default function Home() {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'subscription' | 'lifetime' | null>(null);
   const [isDowngrade, setIsDowngrade] = useState(false); // ダウングレードかどうか
+  const [showMiniCompare, setShowMiniCompare] = useState(false); // アカウントメニュー内の簡易比較
   
   // デバッグ情報の状態
   const [debugInfo, setDebugInfo] = useState<any>(null);
@@ -2173,18 +2174,42 @@ export default function Home() {
                       {membershipType === 'free' ? '無料プラン' : membershipType === 'subscription' ? 'シルバー（月額）' : 'ゴールド（買い切り）'}
                     </div>
                   </div>
+                  {/* 会員種別（設定から移設） */}
+                  <div style={{ fontSize: 12, color: '#6b7280' }}>会員種別</div>
+                  <div style={{ display: 'grid', gap: 6 }}>
+                    <button
+                      onClick={() => { setIsDowngrade(membershipType!=='free'); setSelectedPlan('free'); setShowPricingModal(true); setShowAccountMenu(false); }}
+                      style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700, color: '#111827' }}
+                    >🥉 ブロンズ会員</button>
+                    <button
+                      onClick={() => { setIsDowngrade(membershipType==='lifetime'); setSelectedPlan('subscription'); setShowPricingModal(true); setShowAccountMenu(false); }}
+                      style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700, color: '#111827' }}
+                    >🥈 シルバー会員</button>
+                    <button
+                      onClick={() => { setIsDowngrade(false); setSelectedPlan('lifetime'); setShowPricingModal(true); setShowAccountMenu(false); }}
+                      style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700, color: '#111827' }}
+                    >🏆 ゴールド会員 ¥9,800</button>
+                  </div>
                   <button
-                    onClick={() => { setIsDowngrade(false); setSelectedPlan(null); setShowPricingModal(true); setShowAccountMenu(false); }}
-                    style={{
-                      height: 36,
-                      borderRadius: 8,
-                      background: 'linear-gradient(145deg, #6366f1, #4f46e5)',
-                      color: 'white',
-                      fontWeight: 700,
-                      border: 'none',
-                      cursor: 'pointer'
-                    }}
-                  >パワーアップ</button>
+                    onClick={() => setShowMiniCompare(v=>!v)}
+                    style={{ height: 32, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700, color: '#111827' }}
+                  >📊 プラン比較</button>
+                  {showMiniCompare && (
+                    <div style={{ fontSize: 12, color: '#374151', border: '1px solid #e5e7eb', borderRadius: 8, padding: 8 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
+                        <div style={{ fontWeight: 700 }}>機能</div>
+                        <div style={{ fontWeight: 700 }}>🥉</div>
+                        <div style={{ fontWeight: 700 }}>🥈</div>
+                        <div style={{ fontWeight: 700 }}>🏆</div>
+                        <div>価格</div><div>無料</div><div>¥980/月</div><div>¥9,800</div>
+                        <div>カテゴリー</div><div>基本</div><div>✓ 全</div><div>✓ 全</div>
+                        <div>お気に入り</div><div>6個</div><div>✓ 無制限</div><div>✓ 無制限</div>
+                        <div>速度調整</div><div>✗</div><div>✓</div><div>✓</div>
+                        <div>広告</div><div>✗ あり</div><div>✓ なし</div><div>✓ なし</div>
+                        <div>オフライン</div><div>✗</div><div>✓</div><div>✓</div>
+                      </div>
+                    </div>
+                  )}
 
                   <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
 
