@@ -2233,21 +2233,32 @@ export default function Home() {
                   <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
 
                   <div style={{ fontSize: 12, color: '#6b7280' }}>アカウント</div>
-                  {/* アカウント情報の概要 */}
-                  <div style={{ fontSize: 12, color: '#374151', border: '1px solid #e5e7eb', borderRadius: 8, padding: 8 }}>
-                    <div style={{ display: 'grid', gap: 6 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>ユーザーネーム</span>
+                  {/* アカウント情報（編集機能付き） */}
+                  <div style={{ fontSize: 12, color: '#374151', border: '1px solid #e5e7eb', borderRadius: 8, padding: 8, display: 'grid', gap: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>ユーザーネーム</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontWeight: 700 }}>{user?.user_metadata?.username || '未設定'}</span>
+                        <button
+                          onClick={() => { setShowAccountMenu(false); setShowSettings(true); setIsEditingUsername(true); }}
+                          style={{ border: 'none', background: 'transparent', color: '#2563eb', cursor: 'pointer', fontWeight: 700 }}
+                        >変更</button>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>登録メール</span>
-                        <span style={{ fontWeight: 700 }}>{user?.email || '-'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>ご登録期日</span>
-                        <span style={{ fontWeight: 700 }}>{user?.created_at ? new Date(user.created_at).toLocaleDateString('ja-JP') : '-'}</span>
-                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>登録メール</span>
+                      <span style={{ fontWeight: 700 }}>{user?.email || '-'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>パスワード</span>
+                      <button
+                        onClick={() => { setShowAccountMenu(false); setShowSettings(true); setShowPasswordChange(true); }}
+                        style={{ border: '1px solid #e5e7eb', background: '#fff', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontWeight: 700, color: '#111827' }}
+                      >変更</button>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>ご登録期日</span>
+                      <span style={{ fontWeight: 700 }}>{user?.created_at ? new Date(user.created_at).toLocaleDateString('ja-JP') : '-'}</span>
                     </div>
                   </div>
                   <button
