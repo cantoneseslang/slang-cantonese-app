@@ -2199,16 +2199,21 @@ export default function Home() {
                   {showMiniCompare && (
                     <div style={{ fontSize: 12, color: '#374151', border: '1px solid #e5e7eb', borderRadius: 8, padding: 8 }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
-                        <div style={{ fontWeight: 700 }}>機能</div>
-                        <div style={{ fontWeight: 700 }}>🥉</div>
-                        <div style={{ fontWeight: 700 }}>🥈</div>
-                        <div style={{ fontWeight: 700 }}>🏆</div>
+                        <div style={{ fontWeight: 700 }}>機能・特典</div>
+                        <div style={{ fontWeight: 700 }}>🥉 ブロンズ</div>
+                        <div style={{ fontWeight: 700 }}>🥈 シルバー</div>
+                        <div style={{ fontWeight: 700 }}>🏆 ゴールド</div>
                         <div>価格</div><div>無料</div><div>¥980/月</div><div>¥9,800</div>
-                        <div>カテゴリー</div><div>基本</div><div>✓ 全</div><div>✓ 全</div>
-                        <div>お気に入り</div><div>6個</div><div>✓ 無制限</div><div>✓ 無制限</div>
-                        <div>速度調整</div><div>✗</div><div>✓</div><div>✓</div>
+                        <div>お気に入り登録数</div><div>6個まで</div><div>✓ 無制限</div><div>✓ 無制限</div>
+                        <div>モード切り替え<br/>(ノーマルモード・学習)</div><div>✗</div><div>✓</div><div>✓</div>
+                        <div>note 教科書自動更新</div><div>✗</div><div>✓</div><div>✓</div>
+                        <div>テキストOCR</div><div>✗</div><div>✓</div><div>✓</div>
+                        <div>発音チェック</div><div>✗</div><div>✓</div><div>✓</div>
+                        <div>発音チェックゲーム</div><div>✗</div><div>✓</div><div>✓</div>
+                        <div>カテゴリーアクセス</div><div>基本</div><div>✓ 全カテゴリー</div><div>✓ 全カテゴリー</div>
+                        <div>音声速度調整</div><div>✗</div><div>✓</div><div>✓</div>
                         <div>広告</div><div>✗ あり</div><div>✓ なし</div><div>✓ なし</div>
-                        <div>オフライン</div><div>✗</div><div>✓</div><div>✓</div>
+                        <div>支払い方法</div><div>-</div><div>月額自動更新</div><div>買い切り</div>
                       </div>
                     </div>
                   )}
