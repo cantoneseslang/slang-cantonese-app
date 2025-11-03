@@ -791,6 +791,82 @@ export default function Home() {
   const [examplePlaybackSpeed, setExamplePlaybackSpeed] = useState('1');
   const [showHelpCard, setShowHelpCard] = useState(false);
   const [dontShowHelpAgain, setDontShowHelpAgain] = useState(false);
+  // インポート状態（PDF/TXT/OCR）
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState<number | null>(null);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+
+  // TXT読み込み
+  const readTxt = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const textRaw = String(reader.result || '');
+          // 正規化（両端空白・連続空白の縮約）
+          const normalized = textRaw
+            .replace(/\r\n/g, '\n')
+            .replace(/\u00A0/g, ' ')
+            .replace(/[\t\v\f]+/g, ' ')
+            .trim();
+          resolve(normalized.length > 4000 ? normalized.slice(0, 4000) : normalized);
+        } catch (e) {
+          reject(e);
+        }
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsText(file);
+    });
+  };
+
+  // PDFテキスト抽出（pdfjs-dist）
+  const extractTextFromPdf = async (file: File, onProgress?: (p: number) => void): Promise<string> => {
+    const pdfjsLib: any = await import('pdfjs-dist/build/pdf');
+    // CDNのworkerを設定（バンドル不要）
+    if (pdfjsLib?.GlobalWorkerOptions) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+    }
+    const arrayBuffer = await file.arrayBuffer();
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+    const maxPages = Math.min(pdf.numPages, 10); // 上限
+    let fullText = '';
+    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const content = await page.getTextContent();
+      const strings = content.items.map((it: any) => it.str);
+      fullText += strings.join(' ') + '\n';
+      if (onProgress) onProgress(Math.round((pageNum / maxPages) * 100));
+    }
+    const normalized = fullText
+      .replace(/\u00A0/g, ' ')
+      .replace(/[\t\v\f]+/g, ' ')
+      .replace(/\s{3,}/g, ' ')
+      .trim();
+    return normalized.length > 4000 ? normalized.slice(0, 4000) : normalized;
+  };
+
+  // 画像OCR（Tesseract.js）
+  const runOcr = async (file: File, onProgress?: (p: number) => void): Promise<string> => {
+    const Tesseract: any = await import('tesseract.js');
+    const { createWorker } = Tesseract as any;
+    const worker = await createWorker({
+      logger: (m: any) => {
+        if (m.status === 'recognizing text' && onProgress) {
+          onProgress(Math.round((m.progress || 0) * 100));
+        }
+      }
+    });
+    // 日本語+英語（サイズ大きいが汎用性）
+    await worker.loadLanguage('jpn+eng');
+    await worker.initialize('jpn+eng');
+    const result = await worker.recognize(await file.arrayBuffer());
+    await worker.terminate();
+    const text = String(result?.data?.text || '').replace(/\s{3,}/g, ' ').trim();
+    return text.length > 4000 ? text.slice(0, 4000) : text;
+  };
   
   // カテゴリーバーのスクロール状態
   const categoryScrollRef = useRef<HTMLDivElement>(null);
@@ -1964,7 +2040,8 @@ export default function Home() {
           {/* 検索エリア */}
           <div style={{ 
             marginBottom: '1rem',
-            padding: isMobile ? '0 1rem' : '0 1.5rem'
+            padding: isMobile ? '0 1rem' : '0 1.5rem',
+            position: 'relative'
           }}>
             <input
               type="text"
@@ -1982,7 +2059,7 @@ export default function Home() {
                 width: '100%',
                 maxWidth: '100%',
                 boxSizing: 'border-box',
-                padding: '0 1.25rem',
+                padding: '0 5.25rem 0 1.25rem',
                 border: '1px solid rgba(0,0,0,0.1)',
                 borderRadius: '12px',
                 marginBottom: '0.75rem',
@@ -1998,6 +2075,112 @@ export default function Home() {
               onBlur={(e) => {
                 e.currentTarget.style.borderColor = 'rgba(0,0,0,0.1)';
                 e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)';
+              }}
+            />
+            {/* 右端アイコン（白枠内） */}
+            <div style={{
+              position: 'absolute',
+              right: isMobile ? '1rem' : '1.5rem',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              display: 'flex',
+              gap: '0.5rem',
+              background: '#ffffff',
+              border: '1px solid rgba(0,0,0,0.08)',
+              borderRadius: '10px',
+              padding: '0.25rem 0.5rem',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+            }}>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                title="ファイルから読み取り (PDF/TXT)"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '1.1rem',
+                  padding: '0.25rem 0.25rem',
+                  lineHeight: 1
+                }}
+              >📁</button>
+              {isMobile && (
+                <button
+                  onClick={() => cameraInputRef.current?.click()}
+                  title="カメラ/OCRで読み取り"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '1.1rem',
+                    padding: '0.25rem 0.25rem',
+                    lineHeight: 1
+                  }}
+                >📷</button>
+              )}
+            </div>
+
+            {/* 非表示input: PDF/TXT */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.txt"
+              style={{ display: 'none' }}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                try {
+                  setIsImporting(true);
+                  setImportProgress(null);
+                  setImportMessage('読み取り中...');
+                  if (file.name.toLowerCase().endsWith('.txt')) {
+                    const text = await readTxt(file);
+                    setSearchQuery(text);
+                  } else if (file.name.toLowerCase().endsWith('.pdf')) {
+                    const text = await extractTextFromPdf(file, (p) => setImportProgress(p));
+                    if (!text || text.trim().length === 0) {
+                      alert('PDFからテキストを抽出できませんでした。スキャンPDFの可能性があります。モバイルの📷からOCRをお試しください。');
+                    } else {
+                      setSearchQuery(text);
+                    }
+                  } else {
+                    alert('PDF または TXT ファイルを選択してください。');
+                  }
+                } catch (err: any) {
+                  console.error(err);
+                  alert('読み取り中にエラーが発生しました: ' + (err?.message || String(err)));
+                } finally {
+                  setIsImporting(false);
+                  setImportProgress(null);
+                  setImportMessage(null);
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                }
+              }}
+            />
+
+            {/* 非表示input: カメラ（モバイルOCR） */}
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              style={{ display: 'none' }}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                try {
+                  setIsImporting(true);
+                  setImportMessage('OCR実行中...');
+                  const text = await runOcr(file, (p) => setImportProgress(p));
+                  setSearchQuery(text);
+                } catch (err: any) {
+                  console.error(err);
+                  alert('OCR中にエラーが発生しました: ' + (err?.message || String(err)));
+                } finally {
+                  setIsImporting(false);
+                  setImportProgress(null);
+                  setImportMessage(null);
+                  if (cameraInputRef.current) cameraInputRef.current.value = '';
+                }
               }}
             />
             <div style={{ display: 'flex', gap: '0.5rem' }}>
