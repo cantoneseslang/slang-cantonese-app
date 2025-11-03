@@ -124,7 +124,6 @@ export default function Home() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('clickSoundEnabled', String(newValue));
     }
-    try { fetch('/api/track-button', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wordChinese: sequence, categoryId: currentCategory?.id || 'pronunciation' }) }); } catch {}
   };
 
   // 学習モードのオン/オフを切り替える

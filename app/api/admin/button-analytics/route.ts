@@ -25,12 +25,13 @@ export async function GET() {
   if (evErr) return NextResponse.json({ success: false, error: evErr.message }, { status: 500 })
 
   const allButtons = new Set<string>()
-  const perUser = new Map<string, Set<string>>()
+  interface ButtonMap { [userId: string]: { [key: string]: true } }
+  const perUser: ButtonMap = {};
 
   (events || []).forEach((e: any) => {
     allButtons.add(e.button_key)
-    if (!perUser.has(e.user_id)) perUser.set(e.user_id, new Set<string>())
-    perUser.get(e.user_id)!.add(e.button_key)
+    if (!perUser[e.user_id]) perUser[e.user_id] = {}
+    perUser[e.user_id][e.button_key] = true
   })
 
   const totalButtons = allButtons.size
@@ -40,7 +41,7 @@ export async function GET() {
   if (usersErr) return NextResponse.json({ success: false, error: usersErr.message }, { status: 500 })
 
   const rows = (users || []).map(u => {
-    const pressed = perUser.get(u.id)?.size || 0
+    const pressed = perUser[u.id] ? Object.keys(perUser[u.id]).length : 0
     const notPressed = Math.max(totalButtons - pressed, 0)
     return {
       user_id: u.id,
