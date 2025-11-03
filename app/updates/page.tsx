@@ -1,56 +1,6 @@
 export default function UpdatesPage() {
   return (
     <main style={{ maxWidth: 900, margin: '0 auto', padding: '2rem 1.5rem' }}>
-      {/* ロードマップ */}
-      <section style={{ marginBottom: '1.75rem' }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.75rem' }}>ロードマップ</h2>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-          {[
-            { label: 'Chrome拡張', status: 'WIP' },
-            { label: '文章作成アシスト', status: 'WIP' },
-            { label: 'キャプチャ翻訳' },
-            { label: '用語集' },
-            { label: 'ダークモード' },
-            { label: 'URL翻訳' },
-            { label: 'チームプラン' },
-            { label: 'ルビのIPA表示' },
-            { label: '文字数の上限アップ' },
-            { label: 'ステータスページ' },
-            { label: 'PDF翻訳' },
-            { label: '🇩🇪 🇫🇷 🇵🇹 🇷🇺 🇮🇩' },
-            { label: '画像翻訳', status: 'Done' },
-            { label: '戻し訳', status: 'Done' },
-          ].map((item) => (
-            <span key={item.label} style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              borderRadius: 9999,
-              border: '1px solid #e5e7eb',
-              background: item.status === 'Done' ? '#ecfdf5' : item.status === 'WIP' ? '#eef2ff' : '#f8fafc',
-              color: item.status === 'Done' ? '#065f46' : item.status === 'WIP' ? '#4f46e5' : '#374151',
-              padding: '6px 10px',
-              fontSize: 13,
-              fontWeight: 600
-            }}>
-              {item.label}
-              {item.status && (
-                <span style={{
-                  marginLeft: 4,
-                  borderRadius: 9999,
-                  padding: '2px 8px',
-                  fontSize: 11,
-                  background: item.status === 'Done' ? '#10b981' : '#6366f1',
-                  color: '#fff'
-                }}>
-                  {item.status}
-                </span>
-              )}
-            </span>
-          ))}
-        </div>
-      </section>
-
       {/* 更新情報（上から古い順） */}
       <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.75rem' }}>更新情報</h2>
       <div style={{ display: 'grid', gap: '1rem' }}>
