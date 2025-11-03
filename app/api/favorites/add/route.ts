@@ -72,7 +72,10 @@ export async function POST(request: Request) {
 
     const favoriteCount = (existingFavorites && Array.isArray(existingFavorites)) ? existingFavorites.length : 0
     
-    // ブロンズ会員は6個まで
+    // 会員種別によるお気に入り数の制限
+    // - ブロンズ会員（free）: 6個まで
+    // - シルバー会員（subscription）: 無制限
+    // - ゴールド会員（lifetime）: 無制限
     if (membershipType === 'free' && favoriteCount >= 6) {
       return NextResponse.json({ 
         error: 'ブロンズ会員はお気に入りを6個までしか保存できません。',
@@ -80,6 +83,8 @@ export async function POST(request: Request) {
         current: favoriteCount
       }, { status: 403 })
     }
+    
+    // subscription（シルバー）とlifetime（ゴールド）は制限なし（無制限）
 
     // 既に存在するかチェック
     const { data: existing, error: checkError } = await supabase

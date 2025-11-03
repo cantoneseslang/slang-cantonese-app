@@ -260,7 +260,8 @@ export default function Home() {
         }
       } else {
         // 追加
-        // 会員種別による制限チェック
+        // 会員種別による制限チェック（早期チェック - UX向上のため）
+        // 注意: 最終的な制限チェックはバックエンドで行われる
         if (membershipType === 'free' && favorites.size >= 6) {
           alert('ブロンズ会員は6個までしかお気に入りを登録できません。');
           return;
@@ -277,6 +278,15 @@ export default function Home() {
         });
 
         const data = await response.json();
+        
+        // レスポンスステータスをチェック（403は制限エラー）
+        if (response.status === 403) {
+          // バックエンドからの制限エラーを表示
+          const errorMsg = data.error || 'ブロンズ会員はお気に入りを6個までしか保存できません。';
+          alert(errorMsg);
+          return;
+        }
+        
         if (data.success) {
           const newFavorites = new Set(favorites);
           newFavorites.add(favoriteKey);
