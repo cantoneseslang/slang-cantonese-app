@@ -124,6 +124,7 @@ export default function Home() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('clickSoundEnabled', String(newValue));
     }
+    try { fetch('/api/track-button', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wordChinese: sequence, categoryId: currentCategory?.id || 'pronunciation' }) }); } catch {}
   };
 
   // 学習モードのオン/オフを切り替える
@@ -1199,6 +1200,7 @@ export default function Home() {
     if (isLearningMode) {
       // 学習モード：現在の動作（例文も表示）
       setSearchQuery(word.chinese);
+    try { fetch('/api/track-button', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wordChinese: word.chinese, categoryId: currentCategory?.id }) }); } catch {}
       await handleSearch(word.chinese);
     } else {
       // ノーマルモード：単語のみの音声を再生、ボタンを緑色にする（1つだけ）
@@ -1333,6 +1335,7 @@ export default function Home() {
     } catch (err) {
       console.error('音声再生エラー:', err);
     }
+  try { fetch('/api/track-button', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wordChinese: text, categoryId: currentCategory?.id || 'pronunciation' }) }); } catch {}
   };
 
   // 連続発音ボタンのクリックハンドラー

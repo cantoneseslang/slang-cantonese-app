@@ -29,6 +29,9 @@ export default function AdminPage() {
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
+  const [favoritesCountMap, setFavoritesCountMap] = useState<Record<string, number>>({});
+  const [buttonAnalytics, setButtonAnalytics] = useState<Array<{ user_id: string; email: string; pressed: number; not_pressed: number }>>([]);
+  const [buttonTotal, setButtonTotal] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{ username: string; membership_type: string }>({ username: '', membership_type: 'free' });
@@ -63,6 +66,9 @@ export default function AdminPage() {
 
       setIsAdmin(true);
       fetchUsers();
+      fetchFavoritesCount();
+      fetchButtonAnalytics();
+      fetchFavoritesCount();
     } catch (error) {
       console.error('管理者チェックエラー:', error);
       router.push('/login');
@@ -93,6 +99,35 @@ export default function AdminPage() {
       setLoading(false);
     }
   };
+
+  const fetchFavoritesCount = async () => {
+    try {
+      const res = await fetch('/api/admin/favorites');
+      const data = await res.json();
+      if (data.success) {
+        const map: Record<string, number> = {};
+        (data.favorites || []).forEach((u: any) => {
+          map[u.user_id] = u.favorites_count || 0;
+        });
+        setFavoritesCountMap(map);
+      }
+    } catch (e) {
+      console.error('お気に入り数取得エラー', e);
+    }
+  }
+
+  const fetchButtonAnalytics = async () => {
+    try {
+      const res = await fetch('/api/admin/button-analytics');
+      const data = await res.json();
+      if (data.success) {
+        setButtonTotal(data.total_buttons || 0);
+        setButtonAnalytics(data.users || []);
+      }
+    } catch (e) {
+      console.error('ボタン集計取得エラー', e);
+    }
+  }
 
   const handleEdit = (user: User) => {
     setEditingUser(user.id);
@@ -254,7 +289,7 @@ export default function AdminPage() {
               会員情報一覧
             </h2>
             <button
-              onClick={fetchUsers}
+              onClick={() => { fetchUsers(); fetchFavoritesCount(); fetchButtonAnalytics(); }}
               style={{
                 padding: '0.5rem 1rem',
                 backgroundColor: '#3b82f6',
@@ -326,6 +361,13 @@ export default function AdminPage() {
                       fontSize: '0.875rem',
                       color: '#374151'
                     }}>会員種別</th>
+                    <th style={{
+                      padding: '0.75rem',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      fontSize: '0.875rem',
+                      color: '#374151'
+                    }}>お気に入り数</th>
                     <th style={{
                       padding: '0.75rem',
                       textAlign: 'left',
@@ -425,6 +467,12 @@ export default function AdminPage() {
                             {u.username || '未設定'}
                           </span>
                         )}
+                      </td>
+                      <td style={{
+                        padding: '0.75rem',
+                        fontSize: '0.875rem'
+                      }}>
+                        {favoritesCountMap[u.id] ?? 0}
                       </td>
                       <td style={{
                         padding: '0.75rem',
@@ -629,83 +677,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* お気に入りテーブル作成 */}
-        <div style={{
-          marginTop: '3rem',
-          padding: '1.5rem',
-          backgroundColor: '#fef3c7',
-          borderRadius: '12px',
-          border: '2px solid #fbbf24'
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '1rem'
-          }}>
-            <h3 style={{
-              fontSize: '1.25rem',
-              fontWeight: '600',
-              marginBottom: '0.5rem'
-            }}>
-              🗄️ お気に入りテーブル作成
-            </h3>
-            <button
-              onClick={async () => {
-                try {
-                  const response = await fetch('/api/admin/create-table', { method: 'POST' });
-                  const data = await response.json();
-                  
-                  if (data.success) {
-                    alert('✅ ' + data.message);
-                  } else if (data.requiresManualCreation) {
-                    // SQLを表示してコピーできるようにする
-                    const sql = data.sql;
-                    const instructions = data.instructions.join('\n');
-                    const message = `${data.message}\n\n${instructions}\n\nSQL:\n\n${sql}\n\n※ SQLをコピーしてSupabaseのSQL Editorで実行してください。`;
-                    
-                    // テキストエリアで表示
-                    const textarea = document.createElement('textarea');
-                    textarea.value = sql;
-                    textarea.style.position = 'fixed';
-                    textarea.style.opacity = '0';
-                    document.body.appendChild(textarea);
-                    textarea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textarea);
-                    
-                    alert(message + '\n\n✅ SQLをクリップボードにコピーしました。');
-                  } else {
-                    alert('❌ エラー: ' + (data.error || data.message));
-                  }
-                } catch (error: any) {
-                  alert('❌ エラー: ' + error.message);
-                }
-              }}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: '#f59e0b',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '600'
-              }}
-            >
-              テーブル作成SQL取得
-            </button>
-          </div>
-          <p style={{
-            fontSize: '0.875rem',
-            color: '#78350f',
-            margin: 0,
-            lineHeight: '1.5'
-          }}>
-            お気に入り機能を使用するには、Supabaseでテーブルを作成する必要があります。<br/>
-            上記ボタンをクリックすると、SQLをコピーできます。SupabaseのSQL Editorで実行してください。
-          </p>
-        </div>
 
         {/* お気に入りデータ統計 */}
         <div style={{
@@ -766,6 +737,67 @@ export default function AdminPage() {
             全ユーザーのお気に入りデータを取得し、ユーザーの嗜好を分析できます。
           </p>
         </div>
+
+      {/* ボタン利用分析 */}
+      <div style={{
+        marginTop: '2rem',
+        padding: '1.5rem',
+        backgroundColor: '#f9fafb',
+        borderRadius: '12px'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '1rem'
+        }}>
+          <h3 style={{
+            fontSize: '1.25rem',
+            fontWeight: '600',
+            marginBottom: '1rem'
+          }}>
+            🧮 ボタン利用分析
+          </h3>
+          <button
+            onClick={fetchButtonAnalytics}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              fontWeight: '600'
+            }}
+          >
+            集計更新
+          </button>
+        </div>
+        <div style={{ fontSize: '0.875rem', color: '#374151', marginBottom: '0.75rem' }}>
+          総ボタン数: <span style={{ fontWeight: 700 }}>{buttonTotal}</span>
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>Email</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>押した数</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>未押数</th>
+              </tr>
+            </thead>
+            <tbody>
+              {buttonAnalytics.map((row, idx) => (
+                <tr key={row.user_id} style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                  <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937' }}>{row.email}</td>
+                  <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937' }}>{row.pressed}</td>
+                  <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937' }}>{row.not_pressed}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
       </div>
     </div>
   );

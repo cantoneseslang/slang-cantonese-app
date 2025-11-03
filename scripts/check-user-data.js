@@ -62,3 +62,4 @@ async function checkUserData(email) {
 const email = process.argv[2] || 'bestinksalesman@gmail.com';
 checkUserData(email);
 
+
