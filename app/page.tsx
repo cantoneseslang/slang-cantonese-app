@@ -1696,7 +1696,7 @@ export default function Home() {
               letterSpacing: '-0.02em',
               color: '#111827'
             }}>
-              <img src="/volume-logo.png" alt="logo" style={{ width: isMobile ? 24 : 28, height: isMobile ? 24 : 28 }} />
+              <img src="/volume-logo.png?v=1" alt="logo" style={{ width: isMobile ? 24 : 28, height: isMobile ? 24 : 28 }} />
               <span>カントン語音れん</span>
             </div>
             {/* サブ見出し（薄い灰色・小さめ） */}
