@@ -793,6 +793,8 @@ export default function Home() {
   const [examplePlaybackSpeed, setExamplePlaybackSpeed] = useState('1');
   const [showHelpCard, setShowHelpCard] = useState(false);
   const [dontShowHelpAgain, setDontShowHelpAgain] = useState(false);
+  // 入力欄からの検索結果をノーマルモードでも表示するためのフラグ
+  const [forceShowResult, setForceShowResult] = useState(false);
   // インポート状態（PDF/TXT/OCR）
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState<number | null>(null);
@@ -1129,6 +1131,9 @@ export default function Home() {
       return;
     }
 
+    // 入力欄からの検索は、学習モードでなくても結果パネルを表示する
+    setForceShowResult(true);
+
     setLoading(true);
     setError(null);
 
@@ -1197,6 +1202,8 @@ export default function Home() {
       await handleSearch(word.chinese);
     } else {
       // ノーマルモード：単語のみの音声を再生、ボタンを緑色にする（1つだけ）
+      // 入力欄からの結果パネルは非表示にする
+      setForceShowResult(false);
       const wordId = word.chinese;
       
       // 前のボタンの緑を消して、新しいボタンだけを緑にする
@@ -2380,8 +2387,8 @@ export default function Home() {
             style={{ display: 'none' }}
           />
 
-          {/* 結果エリア（学習モードのみ表示） */}
-          {isLearningMode && result && (
+          {/* 結果エリア（学習モード または 入力欄からの検索時に表示） */}
+          {(result && (isLearningMode || forceShowResult)) && (
             <div style={{ 
               marginBottom: '1rem', 
               padding: isMobile ? '1rem' : '1.5rem', 
