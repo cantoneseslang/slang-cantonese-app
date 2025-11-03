@@ -2119,7 +2119,7 @@ export default function Home() {
               {/* 右端アイコン（入力欄の内側右上、白枠内） */}
               <div style={{
                 position: 'absolute',
-                right: '0.5rem',
+                right: isMobile ? '0.5rem' : '0.75rem',
                 top: '50%',
                 transform: 'translateY(-50%)',
                 display: 'flex',
@@ -2127,6 +2127,7 @@ export default function Home() {
                 background: 'transparent',
                 border: 'none',
                 padding: 0,
+                alignItems: 'center',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                 zIndex: 3
               }}>
