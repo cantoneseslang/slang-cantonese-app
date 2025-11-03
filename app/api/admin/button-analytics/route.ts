@@ -40,7 +40,16 @@ export async function GET() {
     perUser[e.user_id][e.button_key] = true
   })
 
-  const totalButtons = allButtons.size
+  // カタログから総数を取得（存在すれば）
+  let totalButtons = allButtons.size
+  try {
+    const { data: catCount, error: catErr } = await admin
+      .from('button_catalog')
+      .select('button_key', { count: 'exact', head: true })
+    if (!catErr && typeof catCount === 'number') {
+      totalButtons = catCount
+    }
+  } catch {}
 
   // ユーザー情報
   const { data: { users }, error: usersErr } = await admin.auth.admin.listUsers()
