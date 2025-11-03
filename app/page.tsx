@@ -2195,18 +2195,42 @@ export default function Home() {
                     style={{ height: 32, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700, color: '#111827' }}
                   >📊 プラン比較</button>
                   {showMiniCompare && (
-                    <div style={{ fontSize: 12, color: '#374151', border: '1px solid #e5e7eb', borderRadius: 8, padding: 8 }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
-                        <div style={{ fontWeight: 700 }}>機能</div>
-                        <div style={{ fontWeight: 700 }}>🥉</div>
-                        <div style={{ fontWeight: 700 }}>🥈</div>
-                        <div style={{ fontWeight: 700 }}>🏆</div>
-                        <div>価格</div><div>無料</div><div>¥980/月</div><div>¥9,800</div>
-                        <div>カテゴリー</div><div>基本</div><div>✓ 全</div><div>✓ 全</div>
-                        <div>お気に入り</div><div>6個</div><div>✓ 無制限</div><div>✓ 無制限</div>
-                        <div>速度調整</div><div>✗</div><div>✓</div><div>✓</div>
-                        <div>広告</div><div>✗ あり</div><div>✓ なし</div><div>✓ なし</div>
-                        <div>オフライン</div><div>✗</div><div>✓</div><div>✓</div>
+                    <div style={{ fontSize: 12, color: '#374151', border: '1px solid #e5e7eb', borderRadius: 8, padding: 8, display: 'grid', gap: 8 }}>
+                      {/* ブロンズ */}
+                      <div style={{ padding: 12, border: '1px solid #e5e7eb', borderRadius: 8 }}>
+                        <div style={{ fontWeight: 800, marginBottom: 6 }}>🥉 無料（お気に入り6個まで）</div>
+                        <div style={{ fontWeight: 700, marginBottom: 4 }}>特典</div>
+                        <ul style={{ paddingLeft: 16, display: 'grid', gap: 2 }}>
+                          <li>✓ 基本カテゴリーの単語へアクセス</li>
+                          <li>✓ お気に入り6個まで</li>
+                        </ul>
+                        <div style={{ marginTop: 6, color: '#6b7280' }}>お気に入りは6個までに制限されます</div>
+                      </div>
+
+                      {/* シルバー */}
+                      <div style={{ padding: 12, border: '1px solid #e5e7eb', borderRadius: 8 }}>
+                        <div style={{ fontWeight: 800, marginBottom: 6 }}>🥈 ¥980 月額（自動更新）</div>
+                        <div style={{ fontWeight: 700, marginBottom: 4 }}>特典</div>
+                        <ul style={{ paddingLeft: 16, display: 'grid', gap: 2 }}>
+                          <li>✓ 全カテゴリーの単語へアクセス</li>
+                          <li>✓ 例文音声の速度調整機能</li>
+                          <li>✓ 広告なし</li>
+                          <li>✓ オフライン使用可能</li>
+                        </ul>
+                        <div style={{ marginTop: 6, color: '#6b7280' }}>いつでもキャンセル可能です</div>
+                      </div>
+
+                      {/* ゴールド */}
+                      <div style={{ padding: 12, border: '1px solid #e5e7eb', borderRadius: 8 }}>
+                        <div style={{ fontWeight: 800, marginBottom: 6 }}>🏆 ¥9,800 買い切り（永久使用）</div>
+                        <div style={{ fontWeight: 700, marginBottom: 4 }}>特典</div>
+                        <ul style={{ paddingLeft: 16, display: 'grid', gap: 2 }}>
+                          <li>✓ 全カテゴリーの単語へアクセス</li>
+                          <li>✓ 例文音声の速度調整機能</li>
+                          <li>✓ 広告なし</li>
+                          <li>✓ オフライン使用可能</li>
+                        </ul>
+                        <div style={{ marginTop: 6, color: '#6b7280' }}>一度のお支払いで永久に使用できます</div>
                       </div>
                     </div>
                   )}
