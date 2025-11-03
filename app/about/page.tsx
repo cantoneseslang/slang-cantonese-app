@@ -27,14 +27,7 @@ export default function AboutPage() {
       <section style={{ display: 'grid', gap: '0.5rem' }}>
         <h2 style={{ fontSize: '1.125rem', fontWeight: 800 }}>ようこそ！</h2>
         <p>広東語初心の方へ！ようこそスラング式カントン語音れんへ！</p>
-        <ul style={{ paddingLeft: '1.25rem', color: '#374151', display: 'grid', gap: 6 }}>
-          <li>ボタンを押すだけで発音を確認できます</li>
-          <li>ただ発音するだけでなく、学習に役立つ情報を提供します</li>
-          <li>シーンに応じた複数表現の提案や検索も可能です</li>
-          <li>入力テキストの発音（粤ピン/カタカナ）を再生して確認できます</li>
-          <li>音声練習用に音声再生スピードの変更可能です</li>
-          <li>noteと連携し、教材となるボタンがどんどん追加されていきます（<a href="https://note.com/bestinksalesman/m/m6e10d2bd5411" target="_blank" rel="noopener noreferrer">note マガジン</a>）</li>
-        </ul>
+        
         <p>スラング先生考案!カントン語音れん☝️(全{totalButtons}単語)収録！</p>
 
         <ul style={{ paddingLeft: '1.25rem', color: '#374151', display: 'grid', gap: 6 }}>
