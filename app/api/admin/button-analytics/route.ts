@@ -43,10 +43,10 @@ export async function GET() {
   // カタログから総数を取得（存在すれば）
   let totalButtons = allButtons.size
   try {
-    const { data: catCount, error: catErr } = await admin
+    const { count: catCount, error: catErr } = await admin
       .from('button_catalog')
-      .select('button_key', { count: 'exact', head: true })
-    if (!catErr && typeof catCount === 'number') {
+      .select('*', { count: 'exact', head: true })
+    if (!catErr && typeof catCount === 'number' && catCount >= 0) {
       totalButtons = catCount
     }
   } catch {}
