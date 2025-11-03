@@ -2,7 +2,11 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 export function createClient() {
-  const cookieStore = cookies();
+  // Next.js 16 以降の型で cookies() が Promise を返す場合があるため、型を緩めて扱う
+  const cookieStore = cookies() as unknown as {
+    get: (name: string) => { value?: string } | undefined;
+    set: (opts: any) => void;
+  };
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
