@@ -2735,6 +2735,8 @@ export default function Home() {
                       .replace(/<ul>\s*<li>（日本語）学習[\s\S]*?<\/ul>\s*/,'')
                       // 「全部が違う漢字ではなく部分的となります。」の<p>だけ削除
                       .replace(/<p>\s*全部が違う漢字ではなく部分的となります。\s*<\/p>\s*/,'')
+                      // キュー・セイ・ロク・チョウ をモバイルで改行させないようspanで囲む
+                      .replace(/キュー・セイ・ロク・チョウ/g, '<span class="tone-kana-nowrap">キュー・セイ・ロク・チョウ<\/span>')
                   : currentCategory.introContent) }} 
                 style={isMobile ? {
                   fontSize: '0.875rem'

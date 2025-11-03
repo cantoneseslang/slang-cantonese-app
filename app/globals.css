@@ -142,6 +142,11 @@ body {
     word-break: keep-all;
     overflow-wrap: break-word;
   }
+  /* カタカナのトーン表記（キュー・セイ・ロク・チョウ）だけは改行させず微小さく */
+  .intro-content-mobile .tone-kana-nowrap {
+    white-space: nowrap;
+    font-size: 0.9em;
+  }
   
   .intro-content-mobile h2 {
     font-size: 1.125rem !important;
