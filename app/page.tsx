@@ -1847,6 +1847,7 @@ export default function Home() {
                     >
                       ログアウト
                     </button>
+                    {false && (
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -1886,6 +1887,8 @@ export default function Home() {
                     >
                       {isClickSoundEnabled ? '🔊 クリック音オン' : '🔇 クリック音オフ'}
                     </button>
+                    )}
+                    {false && (
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -1925,6 +1928,8 @@ export default function Home() {
                     >
                       {isLearningMode ? '📚 学習モード' : '🎵 ノーマルモード'}
                     </button>
+                    )}
+                    {false && (
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -1960,6 +1965,7 @@ export default function Home() {
                     >
                       ⚙️ 設定
                     </button>
+                    )}
                   </>
                 )}
                 
@@ -2187,6 +2193,20 @@ export default function Home() {
                     <div style={{ color: '#374151' }}>あなたの言語</div>
                     <div style={{ marginLeft: 'auto', color: '#111827', fontWeight: 600 }}>日本語</div>
                   </div>
+
+                  {/* ユーティリティ操作（元のヘッダーから移動） */}
+                  <button
+                    onClick={() => toggleClickSound()}
+                    style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700 }}
+                  >{isClickSoundEnabled ? '🔊 クリック音オン' : '🔇 クリック音オフ'}</button>
+                  <button
+                    onClick={() => toggleLearningMode()}
+                    style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700 }}
+                  >{isLearningMode ? '📚 学習モード' : '🎵 ノーマルモード'}</button>
+                  <button
+                    onClick={() => { setShowSettings(true); setShowAccountMenu(false); }}
+                    style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700 }}
+                  >⚙️ 設定</button>
 
                   <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
 
