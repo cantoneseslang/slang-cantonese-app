@@ -3302,6 +3302,8 @@ export default function Home() {
             gap: '0.75rem',
             fontSize: isMobile ? '0.85rem' : '0.95rem'
           }}>
+            <a href="/cantonese" style={{ textDecoration: 'underline' }}>カントン語（広東語）ってなに？</a>
+            <span>·</span>
             <a href="/about" style={{ textDecoration: 'underline' }}>カントン語音れんって何？</a>
             <span>·</span>
             <a href="/updates" style={{ textDecoration: 'underline' }}>更新情報</a>
