@@ -820,6 +820,46 @@ export default function AdminPage() {
             {analyticsLoading ? '集計中...' : '集計更新'}
           </button>
         </div>
+
+        {/* ボタンログテーブル作成 */}
+        <div style={{
+          marginTop: '2rem',
+          padding: '1.5rem',
+          backgroundColor: '#fef3c7',
+          borderRadius: '12px',
+          border: '2px solid #fbbf24'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: 600, margin: 0 }}>🗄️ ボタンログテーブル作成</h3>
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch('/api/admin/button-events-sql');
+                  const data = await res.json();
+                  if (data.success) {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = data.sql;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    alert('SQLをクリップボードにコピーしました。SupabaseのSQL Editorで実行してください。');
+                  } else {
+                    alert('エラー: ' + (data.error || '不明なエラー'));
+                  }
+                } catch (e: any) {
+                  alert('エラー: ' + (e?.message || String(e)));
+                }
+              }}
+              style={{ padding: '0.5rem 1rem', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}
+            >テーブル作成SQL取得</button>
+          </div>
+          <div style={{ fontSize: '0.875rem', color: '#78350f' }}>
+            集計が0のままの場合は、まずこのSQLを実行してテーブルを作成してください。
+          </div>
+        </div>
           <div style={{ fontSize: '0.875rem', color: '#374151', marginBottom: '0.75rem' }}>
           総ボタン数: <span style={{ fontWeight: 700 }}>{buttonTotal}</span>
         </div>

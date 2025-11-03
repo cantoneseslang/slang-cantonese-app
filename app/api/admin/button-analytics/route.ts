@@ -22,7 +22,13 @@ export async function GET() {
     .from('user_button_events')
     .select('user_id, button_key, category_id')
 
-  if (evErr) return NextResponse.json({ success: false, error: evErr.message }, { status: 500 })
+  if (evErr) {
+    const msg = evErr.message || ''
+    if (evErr.code === 'PGRST116' || /relation|does not exist|Could not find the table|schema cache/i.test(msg)) {
+      return NextResponse.json({ success: true, total_buttons: 0, users: [], requiresTable: true })
+    }
+    return NextResponse.json({ success: false, error: evErr.message }, { status: 500 })
+  }
 
   const allButtons = new Set<string>()
   interface ButtonMap { [userId: string]: { [key: string]: true } }
