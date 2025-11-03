@@ -2130,16 +2130,17 @@ export default function Home() {
               <div style={{
                 position: 'absolute',
                 right: isMobile ? '0.5rem' : '0.75rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
+                top: 0,
+                bottom: 0,
                 display: 'flex',
+                alignItems: 'center',
                 gap: '0.25rem',
                 background: 'transparent',
                 border: 'none',
                 padding: 0,
-                alignItems: 'center',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                zIndex: 3
+                boxShadow: 'none',
+                zIndex: 3,
+                pointerEvents: 'auto'
               }}>
               <button
                 onClick={() => fileInputRef.current?.click()}
