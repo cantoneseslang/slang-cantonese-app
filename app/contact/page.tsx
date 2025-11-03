@@ -24,7 +24,7 @@ export default function ContactPage() {
       </div>
 
       <div style={{ marginTop: '1rem', color: '#6b7280', fontSize: 14 }}>
-        送信ボタンは準備中です。お急ぎの方は <a href="mailto:info@lifesupporthk.com" style={{ textDecoration: 'underline' }}>info@lifesupporthk.com</a> へご連絡ください。
+        送信ボタンは準備中です。お急ぎの方は <a href="mailto:info@lifesupporthk.com" style={{ textDecoration: 'underline' }}>info@lifesupporthk.com</a> へご連絡ください（平日10:00〜17:00）。
       </div>
     </main>
   )

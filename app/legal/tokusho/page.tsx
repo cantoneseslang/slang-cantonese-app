@@ -9,7 +9,7 @@ export default function TokushoPage() {
           <tbody>
             <tr>
               <td style={{ width: '35%', padding: '8px', borderBottom: '1px solid #e5e7eb', color: '#374151' }}>事業者名</td>
-              <td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>（事業者名を記載）</td>
+              <td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>LIFESUPPORT (HK) LIMITED</td>
             </tr>
             <tr>
               <td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', color: '#374151' }}>運営責任者</td>
@@ -17,12 +17,13 @@ export default function TokushoPage() {
             </tr>
             <tr>
               <td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', color: '#374151' }}>所在地</td>
-              <td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>（住所を記載）</td>
+              <td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>G/F No.163 Pan Chung, Tai Po, NT, HONG KONG</td>
             </tr>
             <tr>
               <td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', color: '#374151' }}>お問い合わせ</td>
               <td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>
-                <a href="/contact" style={{ textDecoration: 'underline' }}>お問い合わせフォーム</a>
+                <div><a href="/contact" style={{ textDecoration: 'underline' }}>お問い合わせフォーム</a></div>
+                <div>メール: <a href="mailto:info@lifesupporthk.com" style={{ textDecoration: 'underline' }}>info@lifesupporthk.com</a>（平日10:00〜17:00）</div>
               </td>
             </tr>
             <tr>
