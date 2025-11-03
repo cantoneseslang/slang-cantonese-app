@@ -4,7 +4,7 @@ export default function FaqPage() {
       <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.75rem' }}>よくある質問</h1>
       <div style={{ display: 'grid', gap: '1.25rem' }}>
         <section>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: 800 }}>廣東語音れんって何？</h2>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 800 }}>カントン語音れんって何？</h2>
           <ul style={{ paddingLeft: '1.25rem', color: '#374151', display: 'grid', gap: 6 }}>
             <li>ボタンを押すだけで発音を確認できます</li>
             <li>ただ発音するだけでなく、学習に役立つ情報を提供します</li>

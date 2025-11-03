@@ -1595,7 +1595,7 @@ export default function Home() {
                 広東語初心の方へ！ようこそスラング式カントン語音れんへ！
               </p>
               <p style={{ marginBottom: '0.75rem' }}>
-                スラング式カントン語音れん☝️(全{totalButtons}単語)収録！
+                スラング先生考案!カントン語音れん☝️(全{totalButtons}単語)収録！
               </p>
               <ul style={{ paddingLeft: '1.5rem', marginBottom: '1rem' }}>
                 <li style={{ marginBottom: '0.5rem' }}>
@@ -3220,7 +3220,7 @@ export default function Home() {
             gap: '0.75rem',
             fontSize: isMobile ? '0.85rem' : '0.95rem'
           }}>
-            <a href="/support" style={{ textDecoration: 'underline' }}>Support</a>
+            <a href="/about" style={{ textDecoration: 'underline' }}>カントン語音れんって何？</a>
             <span>·</span>
             <a href="/updates" style={{ textDecoration: 'underline' }}>更新情報</a>
             <span>·</span>
