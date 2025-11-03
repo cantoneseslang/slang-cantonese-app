@@ -1686,14 +1686,18 @@ export default function Home() {
             alignItems: 'center',
             textAlign: 'center'
           }}>
-            {/* タイトル */}
+            {/* タイトル（ロゴ+テキスト） */}
             <div style={{ 
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
               fontSize: isMobile ? '1.625rem' : '2.25rem', 
               fontWeight: 800,
               letterSpacing: '-0.02em',
               color: '#111827'
             }}>
-              廣東語音れん🎵
+              <img src="/volume.png" alt="logo" style={{ width: isMobile ? 24 : 28, height: isMobile ? 24 : 28 }} />
+              <span>カントン語音れん</span>
             </div>
             {/* サブ見出し（薄い灰色・小さめ） */}
             <div style={{
