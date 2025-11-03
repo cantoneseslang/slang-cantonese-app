@@ -46,7 +46,7 @@ export default function Home() {
   const [blueLoading, setBlueLoading] = useState(false);
   const [greenLoading, setGreenLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>('pronunciation');
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentWords, setCurrentWords] = useState<Word[]>([]);
   const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
@@ -1109,21 +1109,13 @@ export default function Home() {
     return () => window.removeEventListener('resize', checkScroll);
   }, [categories]);
 
-  // 初期スクロール位置を設定（左側のメニューボタンを隠す）
+  // 初期スクロール位置（左端から開始）
   useEffect(() => {
-    if (categoryScrollRef.current && user) {
-      // ユーザーがログインしている場合、左側の4つのボタン分スクロール
-      // 各ボタンの幅 + gap を計算して初期位置を設定
-      const buttonWidth = isMobile ? 150 : 180; // おおよそのボタン幅
-      const gap = isMobile ? 8 : 12; // gap
-      const scrollAmount = (buttonWidth + gap) * 4; // 4つのボタン分（ログアウト、クリック音、ノーマルモード、設定）
-      
-      categoryScrollRef.current.scrollLeft = scrollAmount;
-      
-      // スクロール後に矢印の状態を更新
+    if (categoryScrollRef.current) {
+      categoryScrollRef.current.scrollLeft = 0;
       handleCategoryScroll();
     }
-  }, [user, isMobile]);
+  }, [isMobile]);
 
   // 設定画面が開かれたときにデバッグ情報を自動取得
   useEffect(() => {
