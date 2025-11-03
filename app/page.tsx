@@ -87,6 +87,9 @@ export default function Home() {
   // デバッグ情報の状態
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [loadingDebugInfo, setLoadingDebugInfo] = useState(false);
+
+  // アカウントメニュー表示
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
   
   // お気に入りの状態
   const [favorites, setFavorites] = useState<Set<string>>(new Set()); // "categoryId:wordChinese" 形式
@@ -2086,6 +2089,170 @@ export default function Home() {
               </div>
             </div>
         </div>
+
+          {/* ヒーローセクション */}
+          <section style={{
+            maxWidth: 800,
+            margin: '0 auto',
+            padding: isMobile ? '1rem 1rem 0.5rem' : '2rem 1.5rem 1rem',
+            textAlign: 'center'
+          }}>
+            {/* 上部バッジ */}
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              borderRadius: 9999,
+              background: '#eef2ff',
+              padding: '6px 12px',
+              color: '#4f46e5',
+              fontWeight: 700,
+              fontSize: isMobile ? 12 : 14,
+              border: '1px solid #e0e7ff'
+            }}>
+              スラング式カントン語音れん
+            </div>
+
+            {/* 見出し */}
+            <h1 style={{
+              marginTop: '0.5rem',
+              fontSize: isMobile ? '1.75rem' : '2.5rem',
+              fontWeight: 800,
+              lineHeight: 1.2,
+              letterSpacing: '-0.02em',
+              background: 'linear-gradient(180deg, #0f172a, #475569)',
+              WebkitBackgroundClip: 'text',
+              color: 'transparent'
+            }}>
+              AIが解説付きでバシッと翻訳！
+            </h1>
+
+            {/* サブコピー */}
+            <p style={{
+              marginTop: '0.5rem',
+              color: '#4b5563',
+              fontSize: isMobile ? '0.95rem' : '1rem'
+            }}>
+              粤ピン / スラング式カタカナ / 音声検索
+            </p>
+
+            {/* 機能ピル */}
+            <div style={{
+              marginTop: '0.5rem',
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              gap: '0.5rem'
+            }}>
+              {[ '粤ピン', 'スラング式カタカナ', '音声検索' ].map((label) => (
+                <span key={label} style={{
+                  borderRadius: 9999,
+                  background: '#f1f5f9',
+                  padding: '6px 12px',
+                  fontSize: isMobile ? 12 : 13,
+                  color: '#334155',
+                  fontWeight: 600
+                }}>
+                  {label}
+                </span>
+              ))}
+            </div>
+
+            {/* 保障コピー */}
+            <div style={{
+              marginTop: '0.5rem',
+              color: '#6b7280',
+              fontSize: isMobile ? 11 : 12
+            }}>
+              ログイン不要・翻訳データはこの端末にのみ保存
+            </div>
+          </section>
+
+          {/* ユーザーアイコン（右上固定） */}
+          <div style={{ position: 'fixed', top: isMobile ? 10 : 12, right: isMobile ? 10 : 12, zIndex: 50 }}>
+            <button
+              aria-label="アカウントメニュー"
+              onClick={() => setShowAccountMenu(v => !v)}
+              style={{
+                width: isMobile ? 36 : 40,
+                height: isMobile ? 36 : 40,
+                borderRadius: 9999,
+                border: '1px solid rgba(0,0,0,0.08)',
+                background: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+              }}
+            >
+              {user?.user_metadata?.avatar_url || user?.user_metadata?.picture ? (
+                <img
+                  src={user.user_metadata.avatar_url || user.user_metadata.picture}
+                  alt="avatar"
+                  style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                />
+              ) : (
+                <span style={{
+                  fontWeight: 700,
+                  color: '#111827'
+                }}>{(user?.email?.[0] || 'G').toUpperCase()}</span>
+              )}
+            </button>
+
+            {/* ドロップダウン */}
+            {showAccountMenu && (
+              <div style={{
+                position: 'absolute',
+                right: 0,
+                marginTop: 8,
+                width: 280,
+                background: '#fff',
+                border: '1px solid rgba(0,0,0,0.08)',
+                borderRadius: 12,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                overflow: 'hidden'
+              }}>
+                <div style={{ padding: '12px 14px', borderBottom: '1px solid #f1f5f9' }}>
+                  <div style={{ fontSize: 12, color: '#6b7280' }}>サインイン中</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', wordBreak: 'break-all' }}>{user?.email || 'ゲスト'}</div>
+                </div>
+                <div style={{ padding: '10px 14px', display: 'grid', gap: 10 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: 13, color: '#374151' }}>プラン</div>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>
+                      {membershipType === 'free' ? '無料プラン' : membershipType === 'subscription' ? 'シルバー（月額）' : 'ゴールド（買い切り）'}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setIsDowngrade(false); setSelectedPlan(null); setShowPricingModal(true); setShowAccountMenu(false); }}
+                    style={{
+                      height: 36,
+                      borderRadius: 8,
+                      background: 'linear-gradient(145deg, #6366f1, #4f46e5)',
+                      color: 'white',
+                      fontWeight: 700,
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >パワーアップ</button>
+
+                  <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
+
+                  <div style={{ fontSize: 12, color: '#6b7280' }}>一般</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                    <div style={{ color: '#374151' }}>あなたの言語</div>
+                    <div style={{ marginLeft: 'auto', color: '#111827', fontWeight: 600 }}>日本語</div>
+                  </div>
+
+                  <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
+
+                  <div style={{ fontSize: 12, color: '#6b7280' }}>アカウント</div>
+                  <button
+                    onClick={async () => { setShowAccountMenu(false); await supabase.auth.signOut(); router.refresh(); }}
+                    style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700 }}
+                  >ログアウト</button>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* 検索エリア */}
           <div style={{ 
