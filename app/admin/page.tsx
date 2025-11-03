@@ -32,6 +32,8 @@ export default function AdminPage() {
   const [favoritesCountMap, setFavoritesCountMap] = useState<Record<string, number>>({});
   const [buttonAnalytics, setButtonAnalytics] = useState<Array<{ user_id: string; email: string; pressed: number; not_pressed: number }>>([]);
   const [buttonTotal, setButtonTotal] = useState<number>(0);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
   const [favSummary, setFavSummary] = useState<{ totalUsers: number; totalFavorites: number; rows: Array<{ user_id: string; email: string; favorites_count: number }> } | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<string | null>(null);
@@ -119,14 +121,21 @@ export default function AdminPage() {
 
   const fetchButtonAnalytics = async () => {
     try {
-      const res = await fetch('/api/admin/button-analytics');
+      setAnalyticsLoading(true);
+      setAnalyticsError(null);
+      const res = await fetch('/api/admin/button-analytics', { cache: 'no-store' });
       const data = await res.json();
       if (data.success) {
         setButtonTotal(data.total_buttons || 0);
         setButtonAnalytics(data.users || []);
+      } else {
+        setAnalyticsError(data.error || '集計取得に失敗しました');
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('ボタン集計取得エラー', e);
+      setAnalyticsError(e?.message || String(e));
+    } finally {
+      setAnalyticsLoading(false);
     }
   }
 
@@ -806,13 +815,19 @@ export default function AdminPage() {
               fontSize: '0.875rem',
               fontWeight: '600'
             }}
+            disabled={analyticsLoading}
           >
-            集計更新
+            {analyticsLoading ? '集計中...' : '集計更新'}
           </button>
         </div>
-        <div style={{ fontSize: '0.875rem', color: '#374151', marginBottom: '0.75rem' }}>
+          <div style={{ fontSize: '0.875rem', color: '#374151', marginBottom: '0.75rem' }}>
           総ボタン数: <span style={{ fontWeight: 700 }}>{buttonTotal}</span>
         </div>
+          {analyticsError && (
+            <div style={{ color: '#b91c1c', background: '#fee2e2', border: '1px solid #fecaca', padding: '0.5rem 0.75rem', borderRadius: 8, marginBottom: '0.75rem', fontSize: '0.875rem' }}>
+              {analyticsError}
+            </div>
+          )}
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
