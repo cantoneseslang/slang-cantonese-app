@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import categoriesData from '@/data/categories.json';
@@ -50,6 +50,26 @@ export default function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentWords, setCurrentWords] = useState<Word[]>([]);
   const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
+
+  // 総ボタン数（categories.json から動的集計、管理画面と同期）
+  const totalButtons = useMemo(() => {
+    try {
+      const data: Category[] = (categoriesData as unknown) as Category[]
+      let total = 0
+      for (const c of data) {
+        if (!c || c.id === 'pronunciation') continue
+        if (Array.isArray(c.words)) total += c.words.length
+        if (Array.isArray(c.practiceGroups)) {
+          for (const g of c.practiceGroups) {
+            if (g && Array.isArray(g.words)) total += g.words.length
+          }
+        }
+      }
+      return total
+    } catch {
+      return 0
+    }
+  }, []);
 
   // ボタンクリック音のオーディオコンテキストとバッファ
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -1499,10 +1519,12 @@ export default function Home() {
             onClick={(e) => e.stopPropagation()}
             style={{
               position: 'fixed',
-              bottom: isMobile ? '1rem' : '2rem',
-              right: isMobile ? '1rem' : '2rem',
-              width: isMobile ? 'calc(100% - 2rem)' : '400px',
-              maxHeight: '80vh',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: isMobile ? '90vw' : '960px',
+              maxWidth: '95vw',
+              maxHeight: '70vh',
               overflowY: 'auto',
               background: 'white',
               padding: isMobile ? '1rem' : '1.5rem',
@@ -1573,7 +1595,7 @@ export default function Home() {
                 広東語初心の方へ！ようこそスラング式カントン語音れんへ！
               </p>
               <p style={{ marginBottom: '0.75rem' }}>
-                スラング先生考案!簡単指差し広東語☝️(全974単語)収録！
+                スラング式カントン語音れん☝️(全{totalButtons}単語)収録！
               </p>
               <ul style={{ paddingLeft: '1.5rem', marginBottom: '1rem' }}>
                 <li style={{ marginBottom: '0.5rem' }}>
