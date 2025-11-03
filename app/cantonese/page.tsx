@@ -45,6 +45,8 @@ export default function CantoneseIntroPage() {
       <section style={{ display: 'grid', gap: '0.75rem' }}>
         <p>
           ここまで読んでいただいた方は、きっと広東語に興味をお持ちの方！さっそく広東語の一番重要な発音を本アプリ「カントン語音れん」で発音から楽しく学んでいきましょう。
+          <br />
+          <a href="/" style={{ fontWeight: 800 }}>トップページに戻る</a>
         </p>
       </section>
     </main>
