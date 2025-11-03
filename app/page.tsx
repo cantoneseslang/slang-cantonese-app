@@ -2709,7 +2709,9 @@ export default function Home() {
               marginBottom: '1.5rem'
             }}>
               <div 
-                dangerouslySetInnerHTML={{ __html: currentCategory.introContent }} 
+                dangerouslySetInnerHTML={{ __html: (currentCategory.id === 'pronunciation' 
+                  ? currentCategory.introContent.replace(/<ul>\s*<li>（日本語）学習[\s\S]*?<\/ul>\s*/,'')
+                  : currentCategory.introContent) }} 
                 style={isMobile ? {
                   fontSize: '0.875rem'
                 } : {}}
