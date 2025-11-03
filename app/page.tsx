@@ -1686,20 +1686,18 @@ export default function Home() {
             alignItems: 'center',
             textAlign: 'center'
           }}>
-            {/* タイトル（ロゴ+テキスト） */}
+            {/* 三列: ロゴ / タイトル / サブ見出し */}
+            <div style={{ marginBottom: '0.25rem' }}>
+              <img src="/volume-logo.png?v=1" alt="logo" style={{ width: isMobile ? 48 : 56, height: isMobile ? 48 : 56 }} />
+            </div>
             <div style={{ 
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
               fontSize: isMobile ? '1.625rem' : '2.25rem', 
               fontWeight: 800,
               letterSpacing: '-0.02em',
               color: '#111827'
             }}>
-              <img src="/volume-logo.png?v=1" alt="logo" style={{ width: isMobile ? 24 : 28, height: isMobile ? 24 : 28 }} />
-              <span>カントン語音れん</span>
+              カントン語音れん！
             </div>
-            {/* サブ見出し（薄い灰色・小さめ） */}
             <div style={{
               marginTop: '0.35rem',
               fontSize: isMobile ? '0.9rem' : '1rem',
