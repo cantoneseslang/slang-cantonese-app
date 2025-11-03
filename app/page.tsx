@@ -1272,17 +1272,8 @@ export default function Home() {
       return;
     }
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      alert('翻訳機能は今後実装予定です');
-      setLoading(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'エラーが発生しました');
-      setResult(null);
-      setLoading(false);
-    }
+    // グリーンボタンも共通の処理を使用（サーバー側で判定/処理）
+    await handleSearch(query);
   };
 
   // 音声ボタンのクリックハンドラー
