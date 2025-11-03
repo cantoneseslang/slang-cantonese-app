@@ -714,22 +714,63 @@ export default function Home() {
 
   // 会員種別の切り替え処理
   const handleMembershipChange = async (newType: 'free' | 'subscription' | 'lifetime') => {
-    // 普通会員への変更は不可
-    if (newType === 'free') {
-      return;
-    }
-
     // 現在の会員種別と同じ場合は何もしない
     if (membershipType === newType) {
       return;
     }
 
-    // すでに購入済みの場合はそのまま変更
-    if (membershipType === 'lifetime' || (membershipType === 'subscription' && newType === 'subscription')) {
+    // 無料会員（ブロンズ）に戻る場合、または下位会員種別に変更する場合は直接変更
+    if (newType === 'free') {
+      // 確認ダイアログを表示（オプション）
+      const confirmed = window.confirm('ブロンズ会員に戻りますか？お気に入りは6個までに制限されます。');
+      if (!confirmed) {
+        return;
+      }
+      
+      // 直接会員種別を更新
+      try {
+        const { error } = await supabase.auth.updateUser({
+          data: {
+            membership_type: 'free'
+          }
+        });
+
+        if (error) throw error;
+
+        setMembershipType('free');
+        alert('ブロンズ会員に変更しました。');
+      } catch (err: any) {
+        alert('エラーが発生しました: ' + err.message);
+      }
       return;
     }
 
-    // 未購入の場合は料金モーダルを表示
+    // ゴールド会員からシルバーに変更する場合
+    if (membershipType === 'lifetime' && newType === 'subscription') {
+      // ゴールド → シルバーへの変更（直接変更）
+      const confirmed = window.confirm('シルバー会員に変更しますか？');
+      if (!confirmed) {
+        return;
+      }
+      
+      try {
+        const { error } = await supabase.auth.updateUser({
+          data: {
+            membership_type: 'subscription'
+          }
+        });
+
+        if (error) throw error;
+
+        setMembershipType('subscription');
+        alert('シルバー会員に変更しました。');
+      } catch (err: any) {
+        alert('エラーが発生しました: ' + err.message);
+      }
+      return;
+    }
+
+    // シルバーからゴールド、またはブロンズからシルバー/ゴールドへの変更は料金モーダルを表示
     setSelectedPlan(newType);
     setShowPricingModal(true);
   };
@@ -3485,7 +3526,7 @@ export default function Home() {
                           background: membershipType === 'free' 
                             ? 'linear-gradient(145deg, #d4a574 0%, #cd7f32 50%, #a85f1f 100%)' 
                             : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
-                          cursor: 'default',
+                          cursor: membershipType === 'free' ? 'default' : 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
@@ -3495,6 +3536,18 @@ export default function Home() {
                             ? '0 8px 20px rgba(205,127,50,0.4), inset 0 1px 0 rgba(255,255,255,0.3)' 
                             : '0 2px 8px rgba(0,0,0,0.1)',
                           transform: membershipType === 'free' ? 'scale(1.05)' : 'scale(1)'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (membershipType !== 'free') {
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                            e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (membershipType !== 'free') {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                          }
                         }}
                       >
                         <span style={{ fontSize: '2rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>
