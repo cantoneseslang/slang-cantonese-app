@@ -6,7 +6,7 @@ export default function UpdatesPage() {
       <div style={{ display: 'grid', gap: '1rem' }}>
         {/* 以前 */}
         <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '1rem' }}>
-          <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>以前</div>
+          <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>2024/11/01</div>
           <div style={{ fontWeight: 800, marginBottom: 6 }}>GAS での「広東語万能辞書」として提供</div>
           <div style={{ color: '#374151' }}>GAS（Google Apps Script）で提供していた旧版からの継承です。</div>
         </div>
