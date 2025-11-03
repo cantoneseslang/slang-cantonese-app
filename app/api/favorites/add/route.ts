@@ -39,25 +39,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
 
-    // テーブル存在確認を最初に行う（軽量なクエリで確認）
-    const { error: tableCheckError } = await supabase
-      .from('user_favorites')
-      .select('id')
-      .limit(0)
+    // テーブル存在確認は、実際のクエリ実行時にエラーとして検出する
+    // （最初のクエリで確認しない - RLSの影響を避けるため）
     
-    // テーブルが存在しない場合はエラーを返す（データ永続化のため）
-    if (tableCheckError && isTableNotFoundError(tableCheckError)) {
-      console.error('テーブルが存在しません。データを永続化するにはテーブル作成が必要です。')
-      return NextResponse.json({ 
-        success: false,
-        error: 'お気に入りテーブルが存在しません',
-        message: 'データを永続的に保存するには、Supabaseでテーブルを作成する必要があります。',
-        details: 'SupabaseのSQL Editorで docs/favorites-table.sql を実行してください。',
-        requiresTable: true
-      }, { status: 503 }) // Service Unavailable
-    }
-    
-    // テーブルが存在する場合のみ、通常の処理を実行
+    // 通常の処理を実行
     const membershipType = user.user_metadata?.membership_type || 'free'
     
     // 現在のお気に入り数を取得

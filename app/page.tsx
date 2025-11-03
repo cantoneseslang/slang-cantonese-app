@@ -246,11 +246,16 @@ export default function Home() {
           setFavorites(newFavorites);
         } else {
           // テーブル未作成の場合はエラーを表示
-          if (data.requiresTable || (data.error && data.error.includes('テーブル'))) {
+          if (data.requiresTable || (data.error && (data.error.includes('テーブル') || data.error.includes('Could not find the table') || data.error.includes('schema cache')))) {
             alert(`⚠️ お気に入り機能を使用するには、Supabaseでテーブルを作成する必要があります。\n\n${data.details || 'SupabaseのSQL Editorで docs/favorites-table.sql を実行してください。'}\n\n※ テーブル作成後、ページをリロードしてください。`);
             return; // ローカル状態から削除しない
           } else {
-            alert(data.error || data.message || 'お気に入りの削除に失敗しました');
+            const errorMsg = data.error || data.message || 'お気に入りの削除に失敗しました';
+            if (errorMsg.includes('Could not find') || errorMsg.includes('schema cache') || errorMsg.includes('relation')) {
+              alert(`⚠️ お気に入り機能を使用するには、Supabaseでテーブルを作成する必要があります。\n\nSupabaseのSQL Editorで docs/favorites-table.sql を実行してください。\n\n※ テーブル作成後、ページをリロードしてください。`);
+            } else {
+              alert(errorMsg);
+            }
           }
         }
       } else {
@@ -278,14 +283,20 @@ export default function Home() {
           setFavorites(newFavorites);
         } else {
           // テーブル未作成の場合は明確にエラーを表示
-          if (data.requiresTable || (data.error && data.error.includes('テーブル'))) {
+          if (data.requiresTable || (data.error && (data.error.includes('テーブル') || data.error.includes('Could not find the table') || data.error.includes('schema cache')))) {
             alert(`⚠️ お気に入り機能を使用するには、Supabaseでテーブルを作成する必要があります。\n\n${data.details || 'SupabaseのSQL Editorで docs/favorites-table.sql を実行してください。'}\n\n※ テーブル作成後、ページをリロードしてください。`);
             return; // ローカル状態には追加しない
           } else if ((data.error || '').includes('既にお気に入りに登録されています')) {
             // 既に登録されている場合は静かに処理
             console.warn('既にお気に入りに登録されています');
           } else {
-            alert(data.error || data.message || 'お気に入りの追加に失敗しました');
+            // その他のエラーは表示（ただし、テーブル未検出の可能性もチェック）
+            const errorMsg = data.error || data.message || 'お気に入りの追加に失敗しました';
+            if (errorMsg.includes('Could not find') || errorMsg.includes('schema cache') || errorMsg.includes('relation')) {
+              alert(`⚠️ お気に入り機能を使用するには、Supabaseでテーブルを作成する必要があります。\n\nSupabaseのSQL Editorで docs/favorites-table.sql を実行してください。\n\n※ テーブル作成後、ページをリロードしてください。`);
+            } else {
+              alert(errorMsg);
+            }
           }
         }
       }
