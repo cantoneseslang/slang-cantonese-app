@@ -1980,6 +1980,8 @@ export default function Home() {
                 height: isMobile ? '3rem' : '3.5rem',
                 fontSize: isMobile ? '1rem' : '1.125rem',
                 width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
                 padding: '0 1.25rem',
                 border: '1px solid rgba(0,0,0,0.1)',
                 borderRadius: '12px',
