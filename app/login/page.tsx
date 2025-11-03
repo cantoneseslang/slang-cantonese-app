@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
-function LoginForm() {
+export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,37 +15,8 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
-  
-  // アンケートフォームの状態
-  const [showSurvey, setShowSurvey] = useState(false);
-  const [surveyGender, setSurveyGender] = useState('');
-  const [surveyResidence, setSurveyResidence] = useState('');
-  const [surveyResidenceOther, setSurveyResidenceOther] = useState('');
-  const [surveyCantoneseLevel, setSurveyCantoneseLevel] = useState('');
-  const [signUpUserId, setSignUpUserId] = useState<string | null>(null);
   const router = useRouter();
-  const searchParams = useSearchParams();
   const supabase = createClient();
-  
-  const redirectPath = searchParams.get('redirect');
-  const redirectMessage = searchParams.get('message');
-  
-  // 日本の都道府県リスト
-  const prefectures = [
-    '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
-    '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
-    '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県',
-    '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県',
-    '奈良県', '和歌山県', '鳥取県', '島根県', '岡山県', '広島県', '山口県',
-    '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県',
-    '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'
-  ];
-  
-  useEffect(() => {
-    if (redirectMessage) {
-      setMessage(redirectMessage);
-    }
-  }, [redirectMessage]);
 
   const validatePassword = (pwd: string): string | null => {
     if (pwd.length < 6) {
@@ -139,11 +110,7 @@ function LoginForm() {
           } catch (err) {
             console.error('Failed to save username:', err);
           }
-          
-          // アンケートフォームを表示
-          setSignUpUserId(data.user.id);
-          setShowSurvey(true);
-          setMessage('');
+          setMessage('確認メールを送信しました。メールボックスを確認してください。');
         }
       } else {
         // ログイン時：ユーザーネームまたはメールアドレス
@@ -168,8 +135,7 @@ function LoginForm() {
         if (error) throw error;
 
         if (data.user) {
-          // リダイレクト先がある場合はそこに、なければホームに
-          router.push(redirectPath || '/');
+          router.push('/');
           router.refresh();
         }
       }
@@ -222,73 +188,13 @@ function LoginForm() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?survey=true`,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
       if (error) throw error;
     } catch (err: any) {
       setError(err.message || 'Google認証でエラーが発生しました');
-      setLoading(false);
-    }
-  };
-
-  const handleSurveySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    // バリデーション
-    if (!surveyGender) {
-      setError('性別を選択してください');
-      setLoading(false);
-      return;
-    }
-    if (!surveyResidence) {
-      setError('居住地を選択してください');
-      setLoading(false);
-      return;
-    }
-    if (surveyResidence === '海外' && !surveyResidenceOther.trim()) {
-      setError('居住地の詳細を入力してください');
-      setLoading(false);
-      return;
-    }
-    if (!surveyCantoneseLevel) {
-      setError('広東語レベルを選択してください');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/save-survey', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          gender: surveyGender,
-          residence: surveyResidence,
-          residenceOther: surveyResidence === '海外' ? surveyResidenceOther : null,
-          cantoneseLevel: surveyCantoneseLevel,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'アンケートの保存に失敗しました');
-      }
-
-      setMessage('確認メールを送信しました。メールボックスを確認してください。');
-      setShowSurvey(false);
-      
-      // フォームをリセット
-      setSurveyGender('');
-      setSurveyResidence('');
-      setSurveyResidenceOther('');
-      setSurveyCantoneseLevel('');
-      setSignUpUserId(null);
-    } catch (err: any) {
-      setError(err.message || 'アンケートの保存に失敗しました');
-    } finally {
       setLoading(false);
     }
   };
@@ -316,7 +222,7 @@ function LoginForm() {
           marginBottom: '0.75rem',
           textAlign: 'center'
         }}>
-          歡迎光臨！ようこそ！
+          歡迎光臨
         </h1>
         <p style={{
           fontSize: '1rem',
@@ -325,7 +231,7 @@ function LoginForm() {
           textAlign: 'center',
           fontWeight: '500'
         }}>
-          スラング先生広東語プラットフォームへ🇭🇰
+          ようこそ！スラング先生広東語プラットフォームへ🇭🇰
         </p>
         <p style={{
           fontSize: '0.875rem',
@@ -670,208 +576,7 @@ function LoginForm() {
         </button>
         </>
         )}
-
-        {/* アンケートフォーム */}
-        {showSurvey && (
-          <div style={{
-            marginTop: '2rem',
-            padding: '1.5rem',
-            backgroundColor: '#f9fafb',
-            borderRadius: '8px',
-            border: '1px solid #e5e7eb'
-          }}>
-            <h2 style={{
-              fontSize: '1.25rem',
-              fontWeight: 'bold',
-              marginBottom: '1.5rem',
-              color: '#1f2937',
-              textAlign: 'center'
-            }}>
-              簡易アンケート
-            </h2>
-            <p style={{
-              fontSize: '0.875rem',
-              color: '#6b7280',
-              marginBottom: '1.5rem',
-              textAlign: 'center'
-            }}>
-              サービス向上のため、簡単なアンケートにご協力ください
-            </p>
-            
-            <form onSubmit={handleSurveySubmit}>
-              {/* 性別 */}
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  marginBottom: '0.5rem',
-                  color: '#374151'
-                }}>
-                  1. 性別 <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                  {['男性', '女性', '答えたくない'].map((option) => (
-                    <label key={option} style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem'
-                    }}>
-                      <input
-                        type="radio"
-                        name="gender"
-                        value={option}
-                        checked={surveyGender === option}
-                        onChange={(e) => setSurveyGender(e.target.value)}
-                        style={{ marginRight: '0.5rem' }}
-                      />
-                      {option}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* 居住地 */}
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  marginBottom: '0.5rem',
-                  color: '#374151'
-                }}>
-                  2. 居住地 <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <select
-                  value={surveyResidence}
-                  onChange={(e) => {
-                    setSurveyResidence(e.target.value);
-                    if (e.target.value !== '海外') {
-                      setSurveyResidenceOther('');
-                    }
-                  }}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '1rem',
-                    marginBottom: '0.75rem'
-                  }}
-                >
-                  <option value="">選択してください</option>
-                  <optgroup label="日本の都道府県">
-                    {prefectures.map((pref) => (
-                      <option key={pref} value={pref}>{pref}</option>
-                    ))}
-                  </optgroup>
-                  <option value="海外">海外</option>
-                </select>
-                
-                {surveyResidence === '海外' && (
-                  <input
-                    type="text"
-                    value={surveyResidenceOther}
-                    onChange={(e) => setSurveyResidenceOther(e.target.value)}
-                    placeholder="国名または地域名を入力してください"
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '1rem'
-                    }}
-                  />
-                )}
-              </div>
-
-              {/* 広東語レベル */}
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  marginBottom: '0.5rem',
-                  color: '#374151'
-                }}>
-                  3. 広東語レベル <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {[
-                    { value: '初心者', label: '初心者（発音すら習ったことない）' },
-                    { value: '中級者', label: '中級者（学校に行った、独学である程度勉強し、基本単語はわかる）' },
-                    { value: '上級者', label: '上級者（香港のローカルの方と遜色なく会話が可能である）' }
-                  ].map((option) => (
-                    <label key={option.value} style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      padding: '0.75rem',
-                      backgroundColor: surveyCantoneseLevel === option.value ? '#eff6ff' : 'transparent',
-                      border: surveyCantoneseLevel === option.value ? '1px solid #3b82f6' : '1px solid #e5e7eb',
-                      borderRadius: '6px',
-                      transition: 'all 0.2s'
-                    }}>
-                      <input
-                        type="radio"
-                        name="cantoneseLevel"
-                        value={option.value}
-                        checked={surveyCantoneseLevel === option.value}
-                        onChange={(e) => setSurveyCantoneseLevel(e.target.value)}
-                        style={{ marginRight: '0.75rem', marginTop: '0.125rem' }}
-                      />
-                      <span>{option.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  backgroundColor: loading ? '#9ca3af' : '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '1rem',
-                  fontWeight: 'bold',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  marginTop: '1rem'
-                }}
-              >
-                {loading ? '送信中...' : '送信して登録を完了'}
-              </button>
-            </form>
-          </div>
-        )}
       </div>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#f3f4f6'
-      }}>
-        <div style={{ textAlign: 'center', color: '#6b7280' }}>
-          読み込み中...
-        </div>
-      </div>
-    }>
-      <LoginForm />
-    </Suspense>
   );
 }

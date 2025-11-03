@@ -117,32 +117,21 @@ async function generateExampleSentence(word: string): Promise<{ cantonese: strin
     let cantonesePart = '';
     let japanesePart = '';
     
-    // パターン1: [広東語] ([日本語])
-    const parenMatch1 = cleanedExample.match(/^(.+?)\s*\((.+?)\)\s*$/);
-    // パターン2: [広東語] ([日本語])  改行あり
-    const parenMatch2 = cleanedExample.match(/^(.+?)\s*[\n\r]+\s*[（(](.+?)[）)]\s*$/);
-    // パターン3: [広東語]  改行  ([日本語])
-    const parenMatch3 = cleanedExample.match(/^([\s\S]+?)[\n\r]+[\s\S]*?[（(](.+?)[）)]/);
-    
-    if (parenMatch1) {
-      cantonesePart = parenMatch1[1].trim();
-      japanesePart = parenMatch1[2].trim();
-    } else if (parenMatch2) {
-      cantonesePart = parenMatch2[1].trim();
-      japanesePart = parenMatch2[2].trim();
-    } else if (parenMatch3) {
-      cantonesePart = parenMatch3[1].trim();
-      japanesePart = parenMatch3[2].trim();
+    // 括弧で区切られている場合の処理
+    const parenMatch = cleanedExample.match(/^(.+?)\s*\((.+?)\)$/);
+    if (parenMatch) {
+      cantonesePart = parenMatch[1].trim();
+      japanesePart = parenMatch[2].trim();
     } else {
-      // 括弧がない場合は、ひらがな・カタカナで区切る（漢字は除外）
-      const japaneseKanaRegex = /[\u3040-\u309F\u30A0-\u30FF]/;
-      if (japaneseKanaRegex.test(cleanedExample)) {
-        // ひらがな・カタカナが含まれている場合、その位置で分割
-        const kanaIndex = cleanedExample.search(japaneseKanaRegex);
-        cantonesePart = cleanedExample.substring(0, kanaIndex).trim();
-        japanesePart = cleanedExample.substring(kanaIndex).trim();
+      // 括弧がない場合は、日本語文字が含まれているかチェック
+      const japaneseRegex = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/;
+      if (japaneseRegex.test(cleanedExample)) {
+        // 日本語文字が含まれている場合、最初の日本語文字から分割
+        const japaneseIndex = cleanedExample.search(japaneseRegex);
+        cantonesePart = cleanedExample.substring(0, japaneseIndex).trim();
+        japanesePart = cleanedExample.substring(japaneseIndex).trim();
       } else {
-        // ひらがな・カタカナがない場合は広東語部分として扱う
+        // 日本語文字がない場合は広東語部分として扱う
         cantonesePart = cleanedExample;
         japanesePart = '';
       }
