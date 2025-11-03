@@ -875,15 +875,20 @@ export default function Home() {
     }
   }, []);
 
+  // お気に入り画面での単語と元のcategoryIdのマッピングを保持
+  const favoriteWordCategoryMapRef = useRef<Map<string, string>>(new Map());
+
   useEffect(() => {
     if (selectedCategory === 'favorites') {
       // お気に入りカテゴリーの場合
       if (favorites.size === 0) {
         setCurrentWords([]);
         setCurrentCategory(null);
+        favoriteWordCategoryMapRef.current.clear();
       } else {
         // お気に入り単語を取得
         const favoriteWords: Word[] = [];
+        const categoryMap = new Map<string, string>(); // word.chinese -> categoryId
         favorites.forEach((favoriteKey) => {
           const [categoryId, wordChinese] = favoriteKey.split(':');
           const category = categories.find(c => c.id === categoryId);
@@ -891,6 +896,7 @@ export default function Home() {
             const word = category.words.find(w => w.chinese === wordChinese);
             if (word) {
               favoriteWords.push({ ...word, chinese: word.chinese });
+              categoryMap.set(word.chinese, categoryId); // 元のcategoryIdを保存
             }
           }
           // practiceGroupsからも検索
@@ -899,10 +905,12 @@ export default function Home() {
               const word = group.words.find(w => w.chinese === wordChinese);
               if (word && !favoriteWords.find(w => w.chinese === wordChinese)) {
                 favoriteWords.push({ ...word, chinese: word.chinese });
+                categoryMap.set(word.chinese, categoryId); // 元のcategoryIdを保存
               }
             });
           }
         });
+        favoriteWordCategoryMapRef.current = categoryMap; // マップを保存
         setCurrentWords(favoriteWords);
         setCurrentCategory({ id: 'favorites', name: 'お気に入り', words: favoriteWords });
       }
@@ -2681,7 +2689,11 @@ export default function Home() {
             }}>
               {currentWords.map((word, idx) => {
                 const isActive = !isLearningMode && activeWordId === word.chinese;
-                const favoriteKey = `${currentCategory?.id || ''}:${word.chinese}`;
+                // お気に入り画面の場合は元のcategoryIdを使う
+                const originalCategoryId = selectedCategory === 'favorites' 
+                  ? (favoriteWordCategoryMapRef.current.get(word.chinese) || '')
+                  : (currentCategory?.id || '');
+                const favoriteKey = `${originalCategoryId}:${word.chinese}`;
                 const isFavorite = favorites.has(favoriteKey);
                 return (
                 <button
@@ -2699,7 +2711,7 @@ export default function Home() {
                     handleWordClick(word);
                   }}
                   onTouchStart={(e) => {
-                    handleLongPressStart(word, currentCategory?.id || '', e);
+                    handleLongPressStart(word, originalCategoryId, e);
                   }}
                   onTouchEnd={handleLongPressEnd}
                   onTouchCancel={handleLongPressEnd}
@@ -2736,7 +2748,10 @@ export default function Home() {
                   }}
                   onMouseDown={(e) => {
                     e.currentTarget.style.transform = 'scale(0.98)';
-                    handleLongPressStart(word, currentCategory?.id || '', e);
+                    const originalCategoryId = selectedCategory === 'favorites' 
+                      ? (favoriteWordCategoryMapRef.current.get(word.chinese) || '')
+                      : (currentCategory?.id || '');
+                    handleLongPressStart(word, originalCategoryId, e);
                   }}
                   onMouseUp={(e) => {
                     e.currentTarget.style.transform = 'scale(1.03) translateY(-2px)';
