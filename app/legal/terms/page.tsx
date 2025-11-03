@@ -2,7 +2,7 @@ export default function TermsPage() {
   return (
     <main style={{ maxWidth: 900, margin: '0 auto', padding: '2rem 1.5rem' }}>
       <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.75rem' }}>利用規約</h1>
-      <p style={{ color: '#6b7280', marginBottom: '1.25rem' }}>最終改定日: 2025年7月14日（雛形）</p>
+      <p style={{ color: '#6b7280', marginBottom: '1.25rem' }}>（雛形）</p>
 
       <section style={{ display: 'grid', gap: '0.75rem' }}>
         <p>
@@ -46,7 +46,7 @@ export default function TermsPage() {
         <p>本規約は改定される場合があります。重要な変更は事前に通知します。</p>
 
         <h2 style={{ fontSize: '1.125rem', fontWeight: 800 }}>第12条 準拠法</h2>
-        <p>本規約は日本法に準拠します。</p>
+        <p>本規約は香港法に準拠します。</p>
       </section>
     </main>
   )
