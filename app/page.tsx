@@ -799,14 +799,14 @@ export default function Home() {
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
   // iOS風アウトラインアイコン
-  const FolderIcon = ({ size = 20 }: { size?: number }) => (
+  const FolderIcon = ({ size = 20, yOffset = 0 }: { size?: number; yOffset?: number }) => (
     <svg
       width={size}
       height={size}
       viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ display: 'block' }}
+      style={{ display: 'block', transform: `translateY(${yOffset}px)` }}
     >
       <path
         d="M3.5 7.75C3.5 6.784 4.284 6 5.25 6H9l1.5 2h8.25c.966 0 1.75.784 1.75 1.75v7.5c0 .966-.784 1.75-1.75 1.75H5.25A1.75 1.75 0 0 1 3.5 17.25v-9.5Z"
@@ -817,14 +817,14 @@ export default function Home() {
     </svg>
   );
 
-  const CameraIcon = ({ size = 20 }: { size?: number }) => (
+  const CameraIcon = ({ size = 20, yOffset = 0 }: { size?: number; yOffset?: number }) => (
     <svg
       width={size}
       height={size}
       viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ display: 'block' }}
+      style={{ display: 'block', transform: `translateY(${yOffset}px)` }}
     >
       <path
         d="M8.5 7.5 10 6h4l1.5 1.5H19A2 2 0 0 1 21 9.5v7A2 2 0 0 1 19 18.5H5A2 2 0 0 1 3 16.5v-7A2 2 0 0 1 5 7.5h3.5Z"
@@ -2142,8 +2142,8 @@ export default function Home() {
                     padding: 0,
                     lineHeight: 1,
                     color: '#6b7280',
-                    width: isMobile ? 32 : 36,
-                    height: isMobile ? 32 : 36,
+                    width: isMobile ? 36 : 42,
+                    height: isMobile ? 36 : 42,
                     borderRadius: 9999,
                     display: 'flex',
                     alignItems: 'center',
@@ -2154,7 +2154,7 @@ export default function Home() {
                   onFocus={(e) => { (e.currentTarget as HTMLButtonElement).style.outline = 'none'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(0,122,255,0.25)'; e.currentTarget.style.background = '#f3f4f6'; }}
                   onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <FolderIcon size={isMobile ? 18 : 18} />
+                  <FolderIcon size={isMobile ? 22 : 24} yOffset={2} />
                 </button>
                 {isMobile && (
                 <button
@@ -2168,8 +2168,8 @@ export default function Home() {
                       padding: 0,
                       lineHeight: 1,
                       color: '#6b7280',
-                      width: 32,
-                      height: 32,
+                      width: 36,
+                      height: 36,
                       borderRadius: 9999,
                       display: 'flex',
                       alignItems: 'center',
@@ -2180,7 +2180,7 @@ export default function Home() {
                     onFocus={(e) => { (e.currentTarget as HTMLButtonElement).style.outline = 'none'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(0,122,255,0.25)'; e.currentTarget.style.background = '#f3f4f6'; }}
                     onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'transparent'; }}
                   >
-                    <CameraIcon size={isMobile ? 18 : 18} />
+                    <CameraIcon size={isMobile ? 22 : 24} yOffset={2} />
                   </button>
                 )}
               </div>
