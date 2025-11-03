@@ -2161,7 +2161,9 @@ export default function Home() {
                 border: '1px solid rgba(0,0,0,0.08)',
                 borderRadius: 12,
                 boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                overflow: 'hidden'
+                maxHeight: '70vh',
+                overflowY: 'auto',
+                WebkitOverflowScrolling: 'touch'
               }}>
                 <div style={{ padding: '12px 14px', borderBottom: '1px solid #f1f5f9' }}>
                   <div style={{ fontSize: 12, color: '#6b7280' }}>サインイン中</div>
