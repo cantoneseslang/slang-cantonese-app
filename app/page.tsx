@@ -1586,7 +1586,7 @@ export default function Home() {
               <p style={{ fontWeight: '600', marginBottom: '0.5rem' }}>
                 広東語初心の方へ！ようこそスラング式カントン語音れんへ！
               </p>
-              <p style={{ marginBottom: '0.75rem' }}>
+              <p style={{ marginBottom: '0.75rem', display: 'none' }}>
                 スラング先生考案!カントン語音れん☝️(全{totalButtons}単語)収録！
               </p>
               <ul style={{ paddingLeft: '1.5rem', marginBottom: '1rem' }}>
@@ -1600,7 +1600,10 @@ export default function Home() {
                   日本語から広東語の文章・意味・発音を調べたい時は入力欄に日本語を入れて「日訳+広東語発音」を押してください
                 </li>
                 <li style={{ marginBottom: '0.5rem' }}>
-                  ジャンル分け(トータル73ジャンル収録)は横スクロールできるカテゴリーバーから選択してください
+                  ジャンル分け(トータル45ジャンル収録)は右側で押して切り替えを行なってください
+                </li>
+                <li style={{ marginBottom: '0.5rem' }}>
+                  音声練習用に音声再生スピードの変更可能です
                 </li>
                 <li style={{ marginBottom: '0.5rem' }}>
                   粤ピンとは香港語言学学会粤語拼音方案、略称粤拼 (えつぴん、Jyutping)
@@ -1612,6 +1615,9 @@ export default function Home() {
                   スラング式カタカナとは広東語未学習者、初心者の日本語話者に容易に発音できる様に制作した独自変換ルールに則った表記法です。
                 </li>
               </ul>
+              <p style={{ marginBottom: '0.75rem' }}>
+                スラング先生考案!カントン語音れん☝️(全{totalButtons}単語)収録！
+              </p>
               <p style={{ fontSize: isMobile ? '0.625rem' : '0.6875rem', lineHeight: '1.5', marginBottom: '1rem' }}>
                 この文書に記載されている繁体字は、国際標準の『ISO/IEC 10646-1:2000』および『香港補助文字セット – 2001』（Hong Kong Supplementary Character Set – 2001）に含まれる全ての漢字、合計29,145個を含んでいます。
               </p>
