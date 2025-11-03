@@ -798,6 +798,44 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
+  // iOS風アウトラインアイコン
+  const FolderIcon = ({ size = 20 }: { size?: number }) => (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ display: 'block' }}
+    >
+      <path
+        d="M3.5 7.75C3.5 6.784 4.284 6 5.25 6H9l1.5 2h8.25c.966 0 1.75.784 1.75 1.75v7.5c0 .966-.784 1.75-1.75 1.75H5.25A1.75 1.75 0 0 1 3.5 17.25v-9.5Z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+
+  const CameraIcon = ({ size = 20 }: { size?: number }) => (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ display: 'block' }}
+    >
+      <path
+        d="M8.5 7.5 10 6h4l1.5 1.5H19A2 2 0 0 1 21 9.5v7A2 2 0 0 1 19 18.5H5A2 2 0 0 1 3 16.5v-7A2 2 0 0 1 5 7.5h3.5Z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="13" r="3.25" stroke="currentColor" strokeWidth="1.75" />
+    </svg>
+  );
+
   // TXT読み込み
   const readTxt = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -2086,10 +2124,10 @@ export default function Home() {
                 transform: 'translateY(-50%)',
                 display: 'flex',
                 gap: '0.5rem',
-                background: '#ffffff',
-                border: '1px solid rgba(0,0,0,0.08)',
-                borderRadius: '10px',
-                padding: '0.25rem 0.5rem',
+                background: 'rgba(255,255,255,0.95)',
+                border: '1px solid rgba(0,0,0,0.06)',
+                borderRadius: '12px',
+                padding: '0.2rem 0.4rem',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                 zIndex: 3
               }}>
@@ -2097,14 +2135,18 @@ export default function Home() {
                 onClick={() => fileInputRef.current?.click()}
                 title="ファイルから読み取り (PDF/TXT)"
                 style={{
-                  background: 'transparent',
+                    background: 'transparent',
                   border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '1.1rem',
-                  padding: '0.25rem 0.25rem',
-                  lineHeight: 1
+                    cursor: 'pointer',
+                    padding: '0.25rem',
+                    lineHeight: 1,
+                    color: '#6b7280'
                 }}
-              >📁</button>
+                  onMouseEnter={(e) => (e.currentTarget.style.color = '#111827')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = '#6b7280')}
+                >
+                  <FolderIcon size={isMobile ? 18 : 18} />
+                </button>
                 {isMobile && (
                 <button
                   onClick={() => cameraInputRef.current?.click()}
@@ -2112,12 +2154,16 @@ export default function Home() {
                   style={{
                     background: 'transparent',
                     border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '1.1rem',
-                    padding: '0.25rem 0.25rem',
-                    lineHeight: 1
+                      cursor: 'pointer',
+                      padding: '0.25rem',
+                      lineHeight: 1,
+                      color: '#6b7280'
                   }}
-                >📷</button>
+                    onMouseEnter={(e) => (e.currentTarget.style.color = '#111827')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = '#6b7280')}
+                  >
+                    <CameraIcon size={isMobile ? 18 : 18} />
+                  </button>
                 )}
               </div>
             </div>
