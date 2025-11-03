@@ -2096,12 +2096,14 @@ export default function Home() {
               type="text"
                 placeholder="広東語繁体字または日本語をココに入力"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handleSearch(searchQuery);
-                }
-              }}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSearch(searchQuery);
+                  }
+                }}
               style={{
                 height: isMobile ? '3rem' : '3.5rem',
                 fontSize: isMobile ? '1rem' : '1.125rem',
@@ -2263,6 +2265,7 @@ export default function Home() {
             />
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button
+                type="button"
                 onClick={() => {
                   playHapticAndSound();
                   handleSearch(searchQuery);
@@ -2308,6 +2311,7 @@ export default function Home() {
                 {loading ? '検索中...' : '広東語発音'}
               </button>
               <button
+                type="button"
                 onClick={() => {
                   playHapticAndSound();
                   handleTranslateAndConvert(searchQuery);
