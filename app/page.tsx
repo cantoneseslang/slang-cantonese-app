@@ -1704,15 +1704,7 @@ export default function Home() {
             }}>
               ボタンを押すだけでスパッと発音！
             </div>
-            {/* 参照デザインの一行 */}
-            <div style={{
-              marginTop: '0.35rem',
-              fontSize: isMobile ? '1rem' : '1.125rem',
-              fontWeight: 700,
-              color: '#111827'
-            }}>
-              AIが解説付きでバシッと翻訳！
-            </div>
+            {/* 参照行は不要のため削除 */}
           </div>
 
           {/* ラベル: カテゴリー選択 */}
@@ -3203,18 +3195,29 @@ export default function Home() {
 
         </div>
 
-        {/* フッター: 法務リンク */}
-        <div style={{ padding: isMobile ? '1.5rem' : '2rem', color: '#4b5563' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center', fontSize: isMobile ? '0.85rem' : '0.95rem' }}>
+        {/* フッター（デザイン踏襲） */}
+        <footer style={{ padding: isMobile ? '1.5rem' : '2rem', color: '#4b5563' }}>
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: '0.75rem',
+            fontSize: isMobile ? '0.85rem' : '0.95rem'
+          }}>
+            <a href="/support" style={{ textDecoration: 'underline' }}>Support</a>
+            <span>·</span>
+            <a href="/updates" style={{ textDecoration: 'underline' }}>更新情報</a>
+            <span>·</span>
+            <a href="/faq" style={{ textDecoration: 'underline' }}>FAQ</a>
+            <span>·</span>
             <a href="/contact" style={{ textDecoration: 'underline' }}>お問い合わせ</a>
             <span>·</span>
             <a href="/legal/terms" style={{ textDecoration: 'underline' }}>利用規約</a>
-            <span>·</span>
-            <a href="/legal/privacy" style={{ textDecoration: 'underline' }}>プライバシー</a>
-            <span>·</span>
-            <a href="/legal/tokusho" style={{ textDecoration: 'underline' }}>特商法表記</a>
           </div>
-        </div>
+          <div style={{ marginTop: '0.75rem', textAlign: 'center', fontSize: isMobile ? '0.8rem' : '0.9rem', color: '#6b7280' }}>
+            © 2024 LIFESUPPORT(HK)  All Right Reserved.
+          </div>
+        </footer>
 
         {/* 料金モーダル */}
         {showPricingModal && selectedPlan && (
