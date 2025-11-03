@@ -2098,7 +2098,7 @@ export default function Home() {
                 width: '100%',
                 maxWidth: '100%',
                 boxSizing: 'border-box',
-                padding: '0 4rem 0 1.25rem',
+                padding: '0 3.5rem 0 1.25rem',
                 border: '1px solid rgba(0,0,0,0.1)',
                 borderRadius: '12px',
                 marginBottom: '0.75rem',
@@ -2123,27 +2123,35 @@ export default function Home() {
                 top: '50%',
                 transform: 'translateY(-50%)',
                 display: 'flex',
-                gap: '0.5rem',
-                background: 'rgba(255,255,255,0.95)',
-                border: '1px solid rgba(0,0,0,0.06)',
-                borderRadius: '12px',
-                padding: '0.2rem 0.4rem',
+                gap: '0.25rem',
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
                 boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                 zIndex: 3
               }}>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 title="ファイルから読み取り (PDF/TXT)"
+                  aria-label="ファイルから読み取り (PDF/TXT)"
                 style={{
                     background: 'transparent',
-                  border: 'none',
+                    border: 'none',
                     cursor: 'pointer',
-                    padding: '0.25rem',
+                    padding: 0,
                     lineHeight: 1,
-                    color: '#6b7280'
+                    color: '#6b7280',
+                    width: isMobile ? 32 : 36,
+                    height: isMobile ? 32 : 36,
+                    borderRadius: 9999,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                 }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = '#111827')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = '#6b7280')}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = '#111827'; e.currentTarget.style.background = '#f3f4f6'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.background = 'transparent'; }}
+                  onFocus={(e) => { (e.currentTarget as HTMLButtonElement).style.outline = 'none'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(0,122,255,0.25)'; e.currentTarget.style.background = '#f3f4f6'; }}
+                  onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'transparent'; }}
                 >
                   <FolderIcon size={isMobile ? 18 : 18} />
                 </button>
@@ -2151,16 +2159,25 @@ export default function Home() {
                 <button
                   onClick={() => cameraInputRef.current?.click()}
                   title="カメラ/OCRで読み取り"
+                    aria-label="カメラ/OCRで読み取り"
                   style={{
-                    background: 'transparent',
-                    border: 'none',
+                      background: 'transparent',
+                      border: 'none',
                       cursor: 'pointer',
-                      padding: '0.25rem',
+                      padding: 0,
                       lineHeight: 1,
-                      color: '#6b7280'
+                      color: '#6b7280',
+                      width: 32,
+                      height: 32,
+                      borderRadius: 9999,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                   }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = '#111827')}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = '#6b7280')}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = '#111827'; e.currentTarget.style.background = '#f3f4f6'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.background = 'transparent'; }}
+                    onFocus={(e) => { (e.currentTarget as HTMLButtonElement).style.outline = 'none'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(0,122,255,0.25)'; e.currentTarget.style.background = '#f3f4f6'; }}
+                    onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'transparent'; }}
                   >
                     <CameraIcon size={isMobile ? 18 : 18} />
                   </button>
