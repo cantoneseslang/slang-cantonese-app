@@ -2040,10 +2040,11 @@ export default function Home() {
           {/* 検索エリア */}
           <div style={{ 
             marginBottom: '1rem',
-            padding: isMobile ? '0 1rem' : '0 1.5rem',
-            position: 'relative'
+            padding: isMobile ? '0 1rem' : '0 1.5rem'
           }}>
-            <input
+            {/* 入力欄＋右端アイコン用のラッパ（入力の高さに合わせて相対配置） */}
+            <div style={{ position: 'relative' }}>
+              <input
               type="text"
               placeholder="広東語または日本語のフレーズを入力"
               value={searchQuery}
@@ -2059,7 +2060,7 @@ export default function Home() {
                 width: '100%',
                 maxWidth: '100%',
                 boxSizing: 'border-box',
-                padding: '0 5.25rem 0 1.25rem',
+                padding: '0 4rem 0 1.25rem',
                 border: '1px solid rgba(0,0,0,0.1)',
                 borderRadius: '12px',
                 marginBottom: '0.75rem',
@@ -2077,20 +2078,21 @@ export default function Home() {
                 e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)';
               }}
             />
-            {/* 右端アイコン（白枠内） */}
-            <div style={{
-              position: 'absolute',
-              right: isMobile ? '1rem' : '1.5rem',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              display: 'flex',
-              gap: '0.5rem',
-              background: '#ffffff',
-              border: '1px solid rgba(0,0,0,0.08)',
-              borderRadius: '10px',
-              padding: '0.25rem 0.5rem',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
-            }}>
+              {/* 右端アイコン（入力欄の内側右上、白枠内） */}
+              <div style={{
+                position: 'absolute',
+                right: '0.5rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                display: 'flex',
+                gap: '0.5rem',
+                background: '#ffffff',
+                border: '1px solid rgba(0,0,0,0.08)',
+                borderRadius: '10px',
+                padding: '0.25rem 0.5rem',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                zIndex: 3
+              }}>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 title="ファイルから読み取り (PDF/TXT)"
@@ -2103,7 +2105,7 @@ export default function Home() {
                   lineHeight: 1
                 }}
               >📁</button>
-              {isMobile && (
+                {isMobile && (
                 <button
                   onClick={() => cameraInputRef.current?.click()}
                   title="カメラ/OCRで読み取り"
@@ -2116,7 +2118,8 @@ export default function Home() {
                     lineHeight: 1
                   }}
                 >📷</button>
-              )}
+                )}
+              </div>
             </div>
 
             {/* 非表示input: PDF/TXT */}
