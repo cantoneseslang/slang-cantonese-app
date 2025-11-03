@@ -2199,15 +2199,15 @@ export default function Home() {
                   {/* ユーティリティ操作（元のヘッダーから移動） */}
                   <button
                     onClick={() => toggleClickSound()}
-                    style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700 }}
+                    style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700, color: '#111827', padding: '0 12px' }}
                   >{isClickSoundEnabled ? '🔊 クリック音オン' : '🔇 クリック音オフ'}</button>
                   <button
                     onClick={() => toggleLearningMode()}
-                    style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700 }}
+                    style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700, color: '#111827', padding: '0 12px' }}
                   >{isLearningMode ? '📚 学習モード' : '🎵 ノーマルモード'}</button>
                   <button
                     onClick={() => { setShowSettings(true); setShowAccountMenu(false); }}
-                    style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700 }}
+                    style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700, color: '#111827', padding: '0 12px' }}
                   >⚙️ 設定</button>
 
                   <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
@@ -2215,7 +2215,7 @@ export default function Home() {
                   <div style={{ fontSize: 12, color: '#6b7280' }}>アカウント</div>
                   <button
                     onClick={async () => { setShowAccountMenu(false); await supabase.auth.signOut(); router.refresh(); }}
-                    style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700 }}
+                    style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700, color: '#111827', padding: '0 12px' }}
                   >ログアウト</button>
                 </div>
               </div>
