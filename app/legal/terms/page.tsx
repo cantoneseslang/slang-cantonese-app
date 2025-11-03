@@ -2,7 +2,7 @@ export default function TermsPage() {
   return (
     <main style={{ maxWidth: 900, margin: '0 auto', padding: '2rem 1.5rem' }}>
       <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.75rem' }}>利用規約</h1>
-      <p style={{ color: '#6b7280', marginBottom: '1.25rem' }}>（雛形）</p>
+      
 
       <section style={{ display: 'grid', gap: '0.75rem' }}>
         <p>

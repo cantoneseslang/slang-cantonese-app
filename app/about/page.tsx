@@ -51,6 +51,9 @@ export default function AboutPage() {
         <p>変調は考慮されていない発音記号が表示されます。</p>
         <p>広東語特有の表現でDeepSeek翻訳が正確でない場合があります。</p>
         <p>この文書に記載されている繁体字は、国際標準の『ISO/IEC 10646-1:2000』および『香港補助文字セット – 2001』（Hong Kong Supplementary Character Set – 2001）に含まれる全ての漢字、合計29,145個を含んでいます。</p>
+        <p>
+          <a href="https://slang-cantonese-app.vercel.app/" style={{ fontWeight: 800 }}>発音について（戻る）</a>
+        </p>
       </section>
 
       
