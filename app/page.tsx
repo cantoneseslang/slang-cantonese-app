@@ -43,6 +43,8 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [blueLoading, setBlueLoading] = useState(false);
+  const [greenLoading, setGreenLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -2089,11 +2091,13 @@ export default function Home() {
                 placeholder="こちらに広東語、日本語を入力する"
               value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
+                onKeyDown={async (e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
                     e.stopPropagation();
-                    handleSearch(searchQuery);
+                    if (blueLoading) return;
+                    setBlueLoading(true);
+                    try { await handleSearch(searchQuery); } finally { setBlueLoading(false); }
                   }
                 }}
               style={{
@@ -2258,90 +2262,94 @@ export default function Home() {
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
+                  if (blueLoading) return;
                   playHapticAndSound();
-                  handleSearch(searchQuery);
+                  setBlueLoading(true);
+                  try { await handleSearch(searchQuery); } finally { setBlueLoading(false); }
                 }}
-                disabled={loading}
+                disabled={blueLoading}
                 style={{
                   flex: 1,
                   padding: isMobile ? '0.875rem 1rem' : '1rem 1.5rem',
                   fontSize: isMobile ? '0.9375rem' : '1rem',
                   borderRadius: '12px',
-                  background: loading ? 'linear-gradient(145deg, #d1d5db, #9ca3af)' : 'linear-gradient(145deg, #007AFF, #0051D5)',
+                  background: blueLoading ? 'linear-gradient(145deg, #d1d5db, #9ca3af)' : 'linear-gradient(145deg, #007AFF, #0051D5)',
                   color: 'white',
                   border: 'none',
-                  cursor: loading ? 'not-allowed' : 'pointer',
+                  cursor: blueLoading ? 'not-allowed' : 'pointer',
                   fontWeight: '600',
-                  boxShadow: loading ? '0 2px 6px rgba(0,0,0,0.1)' : '0 4px 12px rgba(0,122,255,0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
+                  boxShadow: blueLoading ? '0 2px 6px rgba(0,0,0,0.1)' : '0 4px 12px rgba(0,122,255,0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
                   transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                   transform: 'scale(1)'
                 }}
                 onMouseEnter={(e) => {
-                  if (!loading) {
+                  if (!blueLoading) {
                     e.currentTarget.style.transform = 'scale(1.02) translateY(-1px)';
                     e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,122,255,0.4), inset 0 1px 0 rgba(255,255,255,0.2)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'scale(1)';
-                  if (!loading) {
+                  if (!blueLoading) {
                     e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,122,255,0.3), inset 0 1px 0 rgba(255,255,255,0.2)';
                   }
                 }}
                 onMouseDown={(e) => {
-                  if (!loading) {
+                  if (!blueLoading) {
                     e.currentTarget.style.transform = 'scale(0.98)';
                   }
                 }}
                 onMouseUp={(e) => {
-                  if (!loading) {
+                  if (!blueLoading) {
                     e.currentTarget.style.transform = 'scale(1.02) translateY(-1px)';
                   }
                 }}
               >
-                {loading ? '検索中...' : '広東語発音'}
+                {blueLoading ? '検索中...' : '広東語発音'}
               </button>
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
+                  if (greenLoading) return;
                   playHapticAndSound();
-                  handleTranslateAndConvert(searchQuery);
+                  setGreenLoading(true);
+                  try { await handleTranslateAndConvert(searchQuery); } finally { setGreenLoading(false); }
                 }}
-                disabled={loading}
+                disabled={greenLoading}
                 style={{
                   flex: 1,
                   padding: isMobile ? '0.875rem 1rem' : '1rem 1.5rem',
                   fontSize: isMobile ? '0.9375rem' : '1rem',
                   borderRadius: '12px',
-                  background: loading ? 'linear-gradient(145deg, #d1d5db, #9ca3af)' : 'linear-gradient(145deg, #34C759, #248A3D)',
+                  background: greenLoading ? 'linear-gradient(145deg, #d1d5db, #9ca3af)' : 'linear-gradient(145deg, #34C759, #248A3D)',
                   color: 'white',
                   border: 'none',
-                  cursor: loading ? 'not-allowed' : 'pointer',
+                  cursor: greenLoading ? 'not-allowed' : 'pointer',
                   fontWeight: '600',
-                  boxShadow: loading ? '0 2px 6px rgba(0,0,0,0.1)' : '0 4px 12px rgba(52,199,89,0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
+                  boxShadow: greenLoading ? '0 2px 6px rgba(0,0,0,0.1)' : '0 4px 12px rgba(52,199,89,0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
                   transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                   transform: 'scale(1)'
                 }}
                 onMouseEnter={(e) => {
-                  if (!loading) {
+                  if (!greenLoading) {
                     e.currentTarget.style.transform = 'scale(1.02) translateY(-1px)';
                     e.currentTarget.style.boxShadow = '0 6px 16px rgba(52,199,89,0.4), inset 0 1px 0 rgba(255,255,255,0.2)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'scale(1)';
-                  if (!loading) {
+                  if (!greenLoading) {
                     e.currentTarget.style.boxShadow = '0 4px 12px rgba(52,199,89,0.3), inset 0 1px 0 rgba(255,255,255,0.2)';
                   }
                 }}
                 onMouseDown={(e) => {
-                  if (!loading) {
+                  if (!greenLoading) {
                     e.currentTarget.style.transform = 'scale(0.98)';
                   }
                 }}
                 onMouseUp={(e) => {
-                  if (!loading) {
+                  if (!greenLoading) {
                     e.currentTarget.style.transform = 'scale(1.02) translateY(-1px)';
                   }
                 }}
