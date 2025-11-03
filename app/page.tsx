@@ -2113,18 +2113,10 @@ export default function Home() {
                 boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
               }}
             >
-              {user?.user_metadata?.avatar_url || user?.user_metadata?.picture ? (
-                <img
-                  src={user.user_metadata.avatar_url || user.user_metadata.picture}
-                  alt="avatar"
-                  style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
-                />
-              ) : (
-                <span style={{
-                  fontWeight: 700,
-                  color: '#111827'
-                }}>{(user?.email?.[0] || 'G').toUpperCase()}</span>
-              )}
+              <span style={{
+                fontWeight: 700,
+                color: '#111827'
+              }}>{(user?.email?.[0] || 'G').toUpperCase()}</span>
             </button>
 
             {/* ドロップダウン */}
