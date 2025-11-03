@@ -3673,6 +3673,263 @@ export default function Home() {
                         )}
                       </button>
                     </div>
+
+                    {/* 会員種別比較表 */}
+                    <div style={{
+                      marginTop: '1.5rem',
+                      padding: '1rem',
+                      backgroundColor: '#f9fafb',
+                      borderRadius: '12px',
+                      border: '1px solid #e5e7eb'
+                    }}>
+                      <h3 style={{
+                        fontSize: '1rem',
+                        fontWeight: '700',
+                        marginBottom: '1rem',
+                        color: '#1f2937',
+                        textAlign: 'center'
+                      }}>📊 プラン比較</h3>
+                      
+                      <div style={{
+                        overflowX: 'auto'
+                      }}>
+                        <table style={{
+                          width: '100%',
+                          borderCollapse: 'collapse',
+                          fontSize: '0.875rem'
+                        }}>
+                          <thead>
+                            <tr>
+                              <th style={{
+                                padding: '0.75rem',
+                                textAlign: 'left',
+                                borderBottom: '2px solid #d1d5db',
+                                fontWeight: '600',
+                                color: '#374151',
+                                backgroundColor: '#ffffff'
+                              }}>機能・特典</th>
+                              <th style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '2px solid #d1d5db',
+                                fontWeight: '600',
+                                color: '#374151',
+                                backgroundColor: '#ffffff'
+                              }}>🥉 ブロンズ</th>
+                              <th style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '2px solid #d1d5db',
+                                fontWeight: '600',
+                                color: '#374151',
+                                backgroundColor: '#ffffff'
+                              }}>🥈 シルバー</th>
+                              <th style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '2px solid #d1d5db',
+                                fontWeight: '600',
+                                color: '#374151',
+                                backgroundColor: '#ffffff'
+                              }}>🏆 ゴールド</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr style={{ backgroundColor: '#ffffff' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>価格</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#a85f1f',
+                                fontWeight: '600'
+                              }}>無料</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#6b7280',
+                                fontWeight: '600'
+                              }}>¥980/月</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#d97706',
+                                fontWeight: '600'
+                              }}>¥9,800</td>
+                            </tr>
+                            <tr style={{ backgroundColor: '#f9fafb' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>カテゴリーアクセス</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#6b7280'
+                              }}>基本</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓ 全カテゴリー</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓ 全カテゴリー</td>
+                            </tr>
+                            <tr style={{ backgroundColor: '#ffffff' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>お気に入り数</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#6b7280'
+                              }}>6個まで</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓ 無制限</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓ 無制限</td>
+                            </tr>
+                            <tr style={{ backgroundColor: '#f9fafb' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>音声速度調整</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#ef4444'
+                              }}>✗</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                            </tr>
+                            <tr style={{ backgroundColor: '#ffffff' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>広告</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#ef4444'
+                              }}>✗ あり</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓ なし</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓ なし</td>
+                            </tr>
+                            <tr style={{ backgroundColor: '#f9fafb' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>オフライン使用</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#ef4444'
+                              }}>✗</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                            </tr>
+                            <tr style={{ backgroundColor: '#ffffff' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>支払い方法</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                color: '#6b7280'
+                              }}>-</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                color: '#6b7280'
+                              }}>月額自動更新</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                color: '#6b7280'
+                              }}>買い切り</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
