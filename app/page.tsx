@@ -79,7 +79,8 @@ export default function Home() {
   // 会員種別の状態
   const [membershipType, setMembershipType] = useState<'free' | 'subscription' | 'lifetime'>('free');
   const [showPricingModal, setShowPricingModal] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<'subscription' | 'lifetime' | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<'free' | 'subscription' | 'lifetime' | null>(null);
+  const [isDowngrade, setIsDowngrade] = useState(false); // ダウングレードかどうか
   
   // デバッグ情報の状態
   const [debugInfo, setDebugInfo] = useState<any>(null);
@@ -719,65 +720,21 @@ export default function Home() {
       return;
     }
 
-    // 無料会員（ブロンズ）に戻る場合、または下位会員種別に変更する場合は直接変更
-    if (newType === 'free') {
-      // 確認ダイアログを表示（オプション）
-      const confirmed = window.confirm('ブロンズ会員に戻りますか？お気に入りは6個までに制限されます。');
-      if (!confirmed) {
-        return;
-      }
-      
-      // 直接会員種別を更新
-      try {
-        const { error } = await supabase.auth.updateUser({
-          data: {
-            membership_type: 'free'
-          }
-        });
-
-        if (error) throw error;
-
-        setMembershipType('free');
-        alert('ブロンズ会員に変更しました。');
-      } catch (err: any) {
-        alert('エラーが発生しました: ' + err.message);
-      }
-      return;
-    }
-
-    // ゴールド会員からシルバーに変更する場合
-    if (membershipType === 'lifetime' && newType === 'subscription') {
-      // ゴールド → シルバーへの変更（直接変更）
-      const confirmed = window.confirm('シルバー会員に変更しますか？');
-      if (!confirmed) {
-        return;
-      }
-      
-      try {
-        const { error } = await supabase.auth.updateUser({
-          data: {
-            membership_type: 'subscription'
-          }
-        });
-
-        if (error) throw error;
-
-        setMembershipType('subscription');
-        alert('シルバー会員に変更しました。');
-      } catch (err: any) {
-        alert('エラーが発生しました: ' + err.message);
-      }
-      return;
-    }
-
-    // シルバーからゴールド、またはブロンズからシルバー/ゴールドへの変更は料金モーダルを表示
+    // ダウングレードかどうかを判定
+    const isDowngrading = (
+      (membershipType === 'lifetime' && (newType === 'subscription' || newType === 'free')) ||
+      (membershipType === 'subscription' && newType === 'free')
+    );
+    
+    // すべての変更で料金モーダルを表示
+    setIsDowngrade(isDowngrading);
     setSelectedPlan(newType);
     setShowPricingModal(true);
   };
 
-  // Stripe決済処理
-  const handleStripeCheckout = async (plan: 'subscription' | 'lifetime') => {
-    // TODO: Stripe統合
+  // Stripe決済処理（アップグレード/ダウングレード）
+  const handleStripeCheckout = async (plan: 'free' | 'subscription' | 'lifetime') => {
+    // TODO: Stripe統合（アップグレード時のみ）
     // 現在はデモ用にSupabaseのuser_metadataを更新
     try {
       const { error } = await supabase.auth.updateUser({
@@ -790,7 +747,11 @@ export default function Home() {
 
       setMembershipType(plan);
       setShowPricingModal(false);
-      alert('会員種別が更新されました！');
+      setSelectedPlan(null);
+      setIsDowngrade(false);
+      
+      const planName = plan === 'free' ? 'ブロンズ会員' : plan === 'subscription' ? 'シルバー会員' : 'ゴールド会員';
+      alert(`${planName}に変更しました！`);
     } catch (err: any) {
       alert('エラーが発生しました: ' + err.message);
     }
@@ -2883,7 +2844,9 @@ export default function Home() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                background: selectedPlan === 'subscription' 
+                background: selectedPlan === 'free'
+                  ? 'linear-gradient(145deg, #d4a574 0%, #cd7f32 50%, #a85f1f 100%)'
+                  : selectedPlan === 'subscription' 
                   ? 'linear-gradient(145deg, #e8e8e8 0%, #c0c0c0 50%, #a8a8a8 100%)' 
                   : 'linear-gradient(145deg, #ffe066 0%, #ffd700 50%, #ffb700 100%)'
               }}>
@@ -2894,19 +2857,20 @@ export default function Home() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
-                  textShadow: selectedPlan === 'subscription' 
-                    ? '0 1px 2px rgba(255,255,255,0.5)' 
-                    : '0 1px 2px rgba(255,255,255,0.5)'
+                  textShadow: '0 1px 2px rgba(255,255,255,0.5)'
                 }}>
                   <span style={{ fontSize: '2rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>
-                    {selectedPlan === 'subscription' ? '🥈' : '🏆'}
+                    {selectedPlan === 'free' ? '🥉' : selectedPlan === 'subscription' ? '🥈' : '🏆'}
                   </span>
-                  <span>{selectedPlan === 'subscription' ? 'シルバー会員' : 'ゴールド会員'}</span>
+                  <span>
+                    {selectedPlan === 'free' ? 'ブロンズ会員' : selectedPlan === 'subscription' ? 'シルバー会員' : 'ゴールド会員'}
+                  </span>
                 </h2>
                 <button
                   onClick={() => {
                     setShowPricingModal(false);
                     setSelectedPlan(null);
+                    setIsDowngrade(false);
                   }}
                   style={{
                     background: 'none',
@@ -2930,19 +2894,29 @@ export default function Home() {
                   <div style={{
                     fontSize: '3rem',
                     fontWeight: 'bold',
-                    color: selectedPlan === 'subscription' ? '#6b7280' : '#d97706',
-                    textShadow: selectedPlan === 'subscription' 
+                    color: selectedPlan === 'free' 
+                      ? '#a85f1f'
+                      : selectedPlan === 'subscription' 
+                      ? '#6b7280' 
+                      : '#d97706',
+                    textShadow: selectedPlan === 'free'
+                      ? '0 2px 4px rgba(0,0,0,0.1)'
+                      : selectedPlan === 'subscription' 
                       ? '0 2px 4px rgba(0,0,0,0.1)' 
                       : '0 2px 4px rgba(255,215,0,0.3)'
                   }}>
-                    {selectedPlan === 'subscription' ? '¥980' : '¥9,800'}
+                    {selectedPlan === 'free' ? '無料' : selectedPlan === 'subscription' ? '¥980' : '¥9,800'}
                   </div>
                   <div style={{
                     fontSize: '1rem',
                     color: '#6b7280',
                     marginTop: '0.5rem'
                   }}>
-                    {selectedPlan === 'subscription' ? '月額（自動更新）' : '買い切り（永久使用）'}
+                    {selectedPlan === 'free' 
+                      ? '（お気に入り6個まで）' 
+                      : selectedPlan === 'subscription' 
+                      ? '月額（自動更新）' 
+                      : '買い切り（永久使用）'}
                   </div>
                 </div>
 
@@ -2959,20 +2933,36 @@ export default function Home() {
                     padding: 0,
                     margin: 0
                   }}>
-                    {['全カテゴリーの単語へアクセス', '例文音声の速度調整機能', '広告なし', 'オフライン使用可能'].map((benefit, idx) => (
-                      <li key={idx} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.75rem',
-                        padding: '0.75rem',
-                        marginBottom: '0.5rem',
-                        backgroundColor: '#f9fafb',
-                        borderRadius: '8px'
-                      }}>
-                        <span style={{ color: '#10b981', fontSize: '1.25rem' }}>✓</span>
-                        <span style={{ color: '#1f2937' }}>{benefit}</span>
-                      </li>
-                    ))}
+                    {selectedPlan === 'free' 
+                      ? ['基本カテゴリーの単語へアクセス', 'お気に入り6個まで'].map((benefit, idx) => (
+                        <li key={idx} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          padding: '0.75rem',
+                          marginBottom: '0.5rem',
+                          backgroundColor: '#f9fafb',
+                          borderRadius: '8px'
+                        }}>
+                          <span style={{ color: '#10b981', fontSize: '1.25rem' }}>✓</span>
+                          <span style={{ color: '#1f2937' }}>{benefit}</span>
+                        </li>
+                      ))
+                      : ['全カテゴリーの単語へアクセス', '例文音声の速度調整機能', '広告なし', 'オフライン使用可能'].map((benefit, idx) => (
+                        <li key={idx} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          padding: '0.75rem',
+                          marginBottom: '0.5rem',
+                          backgroundColor: '#f9fafb',
+                          borderRadius: '8px'
+                        }}>
+                          <span style={{ color: '#10b981', fontSize: '1.25rem' }}>✓</span>
+                          <span style={{ color: '#1f2937' }}>{benefit}</span>
+                        </li>
+                      ))
+                    }
                   </ul>
                 </div>
 
@@ -2982,25 +2972,27 @@ export default function Home() {
                   style={{
                     width: '100%',
                     padding: '1rem',
-                    background: selectedPlan === 'subscription' 
+                    background: selectedPlan === 'free'
+                      ? 'linear-gradient(145deg, #d4a574 0%, #cd7f32 50%, #a85f1f 100%)'
+                      : selectedPlan === 'subscription' 
                       ? 'linear-gradient(145deg, #e8e8e8 0%, #c0c0c0 50%, #a8a8a8 100%)' 
                       : 'linear-gradient(145deg, #ffe066 0%, #ffd700 50%, #ffb700 100%)',
-                    color: selectedPlan === 'subscription' ? '#1f2937' : '#1f2937',
+                    color: '#1f2937',
                     border: 'none',
                     borderRadius: '12px',
                     fontSize: '1.125rem',
                     fontWeight: '700',
                     cursor: 'pointer',
                     transition: 'all 0.3s',
-                    boxShadow: selectedPlan === 'subscription' 
+                    boxShadow: selectedPlan === 'free'
+                      ? '0 4px 12px rgba(205,127,50,0.4), inset 0 1px 0 rgba(255,255,255,0.3)'
+                      : selectedPlan === 'subscription' 
                       ? '0 4px 12px rgba(192,192,192,0.4), inset 0 1px 0 rgba(255,255,255,0.4)' 
                       : '0 4px 12px rgba(255,215,0,0.5), inset 0 1px 0 rgba(255,255,255,0.4)',
-                    textShadow: selectedPlan === 'subscription' 
-                      ? '0 1px 2px rgba(255,255,255,0.5)' 
-                      : '0 1px 2px rgba(255,255,255,0.5)'
+                    textShadow: '0 1px 2px rgba(255,255,255,0.5)'
                   }}
                 >
-                  今すぐアップグレード
+                  {isDowngrade ? '今すぐダウングレード' : '今すぐアップグレード'}
                 </button>
 
                 <div style={{
@@ -3009,7 +3001,9 @@ export default function Home() {
                   fontSize: '0.75rem',
                   color: '#9ca3af'
                 }}>
-                  {selectedPlan === 'subscription' 
+                  {selectedPlan === 'free'
+                    ? 'お気に入りは6個までに制限されます'
+                    : selectedPlan === 'subscription' 
                     ? 'いつでもキャンセル可能です' 
                     : '一度のお支払いで永久に使用できます'}
                 </div>
