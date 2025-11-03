@@ -1677,26 +1677,22 @@ export default function Home() {
 
         {/* メインコンテンツエリア */}
         <div>
-          {/* ヘッダー */}
-          <div style={{ marginBottom: isMobile ? '1rem' : '2rem' }}>
+          {/* ヘッダー（簡素・中央寄せ） */}
+          <div style={{ 
+            marginBottom: isMobile ? '1rem' : '2rem',
+            padding: isMobile ? '0 1rem' : '0 1.5rem',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center'
+          }}>
             <div style={{ 
-              background: 'white', 
-              padding: isMobile ? '1rem' : '1.5rem', 
-              borderRadius: '8px', 
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)' 
+              fontSize: isMobile ? '1.5rem' : '2rem', 
+              fontWeight: 800,
+              letterSpacing: '-0.02em',
+              color: '#111827'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ borderLeft: '4px solid #6366f1', paddingLeft: '1rem', flex: 1 }}>
-                  <h1 style={{ 
-                    fontSize: isMobile ? '1.5rem' : '2.5rem', 
-                    fontWeight: 'bold', 
-                    margin: '0 0 0.25rem 0' 
-                  }}>
-                    ボタンを押すだけでスパッと発音！
-          </h1>
-                  
-                </div>
-              </div>
+              ボタンを押すだけでスパッと発音！
             </div>
           </div>
 
