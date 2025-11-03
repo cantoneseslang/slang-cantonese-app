@@ -64,12 +64,7 @@ export async function GET() {
       // 全ユーザーのお気に入りデータを取得（ユーザー情報も含める）
       const { data: favorites, error: listError } = await adminSupabase
         .from('user_favorites')
-        .select(`
-          *,
-          user_email:user_id (
-            email
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
 
       if (listError) {
