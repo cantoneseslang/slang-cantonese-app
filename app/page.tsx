@@ -846,6 +846,26 @@ export default function Home() {
     </svg>
   );
 
+  // クリップ（ペーパークリップ）アイコン
+  const ClipIcon = ({ size = 20, yOffset = 0 }: { size?: number; yOffset?: number }) => (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ display: 'block', transform: `translateY(${yOffset}px)` }}
+    >
+      <path
+        d="M16 8.5v7a4 4 0 0 1-8 0V7.75a3.25 3.25 0 1 1 6.5 0V15a2.25 2.25 0 1 1-4.5 0V9.25"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+
   const CameraIcon = ({ size = 20, yOffset = 0 }: { size?: number; yOffset?: number }) => (
     <svg
       width={size}
@@ -2376,7 +2396,7 @@ export default function Home() {
                   onFocus={(e) => { (e.currentTarget as HTMLButtonElement).style.outline = 'none'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(0,122,255,0.25)'; e.currentTarget.style.background = '#f3f4f6'; }}
                   onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <FolderIcon size={isMobile ? 22 : 24} yOffset={2} />
+                  <ClipIcon size={isMobile ? 22 : 24} yOffset={2} />
                 </button>
                 {isMobile && (
                 <button
