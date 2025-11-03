@@ -157,22 +157,7 @@ export default function Home() {
         console.log('初期値を設定中...');
         try {
           const updates: any = {};
-          {/* ヒーロー見出し（簡素版） */}
-          <div style={{
-            maxWidth: 800,
-            margin: '0 auto',
-            padding: isMobile ? '0.75rem 1rem 0.25rem' : '1rem 1.5rem 0.5rem',
-            textAlign: 'center'
-          }}>
-            <h1 style={{
-              fontSize: isMobile ? '1.25rem' : '1.75rem',
-              fontWeight: 800,
-              letterSpacing: '-0.02em',
-              color: '#111827'
-            }}>
-              ボタンを押すだけでスパッと発音！
-            </h1>
-          </div>
+          
 
           if (needsUsername) {
             // メールのローカル部分をユーザーネームとして使用
@@ -1707,11 +1692,9 @@ export default function Home() {
                     fontWeight: 'bold', 
                     margin: '0 0 0.25rem 0' 
                   }}>
-                    スラング式カントン語音れん
+                    ボタンを押すだけでスパッと発音！
           </h1>
-                  <p style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: '#6b7280', margin: 0 }}>
-                    粤ピン/スラング式カタカナ/音声検索
-                  </p>
+                  
                 </div>
               </div>
             </div>
