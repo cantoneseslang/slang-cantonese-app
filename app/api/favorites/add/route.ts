@@ -45,14 +45,16 @@ export async function POST(request: Request) {
       .select('id')
       .limit(0)
     
-    // テーブルが存在しない場合は早期リターン
+    // テーブルが存在しない場合はエラーを返す（データ永続化のため）
     if (tableCheckError && isTableNotFoundError(tableCheckError)) {
-      console.warn('テーブルが存在しません。ローカル状態で動作します。')
+      console.error('テーブルが存在しません。データを永続化するにはテーブル作成が必要です。')
       return NextResponse.json({ 
-        success: true,
-        data: null,
-        message: 'テーブルが存在しませんが、ローカル状態でお気に入りが保存されました。'
-      })
+        success: false,
+        error: 'お気に入りテーブルが存在しません',
+        message: 'データを永続的に保存するには、Supabaseでテーブルを作成する必要があります。',
+        details: 'SupabaseのSQL Editorで docs/favorites-table.sql を実行してください。',
+        requiresTable: true
+      }, { status: 503 }) // Service Unavailable
     }
     
     // テーブルが存在する場合のみ、通常の処理を実行
@@ -68,10 +70,12 @@ export async function POST(request: Request) {
     if (countError) {
       if (isTableNotFoundError(countError)) {
         return NextResponse.json({ 
-          success: true,
-          data: null,
-          message: 'テーブルが存在しませんが、ローカル状態でお気に入りが保存されました。'
-        })
+          success: false,
+          error: 'お気に入りテーブルが存在しません',
+          message: 'データを永続的に保存するには、Supabaseでテーブルを作成する必要があります。',
+          details: 'SupabaseのSQL Editorで docs/favorites-table.sql を実行してください。',
+          requiresTable: true
+        }, { status: 503 })
       }
       // その他のエラーは500を返す
       console.error('お気に入り数取得エラー:', countError)
@@ -104,10 +108,12 @@ export async function POST(request: Request) {
     if (checkError) {
       if (isTableNotFoundError(checkError)) {
         return NextResponse.json({ 
-          success: true,
-          data: null,
-          message: 'テーブルが存在しませんが、ローカル状態でお気に入りが保存されました。'
-        })
+          success: false,
+          error: 'お気に入りテーブルが存在しません',
+          message: 'データを永続的に保存するには、Supabaseでテーブルを作成する必要があります。',
+          details: 'SupabaseのSQL Editorで docs/favorites-table.sql を実行してください。',
+          requiresTable: true
+        }, { status: 503 })
       }
       // その他のエラーは警告ログに記録して処理を続行
       console.warn('お気に入り存在チェックエラー（処理続行）:', checkError.message)
@@ -133,13 +139,15 @@ export async function POST(request: Request) {
       .single()
 
     if (insertError) {
-      // テーブル未検出エラーの場合は成功レスポンスを返す
+      // テーブル未検出エラーの場合はエラーを返す
       if (isTableNotFoundError(insertError)) {
         return NextResponse.json({ 
-          success: true,
-          data: null,
-          message: 'テーブルが存在しませんが、ローカル状態でお気に入りが保存されました。'
-        })
+          success: false,
+          error: 'お気に入りテーブルが存在しません',
+          message: 'データを永続的に保存するには、Supabaseでテーブルを作成する必要があります。',
+          details: 'SupabaseのSQL Editorで docs/favorites-table.sql を実行してください。',
+          requiresTable: true
+        }, { status: 503 })
       }
       
       console.error('お気に入り追加エラー:', insertError)
@@ -156,10 +164,12 @@ export async function POST(request: Request) {
     const errorMessage = error?.message || String(error)
     if (isTableNotFoundError({ message: errorMessage })) {
       return NextResponse.json({ 
-        success: true,
-        data: null,
-        message: 'テーブルが存在しませんが、ローカル状態でお気に入りが保存されました。'
-      })
+        success: false,
+        error: 'お気に入りテーブルが存在しません',
+        message: 'データを永続的に保存するには、Supabaseでテーブルを作成する必要があります。',
+        details: 'SupabaseのSQL Editorで docs/favorites-table.sql を実行してください。',
+        requiresTable: true
+      }, { status: 503 })
     }
     
     return NextResponse.json({ 

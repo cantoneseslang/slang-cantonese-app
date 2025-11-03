@@ -245,15 +245,12 @@ export default function Home() {
           newFavorites.delete(favoriteKey);
           setFavorites(newFavorites);
         } else {
-          // エラーがテーブル関連の場合は静かに処理
-          if (data.error && (data.error.includes('テーブル') || data.error.includes('テーブルを作成'))) {
-            console.warn('お気に入り削除エラー（テーブル未作成）:', data.error);
-            // ローカル状態から削除（テーブルが作成されたら再同期される）
-            const newFavorites = new Set(favorites);
-            newFavorites.delete(favoriteKey);
-            setFavorites(newFavorites);
+          // テーブル未作成の場合はエラーを表示
+          if (data.requiresTable || (data.error && data.error.includes('テーブル'))) {
+            alert(`⚠️ お気に入り機能を使用するには、Supabaseでテーブルを作成する必要があります。\n\n${data.details || 'SupabaseのSQL Editorで docs/favorites-table.sql を実行してください。'}\n\n※ テーブル作成後、ページをリロードしてください。`);
+            return; // ローカル状態から削除しない
           } else {
-            console.error('お気に入り削除エラー:', data.error);
+            alert(data.error || data.message || 'お気に入りの削除に失敗しました');
           }
         }
       } else {
@@ -280,18 +277,15 @@ export default function Home() {
           newFavorites.add(favoriteKey);
           setFavorites(newFavorites);
         } else {
-          // エラーがテーブル関連の場合は静かに処理
-          if (data.error && (data.error.includes('テーブル') || data.error.includes('テーブルを作成'))) {
-            console.warn('お気に入り追加エラー（テーブル未作成）:', data.error);
-            // ローカル状態に追加（テーブルが作成されたら再同期される）
-            const newFavorites = new Set(favorites);
-            newFavorites.add(favoriteKey);
-            setFavorites(newFavorites);
+          // テーブル未作成の場合は明確にエラーを表示
+          if (data.requiresTable || (data.error && data.error.includes('テーブル'))) {
+            alert(`⚠️ お気に入り機能を使用するには、Supabaseでテーブルを作成する必要があります。\n\n${data.details || 'SupabaseのSQL Editorで docs/favorites-table.sql を実行してください。'}\n\n※ テーブル作成後、ページをリロードしてください。`);
+            return; // ローカル状態には追加しない
           } else if ((data.error || '').includes('既にお気に入りに登録されています')) {
             // 既に登録されている場合は静かに処理
             console.warn('既にお気に入りに登録されています');
           } else {
-            console.error('お気に入り追加エラー:', data.error);
+            alert(data.error || data.message || 'お気に入りの追加に失敗しました');
           }
         }
       }
