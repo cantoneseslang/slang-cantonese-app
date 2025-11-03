@@ -32,6 +32,7 @@ export default function AdminPage() {
   const [favoritesCountMap, setFavoritesCountMap] = useState<Record<string, number>>({});
   const [buttonAnalytics, setButtonAnalytics] = useState<Array<{ user_id: string; email: string; pressed: number; not_pressed: number }>>([]);
   const [buttonTotal, setButtonTotal] = useState<number>(0);
+  const [favSummary, setFavSummary] = useState<{ totalUsers: number; totalFavorites: number; rows: Array<{ user_id: string; email: string; favorites_count: number }> } | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{ username: string; membership_type: string }>({ username: '', membership_type: 'free' });
@@ -703,11 +704,9 @@ export default function AdminPage() {
                 try {
                   const response = await fetch('/api/admin/favorites');
                   const data = await response.json();
-                  
                   if (data.success) {
-                    // お気に入りデータを表示（簡易版）
-                    alert(`総ユーザー数: ${data.total_users}\n総お気に入り数: ${data.total_favorites}\n\n詳細はコンソールを確認してください。`);
-                    console.log('お気に入りデータ:', data);
+                    const rows = (data.favorites || []).map((r: any) => ({ user_id: r.user_id, email: r.email, favorites_count: r.favorites_count || 0 }));
+                    setFavSummary({ totalUsers: data.total_users || rows.length, totalFavorites: data.total_favorites || 0, rows });
                   } else {
                     alert('エラー: ' + data.error);
                   }
@@ -729,13 +728,50 @@ export default function AdminPage() {
               お気に入りデータ取得
             </button>
           </div>
-          <p style={{
-            fontSize: '0.875rem',
-            color: '#6b7280',
-            margin: 0
-          }}>
-            全ユーザーのお気に入りデータを取得し、ユーザーの嗜好を分析できます。
-          </p>
+          {favSummary ? (
+            <div>
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem', fontSize: '0.875rem', color: '#374151' }}>
+                <div>総ユーザー数: <strong>{favSummary.totalUsers}</strong></div>
+                <div>総お気に入り数: <strong>{favSummary.totalFavorites}</strong></div>
+                <button
+                  onClick={() => {
+                    const header = 'email,favorites\n';
+                    const body = favSummary.rows.map(r => `${r.email || ''},${r.favorites_count}`).join('\n');
+                    const blob = new Blob([header + body], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'favorites_summary.csv';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  style={{ padding: '0.25rem 0.75rem', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer' }}
+                >CSVダウンロード</button>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
+                      <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>Email</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>お気に入り数</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {favSummary.rows.map((r, idx) => (
+                      <tr key={r.user_id} style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                        <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937' }}>{r.email}</td>
+                        <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937' }}>{r.favorites_count}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
+              全ユーザーのお気に入りデータを取得し、ユーザーの嗜好を分析できます。
+            </p>
+          )}
         </div>
 
       {/* ボタン利用分析 */}
