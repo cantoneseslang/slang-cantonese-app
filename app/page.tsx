@@ -2087,14 +2087,15 @@ export default function Home() {
               margin: '0 0 0.375rem 0',
               lineHeight: 1.6
             }}>
-              <div>・広東語の発音を調べたい時、広東語を入力して🟦ボタン</div>
+              <div style={{ fontWeight: 600, color: '#4b5563', marginBottom: '0.125rem' }}>ボタン以外の翻訳機能📚（追加）</div>
+              <div>・広東語の発音、意味を調べたい時、広東語を入力して🟦ボタン</div>
               <div>・日本語を広東語に翻訳したい時、日本語を入力して🟩ボタン</div>
             </div>
             {/* 入力欄＋右端アイコン用のラッパ（入力の高さに合わせて相対配置） */}
             <div style={{ position: 'relative' }}>
               <input
               type="text"
-                placeholder="広東語繁体字または日本語をココに入力"
+                placeholder="こちらに広東語、日本語を入力する"
               value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
