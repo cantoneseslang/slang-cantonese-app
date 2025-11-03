@@ -1195,11 +1195,12 @@ export default function Home() {
 
   const handleWordClick = async (word: Word) => {
     playHapticAndSound(); // 振動と音を再生
+    // すべてのモードで押下ログを送信
+    try { fetch('/api/track-button', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wordChinese: word.chinese, categoryId: currentCategory?.id }) }); } catch {}
     
     if (isLearningMode) {
       // 学習モード：現在の動作（例文も表示）
       setSearchQuery(word.chinese);
-    try { fetch('/api/track-button', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wordChinese: word.chinese, categoryId: currentCategory?.id }) }); } catch {}
       await handleSearch(word.chinese);
     } else {
       // ノーマルモード：単語のみの音声を再生、ボタンを緑色にする（1つだけ）
