@@ -2396,7 +2396,7 @@ export default function Home() {
                   onFocus={(e) => { (e.currentTarget as HTMLButtonElement).style.outline = 'none'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(0,122,255,0.25)'; e.currentTarget.style.background = '#f3f4f6'; }}
                   onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <ClipIcon size={isMobile ? 22 : 24} yOffset={2} />
+                  <ClipIcon size={isMobile ? 22 : 24} yOffset={0} />
                 </button>
                 {isMobile && (
                 <button
@@ -2422,7 +2422,7 @@ export default function Home() {
                     onFocus={(e) => { (e.currentTarget as HTMLButtonElement).style.outline = 'none'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(0,122,255,0.25)'; e.currentTarget.style.background = '#f3f4f6'; }}
                     onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'transparent'; }}
                   >
-                    <CameraIcon size={isMobile ? 22 : 24} yOffset={2} />
+                    <CameraIcon size={isMobile ? 22 : 24} yOffset={0} />
                   </button>
                 )}
               </div>
