@@ -24,3 +24,4 @@ CREATE POLICY "Users can insert their own button events"
   WITH CHECK (auth.uid() = user_id);
 
 
+

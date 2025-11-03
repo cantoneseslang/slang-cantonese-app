@@ -20,3 +20,4 @@ CREATE POLICY "Authenticated can update button catalog"
   ON public.button_catalog FOR UPDATE USING (true) WITH CHECK (true);
 
 
+

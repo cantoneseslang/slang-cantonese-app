@@ -1,6 +1,7 @@
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { countAllButtons } from '@/lib/analytics/buttonCounts'
 
 export async function GET() {
   const supabase = await createServerClient()
@@ -40,16 +41,8 @@ export async function GET() {
     perUser[e.user_id][e.button_key] = true
   })
 
-  // カタログから総数を取得（存在すれば）
-  let totalButtons = allButtons.size
-  try {
-    const { count: catCount, error: catErr } = await admin
-      .from('button_catalog')
-      .select('*', { count: 'exact', head: true })
-    if (!catErr && typeof catCount === 'number' && catCount >= 0) {
-      totalButtons = catCount
-    }
-  } catch {}
+  // 総ボタン数は categories.json をソースに常に正確に算出
+  const totalButtons = countAllButtons()
 
   // ユーザー情報
   const { data: { users }, error: usersErr } = await admin.auth.admin.listUsers()
