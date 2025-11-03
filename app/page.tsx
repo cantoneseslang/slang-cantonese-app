@@ -3203,6 +3203,19 @@ export default function Home() {
 
         </div>
 
+        {/* フッター: 法務リンク */}
+        <div style={{ padding: isMobile ? '1.5rem' : '2rem', color: '#4b5563' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center', fontSize: isMobile ? '0.85rem' : '0.95rem' }}>
+            <a href="/contact" style={{ textDecoration: 'underline' }}>お問い合わせ</a>
+            <span>·</span>
+            <a href="/legal/terms" style={{ textDecoration: 'underline' }}>利用規約</a>
+            <span>·</span>
+            <a href="/legal/privacy" style={{ textDecoration: 'underline' }}>プライバシー</a>
+            <span>·</span>
+            <a href="/legal/tokusho" style={{ textDecoration: 'underline' }}>特商法表記</a>
+          </div>
+        </div>
+
         {/* 料金モーダル */}
         {showPricingModal && selectedPlan && (
           <div style={{
