@@ -2700,7 +2700,7 @@ export default function Home() {
           )}
 
           {/* practiceGroups表示（pronunciation用） */}
-          {currentCategory && currentCategory.id !== 'pronunciation' && currentCategory.introContent && currentCategory.practiceGroups && (
+          {currentCategory && currentCategory.introContent && currentCategory.practiceGroups && (
             <div style={{ 
               background: 'white', 
               padding: isMobile ? '1rem' : '1.5rem', 
