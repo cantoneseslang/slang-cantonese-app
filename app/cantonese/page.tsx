@@ -16,7 +16,11 @@ export default function CantoneseIntroPage() {
           広東語で使う漢字は<strong>繁体字</strong>、標準中国語（普通話）で使われる漢字は<strong>簡体字</strong>が中心です。繁体字は元の字形に近く画数が多いのが特徴、簡体字は1950年代以降に画数を減らした字形です。
           すべてが違うわけではなく、部分的に異なります。
         </p>
-        {/* 具体例の一覧は本ページでは非表示（別導線で紹介） */}
+        <ul style={{ paddingLeft: 18, lineHeight: 1.7 }}>
+          <li>（日本語）学習 →（広東語）學習 →（中国語）学习</li>
+          <li>（日本語）中国 →（広東語）中國 →（中国語）中国</li>
+          <li>（日本語）身体 →（広東語）身體 →（中国語）身体</li>
+        </ul>
       </section>
 
       <section style={{ display: 'grid', gap: '0.5rem', marginBottom: '1.25rem' }}>
