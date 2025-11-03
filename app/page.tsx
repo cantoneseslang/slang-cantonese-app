@@ -3330,7 +3330,7 @@ export default function Home() {
           }}>
             <a href="/cantonese" style={{ textDecoration: 'underline' }}>カントン語（広東語）ってなに？</a>
             <span>·</span>
-            <a href="/about" style={{ textDecoration: 'underline' }}>カントン語音れんって何？</a>
+            <a href="/about" style={{ textDecoration: 'underline' }}>カントン語音れんってなに？</a>
             <span>·</span>
             <a href="/updates" style={{ textDecoration: 'underline' }}>更新情報</a>
             <span>·</span>

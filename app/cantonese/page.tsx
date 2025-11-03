@@ -46,7 +46,7 @@ export default function CantoneseIntroPage() {
         <p>
           ここまで読んでいただいた方は、きっと広東語に興味をお持ちの方！さっそく広東語の一番重要な発音を本アプリ「カントン語音れん」で発音から楽しく学んでいきましょう。
           <br />
-          <a href="https://slang-cantonese-app.vercel.app/about" style={{ fontWeight: 800 }}>トップページに戻る</a>
+          <a href="https://slang-cantonese-app.vercel.app/about" style={{ fontWeight: 800 }}>カントン語音れんってなに？</a>
         </p>
       </section>
     </main>
