@@ -224,8 +224,9 @@ export default function Home() {
           const response = await fetch('/api/favorites/list');
           const data = await response.json();
           
-          if (data.success && data.favoriteSet) {
-            setFavorites(new Set(data.favoriteSet));
+          if (data.favorites && Array.isArray(data.favorites)) {
+            // お気に入りリストをSetに変換
+            setFavorites(new Set(data.favorites));
           } else if (data.error) {
             // エラーがあっても静かに処理（テーブルが存在しない場合など）
             console.warn('お気に入り読み込み警告:', data.error);
@@ -3064,16 +3065,15 @@ export default function Home() {
                                     top: '0.125rem',
                                     right: '0.125rem',
                                     fontSize: isMobile ? '0.75rem' : '0.875rem',
-                                    cursor: 'pointer',
                                     zIndex: 10,
                                     userSelect: 'none',
                                     pointerEvents: 'none',
                                     color: isFavorite ? '#fbbf24' : '#9ca3af',
-                                    WebkitTextStroke: isFavorite ? 'none' : '1px #9ca3af',
-                                    WebkitTextFillColor: isFavorite ? '#fbbf24' : 'transparent'
+                                    textShadow: isFavorite ? '0 0 2px rgba(251, 191, 36, 0.5)' : 'none',
+                                    filter: isFavorite ? 'drop-shadow(0 0 1px rgba(251, 191, 36, 0.8))' : 'none'
                                   }}
                                 >
-                                  ★
+                                  {isFavorite ? '★' : '☆'}
                                 </div>
                               )}
                               <strong style={{ 
@@ -3169,16 +3169,15 @@ export default function Home() {
                                     top: '0.125rem',
                                     right: '0.125rem',
                                     fontSize: isMobile ? '0.75rem' : '0.875rem',
-                                    cursor: 'pointer',
                                     zIndex: 10,
                                     userSelect: 'none',
                                     pointerEvents: 'none',
                                     color: isFavorite ? '#fbbf24' : '#9ca3af',
-                                    WebkitTextStroke: isFavorite ? 'none' : '1px #9ca3af',
-                                    WebkitTextFillColor: isFavorite ? '#fbbf24' : 'transparent'
+                                    textShadow: isFavorite ? '0 0 2px rgba(251, 191, 36, 0.5)' : 'none',
+                                    filter: isFavorite ? 'drop-shadow(0 0 1px rgba(251, 191, 36, 0.8))' : 'none'
                                   }}
                                 >
-                                  ★
+                                  {isFavorite ? '★' : '☆'}
                                 </div>
                               )}
                               <strong style={{ 
@@ -3271,16 +3270,15 @@ export default function Home() {
                                     top: '0.125rem',
                                     right: '0.125rem',
                                     fontSize: isMobile ? '0.75rem' : '0.875rem',
-                                    cursor: 'pointer',
                                     zIndex: 10,
                                     userSelect: 'none',
                                     pointerEvents: 'none',
                                     color: isFavorite ? '#fbbf24' : '#9ca3af',
-                                    WebkitTextStroke: isFavorite ? 'none' : '1px #9ca3af',
-                                    WebkitTextFillColor: isFavorite ? '#fbbf24' : 'transparent'
+                                    textShadow: isFavorite ? '0 0 2px rgba(251, 191, 36, 0.5)' : 'none',
+                                    filter: isFavorite ? 'drop-shadow(0 0 1px rgba(251, 191, 36, 0.8))' : 'none'
                                   }}
                                 >
-                                  ★
+                                  {isFavorite ? '★' : '☆'}
                                 </div>
                               )}
                               <strong style={{ 
@@ -3373,16 +3371,15 @@ export default function Home() {
                                     top: '0.125rem',
                                     right: '0.125rem',
                                     fontSize: isMobile ? '0.75rem' : '0.875rem',
-                                    cursor: 'pointer',
                                     zIndex: 10,
                                     userSelect: 'none',
                                     pointerEvents: 'none',
                                     color: isFavorite ? '#fbbf24' : '#9ca3af',
-                                    WebkitTextStroke: isFavorite ? 'none' : '1px #9ca3af',
-                                    WebkitTextFillColor: isFavorite ? '#fbbf24' : 'transparent'
+                                    textShadow: isFavorite ? '0 0 2px rgba(251, 191, 36, 0.5)' : 'none',
+                                    filter: isFavorite ? 'drop-shadow(0 0 1px rgba(251, 191, 36, 0.8))' : 'none'
                                   }}
                                 >
-                                  ★
+                                  {isFavorite ? '★' : '☆'}
                                 </div>
                               )}
                               <strong style={{ 
@@ -3496,16 +3493,15 @@ export default function Home() {
                         top: '0.25rem',
                         right: '0.25rem',
                         fontSize: isMobile ? '0.875rem' : '1rem',
-                        cursor: 'pointer',
                         zIndex: 10,
                         userSelect: 'none',
                         pointerEvents: 'none',
                         color: isFavorite ? '#fbbf24' : '#9ca3af',
-                        WebkitTextStroke: isFavorite ? 'none' : '1px #9ca3af',
-                        WebkitTextFillColor: isFavorite ? '#fbbf24' : 'transparent'
+                        textShadow: isFavorite ? '0 0 2px rgba(251, 191, 36, 0.5)' : 'none',
+                        filter: isFavorite ? 'drop-shadow(0 0 1px rgba(251, 191, 36, 0.8))' : 'none'
                       }}
                     >
-                      ★
+                      {isFavorite ? '★' : '☆'}
                     </div>
                   )}
                   <strong style={{ 
