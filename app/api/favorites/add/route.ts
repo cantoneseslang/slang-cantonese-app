@@ -52,18 +52,26 @@ export async function POST(request: NextRequest) {
     }
     
     // 会員種別をチェックして制限を適用
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('membership_type')
-      .eq('id', user.id)
-      .single();
+    let membershipType = 'free'; // デフォルトは'free'
     
-    if (userError && userError.code !== 'PGRST116') {
-      console.error('User data fetch error:', userError);
+    try {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('membership_type')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      // usersテーブルが存在しない場合や404エラーの場合はデフォルトで'free'とする
+      if (!userError && userData) {
+        membershipType = userData.membership_type || 'free';
+      } else if (userError && userError.code !== 'PGRST116' && !userError.message.includes('relation') && !userError.message.includes('Could not find')) {
+        // テーブルが存在しない場合以外のエラーはログに記録
+        console.error('User data fetch error:', userError);
+      }
+    } catch (error) {
       // usersテーブルが存在しない場合はデフォルトで'free'とする
+      console.warn('Could not fetch user membership type, defaulting to free:', error);
     }
-    
-    const membershipType = userData?.membership_type || 'free';
     
     if (membershipType === 'free') {
       // ブロンズ会員は6個まで
