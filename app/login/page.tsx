@@ -47,6 +47,27 @@ function LoginForm() {
     }
   }, [redirectMessage]);
 
+  // Force light color scheme for this page, even in dark mode browsers
+  useEffect(() => {
+    // Set color-scheme meta tag
+    const meta = document.createElement('meta');
+    meta.name = 'color-scheme';
+    meta.content = 'light';
+    document.head.appendChild(meta);
+    
+    // Also set it on the html element as CSS property
+    document.documentElement.style.colorScheme = 'light';
+    
+    // Cleanup on unmount
+    return () => {
+      const existingMeta = document.querySelector('meta[name="color-scheme"]');
+      if (existingMeta) {
+        existingMeta.remove();
+      }
+      document.documentElement.style.colorScheme = '';
+    };
+  }, []);
+
   const validatePassword = (pwd: string): string | null => {
     if (pwd.length < 6) {
       return 'パスワードは6文字以上必要です';
@@ -296,35 +317,88 @@ function LoginForm() {
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
+        /* Force light color scheme for this page */
+        :root {
+          color-scheme: light !important;
+        }
+        
+        html {
+          color-scheme: light !important;
+        }
+        
         /* Force white background and dark text for all inputs, even in dark mode */
         input[type="text"],
         input[type="email"],
         input[type="password"],
-        select {
+        select,
+        input,
+        textarea {
           background-color: #ffffff !important;
           color: #111827 !important;
           -webkit-text-fill-color: #111827 !important;
+          border-color: #d1d5db !important;
         }
         
-        /* Override autofill styles */
+        /* Override dark mode specifically - most aggressive */
+        @media (prefers-color-scheme: dark) {
+          :root {
+            color-scheme: light !important;
+          }
+          
+          html {
+            color-scheme: light !important;
+          }
+          
+          input[type="text"],
+          input[type="email"],
+          input[type="password"],
+          select,
+          input,
+          textarea {
+            background-color: #ffffff !important;
+            color: #111827 !important;
+            -webkit-text-fill-color: #111827 !important;
+            border-color: #d1d5db !important;
+          }
+          
+          input::placeholder {
+            color: #9ca3af !important;
+            opacity: 1 !important;
+          }
+        }
+        
+        /* Override autofill styles - more aggressive */
         input:-webkit-autofill,
         input:-webkit-autofill:hover,
         input:-webkit-autofill:focus,
-        input:-webkit-autofill:active {
+        input:-webkit-autofill:active,
+        input:-webkit-autofill::first-line {
           -webkit-box-shadow: 0 0 0 30px #ffffff inset !important;
           -webkit-text-fill-color: #111827 !important;
           background-color: #ffffff !important;
           color: #111827 !important;
+          caret-color: #111827 !important;
         }
         
-        /* Override placeholder color */
-        input::placeholder {
+        /* Override placeholder color - all variants */
+        input::placeholder,
+        input::-webkit-input-placeholder,
+        input::-moz-placeholder,
+        input:-ms-input-placeholder {
           color: #9ca3af !important;
           opacity: 1 !important;
         }
         
         /* Force select dropdown styling */
         select option {
+          background-color: #ffffff !important;
+          color: #111827 !important;
+        }
+        
+        /* Override any form element styling */
+        form input,
+        form select,
+        form textarea {
           background-color: #ffffff !important;
           color: #111827 !important;
         }
