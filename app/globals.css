@@ -12,11 +12,9 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ダークモードを無効化 - 常にライトモードで表示 */
+html {
+  color-scheme: light !important;
 }
 
 body {
