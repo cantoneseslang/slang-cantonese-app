@@ -108,14 +108,14 @@ export default function AboutPage() {
         <p style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '1rem' }}>
           さてそれでは早速「カントン語音れん」を始めましょう
         </p>
-        <p style={{ fontSize: '0.875rem', color: '#374151' }}>
+        <p style={{ fontSize: '0.875rem', color: '#374151', marginBottom: '1rem' }}>
           このURLは「カントン語音れん」の埋め込み用です
-          <iframe 
-            src="https://slang-cantonese-app.vercel.app/" 
-            style={{ width: '100%', height: '800px', border: 'none', marginTop: '1rem' }}
-            title="カントン語音れん"
-          />
         </p>
+        <iframe 
+          src="https://slang-cantonese-app.vercel.app/" 
+          style={{ width: '100%', height: '800px', border: 'none', marginTop: '1rem' }}
+          title="カントン語音れん"
+        />
       </div>
     </div>
   );
