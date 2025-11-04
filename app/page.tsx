@@ -1110,21 +1110,16 @@ export default function Home() {
     return () => window.removeEventListener('resize', checkScroll);
   }, [categories]);
 
-  // 初期スクロール位置を設定（左側のメニューボタンを隠す）
+  // 初期スクロール位置を設定（「発音表記について」ボタンが左端に来るように）
   useEffect(() => {
-    if (categoryScrollRef.current && user) {
-      // ユーザーがログインしている場合、左側の4つのボタン分スクロール
-      // 各ボタンの幅 + gap を計算して初期位置を設定
-      const buttonWidth = isMobile ? 150 : 180; // おおよそのボタン幅
-      const gap = isMobile ? 8 : 12; // gap
-      const scrollAmount = (buttonWidth + gap) * 4; // 4つのボタン分（ログアウト、クリック音、ノーマルモード、設定）
-      
-      categoryScrollRef.current.scrollLeft = scrollAmount;
+    if (categoryScrollRef.current) {
+      // 常に左端（スクロール位置0）からスタート
+      categoryScrollRef.current.scrollLeft = 0;
       
       // スクロール後に矢印の状態を更新
       handleCategoryScroll();
     }
-  }, [user, isMobile]);
+  }, [categories]);
 
   // 設定画面が開かれたときにデバッグ情報を自動取得
   useEffect(() => {
