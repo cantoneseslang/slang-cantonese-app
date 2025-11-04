@@ -3212,23 +3212,40 @@ export default function Home() {
         </div>
 
         {/* フッター（デザイン踏襲） */}
-        <footer style={{ padding: isMobile ? '1.5rem' : '2rem', color: '#4b5563' }}>
+        <footer style={{ padding: isMobile ? '1.5rem' : '2rem', color: '#4b5563', marginTop: '3rem' }}>
           <div style={{
             display: 'flex',
             flexWrap: 'wrap',
             justifyContent: 'center',
             gap: '0.75rem',
-            fontSize: isMobile ? '0.85rem' : '0.95rem'
+            fontSize: isMobile ? '0.85rem' : '0.95rem',
+            alignItems: 'center'
           }}>
-            <a href="/about" style={{ textDecoration: 'underline' }}>カントン語音れんって何？</a>
-            <span>·</span>
-            <a href="/updates" style={{ textDecoration: 'underline' }}>更新情報</a>
-            <span>·</span>
-            <a href="/faq" style={{ textDecoration: 'underline' }}>FAQ</a>
-            <span>·</span>
-            <a href="/contact" style={{ textDecoration: 'underline' }}>お問い合わせ</a>
-            <span>·</span>
-            <a href="/legal/terms" style={{ textDecoration: 'underline' }}>利用規約</a>
+            <a href="/about" style={{ 
+              textDecoration: 'underline', 
+              color: '#3b82f6',
+              fontWeight: '500'
+            }}>カントン語音れんって何？</a>
+            <span style={{ color: '#9ca3af' }}>·</span>
+            <a href="/updates" style={{ 
+              textDecoration: 'underline', 
+              color: '#3b82f6' 
+            }}>更新情報</a>
+            <span style={{ color: '#9ca3af' }}>·</span>
+            <a href="/faq" style={{ 
+              textDecoration: 'underline', 
+              color: '#3b82f6' 
+            }}>FAQ</a>
+            <span style={{ color: '#9ca3af' }}>·</span>
+            <a href="/contact" style={{ 
+              textDecoration: 'underline', 
+              color: '#3b82f6' 
+            }}>お問い合わせ</a>
+            <span style={{ color: '#9ca3af' }}>·</span>
+            <a href="/legal/terms" style={{ 
+              textDecoration: 'underline', 
+              color: '#3b82f6' 
+            }}>利用規約</a>
           </div>
           <div style={{ marginTop: '0.75rem', textAlign: 'center', fontSize: isMobile ? '0.8rem' : '0.9rem', color: '#6b7280' }}>
             © 2024 LIFESUPPORT(HK)  All Right Reserved.
