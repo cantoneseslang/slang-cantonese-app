@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 export async function POST(request: Request) {
   try {
     const { username } = await request.json()
-    const supabase = await createClient()
+    const supabase = createClient()
 
     // ユーザーネームテーブルから検索
     const { data, error } = await supabase
