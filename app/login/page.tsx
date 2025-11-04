@@ -294,22 +294,57 @@ function LoginForm() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: '#f3f4f6',
-      padding: '1rem'
-    }}>
+    <>
+      <style dangerouslySetInnerHTML={{__html: `
+        /* Force white background and dark text for all inputs, even in dark mode */
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        select {
+          background-color: #ffffff !important;
+          color: #111827 !important;
+          -webkit-text-fill-color: #111827 !important;
+        }
+        
+        /* Override autofill styles */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 30px #ffffff inset !important;
+          -webkit-text-fill-color: #111827 !important;
+          background-color: #ffffff !important;
+          color: #111827 !important;
+        }
+        
+        /* Override placeholder color */
+        input::placeholder {
+          color: #9ca3af !important;
+          opacity: 1 !important;
+        }
+        
+        /* Force select dropdown styling */
+        select option {
+          background-color: #ffffff !important;
+          color: #111827 !important;
+        }
+      `}} />
       <div style={{
-        background: 'white',
-        padding: '2rem',
-        borderRadius: '8px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        width: '100%',
-        maxWidth: '400px'
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#f3f4f6',
+        padding: '1rem'
       }}>
+        <div style={{
+          background: 'white',
+          padding: '2rem',
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          width: '100%',
+          maxWidth: '400px'
+        }}>
         <h1 style={{
           fontSize: '1.5rem',
           fontWeight: 'bold',
@@ -865,6 +900,7 @@ function LoginForm() {
         )}
       </div>
     </div>
+    </>
   );
 }
 
