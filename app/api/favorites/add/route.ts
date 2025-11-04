@@ -51,18 +51,18 @@ export async function POST(request: NextRequest) {
     if (membershipType === 'free') {
       // ブロンズ会員は6個まで
       const { count, error: countError } = await supabase
-        .from('favorites')
+        .from('user_favorites')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id);
       
       if (countError) {
-        if (countError.code === 'PGRST116' || countError.message.includes('relation') || countError.message.includes('schema')) {
-          return NextResponse.json({
-            error: 'Favorites table not found',
-            requiresTable: true,
-            details: 'Supabaseでfavoritesテーブルを作成する必要があります。docs/favorites-table.sqlを実行してください。'
-          }, { status: 500 });
-        }
+      if (countError.code === 'PGRST116' || countError.message.includes('relation') || countError.message.includes('schema')) {
+        return NextResponse.json({
+          error: 'Favorites table not found',
+          requiresTable: true,
+          details: 'Supabaseでuser_favoritesテーブルを作成する必要があります。'
+        }, { status: 500 });
+      }
         throw countError;
       }
       
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     
     // 既に登録されているかチェック
     const { data: existing, error: checkError } = await supabase
-      .from('favorites')
+      .from('user_favorites')
       .select('id')
       .eq('user_id', user.id)
       .eq('category_id', categoryId)
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     }
     
     const { data: insertData_result, error: insertError } = await supabase
-      .from('favorites')
+      .from('user_favorites')
       .insert(insertData)
       .select();
     
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           error: 'Favorites table not found',
           requiresTable: true,
-          details: 'Supabaseでfavoritesテーブルを作成する必要があります。docs/favorites-table.sqlを実行してください。',
+          details: 'Supabaseでuser_favoritesテーブルを作成する必要があります。',
           errorCode: insertError.code,
           errorMessage: insertError.message
         }, { status: 500 });

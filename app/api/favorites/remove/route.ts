@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     
     // お気に入りを削除
     const { error: deleteError } = await supabase
-      .from('favorites')
+      .from('user_favorites')
       .delete()
       .eq('user_id', user.id)
       .eq('category_id', categoryId)
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           error: 'Favorites table not found',
           requiresTable: true,
-          details: 'Supabaseでfavoritesテーブルを作成する必要があります。docs/favorites-table.sqlを実行してください。'
+          details: 'Supabaseでuser_favoritesテーブルを作成する必要があります。'
         }, { status: 500 });
       }
       console.error('Delete error:', deleteError);

@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     }
     
     const { data, error } = await supabase
-      .from('favorites')
+      .from('user_favorites')
       .select('category_id, word_chinese')
       .eq('user_id', user.id);
     
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
           favorites: [],
           error: 'Favorites table not found',
           requiresTable: true,
-          details: 'Supabaseでfavoritesテーブルを作成する必要があります。docs/favorites-table.sqlを実行してください。'
+          details: 'Supabaseでuser_favoritesテーブルを作成する必要があります。'
         });
       }
       console.error('Error fetching favorites:', error);
