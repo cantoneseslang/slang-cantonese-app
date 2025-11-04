@@ -12,7 +12,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createClient();
+    let supabase;
+    try {
+      supabase = createClient();
+    } catch (clientError) {
+      console.error('Error creating Supabase client:', clientError);
+      return NextResponse.json(
+        { 
+          error: 'Failed to create Supabase client', 
+          details: clientError instanceof Error ? clientError.message : String(clientError),
+          debug: {
+            hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+            hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+          }
+        },
+        { status: 500 }
+      );
+    }
+    
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError) {
@@ -162,14 +179,21 @@ export async function POST(request: NextRequest) {
       if ('code' in error) errorInfo.code = (error as any).code;
       if ('details' in error) errorInfo.details = (error as any).details;
       if ('hint' in error) errorInfo.hint = (error as any).hint;
+      if ('message' in error) errorInfo.fullMessage = (error as any).message;
     }
     
+    // 本番環境でもエラー詳細を返す（デバッグ用）
     return NextResponse.json(
       { 
         error: 'Failed to add favorite', 
         details: errorMessage,
         errorInfo: errorInfo,
-        stack: process.env.NODE_ENV === 'development' ? errorDetails : undefined
+        debug: {
+          hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+          hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+          errorType: error?.constructor?.name || typeof error,
+          errorString: String(error)
+        }
       },
       { status: 500 }
     );

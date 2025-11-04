@@ -12,7 +12,22 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const supabase = createClient();
+    let supabase;
+    try {
+      supabase = createClient();
+    } catch (clientError) {
+      console.error('Error creating Supabase client:', clientError);
+      return NextResponse.json({
+        favorites: [],
+        error: 'Failed to create Supabase client',
+        details: clientError instanceof Error ? clientError.message : String(clientError),
+        debug: {
+          hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+          hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        }
+      });
+    }
+    
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError) {
@@ -48,8 +63,28 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ favorites });
   } catch (error) {
     console.error('Error fetching favorites:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorInfo: any = {};
+    
+    if (error && typeof error === 'object') {
+      if ('code' in error) errorInfo.code = (error as any).code;
+      if ('details' in error) errorInfo.details = (error as any).details;
+      if ('hint' in error) errorInfo.hint = (error as any).hint;
+      if ('message' in error) errorInfo.fullMessage = (error as any).message;
+    }
+    
     return NextResponse.json(
-      { favorites: [], error: 'Failed to fetch favorites' },
+      { 
+        favorites: [], 
+        error: 'Failed to fetch favorites',
+        errorInfo: errorInfo,
+        debug: {
+          hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+          hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+          errorType: error?.constructor?.name || typeof error,
+          errorString: String(error)
+        }
+      },
       { status: 500 }
     );
   }
