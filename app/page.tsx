@@ -2008,27 +2008,8 @@ export default function Home() {
                   <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', wordBreak: 'break-all' }}>{user?.email || 'ゲスト'}</div>
                 </div>
                 <div style={{ padding: '10px 14px', display: 'grid', gap: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontSize: 13, color: '#374151' }}>プラン</div>
-                    <div style={{ fontSize: 13, fontWeight: 700 }}>
-                      {membershipType === 'free' ? '無料プラン' : membershipType === 'subscription' ? 'シルバー（月額）' : 'ゴールド（買い切り）'}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => { setIsDowngrade(false); setSelectedPlan(null); setShowPricingModal(true); setShowAccountMenu(false); }}
-                    style={{
-                      height: 36,
-                      borderRadius: 8,
-                      background: 'linear-gradient(145deg, #6366f1, #4f46e5)',
-                      color: 'white',
-                      fontWeight: 700,
-                      border: 'none',
-                      cursor: 'pointer'
-                    }}
-                  >パワーアップ</button>
-
                   {/* 会員種別 */}
-                  <div style={{ marginTop: '4px' }}>
+                  <div>
                     <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 6 }}>会員種別</div>
                     <div style={{ display: 'flex', gap: 6 }}>
                       {/* ブロンズ会員 */}
@@ -2140,6 +2121,45 @@ export default function Home() {
                       </button>
                     </div>
                   </div>
+
+                  {/* パワーアップボタン（ゴールド会員以外のみ表示） */}
+                  {membershipType !== 'lifetime' && (
+                    <button
+                      onClick={() => {
+                        // 現在のプランより上位のプランを選択
+                        const nextPlan = membershipType === 'free' ? 'subscription' : 'lifetime';
+                        handleMembershipChange(nextPlan);
+                        setShowAccountMenu(false);
+                      }}
+                      style={{
+                        height: 36,
+                        borderRadius: 8,
+                        background: 'linear-gradient(145deg, #6366f1, #4f46e5)',
+                        color: 'white',
+                        fontWeight: 700,
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: 13
+                      }}
+                    >
+                      {membershipType === 'free' ? 'シルバーにアップグレード' : 'ゴールドにアップグレード'}
+                    </button>
+                  )}
+
+                  {/* 現在のプラン表示（ゴールド会員の場合） */}
+                  {membershipType === 'lifetime' && (
+                    <div style={{
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      background: 'linear-gradient(145deg, #ffe066 0%, #ffd700 50%, #ffb700 100%)',
+                      textAlign: 'center',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: '#1f2937'
+                    }}>
+                      🏆 ゴールド会員（最高プラン）
+                    </div>
+                  )}
 
                   <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
 
