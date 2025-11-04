@@ -1807,162 +1807,6 @@ export default function Home() {
                 gap: isMobile ? '0.5rem' : '0.75rem',
                 paddingBottom: '0.25rem'
               }}>
-                {/* 左側の隠れメニュー */}
-                {user && (
-                  <>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleLogout();
-                      }}
-                      style={{
-                        padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
-                        fontSize: isMobile ? '0.875rem' : '1rem',
-                        fontWeight: '600',
-                        borderRadius: '16px',
-                        background: 'linear-gradient(145deg, #ef4444, #dc2626)',
-                        color: 'white',
-                        border: 'none',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                        boxShadow: '0 4px 12px rgba(239,68,68,0.4), inset 0 1px 0 rgba(255,255,255,0.2)',
-                        transform: 'scale(1)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(239,68,68,0.5), inset 0 1px 0 rgba(255,255,255,0.2)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'scale(1)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(239,68,68,0.4), inset 0 1px 0 rgba(255,255,255,0.2)';
-                      }}
-                      onMouseDown={(e) => {
-                        e.currentTarget.style.transform = 'scale(0.98)';
-                      }}
-                      onMouseUp={(e) => {
-                        e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
-                      }}
-                    >
-                      ログアウト
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        toggleClickSound();
-                      }}
-                      style={{
-                        padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
-                        fontSize: isMobile ? '0.875rem' : '1rem',
-                        fontWeight: '600',
-                        borderRadius: '16px',
-                        background: isClickSoundEnabled 
-                          ? 'linear-gradient(145deg, #10b981, #059669)' 
-                          : 'linear-gradient(145deg, #6b7280, #4b5563)',
-                        color: 'white',
-                        border: 'none',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                        boxShadow: isClickSoundEnabled
-                          ? '0 4px 12px rgba(16,185,129,0.4), inset 0 1px 0 rgba(255,255,255,0.2)'
-                          : '0 4px 12px rgba(107,114,128,0.4), inset 0 1px 0 rgba(255,255,255,0.2)',
-                        transform: 'scale(1)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'scale(1)';
-                      }}
-                      onMouseDown={(e) => {
-                        e.currentTarget.style.transform = 'scale(0.98)';
-                      }}
-                      onMouseUp={(e) => {
-                        e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
-                      }}
-                    >
-                      {isClickSoundEnabled ? '🔊 クリック音オン' : '🔇 クリック音オフ'}
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        toggleLearningMode();
-                      }}
-                      style={{
-                        padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
-                        fontSize: isMobile ? '0.875rem' : '1rem',
-                        fontWeight: '600',
-                        borderRadius: '16px',
-                        background: isLearningMode 
-                          ? 'linear-gradient(145deg, #3b82f6, #2563eb)' 
-                          : 'linear-gradient(145deg, #6b7280, #4b5563)',
-                        color: 'white',
-                        border: 'none',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                        boxShadow: isLearningMode
-                          ? '0 4px 12px rgba(59,130,246,0.4), inset 0 1px 0 rgba(255,255,255,0.2)'
-                          : '0 4px 12px rgba(107,114,128,0.4), inset 0 1px 0 rgba(255,255,255,0.2)',
-                        transform: 'scale(1)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'scale(1)';
-                      }}
-                      onMouseDown={(e) => {
-                        e.currentTarget.style.transform = 'scale(0.98)';
-                      }}
-                      onMouseUp={(e) => {
-                        e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
-                      }}
-                    >
-                      {isLearningMode ? '📚 学習モード' : '🎵 ノーマルモード'}
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setShowSettings(true);
-                      }}
-                      style={{
-                        padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
-                        fontSize: isMobile ? '0.875rem' : '1rem',
-                        fontWeight: '600',
-                        borderRadius: '16px',
-                        background: 'linear-gradient(145deg, #f59e0b, #d97706)',
-                        color: 'white',
-                        border: 'none',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                        boxShadow: '0 4px 12px rgba(245,158,11,0.4), inset 0 1px 0 rgba(255,255,255,0.2)',
-                        transform: 'scale(1)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'scale(1)';
-                      }}
-                      onMouseDown={(e) => {
-                        e.currentTarget.style.transform = 'scale(0.98)';
-                      }}
-                      onMouseUp={(e) => {
-                        e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
-                      }}
-                    >
-                      ⚙️ 設定
-                    </button>
-                  </>
-                )}
-                
                 {/* 「発音表記について」カテゴリーボタン（最初に表示） */}
                 {categories.find(c => c.id === 'pronunciation') && (
                   <button
@@ -2208,6 +2052,25 @@ export default function Home() {
                     }}
                   >
                     {isClickSoundEnabled ? '🔊 クリック音オン' : '🔇 クリック音オフ'}
+                  </button>
+                  <button
+                    onClick={() => toggleLearningMode()}
+                    style={{ 
+                      height: 36, 
+                      borderRadius: 8, 
+                      border: '1px solid #e5e7eb', 
+                      background: isLearningMode ? '#eff6ff' : '#f9fafb', 
+                      cursor: 'pointer', 
+                      fontWeight: 600,
+                      fontSize: 13,
+                      color: '#374151',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6
+                    }}
+                  >
+                    {isLearningMode ? '📚 学習モード' : '🎵 ノーマルモード'}
                   </button>
 
                   <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
