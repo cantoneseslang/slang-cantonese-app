@@ -67,7 +67,11 @@ export default function CantoneseIntroPage() {
         <p>
           ここまで読んでいただいた方は、きっと広東語に興味をお持ちの方。
           まずは本アプリ「カントン語音れん」の使い方をみてみましょう。
-          (<a href="/about" style={{ color: '#3b82f6', textDecoration: 'underline' }}>https://slang-cantonese-app.vercel.app/about</a>)
+          <iframe 
+            src="https://slang-cantonese-app.vercel.app/about" 
+            style={{ width: '100%', height: '600px', border: 'none', marginTop: '1rem' }}
+            title="カントン語音れんの使い方"
+          />
         </p>
       </section>
     </main>

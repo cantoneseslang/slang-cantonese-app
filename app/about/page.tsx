@@ -102,9 +102,19 @@ export default function AboutPage() {
       </div>
 
       <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: '#f3f4f6', borderRadius: '8px' }}>
-        <p style={{ fontSize: '0.875rem', color: '#374151' }}>
+        <p style={{ fontSize: '0.875rem', color: '#374151', marginBottom: '1rem' }}>
           この文書に記載されている繁体字は、国際標準の『ISO/IEC 10646-1:2000』および『香港補助文字セット – 2001』（Hong Kong Supplementary Character Set – 2001）に含まれる全ての漢字、合計29,145個を含んでいます。
-          (<a href="/" style={{ color: '#3b82f6', textDecoration: 'underline' }}>https://slang-cantonese-app.vercel.app/</a>)
+        </p>
+        <p style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+          さてそれでは早速「カントン語音れん」を始めましょう
+        </p>
+        <p style={{ fontSize: '0.875rem', color: '#374151' }}>
+          このURLは「カントン語音れん」の埋め込み用です
+          <iframe 
+            src="https://slang-cantonese-app.vercel.app/" 
+            style={{ width: '100%', height: '800px', border: 'none', marginTop: '1rem' }}
+            title="カントン語音れん"
+          />
         </p>
       </div>
     </div>
