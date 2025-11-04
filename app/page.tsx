@@ -2149,12 +2149,15 @@ export default function Home() {
                 position: 'absolute',
                 right: 0,
                 marginTop: 8,
-                width: 280,
+                width: isMobile ? 'calc(100vw - 20px)' : 400,
+                maxWidth: '90vw',
                 background: '#fff',
                 border: '1px solid rgba(0,0,0,0.08)',
                 borderRadius: 12,
                 boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                maxHeight: '90vh',
+                overflowY: 'auto'
               }}>
                 <div style={{ padding: '12px 14px', borderBottom: '1px solid #f1f5f9' }}>
                   <div style={{ fontSize: 12, color: '#6b7280' }}>サインイン中</div>
@@ -2188,7 +2191,7 @@ export default function Home() {
                     <div style={{ marginLeft: 'auto', color: '#111827', fontWeight: 600 }}>日本語</div>
                   </div>
                   <button
-                    onClick={() => { setShowAccountMenu(false); toggleClickSound(); }}
+                    onClick={() => toggleClickSound()}
                     style={{ 
                       height: 36, 
                       borderRadius: 8, 
@@ -2209,20 +2212,332 @@ export default function Home() {
 
                   <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
 
-                  <div style={{ fontSize: 12, color: '#6b7280' }}>アカウント</div>
-                  <button
-                    onClick={() => { setShowAccountMenu(false); setShowSettings(true); }}
-                    style={{ 
-                      height: 36, 
-                      borderRadius: 8, 
-                      border: '1px solid #e5e7eb', 
-                      background: '#fff', 
-                      cursor: 'pointer', 
-                      fontWeight: 600,
-                      fontSize: 13,
-                      color: '#374151'
-                    }}
-                  >⚙️ 設定</button>
+                  <div style={{ fontSize: 12, color: '#6b7280' }}>アカウント情報</div>
+                  
+                  {/* ユーザーネーム */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, color: '#6b7280', marginBottom: 4 }}>ユーザーネーム</label>
+                    {!isEditingUsername ? (
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <div style={{
+                          flex: 1,
+                          padding: '6px 8px',
+                          backgroundColor: '#f9fafb',
+                          borderRadius: 6,
+                          border: '1px solid #e5e7eb',
+                          fontSize: 12,
+                          color: '#1f2937'
+                        }}>
+                          {user?.user_metadata?.username || 'ユーザーネーム未設定'}
+                        </div>
+                        <button
+                          onClick={() => {
+                            setIsEditingUsername(true);
+                            setNewUsername(user?.user_metadata?.username || '');
+                            setUsernameError(null);
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: 6,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          変更
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        {usernameError && (
+                          <div style={{
+                            padding: '6px 8px',
+                            backgroundColor: '#fee2e2',
+                            border: '1px solid #fecaca',
+                            borderRadius: 6,
+                            color: '#dc2626',
+                            fontSize: 11,
+                            marginBottom: 6
+                          }}>
+                            {usernameError}
+                          </div>
+                        )}
+                        <input
+                          type="text"
+                          value={newUsername}
+                          onChange={(e) => setNewUsername(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '6px 8px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: 6,
+                            fontSize: 12,
+                            marginBottom: 6,
+                            boxSizing: 'border-box'
+                          }}
+                          placeholder="新しいユーザーネーム"
+                        />
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            type="button"
+                            onClick={handleUsernameChange}
+                            style={{
+                              flex: 1,
+                              padding: '6px',
+                              backgroundColor: '#10b981',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: 6,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            保存
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsEditingUsername(false);
+                              setUsernameError(null);
+                              setNewUsername('');
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '6px',
+                              backgroundColor: '#6b7280',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: 6,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            キャンセル
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* パスワード */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, color: '#6b7280', marginBottom: 4 }}>パスワード</label>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <div style={{
+                        flex: 1,
+                        padding: '6px 8px',
+                        backgroundColor: '#f9fafb',
+                        borderRadius: 6,
+                        border: '1px solid #e5e7eb',
+                        fontSize: 12,
+                        color: '#1f2937'
+                      }}>
+                        ••••••••
+                      </div>
+                      <button
+                        onClick={() => setShowPasswordChange(!showPasswordChange)}
+                        style={{
+                          padding: '6px 12px',
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        変更
+                      </button>
+                    </div>
+                    
+                    {/* パスワード変更フォーム */}
+                    {showPasswordChange && (
+                      <div style={{
+                        marginTop: 8,
+                        padding: 8,
+                        backgroundColor: '#f0f9ff',
+                        borderRadius: 6,
+                        border: '1px solid #bfdbfe'
+                      }}>
+                        {passwordError && (
+                          <div style={{
+                            padding: '6px 8px',
+                            backgroundColor: '#fee2e2',
+                            border: '1px solid #fecaca',
+                            borderRadius: 6,
+                            color: '#dc2626',
+                            fontSize: 11,
+                            marginBottom: 6
+                          }}>
+                            {passwordError}
+                          </div>
+                        )}
+                        {passwordSuccess && (
+                          <div style={{
+                            padding: '6px 8px',
+                            backgroundColor: '#dcfce7',
+                            border: '1px solid #bbf7d0',
+                            borderRadius: 6,
+                            color: '#16a34a',
+                            fontSize: 11,
+                            marginBottom: 6
+                          }}>
+                            パスワードが正常に変更されました
+                          </div>
+                        )}
+                        <div style={{ marginBottom: 6, position: 'relative' }}>
+                          <input
+                            type={showNewPassword ? 'text' : 'password'}
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '6px 8px',
+                              paddingRight: '2rem',
+                              border: '1px solid #d1d5db',
+                              borderRadius: 6,
+                              fontSize: 12,
+                              boxSizing: 'border-box'
+                            }}
+                            placeholder="新しいパスワード（6文字以上）"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                            style={{
+                              position: 'absolute',
+                              right: '6px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                              color: '#6b7280',
+                              padding: '2px'
+                            }}
+                          >
+                            {showNewPassword ? '🙈' : '👁️'}
+                          </button>
+                        </div>
+                        <div style={{ marginBottom: 6, position: 'relative' }}>
+                          <input
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '6px 8px',
+                              paddingRight: '2rem',
+                              border: '1px solid #d1d5db',
+                              borderRadius: 6,
+                              fontSize: 12,
+                              boxSizing: 'border-box'
+                            }}
+                            placeholder="新しいパスワード（確認）"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            style={{
+                              position: 'absolute',
+                              right: '6px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                              color: '#6b7280',
+                              padding: '2px'
+                            }}
+                          >
+                            {showConfirmPassword ? '🙈' : '👁️'}
+                          </button>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            type="button"
+                            onClick={handlePasswordChange}
+                            style={{
+                              flex: 1,
+                              padding: '6px',
+                              backgroundColor: '#10b981',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: 6,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            保存
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowPasswordChange(false);
+                              setPasswordError(null);
+                              setPasswordSuccess(false);
+                              setNewPassword('');
+                              setConfirmPassword('');
+                              setShowNewPassword(false);
+                              setShowConfirmPassword(false);
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '6px',
+                              backgroundColor: '#6b7280',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: 6,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            キャンセル
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Noteのリンク */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, color: '#6b7280', marginBottom: 4 }}>学習リソース</label>
+                    <a
+                      href="https://note.com/bestinksalesman/n/na050a2a8ccfc"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'block',
+                        padding: '8px 12px',
+                        backgroundColor: '#f0f9ff',
+                        borderRadius: 6,
+                        border: '1px solid #bfdbfe',
+                        fontSize: 12,
+                        color: '#1e40af',
+                        textDecoration: 'none',
+                        fontWeight: 600,
+                        textAlign: 'center'
+                      }}
+                      onClick={() => setShowAccountMenu(false)}
+                    >
+                      📚 広東語の日常会話フレーズ100選
+                    </a>
+                  </div>
+
+                  <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
+
                   <button
                     onClick={async () => { setShowAccountMenu(false); await supabase.auth.signOut(); router.refresh(); }}
                     style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700 }}
