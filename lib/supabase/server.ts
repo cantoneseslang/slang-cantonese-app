@@ -1,7 +1,8 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-export async function createClient() {
+export async function createClient(): Promise<SupabaseClient> {
   // Next.js 16ではcookies()がPromiseを返す場合があるためawaitを使用
   const cookieStore = await cookies();
 
