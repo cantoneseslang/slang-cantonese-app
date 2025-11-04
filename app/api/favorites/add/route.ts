@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
     let supabase;
     try {
-      supabase = createClient();
+      supabase = await createClient();
     } catch (clientError) {
       console.error('Error creating Supabase client:', clientError);
       return NextResponse.json(
