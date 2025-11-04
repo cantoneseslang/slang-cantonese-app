@@ -3221,6 +3221,11 @@ export default function Home() {
             fontSize: isMobile ? '0.85rem' : '0.95rem',
             alignItems: 'center'
           }}>
+            <a href="/cantonese" style={{ 
+              textDecoration: 'underline', 
+              color: '#3b82f6'
+            }}>カントン語（広東語）ってなに？</a>
+            <span style={{ color: '#9ca3af' }}>·</span>
             <a href="/about" style={{ 
               textDecoration: 'underline', 
               color: '#3b82f6',
