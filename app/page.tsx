@@ -1223,7 +1223,8 @@ export default function Home() {
     try { fetch('/api/track-button', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wordChinese: word.chinese, categoryId: currentCategory?.id }) }); } catch {}
     
     if (isLearningMode) {
-      // 学習モード：現在の動作（例文も表示）
+      // 学習モード：例文も表示、音声プレイヤーを表示
+      setForceShowResult(true); // 結果パネルを表示する
       setSearchQuery(word.chinese);
       await handleSearch(word.chinese);
     } else {
