@@ -2374,31 +2374,6 @@ export default function Home() {
                     )}
                   </div>
 
-                  {/* Noteのリンク */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: 11, color: '#6b7280', marginBottom: 4 }}>学習リソース</label>
-                    <a
-                      href="https://note.com/bestinksalesman/n/na050a2a8ccfc"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: 'block',
-                        padding: '8px 12px',
-                        backgroundColor: '#f0f9ff',
-                        borderRadius: 6,
-                        border: '1px solid #bfdbfe',
-                        fontSize: 12,
-                        color: '#1e40af',
-                        textDecoration: 'none',
-                        fontWeight: 600,
-                        textAlign: 'center'
-                      }}
-                      onClick={() => setShowAccountMenu(false)}
-                    >
-                      📚 広東語の日常会話フレーズ100選
-                    </a>
-                  </div>
-
                   <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
 
                   <button
