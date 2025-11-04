@@ -12,6 +12,16 @@ export default function AdminPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -67,35 +77,50 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
+      <div style={{ padding: isMobile ? '1rem' : '2rem', textAlign: 'center' }}>
         <p>読み込み中...</p>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '2rem' }}>
+    <div style={{ 
+      padding: isMobile ? '1rem' : '2rem', 
+      maxWidth: '1200px', 
+      margin: '0 auto',
+      minHeight: '100vh'
+    }}>
+      <h1 style={{ 
+        fontSize: isMobile ? '1.5rem' : '2rem', 
+        fontWeight: 'bold', 
+        marginBottom: isMobile ? '1rem' : '2rem' 
+      }}>
         管理者画面
       </h1>
 
       {/* アナリティクスセクション */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+      <div style={{ marginBottom: isMobile ? '1.5rem' : '2rem' }}>
+        <h2 style={{ 
+          fontSize: isMobile ? '1.125rem' : '1.5rem', 
+          fontWeight: 'bold', 
+          marginBottom: isMobile ? '0.75rem' : '1rem' 
+        }}>
           ボタンアナリティクス
         </h2>
         <button
           onClick={loadAnalytics}
           disabled={loadingAnalytics}
           style={{
-            padding: '0.75rem 1.5rem',
+            padding: isMobile ? '0.625rem 1rem' : '0.75rem 1.5rem',
             backgroundColor: '#3b82f6',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
             cursor: loadingAnalytics ? 'not-allowed' : 'pointer',
             fontWeight: 600,
-            marginBottom: '1rem'
+            marginBottom: '1rem',
+            fontSize: isMobile ? '0.875rem' : '1rem',
+            width: isMobile ? '100%' : 'auto'
           }}
         >
           {loadingAnalytics ? '読み込み中...' : 'アナリティクスを読み込む'}
@@ -103,19 +128,27 @@ export default function AdminPage() {
 
         {analytics && (
           <div style={{
-            padding: '1.5rem',
+            padding: isMobile ? '1rem' : '1.5rem',
             backgroundColor: '#f9fafb',
             borderRadius: '8px',
             border: '1px solid #e5e7eb'
           }}>
-            <div style={{ marginBottom: '1rem' }}>
+            <div style={{ 
+              marginBottom: '1rem',
+              fontSize: isMobile ? '0.875rem' : '1rem'
+            }}>
               <strong>総ボタン数:</strong> {analytics.totalButtons}
             </div>
             <div style={{ marginBottom: '1rem' }}>
-              <strong>カテゴリー別ボタン数:</strong>
-              <ul style={{ marginTop: '0.5rem', paddingLeft: '1.5rem' }}>
+              <strong style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>カテゴリー別ボタン数:</strong>
+              <ul style={{ 
+                marginTop: '0.5rem', 
+                paddingLeft: isMobile ? '1rem' : '1.5rem',
+                fontSize: isMobile ? '0.875rem' : '1rem',
+                lineHeight: 1.6
+              }}>
                 {Object.entries(analytics.categoryButtons || {}).map(([category, count]: [string, any]) => (
-                  <li key={category}>
+                  <li key={category} style={{ marginBottom: '0.25rem' }}>
                     {category}: {count}個
                   </li>
                 ))}
@@ -127,21 +160,27 @@ export default function AdminPage() {
 
       {/* ユーザー管理セクション */}
       <div>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+        <h2 style={{ 
+          fontSize: isMobile ? '1.125rem' : '1.5rem', 
+          fontWeight: 'bold', 
+          marginBottom: isMobile ? '0.75rem' : '1rem' 
+        }}>
           ユーザー管理
         </h2>
         <button
           onClick={loadUsers}
           disabled={loadingUsers}
           style={{
-            padding: '0.75rem 1.5rem',
+            padding: isMobile ? '0.625rem 1rem' : '0.75rem 1.5rem',
             backgroundColor: '#10b981',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
             cursor: loadingUsers ? 'not-allowed' : 'pointer',
             fontWeight: 600,
-            marginBottom: '1rem'
+            marginBottom: '1rem',
+            fontSize: isMobile ? '0.875rem' : '1rem',
+            width: isMobile ? '100%' : 'auto'
           }}
         >
           {loadingUsers ? '読み込み中...' : 'ユーザー一覧を読み込む'}
@@ -149,33 +188,62 @@ export default function AdminPage() {
 
         {users.length > 0 && (
           <div style={{
-            padding: '1.5rem',
+            padding: isMobile ? '1rem' : '1.5rem',
             backgroundColor: '#f9fafb',
             borderRadius: '8px',
             border: '1px solid #e5e7eb'
           }}>
-            <div style={{ marginBottom: '1rem' }}>
+            <div style={{ 
+              marginBottom: '1rem',
+              fontSize: isMobile ? '0.875rem' : '1rem'
+            }}>
               <strong>総ユーザー数:</strong> {users.length}
             </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <table style={{ 
+                width: '100%', 
+                borderCollapse: 'collapse',
+                minWidth: isMobile ? '600px' : 'auto',
+                fontSize: isMobile ? '0.75rem' : '1rem'
+              }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
-                    <th style={{ padding: '0.75rem', textAlign: 'left' }}>メールアドレス</th>
-                    <th style={{ padding: '0.75rem', textAlign: 'left' }}>会員種別</th>
-                    <th style={{ padding: '0.75rem', textAlign: 'left' }}>登録日</th>
+                    <th style={{ 
+                      padding: isMobile ? '0.5rem' : '0.75rem', 
+                      textAlign: 'left',
+                      whiteSpace: 'nowrap'
+                    }}>メールアドレス</th>
+                    <th style={{ 
+                      padding: isMobile ? '0.5rem' : '0.75rem', 
+                      textAlign: 'left',
+                      whiteSpace: 'nowrap'
+                    }}>会員種別</th>
+                    <th style={{ 
+                      padding: isMobile ? '0.5rem' : '0.75rem', 
+                      textAlign: 'left',
+                      whiteSpace: 'nowrap'
+                    }}>登録日</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map((u: any) => (
                     <tr key={u.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                      <td style={{ padding: '0.75rem' }}>{u.email}</td>
-                      <td style={{ padding: '0.75rem' }}>
+                      <td style={{ 
+                        padding: isMobile ? '0.5rem' : '0.75rem',
+                        wordBreak: 'break-all'
+                      }}>{u.email}</td>
+                      <td style={{ 
+                        padding: isMobile ? '0.5rem' : '0.75rem',
+                        whiteSpace: 'nowrap'
+                      }}>
                         {u.membership_type === 'free' ? 'ブロンズ' : 
                          u.membership_type === 'subscription' ? 'シルバー' : 
                          u.membership_type === 'lifetime' ? 'ゴールド' : '不明'}
                       </td>
-                      <td style={{ padding: '0.75rem' }}>
+                      <td style={{ 
+                        padding: isMobile ? '0.5rem' : '0.75rem',
+                        whiteSpace: 'nowrap'
+                      }}>
                         {u.created_at ? new Date(u.created_at).toLocaleDateString('ja-JP') : '-'}
                       </td>
                     </tr>
@@ -187,17 +255,19 @@ export default function AdminPage() {
         )}
       </div>
 
-      <div style={{ marginTop: '2rem' }}>
+      <div style={{ marginTop: isMobile ? '1.5rem' : '2rem' }}>
         <button
           onClick={() => router.push('/')}
           style={{
-            padding: '0.75rem 1.5rem',
+            padding: isMobile ? '0.625rem 1rem' : '0.75rem 1.5rem',
             backgroundColor: '#6b7280',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
             cursor: 'pointer',
-            fontWeight: 600
+            fontWeight: 600,
+            fontSize: isMobile ? '0.875rem' : '1rem',
+            width: isMobile ? '100%' : 'auto'
           }}
         >
           トップページに戻る
