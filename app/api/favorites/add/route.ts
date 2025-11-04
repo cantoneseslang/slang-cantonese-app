@@ -110,19 +110,40 @@ export async function POST(request: NextRequest) {
       insertData.word_japanese = wordJapanese;
     }
     
-    const { error: insertError } = await supabase
+    const { data: insertData_result, error: insertError } = await supabase
       .from('favorites')
-      .insert(insertData);
+      .insert(insertData)
+      .select();
     
     if (insertError) {
+      console.error('Insert error details:', {
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        insertData
+      });
+      
       if (insertError.code === 'PGRST116' || insertError.message.includes('relation') || insertError.message.includes('schema') || insertError.message.includes('Could not find')) {
         return NextResponse.json({
           error: 'Favorites table not found',
           requiresTable: true,
-          details: 'Supabaseでfavoritesテーブルを作成する必要があります。docs/favorites-table.sqlを実行してください。'
+          details: 'Supabaseでfavoritesテーブルを作成する必要があります。docs/favorites-table.sqlを実行してください。',
+          errorCode: insertError.code,
+          errorMessage: insertError.message
         }, { status: 500 });
       }
-      console.error('Insert error:', insertError);
+      
+      // RLSポリシーエラーの可能性
+      if (insertError.code === '42501' || insertError.message.includes('permission') || insertError.message.includes('policy')) {
+        return NextResponse.json({
+          error: 'Permission denied',
+          details: 'RLS（Row Level Security）ポリシーが設定されていない可能性があります。SupabaseでRLSポリシーを設定してください。',
+          errorCode: insertError.code,
+          errorMessage: insertError.message
+        }, { status: 500 });
+      }
+      
       throw insertError;
     }
     
@@ -132,10 +153,22 @@ export async function POST(request: NextRequest) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const errorDetails = error instanceof Error ? error.stack : String(error);
     
+    // エラーオブジェクトの詳細情報を取得
+    const errorInfo: any = {
+      message: errorMessage,
+    };
+    
+    if (error && typeof error === 'object') {
+      if ('code' in error) errorInfo.code = (error as any).code;
+      if ('details' in error) errorInfo.details = (error as any).details;
+      if ('hint' in error) errorInfo.hint = (error as any).hint;
+    }
+    
     return NextResponse.json(
       { 
         error: 'Failed to add favorite', 
         details: errorMessage,
+        errorInfo: errorInfo,
         stack: process.env.NODE_ENV === 'development' ? errorDetails : undefined
       },
       { status: 500 }
