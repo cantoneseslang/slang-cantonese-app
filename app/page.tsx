@@ -2027,6 +2027,120 @@ export default function Home() {
                     }}
                   >パワーアップ</button>
 
+                  {/* 会員種別 */}
+                  <div style={{ marginTop: '4px' }}>
+                    <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 6 }}>会員種別</div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {/* ブロンズ会員 */}
+                      <button
+                        onClick={() => handleMembershipChange('free')}
+                        style={{
+                          flex: 1,
+                          padding: '8px 4px',
+                          borderRadius: 8,
+                          border: 'none',
+                          background: membershipType === 'free' 
+                            ? 'linear-gradient(145deg, #d4a574 0%, #cd7f32 50%, #a85f1f 100%)' 
+                            : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
+                          cursor: membershipType === 'free' ? 'default' : 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: 4,
+                          transition: 'all 0.2s',
+                          boxShadow: membershipType === 'free' 
+                            ? '0 4px 12px rgba(205,127,50,0.3)' 
+                            : '0 1px 3px rgba(0,0,0,0.1)',
+                          transform: membershipType === 'free' ? 'scale(1.02)' : 'scale(1)'
+                        }}
+                      >
+                        <span style={{ fontSize: '1.25rem' }}>
+                          {getMembershipIcon('free')}
+                        </span>
+                        <span style={{
+                          fontSize: '10px',
+                          fontWeight: '700',
+                          color: membershipType === 'free' ? '#ffffff' : '#6b7280',
+                          textShadow: membershipType === 'free' ? '0 1px 2px rgba(0,0,0,0.3)' : 'none'
+                        }}>
+                          {getMembershipLabel('free')}
+                        </span>
+                      </button>
+
+                      {/* シルバー会員 */}
+                      <button
+                        onClick={() => handleMembershipChange('subscription')}
+                        style={{
+                          flex: 1,
+                          padding: '8px 4px',
+                          borderRadius: 8,
+                          border: 'none',
+                          background: membershipType === 'subscription' 
+                            ? 'linear-gradient(145deg, #e8e8e8 0%, #c0c0c0 50%, #a8a8a8 100%)' 
+                            : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
+                          cursor: membershipType === 'subscription' ? 'default' : 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: 4,
+                          transition: 'all 0.2s',
+                          boxShadow: membershipType === 'subscription' 
+                            ? '0 4px 12px rgba(192,192,192,0.3)' 
+                            : '0 1px 3px rgba(0,0,0,0.1)',
+                          transform: membershipType === 'subscription' ? 'scale(1.02)' : 'scale(1)'
+                        }}
+                      >
+                        <span style={{ fontSize: '1.25rem' }}>
+                          {getMembershipIcon('subscription')}
+                        </span>
+                        <span style={{
+                          fontSize: '10px',
+                          fontWeight: '700',
+                          color: membershipType === 'subscription' ? '#1f2937' : '#6b7280',
+                          textShadow: membershipType === 'subscription' ? '0 1px 2px rgba(255,255,255,0.5)' : 'none'
+                        }}>
+                          {getMembershipLabel('subscription')}
+                        </span>
+                      </button>
+
+                      {/* ゴールド会員 */}
+                      <button
+                        onClick={() => handleMembershipChange('lifetime')}
+                        style={{
+                          flex: 1,
+                          padding: '8px 4px',
+                          borderRadius: 8,
+                          border: 'none',
+                          background: membershipType === 'lifetime' 
+                            ? 'linear-gradient(145deg, #ffe066 0%, #ffd700 50%, #ffb700 100%)' 
+                            : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
+                          cursor: membershipType === 'lifetime' ? 'default' : 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: 4,
+                          transition: 'all 0.2s',
+                          boxShadow: membershipType === 'lifetime' 
+                            ? '0 4px 12px rgba(255,215,0,0.4)' 
+                            : '0 1px 3px rgba(0,0,0,0.1)',
+                          transform: membershipType === 'lifetime' ? 'scale(1.02)' : 'scale(1)'
+                        }}
+                      >
+                        <span style={{ fontSize: '1.25rem' }}>
+                          {getMembershipIcon('lifetime')}
+                        </span>
+                        <span style={{
+                          fontSize: '10px',
+                          fontWeight: '700',
+                          color: membershipType === 'lifetime' ? '#1f2937' : '#6b7280',
+                          textShadow: membershipType === 'lifetime' ? '0 1px 2px rgba(255,255,255,0.5)' : 'none'
+                        }}>
+                          {getMembershipLabel('lifetime')}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
                   <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
 
                   <div style={{ fontSize: 12, color: '#6b7280' }}>一般</div>
