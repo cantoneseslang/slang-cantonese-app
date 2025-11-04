@@ -2187,10 +2187,42 @@ export default function Home() {
                     <div style={{ color: '#374151' }}>あなたの言語</div>
                     <div style={{ marginLeft: 'auto', color: '#111827', fontWeight: 600 }}>日本語</div>
                   </div>
+                  <button
+                    onClick={() => { setShowAccountMenu(false); toggleClickSound(); }}
+                    style={{ 
+                      height: 36, 
+                      borderRadius: 8, 
+                      border: '1px solid #e5e7eb', 
+                      background: isClickSoundEnabled ? '#f0fdf4' : '#f9fafb', 
+                      cursor: 'pointer', 
+                      fontWeight: 600,
+                      fontSize: 13,
+                      color: '#374151',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6
+                    }}
+                  >
+                    {isClickSoundEnabled ? '🔊 クリック音オン' : '🔇 クリック音オフ'}
+                  </button>
 
                   <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
 
                   <div style={{ fontSize: 12, color: '#6b7280' }}>アカウント</div>
+                  <button
+                    onClick={() => { setShowAccountMenu(false); setShowSettings(true); }}
+                    style={{ 
+                      height: 36, 
+                      borderRadius: 8, 
+                      border: '1px solid #e5e7eb', 
+                      background: '#fff', 
+                      cursor: 'pointer', 
+                      fontWeight: 600,
+                      fontSize: 13,
+                      color: '#374151'
+                    }}
+                  >⚙️ 設定</button>
                   <button
                     onClick={async () => { setShowAccountMenu(false); await supabase.auth.signOut(); router.refresh(); }}
                     style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700 }}
