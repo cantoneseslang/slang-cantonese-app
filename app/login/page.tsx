@@ -58,8 +58,58 @@ function LoginForm() {
     // Also set it on the html element as CSS property
     document.documentElement.style.colorScheme = 'light';
     
+    // Force input styles directly via JavaScript (for Cursor browser and other strict browsers)
+    const forceInputStyles = () => {
+      const inputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="password"], select, textarea');
+      inputs.forEach((input: any) => {
+        if (input && input.style) {
+          // Use setProperty with important flag
+          try {
+            input.style.setProperty('background-color', '#ffffff', 'important');
+            input.style.setProperty('color', '#111827', 'important');
+            input.style.setProperty('-webkit-text-fill-color', '#111827', 'important');
+            input.style.setProperty('border-color', '#d1d5db', 'important');
+          } catch (e) {
+            // Fallback: direct assignment (may not override important styles but will set defaults)
+            input.style.backgroundColor = '#ffffff';
+            input.style.color = '#111827';
+            (input.style as any).webkitTextFillColor = '#111827';
+            input.style.borderColor = '#d1d5db';
+          }
+        }
+      });
+    };
+    
+    // Apply immediately
+    forceInputStyles();
+    
+    // Also apply after a short delay to catch dynamically added inputs
+    const timeoutId = setTimeout(forceInputStyles, 100);
+    
+    // Apply again after a longer delay to ensure styles are applied
+    const timeoutId2 = setTimeout(forceInputStyles, 500);
+    
+    // Use MutationObserver to watch for any input changes
+    const observer = new MutationObserver(() => {
+      forceInputStyles();
+    });
+    
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style', 'class']
+    });
+    
+    // Also periodically force styles (for stubborn browsers like Cursor)
+    const intervalId = setInterval(forceInputStyles, 1000);
+    
     // Cleanup on unmount
     return () => {
+      clearTimeout(timeoutId);
+      clearTimeout(timeoutId2);
+      clearInterval(intervalId);
+      observer.disconnect();
       const existingMeta = document.querySelector('meta[name="color-scheme"]');
       if (existingMeta) {
         existingMeta.remove();
