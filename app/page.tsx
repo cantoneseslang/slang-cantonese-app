@@ -889,10 +889,10 @@ export default function Home() {
 
   // PDFテキスト抽出（pdfjs-dist）
   const extractTextFromPdf = async (file: File, onProgress?: (p: number) => void): Promise<string> => {
-    const pdfjsLib: any = await import('pdfjs-dist/build/pdf');
+    const pdfjsLib: any = await import('pdfjs-dist');
     // CDNのworkerを設定（バンドル不要）
     if (pdfjsLib?.GlobalWorkerOptions) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
     }
     const arrayBuffer = await file.arrayBuffer();
     const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
