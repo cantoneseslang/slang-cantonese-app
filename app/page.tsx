@@ -369,7 +369,7 @@ export default function Home() {
   };
 
   // 長押し終了
-  const handleLongPressEnd = (e?: React.TouchEvent | React.MouseEvent) => {
+  const handleLongPressEnd = (e?: React.TouchEvent | React.MouseEvent, word?: Word, categoryId?: string) => {
     const wasLongPress = longPressCompletedRef.current;
     
     // 長押しが完了していた場合のみイベントを止める
@@ -381,13 +381,24 @@ export default function Home() {
       // フラグを少し遅延してリセット（onClickを防ぐため）
       setTimeout(() => {
         longPressCompletedRef.current = false;
-      }, 200);
+      }, 300);
     } else {
       // 長押しが完了していない場合はタイマーをクリア（通常クリックを許可）
       if (longPressTimerRef.current) {
         clearTimeout(longPressTimerRef.current);
         longPressTimerRef.current = null;
       }
+      
+      // 通常クリックの場合、wordがあればhandleWordClickを呼ぶ
+      if (word && !wasLongPress) {
+        // 少し遅延を入れて、タイマーが完全にクリアされたことを確認
+        setTimeout(() => {
+          if (!longPressCompletedRef.current && longPressWordRef.current === null) {
+            handleWordClick(word);
+          }
+        }, 10);
+      }
+      
       longPressWordRef.current = null;
       longPressCompletedRef.current = false;
     }
@@ -3021,21 +3032,19 @@ export default function Home() {
                                   e.stopPropagation();
                                   return;
                                 }
-                                // 通常クリックの場合は音声を再生
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleWordClick(word);
+                                // onClickはonMouseUpで処理するため、ここでは何もしない
+                                // （ただし、念のためフォールバックとして残す）
                               }}
                               onTouchStart={(e) => {
                                 handleLongPressStart(word, currentCategory?.id || '', e);
                               }}
-                              onTouchEnd={handleLongPressEnd}
-                              onTouchCancel={handleLongPressEnd}
+                              onTouchEnd={(e) => handleLongPressEnd(e, word, currentCategory?.id)}
+                              onTouchCancel={(e) => handleLongPressEnd(e, word, currentCategory?.id)}
                               onMouseDown={(e) => {
                                 handleLongPressStart(word, currentCategory?.id || '', e);
                               }}
-                              onMouseUp={handleLongPressEnd}
-                              onMouseLeave={handleLongPressEnd}
+                              onMouseUp={(e) => handleLongPressEnd(e, word, currentCategory?.id)}
+                              onMouseLeave={(e) => handleLongPressEnd(e, word, currentCategory?.id)}
                               style={{
                                 background: isActive 
                                   ? 'linear-gradient(145deg, #10b981, #059669)' 
@@ -3126,21 +3135,19 @@ export default function Home() {
                                   e.stopPropagation();
                                   return;
                                 }
-                                // 通常クリックの場合は音声を再生
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleWordClick(word);
+                                // onClickはonMouseUpで処理するため、ここでは何もしない
+                                // （ただし、念のためフォールバックとして残す）
                               }}
                               onTouchStart={(e) => {
                                 handleLongPressStart(word, currentCategory?.id || '', e);
                               }}
-                              onTouchEnd={handleLongPressEnd}
-                              onTouchCancel={handleLongPressEnd}
+                              onTouchEnd={(e) => handleLongPressEnd(e, word, currentCategory?.id)}
+                              onTouchCancel={(e) => handleLongPressEnd(e, word, currentCategory?.id)}
                               onMouseDown={(e) => {
                                 handleLongPressStart(word, currentCategory?.id || '', e);
                               }}
-                              onMouseUp={handleLongPressEnd}
-                              onMouseLeave={handleLongPressEnd}
+                              onMouseUp={(e) => handleLongPressEnd(e, word, currentCategory?.id)}
+                              onMouseLeave={(e) => handleLongPressEnd(e, word, currentCategory?.id)}
                               style={{
                                 background: isActive 
                                   ? 'linear-gradient(145deg, #10b981, #059669)' 
@@ -3228,21 +3235,19 @@ export default function Home() {
                                   e.stopPropagation();
                                   return;
                                 }
-                                // 通常クリックの場合は音声を再生
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleWordClick(word);
+                                // onClickはonMouseUpで処理するため、ここでは何もしない
+                                // （ただし、念のためフォールバックとして残す）
                               }}
                               onTouchStart={(e) => {
                                 handleLongPressStart(word, currentCategory?.id || '', e);
                               }}
-                              onTouchEnd={handleLongPressEnd}
-                              onTouchCancel={handleLongPressEnd}
+                              onTouchEnd={(e) => handleLongPressEnd(e, word, currentCategory?.id)}
+                              onTouchCancel={(e) => handleLongPressEnd(e, word, currentCategory?.id)}
                               onMouseDown={(e) => {
                                 handleLongPressStart(word, currentCategory?.id || '', e);
                               }}
-                              onMouseUp={handleLongPressEnd}
-                              onMouseLeave={handleLongPressEnd}
+                              onMouseUp={(e) => handleLongPressEnd(e, word, currentCategory?.id)}
+                              onMouseLeave={(e) => handleLongPressEnd(e, word, currentCategory?.id)}
                               style={{
                                 background: isActive 
                                   ? 'linear-gradient(145deg, #10b981, #059669)' 
@@ -3330,21 +3335,19 @@ export default function Home() {
                                   e.stopPropagation();
                                   return;
                                 }
-                                // 通常クリックの場合は音声を再生
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleWordClick(word);
+                                // onClickはonMouseUpで処理するため、ここでは何もしない
+                                // （ただし、念のためフォールバックとして残す）
                               }}
                               onTouchStart={(e) => {
                                 handleLongPressStart(word, currentCategory?.id || '', e);
                               }}
-                              onTouchEnd={handleLongPressEnd}
-                              onTouchCancel={handleLongPressEnd}
+                              onTouchEnd={(e) => handleLongPressEnd(e, word, currentCategory?.id)}
+                              onTouchCancel={(e) => handleLongPressEnd(e, word, currentCategory?.id)}
                               onMouseDown={(e) => {
                                 handleLongPressStart(word, currentCategory?.id || '', e);
                               }}
-                              onMouseUp={handleLongPressEnd}
-                              onMouseLeave={handleLongPressEnd}
+                              onMouseUp={(e) => handleLongPressEnd(e, word, currentCategory?.id)}
+                              onMouseLeave={(e) => handleLongPressEnd(e, word, currentCategory?.id)}
                               style={{
                                 background: isActive 
                                   ? 'linear-gradient(145deg, #10b981, #059669)' 
@@ -3435,16 +3438,14 @@ export default function Home() {
                       e.stopPropagation();
                       return;
                     }
-                    // 通常クリックの場合は音声を再生
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleWordClick(word);
+                    // onClickはonMouseUpで処理するため、ここでは何もしない
+                    // （ただし、念のためフォールバックとして残す）
                   }}
                   onTouchStart={(e) => {
                     handleLongPressStart(word, originalCategoryId, e);
                   }}
-                  onTouchEnd={handleLongPressEnd}
-                  onTouchCancel={handleLongPressEnd}
+                  onTouchEnd={(e) => handleLongPressEnd(e, word, originalCategoryId)}
+                  onTouchCancel={(e) => handleLongPressEnd(e, word, originalCategoryId)}
                   style={{
                     background: isActive 
                       ? 'linear-gradient(145deg, #10b981, #059669)' 
@@ -3474,7 +3475,7 @@ export default function Home() {
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'scale(1)';
                     e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)';
-                    handleLongPressEnd();
+                    handleLongPressEnd(e, word, originalCategoryId);
                   }}
                   onMouseDown={(e) => {
                     e.currentTarget.style.transform = 'scale(0.98)';
@@ -3485,7 +3486,10 @@ export default function Home() {
                   }}
                   onMouseUp={(e) => {
                     e.currentTarget.style.transform = 'scale(1.03) translateY(-2px)';
-                    handleLongPressEnd();
+                    const originalCategoryId = selectedCategory === 'favorites' 
+                      ? (favoriteWordCategoryMapRef.current.get(word.chinese) || '')
+                      : (currentCategory?.id || '');
+                    handleLongPressEnd(e, word, originalCategoryId);
                   }}
                 >
                   {/* 星マーク（右上） */}
