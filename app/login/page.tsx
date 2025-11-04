@@ -438,7 +438,9 @@ function LoginForm() {
                   padding: '0.75rem',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '1rem'
+                  fontSize: '1rem',
+                  backgroundColor: '#ffffff',
+                  color: '#111827'
                 }}
                 placeholder="ユーザーネームまたはメールアドレス"
               />
@@ -506,7 +508,9 @@ function LoginForm() {
                   padding: '0.75rem',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '1rem'
+                  fontSize: '1rem',
+                  backgroundColor: '#ffffff',
+                  color: '#111827'
                 }}
                 placeholder="ユーザーネーム"
               />
@@ -532,7 +536,9 @@ function LoginForm() {
                 padding: '0.75rem',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
-                fontSize: '1rem'
+                fontSize: '1rem',
+                backgroundColor: '#ffffff',
+                color: '#111827'
               }}
               placeholder={isSignUp ? 'email@example.com' : 'ユーザーネームまたはメールアドレス'}
             />
@@ -566,7 +572,9 @@ function LoginForm() {
                 padding: '0.75rem',
                 border: passwordError ? '1px solid #ef4444' : '1px solid #d1d5db',
                 borderRadius: '6px',
-                fontSize: '1rem'
+                fontSize: '1rem',
+                backgroundColor: '#ffffff',
+                color: '#111827'
               }}
               placeholder={isSignUp ? '6文字以上（英文字・数字・記号の組み合わせ）' : 'パスワード'}
               minLength={6}
@@ -758,7 +766,9 @@ function LoginForm() {
                     border: '1px solid #d1d5db',
                     borderRadius: '6px',
                     fontSize: '1rem',
-                    marginBottom: '0.75rem'
+                    marginBottom: '0.75rem',
+                    backgroundColor: '#ffffff',
+                    color: '#111827'
                   }}
                 >
                   <option value="">選択してください</option>
@@ -782,7 +792,9 @@ function LoginForm() {
                       padding: '0.75rem',
                       border: '1px solid #d1d5db',
                       borderRadius: '6px',
-                      fontSize: '1rem'
+                      fontSize: '1rem',
+                      backgroundColor: '#ffffff',
+                      color: '#111827'
                     }}
                   />
                 )}
