@@ -1,21 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import categoriesData from '@/data/categories.json';
 
-export default function AboutPage() {
-  const [totalButtons, setTotalButtons] = useState<number>(0);
+interface Category {
+  words?: Array<{ chinese: string; japanese: string }>;
+  practiceGroups?: Array<{
+    name: string;
+    words: Array<{ chinese: string; japanese: string }>;
+  }>;
+}
 
-  useEffect(() => {
-    // カテゴリーデータから全ボタン数を計算
+export default function AboutPage() {
+  // カテゴリーデータから全ボタン数を計算（useMemoで一度だけ計算）
+  const totalButtons = useMemo(() => {
     let count = 0;
     if (Array.isArray(categoriesData)) {
-      categoriesData.forEach((category: any) => {
+      (categoriesData as Category[]).forEach((category) => {
         if (category.words && Array.isArray(category.words)) {
           count += category.words.length;
         }
         if (category.practiceGroups && Array.isArray(category.practiceGroups)) {
-          category.practiceGroups.forEach((group: any) => {
+          category.practiceGroups.forEach((group) => {
             if (group.words && Array.isArray(group.words)) {
               count += group.words.length;
             }
@@ -23,7 +29,7 @@ export default function AboutPage() {
         }
       });
     }
-    setTotalButtons(count);
+    return count;
   }, []);
 
   return (
