@@ -104,7 +104,8 @@ async function translateJapaneseToCantonese(japaneseText: string): Promise<strin
     
     // 不要な記号や引用符、説明文を削除
     translatedText = translatedText
-      .replace(/^["'「」『』]|["'「」『』]$/g, '') // 引用符を削除
+      .replace(/^["'「」『』\[\]]|["'「」『』\[\]]$/g, '') // 引用符と角括弧を削除
+      .replace(/\[|\]/g, '') // 文中の角括弧も削除
       .replace(/^(広東語|Cantonese|Translation|翻訳)[:：]\s*/i, '') // 説明文を削除
       .replace(/^.*?[:：]\s*/, '') // コロン以降の説明を削除
       .trim();
@@ -172,8 +173,11 @@ async function generateExampleSentence(word: string, originalJapanese?: string |
     const jsonResponse = await response.json();
     let fullExample = jsonResponse.choices[0].message.content.trim();
     
-    // 不要な記号や引用符を削除
-    fullExample = fullExample.replace(/^["'「」『』]|["'「」『』]$/g, '');
+    // 不要な記号や引用符、角括弧を削除
+    fullExample = fullExample
+      .replace(/^["'「」『』\[\]]|["'「」『』\[\]]$/g, '') // 先頭・末尾の引用符と角括弧を削除
+      .replace(/\[|\]/g, '') // 文中の角括弧も削除
+      .trim();
     
     // 広東語部分と日本語翻訳部分を分離
     let cantonesePart = '';
