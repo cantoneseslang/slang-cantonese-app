@@ -2050,134 +2050,119 @@ export default function Home() {
       source.start(0);
     }
 
-    // 連続発音
-    const texts = sequence.split(',').map(t => t.trim());
-    const textMap: { [key: string]: string } = {
-      '3': '3',
-      '9': '9',
-      '4': '4',
-      '0': '0',
-      '5': '5',
-      '2': '2',
-      '7': '7',
-      '8': '8',
-      '6': '6'
-    };
-
     // 連続発音ボタンを緑色に点灯
     if (button) {
       button.style.background = 'linear-gradient(145deg, #10b981, #059669)';
       button.style.color = 'white';
     }
     
-    // 個別ボタンの点灯を防ぐため、activeWordIdは設定しない
+    // テキスト全体を一度に送信（例: "3,9,4,0,5,2" または "7,8,6"）
+    // カンマを読点に変換して自然な読み上げにする
+    const textToSpeak = sequence.split(',').map(t => t.trim()).join('、');
+    console.log('連続発音テキスト:', textToSpeak);
     
-    for (let i = 0; i < texts.length; i++) {
-      const text = textMap[texts[i]] || texts[i];
-      
-      try {
-        const audioResponse = await fetch('/api/generate-speech', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ text }),
-        });
+    try {
+      const audioResponse = await fetch('/api/generate-speech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: textToSpeak }),
+      });
 
-        if (!audioResponse.ok) {
-          console.error('音声生成エラー:', audioResponse.status, await audioResponse.text());
-          continue;
+      if (!audioResponse.ok) {
+        console.error('音声生成エラー:', audioResponse.status, await audioResponse.text());
+        // エラー時はボタンの色をリセット
+        if (button) {
+          button.style.background = '#ffffff';
+          button.style.color = '#111827';
         }
+        return;
+      }
 
-        const audioData = await audioResponse.json();
-        const audioBase64 = audioData.audioContent;
+      const audioData = await audioResponse.json();
+      const audioBase64 = audioData.audioContent;
 
-        if (!audioBase64) {
-          console.error('音声データが空です');
-          continue;
+      if (!audioBase64) {
+        console.error('音声データが空です');
+        if (button) {
+          button.style.background = '#ffffff';
+          button.style.color = '#111827';
         }
+        return;
+      }
 
-        if (normalModeAudioRef.current) {
-          // 前の音声を停止
-          normalModeAudioRef.current.pause();
-          normalModeAudioRef.current.currentTime = 0;
-          
-          // 新しい音声を設定
-          normalModeAudioRef.current.src = `data:audio/mp3;base64,${audioBase64}`;
-          
-          // 音声をロードして再生
-          await new Promise<void>((resolve, reject) => {
-            if (!normalModeAudioRef.current) {
-              reject(new Error('audioRef is null'));
-              return;
-            }
-            
-            const audio = normalModeAudioRef.current;
-            
-            // ロード完了を待つ
-            const handleCanPlay = () => {
-              audio.removeEventListener('canplaythrough', handleCanPlay);
-              audio.removeEventListener('error', handleError);
-              
-              // 再生開始
-              audio.play().then(() => {
-                console.log(`音声${i + 1}/${texts.length}再生開始:`, text);
-                resolve();
-              }).catch((playErr) => {
-                console.error('音声再生エラー:', playErr);
-                reject(playErr);
-              });
-            };
-            
-            const handleError = () => {
-              audio.removeEventListener('canplaythrough', handleCanPlay);
-              audio.removeEventListener('error', handleError);
-              reject(new Error('音声のロードに失敗しました'));
-            };
-            
-            audio.addEventListener('canplaythrough', handleCanPlay);
-            audio.addEventListener('error', handleError);
-            
-            // 既にロード済みの場合
-            if (audio.readyState >= 3) {
-              handleCanPlay();
-            }
-          });
-          
-          // 最後の音声でない場合は、再生完了まで待つ
-          if (i < texts.length - 1) {
-            await new Promise<void>((resolve) => {
-              if (normalModeAudioRef.current) {
-                const handleEnded = () => {
-                  normalModeAudioRef.current?.removeEventListener('ended', handleEnded);
-                  resolve();
-                };
-                normalModeAudioRef.current.addEventListener('ended', handleEnded, { once: true });
-              } else {
-                resolve();
-              }
-            });
-            // 短い間隔を追加
-            await new Promise(resolve => setTimeout(resolve, 200));
-          } else {
-            // 最後の音声再生後、連続発音ボタンの色をリセット
-            if (normalModeAudioRef.current) {
-              normalModeAudioRef.current.addEventListener('ended', () => {
-                // 連続発音ボタンの色をリセット
-                if (button) {
-                  button.style.background = '#ffffff';
-                  button.style.color = '#111827';
-                }
-                console.log('連続発音完了');
-              }, { once: true });
-            }
+      if (normalModeAudioRef.current) {
+        // 前の音声を停止
+        normalModeAudioRef.current.pause();
+        normalModeAudioRef.current.currentTime = 0;
+        
+        // 新しい音声を設定
+        normalModeAudioRef.current.src = `data:audio/mp3;base64,${audioBase64}`;
+        
+        // 音声をロードして再生
+        await new Promise<void>((resolve, reject) => {
+          if (!normalModeAudioRef.current) {
+            reject(new Error('audioRef is null'));
+            return;
           }
-        } else {
-          console.error('normalModeAudioRef.currentがnullです');
+          
+          const audio = normalModeAudioRef.current;
+          
+          // ロード完了を待つ
+          const handleCanPlay = () => {
+            audio.removeEventListener('canplaythrough', handleCanPlay);
+            audio.removeEventListener('error', handleError);
+            
+            // 再生開始
+            audio.play().then(() => {
+              console.log('連続発音再生開始:', textToSpeak);
+              resolve();
+            }).catch((playErr) => {
+              console.error('音声再生エラー:', playErr);
+              reject(playErr);
+            });
+          };
+          
+          const handleError = () => {
+            audio.removeEventListener('canplaythrough', handleCanPlay);
+            audio.removeEventListener('error', handleError);
+            reject(new Error('音声のロードに失敗しました'));
+          };
+          
+          audio.addEventListener('canplaythrough', handleCanPlay);
+          audio.addEventListener('error', handleError);
+          
+          // 既にロード済みの場合
+          if (audio.readyState >= 3) {
+            handleCanPlay();
+          }
+        });
+        
+        // 再生完了後、連続発音ボタンの色をリセット
+        if (normalModeAudioRef.current) {
+          normalModeAudioRef.current.addEventListener('ended', () => {
+            // 連続発音ボタンの色をリセット
+            if (button) {
+              button.style.background = '#ffffff';
+              button.style.color = '#111827';
+            }
+            console.log('連続発音完了');
+          }, { once: true });
         }
-      } catch (err) {
-        console.error('音声再生エラー:', err);
-        // エラーが発生しても次の音声に進む
+      } else {
+        console.error('normalModeAudioRef.currentがnullです');
+        if (button) {
+          button.style.background = '#ffffff';
+          button.style.color = '#111827';
+        }
+      }
+    } catch (err) {
+      console.error('音声再生エラー:', err);
+      // エラー時はボタンの色をリセット
+      if (button) {
+        button.style.background = '#ffffff';
+        button.style.color = '#111827';
       }
     }
   };
