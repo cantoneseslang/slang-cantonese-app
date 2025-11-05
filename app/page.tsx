@@ -88,6 +88,9 @@ export default function Home() {
   
   // 長文の場合の粤ピン・カタカナ表示/非表示
   const [showPronunciationDetails, setShowPronunciationDetails] = useState(true);
+  
+  // コピー成功メッセージ表示用
+  const [copySuccess, setCopySuccess] = useState<string | null>(null);
 
   // 総ボタン数（categories.json から動的集計、管理画面と同期）
   const totalButtons = useMemo(() => {
@@ -4035,6 +4038,87 @@ export default function Home() {
                         <option value="2">2x</option>
                       </select>
                     </div>
+                    <button
+                      onClick={async () => {
+                        const textToCopy = result.translatedText || searchQuery;
+                        try {
+                          await navigator.clipboard.writeText(textToCopy);
+                          setCopySuccess('単語');
+                          setTimeout(() => setCopySuccess(null), 2000);
+                        } catch (err) {
+                          alert('コピーに失敗しました');
+                        }
+                      }}
+                      title="テキストをコピー"
+                      style={{
+                        padding: isMobile ? '6px 12px' : '8px 16px',
+                        fontSize: isMobile ? '0.875rem' : '1rem',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(0,0,0,0.1)',
+                        background: 'linear-gradient(145deg, #ffffff, #f5f5f7)',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
+                        cursor: 'pointer',
+                        color: '#111827',
+                        fontWeight: '600',
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                      }}
+                    >
+                      📋 {copySuccess === '単語' ? 'コピーしました' : 'コピー'}
+                    </button>
+                    {result.translatedText && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(result.translatedText);
+                            setCopySuccess('翻訳');
+                            setTimeout(() => setCopySuccess(null), 2000);
+                          } catch (err) {
+                            alert('コピーに失敗しました');
+                          }
+                        }}
+                        title="翻訳テキストのみをコピー"
+                        style={{
+                          padding: isMobile ? '6px 12px' : '8px 16px',
+                          fontSize: isMobile ? '0.875rem' : '1rem',
+                          borderRadius: '12px',
+                          border: '1px solid rgba(0,0,0,0.1)',
+                          background: 'linear-gradient(145deg, #ffffff, #f5f5f7)',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
+                          cursor: 'pointer',
+                          color: '#111827',
+                          fontWeight: '600',
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)';
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                      >
+                        🌐 {copySuccess === '翻訳' ? 'コピーしました' : '翻訳のみ'}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
