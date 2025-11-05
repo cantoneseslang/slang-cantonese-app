@@ -54,23 +54,29 @@ export async function POST(request: NextRequest) {
     // 会員種別をチェックして制限を適用
     let membershipType = 'free'; // デフォルトは'free'
     
-    try {
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('membership_type')
-        .eq('id', user.id)
-        .maybeSingle();
-      
-      // usersテーブルが存在しない場合や404エラーの場合はデフォルトで'free'とする
-      if (!userError && userData) {
-        membershipType = userData.membership_type || 'free';
-      } else if (userError && userError.code !== 'PGRST116' && !userError.message.includes('relation') && !userError.message.includes('Could not find')) {
-        // テーブルが存在しない場合以外のエラーはログに記録
-        console.error('User data fetch error:', userError);
+    // まずuser_metadataから取得を試みる（最新の状態が反映されている）
+    if (user.user_metadata?.membership_type) {
+      membershipType = user.user_metadata.membership_type;
+    } else {
+      // user_metadataにない場合、usersテーブルから取得を試みる
+      try {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('membership_type')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        // usersテーブルが存在しない場合や404エラーの場合はデフォルトで'free'とする
+        if (!userError && userData) {
+          membershipType = userData.membership_type || 'free';
+        } else if (userError && userError.code !== 'PGRST116' && !userError.message.includes('relation') && !userError.message.includes('Could not find')) {
+          // テーブルが存在しない場合以外のエラーはログに記録
+          console.error('User data fetch error:', userError);
+        }
+      } catch (error) {
+        // usersテーブルが存在しない場合はデフォルトで'free'とする
+        console.warn('Could not fetch user membership type, defaulting to free:', error);
       }
-    } catch (error) {
-      // usersテーブルが存在しない場合はデフォルトで'free'とする
-      console.warn('Could not fetch user membership type, defaulting to free:', error);
     }
     
     if (membershipType === 'free') {
