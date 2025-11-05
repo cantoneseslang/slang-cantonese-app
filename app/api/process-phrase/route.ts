@@ -123,25 +123,27 @@ async function translateJapaneseToCantonese(japaneseText: string): Promise<strin
 }
 
 function isJapaneseText(text: string): boolean {
-  // 日本語文字（ひらがな、カタカナ、漢字）が含まれているかチェック
-  // 広東語の繁体字と日本語の漢字は重複するため、ひらがな・カタカナが含まれているか、または漢字とひらがな・カタカナの組み合わせで判定
-  const hiraganaKatakanaRegex = /[\u3040-\u309F\u30A0-\u30FF]/; // ひらがな・カタカナ
-  const kanjiRegex = /[\u4E00-\u9FAF]/; // 漢字
-  
-  // ひらがな・カタカナが含まれていれば日本語と判定
-  if (hiraganaKatakanaRegex.test(text)) {
-    return true;
+  if (!text || text.trim() === '') {
+    return false;
   }
   
-  // 漢字のみの場合、日本語特有の文字やパターンで判定
-  // 「の」「を」「に」「は」「が」などの助詞が含まれていれば日本語
-  const japaneseParticles = /[のはがをにでへとからまでより]/;
-  if (kanjiRegex.test(text) && japaneseParticles.test(text)) {
+  // 日本語文字（ひらがな、カタカナ、漢字）が含まれているかチェック
+  // 広東語の繁体字と日本語の漢字は重複するため、ひらがな・カタカナが含まれているか、または日本語特有のパターンで判定
+  const hiraganaKatakanaRegex = /[\u3040-\u309F\u30A0-\u30FF]/; // ひらがな・カタカナ
+  
+  // ひらがな・カタカナが含まれていれば日本語と判定（最も確実）
+  if (hiraganaKatakanaRegex.test(text)) {
     return true;
   }
   
   // 日本語の句読点（、。）が含まれていれば日本語
   if (/[、。]/.test(text)) {
+    return true;
+  }
+  
+  // 漢字のみの場合、日本語特有の助詞（の、を、に、は、が、で、へ、と、から、まで、より）が含まれていれば日本語
+  const japaneseParticles = /[のはがをにでへとからまでより]/;
+  if (japaneseParticles.test(text)) {
     return true;
   }
   
