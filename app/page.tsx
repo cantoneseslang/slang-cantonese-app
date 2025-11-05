@@ -1286,14 +1286,16 @@ export default function Home() {
             body: JSON.stringify({ text: word.chinese }),
           });
 
-          let resultData = {
-            jyutping: word.jyutping,
-            katakana: word.katakana,
+          let resultData: SearchResult = {
+            jyutping: word.jyutping || '',
+            katakana: word.katakana || '',
             jyutpingMulti: '',
             katakanaMulti: '',
             exampleCantonese: exampleData.exampleCantonese || '',
             exampleJapanese: exampleData.exampleJapanese || '',
             exampleFull: exampleData.exampleFull || '',
+            audioBase64: undefined,
+            exampleAudioBase64: undefined,
           };
 
           if (audioResponse.ok) {
