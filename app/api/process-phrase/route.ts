@@ -87,35 +87,72 @@ async function translateJapaneseToCantonese(japaneseText: string): Promise<strin
         messages: [
           {
             role: "system",
-            content: "You are a professional translator specializing in Japanese to Cantonese translation. Translate the given Japanese text into natural, conversational Cantonese (Traditional Chinese characters). Provide ONLY the Cantonese translation, nothing else. Do not add explanations, notes, or any other text. Just the translation."
+            content: "You are a professional translator specializing in Japanese to Cantonese translation. Translate the given Japanese text into natural, conversational Cantonese using Traditional Chinese characters. Provide ONLY the Cantonese translation without any explanations, notes, or additional text."
           },
           {
             role: "user",
-            content: `Please translate the following Japanese text to Cantonese. Provide only the Cantonese translation in Traditional Chinese characters:\n\n${japaneseText}`
+            content: `次の日本語文章を広東語に翻訳して\n\n${japaneseText}`
           }
         ],
         max_tokens: 3000,
-        temperature: 0.2
+        temperature: 0.3
       })
     });
     
     const jsonResponse = await response.json();
     let translatedText = jsonResponse.choices[0].message.content.trim();
     
-    // 不要な記号や引用符、説明文を削除
-    translatedText = translatedText
-      .replace(/^["'「」『』\[\]]|["'「」『』\[\]]$/g, '') // 引用符と角括弧を削除
-      .replace(/\[|\]/g, '') // 文中の角括弧も削除
-      .replace(/^(広東語|Cantonese|Translation|翻訳)[:：]\s*/i, '') // 説明文を削除
-      .replace(/^.*?[:：]\s*/, '') // コロン以降の説明を削除
-      .trim();
+    console.log('📝 DeepSeek生レスポンス:', translatedText.substring(0, 200));
+    
+    // 説明文や括弧付きの説明を削除
+    // 例: "(我將嘗試把這首富有詩意的日文詩翻譯成廣東話，盡量保留原作的意境與韻味)" のような説明文を削除
+    translatedText = translatedText.replace(/^[（(].*?[）)]\s*/g, ''); // 括弧で囲まれた説明文を削除
+    
+    // 改行で区切られた場合、最初の空行以降が説明文の可能性があるので、最初の空行までの部分を取得
+    const lines = translatedText.split('\n');
+    let resultLines: string[] = [];
+    let foundTranslation = false;
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      // 空行をスキップ
+      if (!trimmedLine) {
+        if (foundTranslation) break; // 翻訳が見つかった後の空行は終了
+        continue;
+      }
+      // 説明文のパターンを検出（括弧で始まる、または英語/日本語の説明）
+      if (/^[（(]/.test(trimmedLine) || /^(我將|我會|I will|I'll|I'm|翻訳|Translation)/i.test(trimmedLine)) {
+        continue; // 説明文をスキップ
+      }
+      // 広東語の文字（繁体字）が含まれている行を翻訳として採用
+      if (/[\u4E00-\u9FFF]/.test(trimmedLine)) {
+        resultLines.push(trimmedLine);
+        foundTranslation = true;
+      }
+    }
+    
+    // 結果が得られない場合は、元のテキストから説明文以外を抽出
+    if (resultLines.length === 0) {
+      // 括弧で囲まれた部分を削除
+      translatedText = translatedText.replace(/[（(][^）)]*[）)]/g, '');
+      // 先頭・末尾の引用符や角括弧を削除
+      translatedText = translatedText.replace(/^["'「」『』\[\]\s]+|["'「」『』\[\]\s]+$/g, '');
+      resultLines = translatedText.split('\n').filter(line => {
+        const trimmed = line.trim();
+        return trimmed && /[\u4E00-\u9FFF]/.test(trimmed);
+      });
+    }
+    
+    const finalTranslation = resultLines.join('\n').trim();
     
     // 翻訳結果が空または短すぎる場合はエラー
-    if (!translatedText || translatedText.length < 3) {
+    if (!finalTranslation || finalTranslation.length < 3) {
+      console.error('❌ 翻訳結果が空:', { original: translatedText.substring(0, 100) });
       throw new Error('翻訳結果が空または不十分です');
     }
     
-    return translatedText;
+    console.log('✅ 最終翻訳結果:', finalTranslation.substring(0, 100));
+    return finalTranslation;
   } catch (error) {
     console.error('Translation error:', error);
     throw error;
