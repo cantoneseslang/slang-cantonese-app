@@ -1258,26 +1258,36 @@ export default function Home() {
     // すべてのモードで押下ログを送信
     try { fetch('/api/track-button', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wordChinese: word.chinese, categoryId: currentCategory?.id }) }); } catch {}
     
+    // 学習モードの場合はページトップにスクロール
+    if (isLearningMode) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    
     if (isLearningMode) {
       // 学習モード：例文も表示、音声プレイヤーを表示
       setForceShowResult(true); // 結果パネルを表示する
       setSearchQuery(word.chinese);
       
-      // jyutpingとkatakanaが既に存在する場合はAPI呼び出しをスキップ
+      // jyutpingとkatakanaが既に存在する場合でも、例文生成と音声生成は必須
       if (word.jyutping && word.katakana) {
         setLoading(true);
         try {
-          // 既存のjyutpingとkatakanaを使用して結果を設定
-          // 例文生成と音声生成のみAPI呼び出し
-          const exampleData = await fetch('/api/process-phrase', {
+          // 例文生成と音声生成を実行
+          const exampleResponse = await fetch('/api/process-phrase', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phrase: word.chinese }),
-          }).then(res => res.json()).catch(() => ({
+          });
+
+          let exampleData: any = {
             exampleCantonese: '',
             exampleJapanese: '',
             exampleFull: '',
-          }));
+          };
+
+          if (exampleResponse.ok) {
+            exampleData = await exampleResponse.json();
+          }
 
           // 単語音声を生成
           const audioResponse = await fetch('/api/generate-speech', {
@@ -1303,8 +1313,8 @@ export default function Home() {
             resultData.audioBase64 = audioData.audioContent;
           }
 
-          // 例文音声を生成
-          if (resultData.exampleCantonese && resultData.exampleCantonese !== '例文生成エラーが発生しました') {
+          // 例文音声を生成（例文が存在する場合）
+          if (resultData.exampleCantonese && resultData.exampleCantonese !== '例文生成エラーが発生しました' && resultData.exampleCantonese.trim() !== '') {
             const exampleAudioResponse = await fetch('/api/generate-speech', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
