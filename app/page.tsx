@@ -3635,7 +3635,8 @@ export default function Home() {
                         
                         for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
                           const page = await pdf.getPage(pageNum);
-                          const viewport = page.getViewport({ scale: 2.0 });
+                          // OCR精度向上のため、解像度を上げる（2.0 → 3.0）
+                          const viewport = page.getViewport({ scale: 3.0 });
                           const canvas = document.createElement('canvas');
                           const context = canvas.getContext('2d');
                           if (!context) continue;
