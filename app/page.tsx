@@ -2308,6 +2308,7 @@ export default function Home() {
                         e.stopPropagation();
                         playHapticAndSound();
                         setSelectedCategory(category.id);
+                        setSelectedNoteCategory(null); // Noteカテゴリーを解除
                         setShowNoteSubCategories(false); // Noteサブカテゴリーを閉じる
                       }}
                       style={{
