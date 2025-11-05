@@ -1580,7 +1580,20 @@ export default function Home() {
   const handleWordClick = async (word: Word) => {
     playHapticAndSound(); // 振動と音を再生
     // すべてのモードで押下ログを送信
-    try { fetch('/api/track-button', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wordChinese: word.chinese, categoryId: currentCategory?.id }) }); } catch {}
+    // categoryIdの取得: noteカテゴリーが選択されている場合はselectedNoteCategoryを優先
+    const categoryId = selectedNoteCategory || currentCategory?.id || '';
+    try { 
+      const response = await fetch('/api/track-button', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ wordChinese: word.chinese, categoryId }) 
+      });
+      if (!response.ok) {
+        console.error('ボタン押下トラッキングエラー:', response.status);
+      }
+    } catch (err) {
+      console.error('ボタン押下トラッキング失敗:', err);
+    }
     
     // 学習モードの場合はページトップにスクロール
     if (isLearningMode) {
@@ -1796,7 +1809,20 @@ export default function Home() {
     } catch (err) {
       console.error('音声再生エラー:', err);
     }
-  try { fetch('/api/track-button', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wordChinese: text, categoryId: currentCategory?.id || 'pronunciation' }) }); } catch {}
+    // categoryIdの取得: noteカテゴリーが選択されている場合はselectedNoteCategoryを優先
+    const categoryId = selectedNoteCategory || currentCategory?.id || 'pronunciation';
+    try { 
+      const response = await fetch('/api/track-button', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ wordChinese: text, categoryId }) 
+      });
+      if (!response.ok) {
+        console.error('ボタン押下トラッキングエラー:', response.status);
+      }
+    } catch (err) {
+      console.error('ボタン押下トラッキング失敗:', err);
+    }
   };
 
   // 連続発音ボタンのクリックハンドラー
