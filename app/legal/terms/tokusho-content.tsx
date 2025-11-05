@@ -18,7 +18,7 @@ const tokushoContent = {
       },
       {
         title: 'お問合せ先',
-        content: 'メールアドレス：info@lifesupporthk.com\n※ お問い合わせの雛形をご利用ください。\n電話番号：080-5733-6139（平日10:00〜17:00）'
+        content: 'メールアドレス：info@lifesupporthk.com\n※ お問い合わせの雛形をご利用ください。'
       },
       {
         title: '販売価格と手数料',
@@ -81,7 +81,7 @@ const tokushoContent = {
       },
       {
         title: 'Contact Information',
-        content: 'Email: info@lifesupporthk.com\n※ Please use the contact form.\nPhone: 080-5733-6139 (Weekdays 10:00-17:00)'
+        content: 'Email: info@lifesupporthk.com\n※ Please use the contact form.'
       },
       {
         title: 'Price and Fees',
