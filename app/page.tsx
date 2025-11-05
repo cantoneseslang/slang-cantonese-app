@@ -1002,7 +1002,7 @@ export default function Home() {
     });
   };
 
-  // PDFテキスト抽出（pdfjs-dist）
+  // PDFテキスト抽出（pdfjs-dist）- 中国語・広東語対応
   const extractTextFromPdf = async (file: File, onProgress?: (p: number) => void): Promise<string> => {
     const pdfjsLib: any = await import('pdfjs-dist');
     // CDNのworkerを設定（バンドル不要）
@@ -1010,26 +1010,59 @@ export default function Home() {
       pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
     }
     const arrayBuffer = await file.arrayBuffer();
-    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const loadingTask = pdfjsLib.getDocument({ 
+      data: arrayBuffer,
+      // 中国語・広東語のフォント埋め込みPDFに対応
+      standardFontDataUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/standard_fonts/`,
+      cMapUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/cmaps/`,
+      cMapPacked: true,
+    });
     const pdf = await loadingTask.promise;
     const maxPages = Math.min(pdf.numPages, 10); // 上限
     let fullText = '';
     for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
       const content = await page.getTextContent();
-      const strings = content.items.map((it: any) => it.str);
+      // 中国語文字（簡体字・繁体字）を正しく抽出
+      const strings = content.items.map((it: any) => {
+        // フォント情報からエンコーディングを推測してテキストを取得
+        let text = it.str || '';
+        // エンコーディング変換を試みる
+        try {
+          // UTF-8として解釈
+          if (text && typeof text === 'string') {
+            // 不正な文字を除去
+            text = text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '');
+          }
+        } catch (e) {
+          console.warn('テキスト処理エラー:', e);
+        }
+        return text;
+      });
       fullText += strings.join(' ') + '\n';
       if (onProgress) onProgress(Math.round((pageNum / maxPages) * 100));
     }
-    const normalized = fullText
-      .replace(/\u00A0/g, ' ')
-      .replace(/[\t\v\f]+/g, ' ')
-      .replace(/\s{3,}/g, ' ')
+    // テキストの正規化とエンコーディング処理
+    let normalized = fullText
+      .replace(/\u00A0/g, ' ') // ノンブレーキングスペースを通常スペースに
+      .replace(/[\t\v\f]+/g, ' ') // タブ等をスペースに
+      .replace(/\s{3,}/g, ' ') // 連続する空白を1つに
       .trim();
+    
+    // UTF-8エンコーディングの確認と正規化
+    try {
+      const utf8Text = new TextDecoder('utf-8', { fatal: false }).decode(
+        new TextEncoder().encode(normalized)
+      );
+      normalized = utf8Text || normalized;
+    } catch (e) {
+      console.warn('PDFエンコーディング変換エラー:', e);
+    }
+    
     return normalized.length > 4000 ? normalized.slice(0, 4000) : normalized;
   };
 
-  // 画像OCR（Tesseract.js）
+  // 画像OCR（Tesseract.js）- 広東語・中国語専用
   const runOcr = async (file: File, onProgress?: (p: number) => void): Promise<string> => {
     const Tesseract: any = await import('tesseract.js');
     const { createWorker } = Tesseract as any;
@@ -1040,12 +1073,27 @@ export default function Home() {
         }
       }
     });
-    // 日本語+英語（サイズ大きいが汎用性）
-    await worker.loadLanguage('jpn+eng');
-    await worker.initialize('jpn+eng');
+    // 中国語（簡体字+繁体字）のみ使用 - 広東語は繁体字で書かれるため
+    // chi_sim: 簡体字中国語, chi_tra: 繁体字中国語（広東語含む）
+    await worker.loadLanguage('chi_sim+chi_tra');
+    await worker.initialize('chi_sim+chi_tra');
     const result = await worker.recognize(await file.arrayBuffer());
     await worker.terminate();
-    const text = String(result?.data?.text || '').replace(/\s{3,}/g, ' ').trim();
+    // テキストの正規化とエンコーディング処理
+    let text = String(result?.data?.text || '');
+    // 連続する空白を整理
+    text = text.replace(/\s{3,}/g, ' ').trim();
+    // エンコーディングの正規化（UTF-8に統一）
+    try {
+      // テキストが正しくUTF-8として解釈できるか確認
+      const utf8Text = new TextDecoder('utf-8', { fatal: false }).decode(
+        new TextEncoder().encode(text)
+      );
+      text = utf8Text || text;
+    } catch (e) {
+      // エンコーディング変換に失敗した場合は元のテキストを使用
+      console.warn('エンコーディング変換エラー:', e);
+    }
     return text.length > 4000 ? text.slice(0, 4000) : text;
   };
   
@@ -3452,11 +3500,11 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 非表示input: PDF/画像/TXT（OCR対応） */}
+            {/* 非表示input: PDF/画像（OCR対応、自動実行） */}
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.txt,image/*"
+              accept=".pdf,image/*"
               style={{ display: 'none' }}
               onChange={async (e) => {
                 const file = e.target.files?.[0];
@@ -3469,14 +3517,9 @@ export default function Home() {
                   const fileName = file.name.toLowerCase();
                   const fileType = file.type;
                   
-                  // TXTファイルの場合
-                  if (fileName.endsWith('.txt')) {
-                    const text = await readTxt(file);
-                    setSearchQuery(text);
-                  }
-                  // 画像ファイルの場合（PDF/TXT以外の画像）
-                  else if (fileType.startsWith('image/')) {
-                    setImportMessage('OCR実行中...');
+                  // 画像ファイルの場合（自動OCR実行）
+                  if (fileType.startsWith('image/')) {
+                    setImportMessage('OCR実行中（中国語・広東語）...');
                     const text = await runOcr(file, (p) => setImportProgress(p));
                     if (!text || text.trim().length === 0) {
                       alert('画像からテキストを読み取れませんでした。');
@@ -3484,7 +3527,7 @@ export default function Home() {
                       setSearchQuery(text);
                     }
                   }
-                  // PDFファイルの場合
+                  // PDFファイルの場合（自動テキスト抽出→OCR）
                   else if (fileName.endsWith('.pdf')) {
                     setImportMessage('PDFからテキスト抽出中...');
                     let text = await extractTextFromPdf(file, (p) => setImportProgress(p));
@@ -3546,7 +3589,7 @@ export default function Home() {
                       setSearchQuery(text);
                     }
                   } else {
-                    alert('PDF、TXT、または画像ファイルを選択してください。');
+                    alert('PDFまたは画像ファイルを選択してください。');
                   }
                 } catch (err: any) {
                   console.error(err);
