@@ -3925,10 +3925,10 @@ export default function Home() {
               {/* 単語音声プレーヤー */}
               {result.audioBase64 && (
                 <div style={{ marginTop: '0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', lineHeight: '1' }}>
-                    <span style={{ fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 'bold', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                      単語音声: {searchQuery}
-                    </span>
+                  <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
+                    単語音声: {searchQuery}
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <audio 
                       ref={audioRef}
                       controls 
@@ -3965,10 +3965,10 @@ export default function Home() {
               {/* 例文音声プレーヤー */}
               {result.exampleAudioBase64 && result.exampleCantonese && (
                 <div style={{ marginTop: '0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', lineHeight: '1' }}>
-                    <span style={{ fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 'bold', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                      例文音声: {result.exampleCantonese}
-                    </span>
+                  <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
+                    例文音声: {result.exampleCantonese}
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <audio 
                       ref={exampleAudioRef}
                       controls 
