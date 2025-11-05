@@ -1187,10 +1187,24 @@ export default function Home() {
     setCategories(regularCategories);
   }, []);
 
-  // ユーザー情報とデフォルトカテゴリーが読み込まれた後にカテゴリーを適用
+  // ユーザー情報とデフォルトカテゴリーが読み込まれた後にカテゴリーを適用（初回ロード時のみ）
+  const hasAppliedDefaultCategory = useRef(false);
   useEffect(() => {
     if (!user || categories.length === 0) {
       console.log('⏳ カテゴリー適用待機中:', { hasUser: !!user, categoriesCount: categories.length });
+      return;
+    }
+    
+    // 既にデフォルトカテゴリーを適用済みの場合はスキップ（ユーザーが手動でカテゴリーを選択した場合）
+    if (hasAppliedDefaultCategory.current) {
+      console.log('✅ デフォルトカテゴリーは既に適用済み、スキップ');
+      return;
+    }
+    
+    // 既にカテゴリーが選択されている場合はスキップ
+    if (selectedCategory) {
+      console.log('✅ カテゴリーは既に選択済み:', selectedCategory);
+      hasAppliedDefaultCategory.current = true;
       return;
     }
     
@@ -1198,23 +1212,17 @@ export default function Home() {
     const regularCategories = categories.filter(c => !c.id.startsWith('note_'));
     if (regularCategories.length > 0) {
       const defaultCategory = regularCategories.find(c => c.id === defaultCategoryId) || regularCategories[0];
-      
-      // 現在選択中のカテゴリーがデフォルトカテゴリーと異なる場合のみ更新
-      if (selectedCategory !== defaultCategory.id) {
-        console.log('🎯 デフォルトカテゴリーを適用:', { 
-          defaultCategoryId, 
-          categoryName: defaultCategory.name,
-          categoryId: defaultCategory.id,
-          currentSelectedCategory: selectedCategory
-        });
-        setSelectedCategory(defaultCategory.id);
-        setCurrentCategory(defaultCategory);
-        setCurrentWords(defaultCategory.words || []);
-      } else {
-        console.log('✅ カテゴリーは既にデフォルトカテゴリーと一致:', selectedCategory);
-      }
+      console.log('🎯 デフォルトカテゴリーを適用:', { 
+        defaultCategoryId, 
+        categoryName: defaultCategory.name,
+        categoryId: defaultCategory.id
+      });
+      setSelectedCategory(defaultCategory.id);
+      setCurrentCategory(defaultCategory);
+      setCurrentWords(defaultCategory.words || []);
+      hasAppliedDefaultCategory.current = true;
     }
-  }, [user, defaultCategoryId, categories, selectedCategory]);
+  }, [user, defaultCategoryId, categories]);
   
   // Noteサブカテゴリーバーのスクロール状態を初期化
   useEffect(() => {
