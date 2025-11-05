@@ -1109,14 +1109,19 @@ export default function Home() {
     const { createWorker } = Tesseract as any;
     
     // createWorkerの新しいAPI形式を使用
-    // 中国語（簡体字+繁体字）+ 日本語を組み合わせて使用
-    // chi_sim: 簡体字中国語, chi_tra: 繁体字中国語（広東語含む）, jpn: 日本語
-    const worker = await createWorker('chi_sim+chi_tra+jpn', 1, {});
+    // 繁体字中国語を優先、次に日本語、最後に簡体字
+    // chi_tra: 繁体字中国語（広東語含む、優先）、jpn: 日本語、chi_sim: 簡体字中国語
+    const worker = await createWorker('chi_tra+jpn+chi_sim', 1, {});
     
     try {
       // Fileオブジェクトを直接渡す（arrayBufferではなく）
       // Tesseract.jsはFile、Blob、または画像URLを受け取る
-      const result = await worker.recognize(imageFile);
+      // PSM（Page Segmentation Mode）を設定して精度を向上
+      const result = await worker.recognize(imageFile, {
+        // PSM 6: 単一の統一されたテキストブロックとして認識
+        // PSM 11: 可能な限り多くのテキストを検出（デフォルトより良い）
+        tessedit_pageseg_mode: '6', // 単一テキストブロック
+      });
       
       // 進捗を100%に設定
       if (onProgress) {
@@ -1127,8 +1132,15 @@ export default function Home() {
       
       // テキストの正規化とエンコーディング処理
       let text = String(result?.data?.text || '');
-      // 連続する空白を整理
-      text = text.replace(/\s{3,}/g, ' ').trim();
+      
+      // 中国語・日本語の文字間の不要なスペースを削除
+      // 中国語文字（簡体字・繁体字）と日本語文字の間のスペースを削除
+      text = text
+        .replace(/([\u4e00-\u9fff\u3400-\u4dbf\u3040-\u309f\u30a0-\u30ff])\s+([\u4e00-\u9fff\u3400-\u4dbf\u3040-\u309f\u30a0-\u30ff])/g, '$1$2') // 漢字・ひらがな・カタカナ間のスペースを削除
+        .replace(/([\u4e00-\u9fff\u3400-\u4dbf\u3040-\u309f\u30a0-\u30ff])\s+([，。、．])/g, '$1$2') // 句読点前のスペースを削除
+        .replace(/([，。、．])\s+([\u4e00-\u9fff\u3400-\u4dbf\u3040-\u309f\u30a0-\u30ff])/g, '$1$2') // 句読点後のスペースを削除
+        .replace(/\s{2,}/g, ' ') // 連続する空白を1つに
+        .trim();
       // エンコーディングの正規化（UTF-8に統一）
       try {
         // テキストが正しくUTF-8として解釈できるか確認
