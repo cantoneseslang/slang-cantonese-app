@@ -4467,7 +4467,7 @@ export default function Home() {
                       
                       // タッチアクションとスタイルを設定
                       (newBtn as HTMLElement).style.touchAction = 'manipulation';
-                      (newBtn as HTMLElement).style.WebkitTapHighlightColor = 'transparent';
+                      (newBtn as HTMLElement).style.setProperty('-webkit-tap-highlight-color', 'transparent');
                     });
                     
                     console.log(`連続発音ボタンを${sequenceButtons.length}個登録しました`);
