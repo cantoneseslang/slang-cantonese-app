@@ -4205,7 +4205,9 @@ export default function Home() {
             zIndex: 10000,
             padding: '1rem'
           }}>
-            <div style={{
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              style={{
               backgroundColor: 'white',
               borderRadius: '16px',
               width: '100%',
