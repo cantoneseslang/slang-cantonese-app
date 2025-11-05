@@ -76,18 +76,8 @@ export default function AboutPage() {
 
       <div style={{ marginTop: '2rem' }}>
         <p style={{ fontSize: '1rem' }}>
-          それでは早速「カントン語音れん」を始めてみましょう！
+          それでは早速<a href="/" style={{ color: '#3b82f6', textDecoration: 'underline' }}>「カントン語音れん」</a>を始めてみましょう！
         </p>
-        <iframe 
-          src="https://slang-cantonese-app.vercel.app/" 
-          style={{ 
-            width: '100%',
-            height: '800px',
-            border: 'none',
-            marginTop: '1rem'
-          }}
-          title="カントン語音れん"
-        />
       </div>
     </div>
   );
