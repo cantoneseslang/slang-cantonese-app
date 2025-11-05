@@ -3936,13 +3936,13 @@ export default function Home() {
                     src={`data:audio/mp3;base64,${result.audioBase64}`}
                   />
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px', flexWrap: 'wrap' }}>
-                    <label style={{ fontSize: isMobile ? '0.875rem' : '24px' }}>再生速度: </label>
+                    <label style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>再生速度: </label>
                     <select 
                       value={playbackSpeed}
                       onChange={(e) => setPlaybackSpeed(e.target.value)}
                       style={{ 
-                        padding: isMobile ? '5px 10px' : '24px', 
-                        fontSize: isMobile ? '0.875rem' : '24px', 
+                        padding: isMobile ? '5px 10px' : '8px 12px', 
+                        fontSize: isMobile ? '0.875rem' : '1rem', 
                         borderRadius: '8px', 
                         border: '1px solid #ccc', 
                         width: 'auto' 
