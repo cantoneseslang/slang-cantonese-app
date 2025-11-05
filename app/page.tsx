@@ -4174,6 +4174,86 @@ export default function Home() {
                         <option value="2">2x</option>
                       </select>
                     </div>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(result.exampleCantonese);
+                          setCopySuccess('例文');
+                          setTimeout(() => setCopySuccess(null), 2000);
+                        } catch (err) {
+                          alert('コピーに失敗しました');
+                        }
+                      }}
+                      title="例文をコピー"
+                      style={{
+                        padding: isMobile ? '6px 12px' : '8px 16px',
+                        fontSize: isMobile ? '0.875rem' : '1rem',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(0,0,0,0.1)',
+                        background: 'linear-gradient(145deg, #ffffff, #f5f5f7)',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
+                        cursor: 'pointer',
+                        color: '#111827',
+                        fontWeight: '600',
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                      }}
+                    >
+                      📋 {copySuccess === '例文' ? 'コピーしました' : 'コピー'}
+                    </button>
+                    {result.exampleJapanese && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(result.exampleJapanese);
+                            setCopySuccess('例文翻訳');
+                            setTimeout(() => setCopySuccess(null), 2000);
+                          } catch (err) {
+                            alert('コピーに失敗しました');
+                          }
+                        }}
+                        title="例文の日本語翻訳をコピー"
+                        style={{
+                          padding: isMobile ? '6px 12px' : '8px 16px',
+                          fontSize: isMobile ? '0.875rem' : '1rem',
+                          borderRadius: '12px',
+                          border: '1px solid rgba(0,0,0,0.1)',
+                          background: 'linear-gradient(145deg, #ffffff, #f5f5f7)',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
+                          cursor: 'pointer',
+                          color: '#111827',
+                          fontWeight: '600',
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)';
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                      >
+                        🌐 {copySuccess === '例文翻訳' ? 'コピーしました' : '翻訳のみ'}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
