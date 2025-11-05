@@ -504,28 +504,162 @@ const privacyContent = {
 const tokushoContent = {
   ja: {
     title: '特定商取引法に基づく表示',
-    content: [
-      { list: [
-        '事業者名：LIFESUPPORT(HK)LIMITED',
-        '所在地：Hong Kong',
-        'お問い合わせ：info@lifesupporthk.com',
-        '販売価格・支払方法：各プランの案内ページに記載',
-        '役務の提供時期：決済完了後ただちに利用可能',
-        '返品・キャンセル：デジタルサービスの性質上、原則不可'
-      ]}
+    sections: [
+      {
+        title: '事業者',
+        items: [
+          { text: 'LIFESUPPORT(HK)LIMITED' }
+        ]
+      },
+      {
+        title: '事業者の所在',
+        items: [
+          { text: 'G/F No.163 Pan Chung, Tai Po, NT, HONGKONG' },
+          { text: '地址-香港新界大埔泮涌163號地下' }
+        ]
+      },
+      {
+        title: 'お問合せ先',
+        items: [
+          { text: 'メールアドレス：info@lifesupporthk.com' },
+          { text: '※ お問い合わせの雛形をご利用ください。' },
+          { text: '（平日10:00〜17:00）' }
+        ]
+      },
+      {
+        title: '販売価格と手数料',
+        items: [
+          { text: '販売ページおよび購入手続きの画面において、消費税・手数料を含む価格で表示されています。' },
+          { text: '本サービスの利用に必要となるインターネット通信料金はお客様のご負担となります。' },
+          { text: 'デジタルコンテンツ（役務）のため送料や返品送料は発生しません。' }
+        ]
+      },
+      {
+        title: '提供時期',
+        items: [
+          { text: 'お支払いが確認でき次第、すぐに利用できるようになります。' }
+        ]
+      },
+      {
+        title: 'お支払方法',
+        items: [
+          { text: 'クレジットカード、またはその他当社が定める方法（Apple Pay、Google Pay、Stripe Link）によりお支払いいただきます' }
+        ]
+      },
+      {
+        title: 'お支払時期',
+        items: [
+          { text: '利用料金のお支払いは利用期間ごとの前払いとし、お支払時期は初回を有料サービス登録時、以降は1ヶ月または1年ごとの同日となります（翌月または翌年に同日がない場合は、その月の末日となります）。' },
+          { text: 'クレジットカード会社からお客様への請求時期は、お客様とクレジットカード会社との間の契約に基づきます。' }
+        ]
+      },
+      {
+        title: '返品・キャンセル・解約について',
+        items: [
+          { text: 'デジタルサービスという性質上、お客様都合による返金・キャンセルはお受けしておりません。' },
+          { text: '弊社の責による長期システム停止等、当社利用規約で定める場合に限り、未提供日数を日割り計算の上で返金いたします。' },
+          { text: 'マイページから次回更新日の24時間前までに解約いただけます。解約後も当該請求期間の終了日まではサービスをご利用いただけます。' }
+        ]
+      },
+      {
+        title: '推奨するご利用環境',
+        items: [
+          { text: '以下の環境でのご利用を推奨します。' },
+          { text: 'お支払い前にあらかじめご利用環境での動作をご確認ください。' },
+          { label: 'Web版（ブラウザ）', text: '' },
+          { list: [
+            'macOSの場合、ChromeまたはSafariの最新版',
+            'Windowsの場合、EdgeまたはChromeの最新版',
+            'iOSの場合、Safariの最新版',
+            'Androidの場合、Chromeの最新版'
+          ]},
+          { label: 'デスクトップ版', text: '' },
+          { list: [
+            'macOSの場合、Apple Silicon搭載のmacOS 14以上',
+            'Windowsの場合、Windows 11以上'
+          ]}
+        ]
+      }
     ]
   },
   en: {
     title: 'Specified Commercial Transactions Act',
-    content: [
-      { list: [
-        'Business name: LIFESUPPORT(HK)LIMITED',
-        'Location: Hong Kong',
-        'Contact: info@lifesupporthk.com',
-        'Sales price and payment method: As stated on each plan\'s information page',
-        'Service provision period: Available immediately after payment completion',
-        'Returns and cancellations: Generally not possible due to the nature of digital services'
-      ]}
+    sections: [
+      {
+        title: 'Business Operator',
+        items: [
+          { text: 'LIFESUPPORT(HK)LIMITED' }
+        ]
+      },
+      {
+        title: 'Business Location',
+        items: [
+          { text: 'G/F No.163 Pan Chung, Tai Po, NT, HONGKONG' },
+          { text: '地址-香港新界大埔泮涌163號地下' }
+        ]
+      },
+      {
+        title: 'Contact',
+        items: [
+          { text: 'Email: info@lifesupporthk.com' },
+          { text: '※ Please use the contact form.' },
+          { text: '(Weekdays 10:00-17:00)' }
+        ]
+      },
+      {
+        title: 'Sales Price and Fees',
+        items: [
+          { text: 'Prices displayed on the sales page and purchase procedure screen include consumption tax and fees.' },
+          { text: 'Internet communication charges required to use this service are the responsibility of the customer.' },
+          { text: 'As this is digital content (services), shipping and return shipping fees do not apply.' }
+        ]
+      },
+      {
+        title: 'Service Provision Period',
+        items: [
+          { text: 'The service will be available immediately after payment is confirmed.' }
+        ]
+      },
+      {
+        title: 'Payment Methods',
+        items: [
+          { text: 'Payment can be made by credit card or other methods specified by us (Apple Pay, Google Pay, Stripe Link).' }
+        ]
+      },
+      {
+        title: 'Payment Timing',
+        items: [
+          { text: 'Usage fees are prepaid for each usage period. The payment timing is at the time of initial paid service registration, and thereafter on the same day each month or year (if the same day does not exist in the following month or year, it will be the last day of that month).' },
+          { text: 'The billing timing from the credit card company to the customer is based on the contract between the customer and the credit card company.' }
+        ]
+      },
+      {
+        title: 'Returns, Cancellations, and Cancellation',
+        items: [
+          { text: 'Due to the nature of digital services, we do not accept refunds or cancellations at the customer\'s convenience.' },
+          { text: 'Refunds will only be made in cases stipulated in our Terms of Service, such as long-term system shutdowns due to our responsibility, calculated on a daily basis for unprovided days.' },
+          { text: 'Cancellation can be made from My Page up to 24 hours before the next renewal date. You can continue to use the service until the end of the current billing period after cancellation.' }
+        ]
+      },
+      {
+        title: 'Recommended Usage Environment',
+        items: [
+          { text: 'We recommend using the following environments.' },
+          { text: 'Please confirm operation in your usage environment before payment.' },
+          { label: 'Web Version (Browser)', text: '' },
+          { list: [
+            'For macOS: Latest version of Chrome or Safari',
+            'For Windows: Latest version of Edge or Chrome',
+            'For iOS: Latest version of Safari',
+            'For Android: Latest version of Chrome'
+          ]},
+          { label: 'Desktop Version', text: '' },
+          { list: [
+            'For macOS: macOS 14 or later with Apple Silicon',
+            'For Windows: Windows 11 or later'
+          ]}
+        ]
+      }
     ]
   }
 };
@@ -724,21 +858,29 @@ export default function TermsPage() {
             <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '2rem' }}>
               {tokusho.title}
             </h1>
-            {tokusho.content.map((item, itemIndex) => (
-              <div key={itemIndex}>
-                {'list' in item && item.list ? (
-                  <ul style={{ listStyle: 'disc', paddingLeft: '2rem', marginBottom: '1rem' }}>
-                    {item.list.map((listItem, listIndex) => (
-                      <li key={listIndex} style={{ marginBottom: '0.5rem' }}>
-                        {listItem}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p style={{ marginBottom: '1rem' }}>
-                    {'text' in item && typeof item.text === 'string' ? item.text : ''}
-                  </p>
-                )}
+            {tokusho.sections.map((section, sectionIndex) => (
+              <div key={sectionIndex}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: sectionIndex === 0 ? '0' : '2rem', marginBottom: '1rem' }}>
+                  {section.title}
+                </h2>
+                {section.items.map((item, itemIndex) => (
+                  <div key={itemIndex}>
+                    {'list' in item && item.list ? (
+                      <ul style={{ listStyle: 'disc', paddingLeft: '2rem', marginBottom: '1rem' }}>
+                        {item.list.map((listItem, listIndex) => (
+                          <li key={listIndex} style={{ marginBottom: '0.5rem' }}>
+                            {listItem}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p style={{ marginBottom: ('label' in item && item.label) ? '0.5rem' : '1rem' }}>
+                        {'label' in item && item.label && <strong>{item.label} </strong>}
+                        {'text' in item && typeof item.text === 'string' ? item.text : ''}
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
             ))}
             <p style={{ marginTop: '1rem', textAlign: 'center' }}>
