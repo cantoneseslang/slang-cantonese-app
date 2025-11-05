@@ -1185,6 +1185,45 @@ export default function Home() {
     }
   }, [showSettings, user]);
 
+  // 設定メニューの外側クリックで閉じる処理
+  useEffect(() => {
+    if (!showSettings) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      
+      // 設定パネル内の要素をクリックした場合は何もしない
+      const settingsPanel = document.querySelector('[data-settings-panel]');
+      if (settingsPanel && settingsPanel.contains(target)) {
+        return;
+      }
+      
+      // アカウントメニューやその他の要素をクリックした場合も何もしない
+      // （それらの要素自体がクリックを処理するため）
+      if (target.closest('[data-settings-panel]')) {
+        return;
+      }
+      
+      // それ以外のクリックで設定を閉じる
+      setShowSettings(false);
+      setShowPasswordChange(false);
+      setPasswordError(null);
+      setPasswordSuccess(false);
+      setNewPassword('');
+      setConfirmPassword('');
+    };
+
+    // イベントリスナーを追加（少し遅延させて、設定メニューを開くクリックイベントが処理される前に閉じないようにする）
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside, true);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside, true);
+    };
+  }, [showSettings]);
+
   const handleSearch = async (query: string) => {
     if (!query || query.trim() === '') {
       setError('検索文字を入力してください');
@@ -4181,17 +4220,6 @@ export default function Home() {
         {/* 設定画面モーダル（右側スライドイン） */}
         {showSettings && user && (
           <div
-            onClick={(e) => {
-              // 外側をクリックした場合は設定を閉じる
-              if (e.target === e.currentTarget) {
-                setShowSettings(false);
-                setShowPasswordChange(false);
-                setPasswordError(null);
-                setPasswordSuccess(false);
-                setNewPassword('');
-                setConfirmPassword('');
-              }
-            }}
             style={{
             position: 'fixed',
             top: 0,
@@ -4204,15 +4232,6 @@ export default function Home() {
           }}>
             {/* 背景オーバーレイ（左側のスペース） */}
             <div 
-              onClick={(e) => {
-                // 背景をクリックした場合は設定を閉じる
-                setShowSettings(false);
-                setShowPasswordChange(false);
-                setPasswordError(null);
-                setPasswordSuccess(false);
-                setNewPassword('');
-                setConfirmPassword('');
-              }}
               style={{
               position: 'absolute',
               top: 0,
@@ -4224,6 +4243,7 @@ export default function Home() {
             }} />
             {/* 設定パネル（右側） */}
             <div 
+              data-settings-panel
               onClick={(e) => e.stopPropagation()}
               style={{
               position: 'relative',
