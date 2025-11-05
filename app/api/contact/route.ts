@@ -16,10 +16,10 @@ export async function POST(request: NextRequest) {
     // TITANのSMTP設定（SSL/TLS Port: 465）
     const smtpHost = process.env.SMTP_HOST || 'smtp.titan.email';
     const smtpPort = parseInt(process.env.SMTP_PORT || '465'); // TITANはポート465（SSL/TLS）
-    const smtpUser = process.env.SMTP_USER || 'info@lifesupporthk.com';
-    const smtpPassword = process.env.SMTP_PASSWORD;
-    const smtpFrom = process.env.SMTP_FROM || 'info@lifesupporthk.com';
-    const smtpTo = process.env.SMTP_TO || 'info@lifesupporthk.com';
+    const smtpUser = process.env.TITAN_SMTP_USER || 'info@lifesupporthk.com';
+    const smtpPassword = process.env.TITAN_SMTP_PASS;
+    const smtpFrom = process.env.SMTP_FROM || process.env.TITAN_SMTP_USER || 'info@lifesupporthk.com';
+    const smtpTo = process.env.CONTACT_TO || 'info@lifesupporthk.com';
 
     if (!smtpPassword) {
       console.error('SMTP_PASSWORD環境変数が設定されていません');
