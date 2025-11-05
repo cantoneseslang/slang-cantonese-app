@@ -1088,7 +1088,7 @@ export default function Home() {
     }
   };
 
-  // 画像OCR（Tesseract.js）- 広東語・中国語専用
+  // 画像OCR（Tesseract.js）- 広東語・中国語・日本語対応
   const runOcr = async (file: File, onProgress?: (p: number) => void): Promise<string> => {
     let imageFile = file;
     
@@ -1108,13 +1108,12 @@ export default function Home() {
     const Tesseract: any = await import('tesseract.js');
     const { createWorker } = Tesseract as any;
     
-    // createWorkerの新しいAPI形式を使用（言語を最初の引数として指定）
-    const worker = await createWorker('chi_sim+chi_tra', 1, {});
+    // createWorkerの新しいAPI形式を使用
+    // 中国語（簡体字+繁体字）+ 日本語を組み合わせて使用
+    // chi_sim: 簡体字中国語, chi_tra: 繁体字中国語（広東語含む）, jpn: 日本語
+    const worker = await createWorker('chi_sim+chi_tra+jpn', 1, {});
     
     try {
-      // 中国語（簡体字+繁体字）のみ使用 - 広東語は繁体字で書かれるため
-      // chi_sim: 簡体字中国語, chi_tra: 繁体字中国語（広東語含む）
-      
       // Fileオブジェクトを直接渡す（arrayBufferではなく）
       // Tesseract.jsはFile、Blob、または画像URLを受け取る
       const result = await worker.recognize(imageFile);
