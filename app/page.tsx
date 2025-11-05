@@ -1162,23 +1162,38 @@ export default function Home() {
         const categoryMap = new Map<string, string>(); // word.chinese -> categoryId
         favorites.forEach((favoriteKey) => {
           const [categoryId, wordChinese] = favoriteKey.split(':');
-          const category = categories.find(c => c.id === categoryId);
-          if (category && category.words) {
-            const word = category.words.find(w => w.chinese === wordChinese);
-            if (word) {
-              favoriteWords.push({ ...word, chinese: word.chinese });
-              categoryMap.set(word.chinese, categoryId); // 元のcategoryIdを保存
+          
+          // まず通常のカテゴリーから検索
+          let category = categories.find(c => c.id === categoryId);
+          let word: Word | undefined;
+          
+          if (category) {
+            // 通常カテゴリーから単語を検索
+            if (category.words) {
+              word = category.words.find(w => w.chinese === wordChinese);
+            }
+            // practiceGroupsからも検索
+            if (!word && category.practiceGroups) {
+              category.practiceGroups.forEach(group => {
+                const foundWord = group.words.find(w => w.chinese === wordChinese);
+                if (foundWord) {
+                  word = foundWord;
+                }
+              });
+            }
+          } else {
+            // 通常カテゴリーに見つからない場合、Noteカテゴリーから検索
+            const noteCategory = (noteCategoriesData as Category[]).find(c => c.id === categoryId);
+            if (noteCategory && noteCategory.words) {
+              word = noteCategory.words.find(w => w.chinese === wordChinese);
+              category = noteCategory; // Noteカテゴリーを設定
             }
           }
-          // practiceGroupsからも検索
-          if (category && category.practiceGroups) {
-            category.practiceGroups.forEach(group => {
-              const word = group.words.find(w => w.chinese === wordChinese);
-              if (word && !favoriteWords.find(w => w.chinese === wordChinese)) {
-                favoriteWords.push({ ...word, chinese: word.chinese });
-                categoryMap.set(word.chinese, categoryId); // 元のcategoryIdを保存
-              }
-            });
+          
+          // 単語が見つかった場合は追加
+          if (word && !favoriteWords.find(w => w.chinese === wordChinese)) {
+            favoriteWords.push({ ...word, chinese: word.chinese });
+            categoryMap.set(word.chinese, categoryId); // 元のcategoryIdを保存
           }
         });
         favoriteWordCategoryMapRef.current = categoryMap; // マップを保存
