@@ -1,20 +1,21 @@
 export default function AboutPage() {
   return (
     <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '1rem' }}>ようこそ！</h1>
+      <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '1rem' }}>
+        広東語初心の方へ！ようこそスラング式カントン語音れんへ！
+      </h1>
       
       <div style={{ marginTop: '2rem' }}>
-        <p style={{ marginBottom: '1rem', fontSize: '1.125rem' }}>
-          広東語初心の方へ！ようこそスラング式カントン語音れんへ！
-        </p>
-        
         <ul style={{ listStyle: 'disc', paddingLeft: '2rem', marginBottom: '2rem', lineHeight: 1.8 }}>
-          <li>ボタンを押すだけで発音を確認できます</li>
-          <li>ただ発音するだけでなく、学習に役立つ情報を提供します</li>
-          <li>シーンに応じた複数表現の提案や検索も可能です</li>
-          <li>入力テキストの発音（粤ピン/カタカナ）を再生して確認できます</li>
-          <li>音声練習用に音声再生スピードの変更可能です</li>
-          <li>noteと連携し、教材となるボタンがどんどん追加されていきます</li>
+          <li>ボタンを押すだけで発音を確認できます(ノーマルモード）</li>
+          <li>ボタンを押すだけで発音と例文まで出てきます(学習モード）</li>
+          <li>学習モードでは音声練習用に音声再生スピードの変更可能です</li>
+          <li>お気に入りボタンに必要な単語だけを収録（ボタンを長押しするとお気に入りに自動収録）</li>
+          <li>ボタンにないカントン語は入力欄に単語やフレーズを入力すれば翻訳機にもなります</li>
+          <li>広東語の発音、意味を調べたい時、広東語を入力して🟦ボタン</li>
+          <li>日本語を広東語に翻訳したい時、日本語を入力して🟩ボタン</li>
+          <li>ファイルアイコンを押し写真やテキストファイルもOCRで読み込み翻訳できます</li>
+          <li>noteにて教科書テキストを発行、それと連携しボタンがどんどんと追加されてます</li>
         </ul>
       </div>
 
