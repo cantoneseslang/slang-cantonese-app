@@ -53,10 +53,21 @@ export default function AdminPage() {
     setLoadingAnalytics(true);
     try {
       const response = await fetch('/api/admin/button-analytics');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
-      setAnalytics(data);
+      if (data.error) {
+        console.error('API error:', data.error);
+        alert(`エラー: ${data.error}`);
+        setAnalytics(null);
+      } else {
+        setAnalytics(data);
+      }
     } catch (error) {
       console.error('Analytics loading error:', error);
+      alert('アナリティクスの読み込みに失敗しました');
+      setAnalytics(null);
     } finally {
       setLoadingAnalytics(false);
     }
@@ -66,10 +77,21 @@ export default function AdminPage() {
     setLoadingUsers(true);
     try {
       const response = await fetch('/api/admin/users');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
-      setUsers(data.users || []);
+      if (data.error) {
+        console.error('API error:', data.error);
+        alert(`エラー: ${data.error}`);
+        setUsers([]);
+      } else {
+        setUsers(data.users || []);
+      }
     } catch (error) {
       console.error('Users loading error:', error);
+      alert('ユーザー一覧の読み込みに失敗しました');
+      setUsers([]);
     } finally {
       setLoadingUsers(false);
     }

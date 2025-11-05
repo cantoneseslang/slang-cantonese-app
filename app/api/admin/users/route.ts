@@ -16,14 +16,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
 
-    // Supabaseのauth.usersテーブルからユーザーを取得
-    // 注意: これはService Role Keyが必要な場合があります
+    // Supabaseのusersテーブルからユーザーを取得
+    // usersテーブルが存在しない場合は空配列を返す
     const { data: users, error } = await supabase
       .from('users')
       .select('id, email, membership_type, created_at')
       .order('created_at', { ascending: false });
 
     if (error) {
+      // テーブルが存在しない場合（PGRST116エラー）は空配列を返す
+      if (error.code === 'PGRST116' || error.message.includes('relation') || error.message.includes('schema')) {
+        console.warn('Users table does not exist, returning empty array');
+        return NextResponse.json({ users: [] });
+      }
       console.error('Error fetching users:', error);
       return NextResponse.json(
         { error: 'Failed to fetch users', details: error.message },
