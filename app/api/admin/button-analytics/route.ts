@@ -31,7 +31,7 @@ export async function GET() {
   }
 
   const allButtons: Set<string> = new Set()
-  const perUser: Record<string, Set<string>> = {}
+  const perUser: Record<string, Set<string>> = {} as Record<string, Set<string>>
 
   (events || []).forEach((e: any) => {
     allButtons.add(e.button_key)
