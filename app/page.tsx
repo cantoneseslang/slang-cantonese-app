@@ -1193,24 +1193,25 @@ export default function Home() {
       return;
     }
     
-    // 既にカテゴリーが選択されている場合はスキップ
-    if (selectedCategory) {
-      console.log('✅ カテゴリーは既に選択済み:', selectedCategory);
-      return;
-    }
-    
     // デフォルトカテゴリーを適用（ユーザー設定がある場合はそれを使用、なければpronunciation）
     const regularCategories = categories.filter(c => !c.id.startsWith('note_'));
     if (regularCategories.length > 0) {
       const defaultCategory = regularCategories.find(c => c.id === defaultCategoryId) || regularCategories[0];
-      console.log('🎯 デフォルトカテゴリーを適用:', { 
-        defaultCategoryId, 
-        categoryName: defaultCategory.name,
-        categoryId: defaultCategory.id 
-      });
-      setSelectedCategory(defaultCategory.id);
-      setCurrentCategory(defaultCategory);
-      setCurrentWords(defaultCategory.words || []);
+      
+      // 現在選択中のカテゴリーがデフォルトカテゴリーと異なる場合のみ更新
+      if (selectedCategory !== defaultCategory.id) {
+        console.log('🎯 デフォルトカテゴリーを適用:', { 
+          defaultCategoryId, 
+          categoryName: defaultCategory.name,
+          categoryId: defaultCategory.id,
+          currentSelectedCategory: selectedCategory
+        });
+        setSelectedCategory(defaultCategory.id);
+        setCurrentCategory(defaultCategory);
+        setCurrentWords(defaultCategory.words || []);
+      } else {
+        console.log('✅ カテゴリーは既にデフォルトカテゴリーと一致:', selectedCategory);
+      }
     }
   }, [user, defaultCategoryId, categories, selectedCategory]);
   
