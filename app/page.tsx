@@ -1948,6 +1948,17 @@ export default function Home() {
       setActiveWordId(text);
     }
 
+    // ボタン押下をトラッキング（pronunciationカテゴリー）
+    try {
+      await fetch('/api/track-button', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wordChinese: text, categoryId: 'pronunciation' })
+      });
+    } catch (err) {
+      console.error('Failed to track tone audio click:', err);
+    }
+
     // 音声再生
     try {
       const audioResponse = await fetch('/api/generate-speech', {
