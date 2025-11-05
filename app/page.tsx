@@ -850,8 +850,15 @@ export default function Home() {
 
   // 会員種別の切り替え処理
   const handleMembershipChange = async (newType: 'free' | 'subscription' | 'lifetime') => {
+    console.log('🔄 handleMembershipChange called:', { 
+      currentType: membershipType, 
+      newType,
+      isMobile 
+    });
+    
     // 現在の会員種別と同じ場合は何もしない
     if (membershipType === newType) {
+      console.log('⚠️ 同じプランなのでスキップ');
       return;
     }
 
@@ -861,10 +868,19 @@ export default function Home() {
       (membershipType === 'subscription' && newType === 'free')
     );
     
+    console.log('💰 プラン変更処理:', { isDowngrading, newType });
+    
+    // アカウントメニューを閉じる（モバイルの場合）
+    if (showAccountMenu) {
+      setShowAccountMenu(false);
+    }
+    
     // すべての変更で料金モーダルを表示
     setIsDowngrade(isDowngrading);
     setSelectedPlan(newType);
     setShowPricingModal(true);
+    
+    console.log('✅ プラン変更モーダルを表示');
   };
 
   // Stripe決済処理（アップグレード/ダウングレード）
@@ -2005,9 +2021,18 @@ export default function Home() {
 
   // 連続発音ボタンのクリックハンドラー
   const handleToneSequenceClick = async (e: Event) => {
-    const button = e.target as HTMLButtonElement;
+    // e.targetがボタンでない場合（spanなどの子要素の場合）を考慮
+    const target = e.target as HTMLElement;
+    const button = target.closest('.tone-sequence-btn') as HTMLButtonElement;
+    if (!button) return;
+    
     const sequence = button.getAttribute('data-sequence');
-    if (!sequence) return;
+    if (!sequence) {
+      console.error('連続発音ボタンにdata-sequence属性がありません');
+      return;
+    }
+    
+    console.log('連続発音ボタンクリック:', sequence);
 
     // ハプティックフィードバック
     if ('vibrate' in navigator) {
@@ -2036,8 +2061,19 @@ export default function Home() {
       '6': '6'
     };
 
+    // 連続発音ボタンを緑色に点灯
+    if (button) {
+      button.style.background = 'linear-gradient(145deg, #10b981, #059669)';
+      button.style.color = 'white';
+    }
+    
     for (let i = 0; i < texts.length; i++) {
       const text = textMap[texts[i]] || texts[i];
+      
+      // 各音声を再生する前にactiveWordIdを設定して緑点灯
+      if (!isLearningMode) {
+        setActiveWordId(text);
+      }
       
       try {
         const audioResponse = await fetch('/api/generate-speech', {
@@ -2064,7 +2100,10 @@ export default function Home() {
                   normalModeAudioRef.current.onended = () => {
                     resolve();
                   };
-                  normalModeAudioRef.current.play();
+                  normalModeAudioRef.current.play().catch(err => {
+                    console.error('音声再生エラー:', err);
+                    resolve();
+                  });
                 } else {
                   resolve();
                 }
@@ -2072,7 +2111,30 @@ export default function Home() {
               // 短い間隔を追加
               await new Promise(resolve => setTimeout(resolve, 200));
             } else {
-              normalModeAudioRef.current.play();
+              // 最後の音声再生後、activeWordIdをクリア
+              normalModeAudioRef.current.play().then(() => {
+                if (normalModeAudioRef.current) {
+                  normalModeAudioRef.current.addEventListener('ended', () => {
+                    if (!isLearningMode) {
+                      setActiveWordId(null);
+                    }
+                    // 連続発音ボタンの色をリセット
+                    if (button) {
+                      button.style.background = '#ffffff';
+                      button.style.color = '#111827';
+                    }
+                  }, { once: true });
+                }
+              }).catch(err => {
+                console.error('音声再生エラー:', err);
+                if (!isLearningMode) {
+                  setActiveWordId(null);
+                }
+                if (button) {
+                  button.style.background = '#ffffff';
+                  button.style.color = '#111827';
+                }
+              });
             }
           }
         }
@@ -2092,6 +2154,25 @@ export default function Home() {
         if (!text) return;
         
         const isActive = !isLearningMode && activeWordId === text;
+        if (isActive) {
+          (btn as HTMLElement).style.background = 'linear-gradient(145deg, #10b981, #059669)';
+          (btn as HTMLElement).style.color = 'white';
+        } else {
+          (btn as HTMLElement).style.background = '#ffffff';
+          (btn as HTMLElement).style.color = '#111827';
+        }
+      });
+      
+      // 連続発音ボタンのスタイル更新
+      const sequenceButtons = document.querySelectorAll('.tone-sequence-btn');
+      sequenceButtons.forEach((btn) => {
+        const sequence = btn.getAttribute('data-sequence');
+        if (!sequence) return;
+        
+        // 連続発音ボタンがクリックされた場合、そのシーケンスの各文字がactiveWordIdに含まれているかチェック
+        const sequenceTexts = sequence.split(',').map(t => t.trim());
+        const isActive = !isLearningMode && sequenceTexts.some(text => activeWordId === text);
+        
         if (isActive) {
           (btn as HTMLElement).style.background = 'linear-gradient(145deg, #10b981, #059669)';
           (btn as HTMLElement).style.color = 'white';
@@ -2910,7 +2991,18 @@ export default function Home() {
             <button
               aria-label="アカウントメニュー"
               data-account-menu-button
-              onClick={() => setShowAccountMenu(v => !v)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('アカウントメニューボタンクリック');
+                setShowAccountMenu(v => !v);
+              }}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('アカウントメニューボタンタッチ');
+                setShowAccountMenu(v => !v);
+              }}
               style={{
                 width: isMobile ? 36 : 40,
                 height: isMobile ? 36 : 40,
@@ -2918,7 +3010,10 @@ export default function Home() {
                 border: '1px solid rgba(0,0,0,0.08)',
                 background: '#fff',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent',
+                cursor: 'pointer'
               }}
             >
               <span style={{
@@ -3564,17 +3659,41 @@ export default function Home() {
                       e.preventDefault();
                       e.stopPropagation();
                       console.log('ログアウトボタンクリック');
-                      setShowAccountMenu(false);
-                      await supabase.auth.signOut();
-                      router.refresh();
+                      try {
+                        setShowAccountMenu(false);
+                        const { error } = await supabase.auth.signOut();
+                        if (error) {
+                          console.error('ログアウトエラー:', error);
+                          alert('ログアウトに失敗しました: ' + error.message);
+                        } else {
+                          console.log('ログアウト成功');
+                          router.refresh();
+                          router.push('/login');
+                        }
+                      } catch (err) {
+                        console.error('ログアウト例外:', err);
+                        alert('ログアウトに失敗しました');
+                      }
                     }}
                     onTouchStart={async (e) => {
                       e.preventDefault();
                       e.stopPropagation();
                       console.log('ログアウトボタンタッチ');
-                      setShowAccountMenu(false);
-                      await supabase.auth.signOut();
-                      router.refresh();
+                      try {
+                        setShowAccountMenu(false);
+                        const { error } = await supabase.auth.signOut();
+                        if (error) {
+                          console.error('ログアウトエラー:', error);
+                          alert('ログアウトに失敗しました: ' + error.message);
+                        } else {
+                          console.log('ログアウト成功');
+                          router.refresh();
+                          router.push('/login');
+                        }
+                      } catch (err) {
+                        console.error('ログアウト例外:', err);
+                        alert('ログアウトに失敗しました');
+                      }
                     }}
                     style={{ 
                       height: 36, 
@@ -3584,7 +3703,9 @@ export default function Home() {
                       cursor: 'pointer', 
                       fontWeight: 700,
                       touchAction: 'manipulation',
-                      WebkitTapHighlightColor: 'transparent'
+                      WebkitTapHighlightColor: 'transparent',
+                      width: '100%',
+                      fontSize: '14px'
                     }}
                   >ログアウト</button>
                 </div>
@@ -4311,12 +4432,23 @@ export default function Home() {
                       btn.addEventListener('click', handler as EventListener);
                     });
                     
-                    // 連続発音ボタン
-                    if (sequenceButton) {
-                      const handler = (e: Event) => handleToneSequenceClick(e);
-                      sequenceButton.removeEventListener('click', handler as EventListener);
-                      sequenceButton.addEventListener('click', handler as EventListener);
-                    }
+                    // 連続発音ボタン（複数ある可能性があるためquerySelectorAllを使用）
+                    const sequenceButtons = el.querySelectorAll('.tone-sequence-btn');
+                    sequenceButtons.forEach((btn) => {
+                      const handler = (e: Event) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleToneSequenceClick(e);
+                      };
+                      btn.removeEventListener('click', handler as EventListener);
+                      btn.addEventListener('click', handler as EventListener);
+                      
+                      // モバイル対応: タッチイベントも追加
+                      btn.removeEventListener('touchstart', handler as EventListener);
+                      btn.addEventListener('touchstart', handler as EventListener);
+                    });
+                    
+                    console.log(`連続発音ボタンを${sequenceButtons.length}個登録しました`);
                   }
                 }}
               />
