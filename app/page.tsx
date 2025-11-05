@@ -3915,8 +3915,8 @@ export default function Home() {
                 <strong style={{ textDecoration: 'underline' }}>スラング式カタカナ： {result.katakana}</strong>
               </p>
               
-              {/* 例文表示 */}
-              {result.exampleCantonese && (
+              {/* 例文表示（翻訳された場合は非表示） */}
+              {result.exampleCantonese && !result.translatedText && (
                 <div style={{ marginTop: '1rem' }}>
                   <p style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
                     <strong>例文： {result.exampleCantonese}</strong>
