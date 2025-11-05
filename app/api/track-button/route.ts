@@ -51,3 +51,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true }); // エラーでも成功を返す（ボタン機能に影響を与えない）
   }
 }
+
