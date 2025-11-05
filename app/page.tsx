@@ -4526,7 +4526,7 @@ export default function Home() {
                                 borderBottom: '1px solid #e5e7eb',
                                 fontWeight: '500',
                                 color: '#1f2937'
-                              }}>価格</td>
+                              }}>価格(JPY)</td>
                               <td style={{
                                 padding: '0.75rem',
                                 textAlign: 'center',
@@ -4555,6 +4555,204 @@ export default function Home() {
                                 borderBottom: '1px solid #e5e7eb',
                                 fontWeight: '500',
                                 color: '#1f2937'
+                              }}>価格(HKD)</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#a85f1f',
+                                fontWeight: '600'
+                              }}>無料</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#6b7280',
+                                fontWeight: '600'
+                              }}>💲50/月</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#d97706',
+                                fontWeight: '600'
+                              }}>💲498</td>
+                            </tr>
+                            <tr style={{ backgroundColor: '#ffffff' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>お気に入り登録数</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#6b7280'
+                              }}>6個まで</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓ 無制限</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓ 無制限</td>
+                            </tr>
+                            <tr style={{ backgroundColor: '#f9fafb' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>モード切り替え<br/>(ノーマルモード・学習)</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#ef4444'
+                              }}>✗</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                            </tr>
+                            <tr style={{ backgroundColor: '#ffffff' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>note 教科書自動更新</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#ef4444'
+                              }}>✗</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                            </tr>
+                            <tr style={{ backgroundColor: '#f9fafb' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>テキストOCR</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#ef4444'
+                              }}>✗</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                            </tr>
+                            <tr style={{ backgroundColor: '#ffffff' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>発音チェック</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#ef4444'
+                              }}>✗</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                            </tr>
+                            <tr style={{ backgroundColor: '#f9fafb' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>発音チェックゲーム</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                            </tr>
+                            <tr style={{ backgroundColor: '#ffffff' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
                               }}>カテゴリーアクセス</td>
                               <td style={{
                                 padding: '0.75rem',
@@ -4576,34 +4774,6 @@ export default function Home() {
                                 color: '#10b981',
                                 fontWeight: '600'
                               }}>✓ 全カテゴリー</td>
-                            </tr>
-                            <tr style={{ backgroundColor: '#ffffff' }}>
-                              <td style={{
-                                padding: '0.75rem',
-                                borderBottom: '1px solid #e5e7eb',
-                                fontWeight: '500',
-                                color: '#1f2937'
-                              }}>お気に入り数</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#6b7280'
-                              }}>6個まで</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#10b981',
-                                fontWeight: '600'
-                              }}>✓ 無制限</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#10b981',
-                                fontWeight: '600'
-                              }}>✓ 無制限</td>
                             </tr>
                             <tr style={{ backgroundColor: '#f9fafb' }}>
                               <td style={{
@@ -4662,34 +4832,6 @@ export default function Home() {
                               }}>✓ なし</td>
                             </tr>
                             <tr style={{ backgroundColor: '#f9fafb' }}>
-                              <td style={{
-                                padding: '0.75rem',
-                                borderBottom: '1px solid #e5e7eb',
-                                fontWeight: '500',
-                                color: '#1f2937'
-                              }}>オフライン使用</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#ef4444'
-                              }}>✗</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#10b981',
-                                fontWeight: '600'
-                              }}>✓</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#10b981',
-                                fontWeight: '600'
-                              }}>✓</td>
-                            </tr>
-                            <tr style={{ backgroundColor: '#ffffff' }}>
                               <td style={{
                                 padding: '0.75rem',
                                 fontWeight: '500',
