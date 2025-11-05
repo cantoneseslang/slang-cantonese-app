@@ -81,19 +81,19 @@ export default function AdminPage() {
       const data = await response.json();
       
       if (data.success) {
-        setUsers(data.users);
+        setUsers(data.users || []);
       } else {
         console.error('ユーザー取得エラー:', data);
         // 詳細なエラー情報を表示
         const errorMsg = data.error || '不明なエラー';
         const details = data.details ? `\n詳細: ${data.details}` : '';
-        const debug = data.debug ? `\nデバッグ情報: ${JSON.stringify(data.debug, null, 2)}` : '';
-        const help = data.help ? `\n\n💡 解決方法:\n${data.help}` : '';
-        alert(`❌ ユーザー情報の取得に失敗しました\n\n${errorMsg}${details}${debug}${help}`);
+        alert(`❌ ユーザー情報の取得に失敗しました\n\n${errorMsg}${details}`);
+        setUsers([]);
       }
     } catch (error: any) {
       console.error('ユーザー取得エラー:', error);
       alert(`❌ ユーザー情報の取得に失敗しました\n\n${error.message || String(error)}`);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
