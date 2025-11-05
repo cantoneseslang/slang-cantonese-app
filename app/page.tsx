@@ -4220,6 +4220,17 @@ export default function Home() {
         {/* 設定画面モーダル（右側スライドイン） */}
         {showSettings && user && (
           <div
+            onClick={(e) => {
+              // 外側をクリックした場合は設定を閉じる
+              if (e.target === e.currentTarget) {
+                setShowSettings(false);
+                setShowPasswordChange(false);
+                setPasswordError(null);
+                setPasswordSuccess(false);
+                setNewPassword('');
+                setConfirmPassword('');
+              }
+            }}
             style={{
             position: 'fixed',
             top: 0,
@@ -4232,6 +4243,15 @@ export default function Home() {
           }}>
             {/* 背景オーバーレイ（左側のスペース） */}
             <div 
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowSettings(false);
+                setShowPasswordChange(false);
+                setPasswordError(null);
+                setPasswordSuccess(false);
+                setNewPassword('');
+                setConfirmPassword('');
+              }}
               style={{
               position: 'absolute',
               top: 0,
@@ -4239,7 +4259,8 @@ export default function Home() {
               right: isMobile ? 0 : '400px',
               bottom: 0,
               backgroundColor: 'rgba(0,0,0,0.3)',
-              transition: 'opacity 0.3s ease'
+              transition: 'opacity 0.3s ease',
+              cursor: 'pointer'
             }} />
             {/* 設定パネル（右側） */}
             <div 
