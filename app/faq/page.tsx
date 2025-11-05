@@ -4,13 +4,40 @@ import { useState } from 'react';
 
 interface FAQItem {
   question: string;
-  answer: string;
+  answer: string | React.ReactNode;
 }
 
 export default function FAQPage() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const faqs: FAQItem[] = [
+    {
+      question: 'スラング先生って何もの？',
+      answer: (
+        <>
+          1973年から香港にいる謎の生物です　色んなSNSにいるのでその生態系を除いて見てください
+          <br />
+          <br />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <div>
+              𝕏: <a href="https://x.com/cantonese_slang" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>https://x.com/cantonese_slang</a>
+            </div>
+            <div>
+              YouTube: <a href="https://t.co/ixv6RALYbz" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>https://t.co/ixv6RALYbz</a>
+            </div>
+            <div>
+              Instagram: <a href="https://www.instagram.com/cantonese_slang?igsh=MTV2OHVhNTYwbnlsag%3D%3D&utm_source=qr" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>https://www.instagram.com/cantonese_slang</a>
+            </div>
+            <div>
+              Threads: <a href="https://www.threads.com/@cantonese_slang" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>https://www.threads.com/@cantonese_slang</a>
+            </div>
+            <div>
+              Note: <a href="https://note.com/bestinksalesman" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>https://note.com/bestinksalesman</a>
+            </div>
+          </div>
+        </>
+      )
+    },
     {
       question: '廣東語音れんって何？',
       answer: 'ボタンを押すだけで発音を確認できます。ただ発音するだけでなく、学習に役立つ情報を提供します。シーンに応じた複数表現の提案や検索も可能です。入力テキストの発音（粤ピン/カタカナ）を再生して確認できます。noteと連携し、教材となるボタンがどんどん追加されていきます。'
