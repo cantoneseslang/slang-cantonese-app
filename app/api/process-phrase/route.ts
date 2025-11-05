@@ -87,23 +87,34 @@ async function translateJapaneseToCantonese(japaneseText: string): Promise<strin
         messages: [
           {
             role: "system",
-            content: "You are a professional translator specializing in Japanese to Cantonese translation. Translate the given Japanese text into natural, conversational Cantonese. Only provide the Cantonese translation without any explanations or additional text. Use traditional Chinese characters (繁體字) for Cantonese."
+            content: "You are a professional translator specializing in Japanese to Cantonese translation. Translate the given Japanese text into natural, conversational Cantonese (Traditional Chinese characters). Provide ONLY the Cantonese translation, nothing else. Do not add explanations, notes, or any other text. Just the translation."
           },
           {
             role: "user",
-            content: `Translate this Japanese text to Cantonese: ${japaneseText}`
+            content: `Please translate the following Japanese text to Cantonese. Provide only the Cantonese translation in Traditional Chinese characters:\n\n${japaneseText}`
           }
         ],
-        max_tokens: 2000,
-        temperature: 0.3
+        max_tokens: 3000,
+        temperature: 0.2
       })
     });
     
     const jsonResponse = await response.json();
-    const translatedText = jsonResponse.choices[0].message.content.trim();
+    let translatedText = jsonResponse.choices[0].message.content.trim();
     
-    // 不要な記号や引用符を削除
-    return translatedText.replace(/^["']|["']$/g, '').trim();
+    // 不要な記号や引用符、説明文を削除
+    translatedText = translatedText
+      .replace(/^["'「」『』]|["'「」『』]$/g, '') // 引用符を削除
+      .replace(/^(広東語|Cantonese|Translation|翻訳)[:：]\s*/i, '') // 説明文を削除
+      .replace(/^.*?[:：]\s*/, '') // コロン以降の説明を削除
+      .trim();
+    
+    // 翻訳結果が空または短すぎる場合はエラー
+    if (!translatedText || translatedText.length < 3) {
+      throw new Error('翻訳結果が空または不十分です');
+    }
+    
+    return translatedText;
   } catch (error) {
     console.error('Translation error:', error);
     throw error;
@@ -116,12 +127,21 @@ function isJapaneseText(text: string): boolean {
   return japaneseRegex.test(text);
 }
 
-async function generateExampleSentence(word: string): Promise<{ cantonese: string; japanese: string; full: string }> {
+async function generateExampleSentence(word: string, originalJapanese?: string | null): Promise<{ cantonese: string; japanese: string; full: string }> {
   if (!word || word.trim() === '') {
     return {
       cantonese: '例文生成エラー',
       japanese: '単語が無効です',
       full: '例文生成エラー'
+    };
+  }
+  
+  // 元の日本語テキストがある場合（翻訳された場合）、例文生成をスキップして元の日本語を返す
+  if (originalJapanese) {
+    return {
+      cantonese: word, // 翻訳された広東語テキスト
+      japanese: originalJapanese, // 元の日本語テキスト
+      full: `${word} (${originalJapanese})`
     };
   }
   
@@ -137,44 +157,44 @@ async function generateExampleSentence(word: string): Promise<{ cantonese: strin
         messages: [
           {
             role: "system",
-            content: "You are a Cantonese language teacher. Generate a simple, natural example sentence using the given Cantonese word. Provide the sentence in Cantonese with Japanese translation in parentheses. Format: [Cantonese sentence] ([Japanese translation]). Keep it conversational and beginner-friendly."
+            content: "You are a Cantonese language teacher. Generate a simple, natural example sentence using the given Cantonese word or phrase. Provide the sentence in Cantonese with Japanese translation in parentheses. Format: [Cantonese sentence] ([Japanese translation]). Keep it conversational and beginner-friendly. Do not add any other text or explanations."
           },
           {
             role: "user",
-            content: `Generate an example sentence using the Cantonese word: ${word}`
+            content: `Generate an example sentence using this Cantonese word or phrase: ${word}`
           }
         ],
-        max_tokens: 100,
+        max_tokens: 200,
         temperature: 0.7
       })
     });
     
     const jsonResponse = await response.json();
-    const fullExample = jsonResponse.choices[0].message.content.trim();
+    let fullExample = jsonResponse.choices[0].message.content.trim();
     
     // 不要な記号や引用符を削除
-    const cleanedExample = fullExample.replace(/^["']|["']$/g, '');
+    fullExample = fullExample.replace(/^["'「」『』]|["'「」『』]$/g, '');
     
     // 広東語部分と日本語翻訳部分を分離
     let cantonesePart = '';
     let japanesePart = '';
     
     // 括弧で区切られている場合の処理
-    const parenMatch = cleanedExample.match(/^(.+?)\s*\((.+?)\)$/);
+    const parenMatch = fullExample.match(/^(.+?)\s*[（(]\s*(.+?)\s*[）)]$/);
     if (parenMatch) {
       cantonesePart = parenMatch[1].trim();
       japanesePart = parenMatch[2].trim();
     } else {
       // 括弧がない場合は、日本語文字が含まれているかチェック
       const japaneseRegex = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/;
-      if (japaneseRegex.test(cleanedExample)) {
+      if (japaneseRegex.test(fullExample)) {
         // 日本語文字が含まれている場合、最初の日本語文字から分割
-        const japaneseIndex = cleanedExample.search(japaneseRegex);
-        cantonesePart = cleanedExample.substring(0, japaneseIndex).trim();
-        japanesePart = cleanedExample.substring(japaneseIndex).trim();
+        const japaneseIndex = fullExample.search(japaneseRegex);
+        cantonesePart = fullExample.substring(0, japaneseIndex).trim();
+        japanesePart = fullExample.substring(japaneseIndex).trim();
       } else {
         // 日本語文字がない場合は広東語部分として扱う
-        cantonesePart = cleanedExample;
+        cantonesePart = fullExample;
         japanesePart = '';
       }
     }
@@ -182,7 +202,7 @@ async function generateExampleSentence(word: string): Promise<{ cantonese: strin
     return {
       cantonese: cantonesePart,
       japanese: japanesePart,
-      full: cleanedExample
+      full: fullExample
     };
   } catch (error) {
     console.error('Example sentence generation error:', error);
@@ -247,8 +267,8 @@ export async function POST(request: NextRequest) {
     const jyutpingResult = jyutpingArray.join("・");
     const katakanaResult = katakanaArray.join("・");
     
-    // 例文生成（翻訳された広東語テキストを使用）
-    const exampleData = await generateExampleSentence(cantonesePhrase);
+    // 例文生成（翻訳された広東語テキストを使用、元の日本語テキストも渡す）
+    const exampleData = await generateExampleSentence(cantonesePhrase, originalJapanese);
     
     return NextResponse.json({
       jyutping: jyutpingResult,
