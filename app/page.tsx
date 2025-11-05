@@ -3474,6 +3474,14 @@ export default function Home() {
             }}>
               <div>・広東語の発音、意味を調べたい時、広東語を入力して🟦ボタン</div>
               <div>・日本語を広東語に翻訳したい時、日本語を入力して🟩ボタン</div>
+              <div style={{ 
+                fontSize: isMobile ? '0.7rem' : '0.8rem', 
+                color: searchQuery.length > 900 ? '#ef4444' : '#9ca3af', 
+                marginTop: '0.25rem',
+                fontWeight: searchQuery.length > 900 ? '600' : '400'
+              }}>
+                入力可能文字数: {searchQuery.length} / 1,000文字
+              </div>
             </div>
             {/* 入力欄＋右端アイコン用のラッパ（入力の高さに合わせて相対配置） */}
             <div style={{ position: 'relative' }}>
