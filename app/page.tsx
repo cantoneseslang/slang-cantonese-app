@@ -1062,8 +1062,49 @@ export default function Home() {
     return normalized.length > 4000 ? normalized.slice(0, 4000) : normalized;
   };
 
+  // HEIC形式をJPEG/PNGに変換
+  const convertHeicToJpeg = async (file: File): Promise<File> => {
+    try {
+      const heic2any = (await import('heic2any')).default;
+      const convertedBlob = await heic2any({
+        blob: file,
+        toType: 'image/jpeg',
+        quality: 0.9
+      });
+      
+      // heic2anyは配列を返す可能性がある
+      const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+      
+      // BlobをFileオブジェクトに変換
+      const convertedFile = new File([blob], file.name.replace(/\.heic$/i, '.jpg'), {
+        type: 'image/jpeg',
+        lastModified: Date.now()
+      });
+      
+      return convertedFile;
+    } catch (error) {
+      console.error('HEIC変換エラー:', error);
+      throw new Error('HEIC形式の変換に失敗しました。');
+    }
+  };
+
   // 画像OCR（Tesseract.js）- 広東語・中国語専用
   const runOcr = async (file: File, onProgress?: (p: number) => void): Promise<string> => {
+    let imageFile = file;
+    
+    // HEIC形式の場合はJPEGに変換
+    const fileName = file.name.toLowerCase();
+    const fileType = file.type;
+    if (fileName.endsWith('.heic') || fileName.endsWith('.heif') || fileType === 'image/heic' || fileType === 'image/heif') {
+      if (onProgress) {
+        onProgress(10); // 変換開始
+      }
+      imageFile = await convertHeicToJpeg(file);
+      if (onProgress) {
+        onProgress(20); // 変換完了
+      }
+    }
+    
     const Tesseract: any = await import('tesseract.js');
     const { createWorker } = Tesseract as any;
     
@@ -1076,7 +1117,7 @@ export default function Home() {
       
       // Fileオブジェクトを直接渡す（arrayBufferではなく）
       // Tesseract.jsはFile、Blob、または画像URLを受け取る
-      const result = await worker.recognize(file);
+      const result = await worker.recognize(imageFile);
       
       // 進捗を100%に設定
       if (onProgress) {
@@ -3510,11 +3551,11 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 非表示input: PDF/画像（OCR対応、自動実行） */}
+            {/* 非表示input: PDF/画像（OCR対応、自動実行、HEIC対応） */}
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,image/*"
+              accept=".pdf,image/*,.heic,.heif"
               style={{ display: 'none' }}
               onChange={async (e) => {
                 const file = e.target.files?.[0];

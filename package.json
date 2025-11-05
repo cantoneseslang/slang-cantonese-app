@@ -12,6 +12,7 @@
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.78.0",
     "csv-parse": "^6.1.0",
+    "heic2any": "^0.0.4",
     "next": "16.0.1",
     "papaparse": "^5.5.3",
     "pdfjs-dist": "^4.0.379",
