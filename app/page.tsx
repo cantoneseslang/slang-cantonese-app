@@ -1306,34 +1306,53 @@ export default function Home() {
 
   // プランカードモーダルのスクロール状態を初期化と背景スクロールの無効化
   useEffect(() => {
-    if (showPricingModal) {
+    if (showPricingModal && selectedPlan) {
       // 背景のスクロールを無効化
       const originalStyle = window.getComputedStyle(document.body).overflow;
       document.body.style.overflow = 'hidden';
       
-      if (pricingModalScrollRef.current && (selectedPlan === 'subscription' || selectedPlan === 'lifetime')) {
-        const checkScroll = () => {
-          if (pricingModalScrollRef.current) {
-            const { scrollTop, scrollHeight, clientHeight } = pricingModalScrollRef.current;
-            setShowPricingModalTopArrow(scrollTop > 10);
-            setShowPricingModalBottomArrow(scrollTop < scrollHeight - clientHeight - 10);
-          }
-        };
-        // 少し遅延して実行（レンダリング後に）
-        setTimeout(checkScroll, 100);
-        window.addEventListener('resize', checkScroll);
-        return () => {
-          window.removeEventListener('resize', checkScroll);
-          document.body.style.overflow = originalStyle;
-        };
-      } else {
-        setShowPricingModalTopArrow(false);
-        setShowPricingModalBottomArrow(false);
-        return () => {
-          document.body.style.overflow = originalStyle;
-        };
+      const checkScroll = () => {
+        if (pricingModalScrollRef.current) {
+          // 強制的に再計算を促すため、少し遅延
+          requestAnimationFrame(() => {
+            if (pricingModalScrollRef.current) {
+              const { scrollTop, scrollHeight, clientHeight } = pricingModalScrollRef.current;
+              const canScroll = scrollHeight > clientHeight;
+              const isAtTop = scrollTop <= 10;
+              const isAtBottom = scrollTop >= scrollHeight - clientHeight - 10;
+              
+              // スクロール可能な場合のみ矢印を表示
+              if (canScroll) {
+                setShowPricingModalTopArrow(!isAtTop);
+                setShowPricingModalBottomArrow(!isAtBottom);
+              } else {
+                setShowPricingModalTopArrow(false);
+                setShowPricingModalBottomArrow(false);
+              }
+            }
+          });
+        }
+      };
+      
+      // 初回チェック（レンダリング後）
+      setTimeout(checkScroll, 150);
+      // リサイズ時にもチェック
+      window.addEventListener('resize', checkScroll);
+      // スクロール時にもチェック
+      if (pricingModalScrollRef.current) {
+        pricingModalScrollRef.current.addEventListener('scroll', checkScroll);
       }
+      
+      return () => {
+        window.removeEventListener('resize', checkScroll);
+        if (pricingModalScrollRef.current) {
+          pricingModalScrollRef.current.removeEventListener('scroll', checkScroll);
+        }
+        document.body.style.overflow = originalStyle;
+      };
     } else {
+      // モーダルが閉じられたら背景スクロールを復元
+      document.body.style.overflow = '';
       setShowPricingModalTopArrow(false);
       setShowPricingModalBottomArrow(false);
     }
