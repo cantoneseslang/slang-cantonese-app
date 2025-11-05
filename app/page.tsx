@@ -3925,36 +3925,39 @@ export default function Home() {
               {/* 単語音声プレーヤー */}
               {result.audioBase64 && (
                 <div style={{ marginTop: '1rem' }}>
-                  <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 'bold' }}>
-                    単語音声: {searchQuery}
-                  </p>
-                  <audio 
-                    ref={audioRef}
-                    controls 
-                    controlsList="nodownload nofullscreen noremoteplayback"
-                    style={{ width: '100%', height: '100px' }}
-                    src={`data:audio/mp3;base64,${result.audioBase64}`}
-                  />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px', flexWrap: 'wrap' }}>
-                    <label style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>再生速度: </label>
-                    <select 
-                      value={playbackSpeed}
-                      onChange={(e) => setPlaybackSpeed(e.target.value)}
-                      style={{ 
-                        padding: isMobile ? '5px 10px' : '8px 12px', 
-                        fontSize: isMobile ? '0.875rem' : '1rem', 
-                        borderRadius: '8px', 
-                        border: '1px solid #ccc', 
-                        width: 'auto' 
-                      }}
-                    >
-                      <option value="0.5">0.5x</option>
-                      <option value="0.75">0.75x</option>
-                      <option value="1">1x</option>
-                      <option value="1.25">1.25x</option>
-                      <option value="1.5">1.5x</option>
-                      <option value="2">2x</option>
-                    </select>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                      単語音声: {searchQuery}
+                    </span>
+                    <audio 
+                      ref={audioRef}
+                      controls 
+                      controlsList="nodownload nofullscreen noremoteplayback"
+                      style={{ flex: '1', minWidth: '200px', maxWidth: '400px', height: '32px' }}
+                      src={`data:audio/mp3;base64,${result.audioBase64}`}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}>
+                      <label style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>再生速度:</label>
+                      <select 
+                        value={playbackSpeed}
+                        onChange={(e) => setPlaybackSpeed(e.target.value)}
+                        style={{ 
+                          padding: isMobile ? '4px 8px' : '6px 10px', 
+                          fontSize: isMobile ? '0.875rem' : '1rem', 
+                          borderRadius: '6px', 
+                          border: '1px solid #ccc', 
+                          width: 'auto',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="0.5">0.5x</option>
+                        <option value="0.75">0.75x</option>
+                        <option value="1">1x</option>
+                        <option value="1.25">1.25x</option>
+                        <option value="1.5">1.5x</option>
+                        <option value="2">2x</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               )}
@@ -3962,36 +3965,39 @@ export default function Home() {
               {/* 例文音声プレーヤー */}
               {result.exampleAudioBase64 && result.exampleCantonese && (
                 <div style={{ marginTop: '1rem' }}>
-                  <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 'bold' }}>
-                    例文音声: {result.exampleCantonese}
-                  </p>
-                  <audio 
-                    ref={exampleAudioRef}
-                    controls 
-                    controlsList="nodownload nofullscreen noremoteplayback"
-                    style={{ width: '100%', height: '100px' }}
-                    src={`data:audio/mp3;base64,${result.exampleAudioBase64}`}
-                  />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px', flexWrap: 'wrap' }}>
-                    <label style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>再生速度: </label>
-                    <select 
-                      value={examplePlaybackSpeed}
-                      onChange={(e) => setExamplePlaybackSpeed(e.target.value)}
-                      style={{ 
-                        padding: isMobile ? '5px 10px' : '8px 12px', 
-                        fontSize: isMobile ? '0.875rem' : '1rem', 
-                        borderRadius: '8px', 
-                        border: '1px solid #ccc', 
-                        width: 'auto' 
-                      }}
-                    >
-                      <option value="0.5">0.5x</option>
-                      <option value="0.75">0.75x</option>
-                      <option value="1">1x</option>
-                      <option value="1.25">1.25x</option>
-                      <option value="1.5">1.5x</option>
-                      <option value="2">2x</option>
-                    </select>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                      例文音声: {result.exampleCantonese}
+                    </span>
+                    <audio 
+                      ref={exampleAudioRef}
+                      controls 
+                      controlsList="nodownload nofullscreen noremoteplayback"
+                      style={{ flex: '1', minWidth: '200px', maxWidth: '400px', height: '32px' }}
+                      src={`data:audio/mp3;base64,${result.exampleAudioBase64}`}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}>
+                      <label style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>再生速度:</label>
+                      <select 
+                        value={examplePlaybackSpeed}
+                        onChange={(e) => setExamplePlaybackSpeed(e.target.value)}
+                        style={{ 
+                          padding: isMobile ? '4px 8px' : '6px 10px', 
+                          fontSize: isMobile ? '0.875rem' : '1rem', 
+                          borderRadius: '6px', 
+                          border: '1px solid #ccc', 
+                          width: 'auto',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="0.5">0.5x</option>
+                        <option value="0.75">0.75x</option>
+                        <option value="1">1x</option>
+                        <option value="1.25">1.25x</option>
+                        <option value="1.5">1.5x</option>
+                        <option value="2">2x</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               )}
