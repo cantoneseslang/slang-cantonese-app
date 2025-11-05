@@ -1319,8 +1319,9 @@ export default function Home() {
   // ユーザー情報とデフォルトカテゴリーが読み込まれた後にカテゴリーを適用（初回ロード時のみ）
   const hasAppliedDefaultCategory = useRef(false);
   useEffect(() => {
-    if (!user || categories.length === 0) {
-      console.log('⏳ カテゴリー適用待機中:', { hasUser: !!user, categoriesCount: categories.length });
+    // カテゴリーが読み込まれていない場合は待機
+    if (categories.length === 0) {
+      console.log('⏳ カテゴリー適用待機中:', { categoriesCount: categories.length });
       return;
     }
     
@@ -1340,18 +1341,21 @@ export default function Home() {
     // デフォルトカテゴリーを適用（ユーザー設定がある場合はそれを使用、なければpronunciation）
     const regularCategories = categories.filter(c => !c.id.startsWith('note_'));
     if (regularCategories.length > 0) {
-      const defaultCategory = regularCategories.find(c => c.id === defaultCategoryId) || regularCategories[0];
+      // ユーザーがログインしている場合はdefaultCategoryIdを使用、そうでなければpronunciationを使用
+      const targetCategoryId = user ? defaultCategoryId : 'pronunciation';
+      const defaultCategory = regularCategories.find(c => c.id === targetCategoryId) || regularCategories.find(c => c.id === 'pronunciation') || regularCategories[0];
       console.log('🎯 デフォルトカテゴリーを適用:', { 
-        defaultCategoryId, 
+        defaultCategoryId: targetCategoryId, 
         categoryName: defaultCategory.name,
-        categoryId: defaultCategory.id
+        categoryId: defaultCategory.id,
+        hasUser: !!user
       });
       setSelectedCategory(defaultCategory.id);
       setCurrentCategory(defaultCategory);
       setCurrentWords(defaultCategory.words || []);
       hasAppliedDefaultCategory.current = true;
     }
-  }, [user, defaultCategoryId, categories]);
+  }, [user, defaultCategoryId, categories, selectedCategory]);
   
   // Noteサブカテゴリーバーのスクロール状態を初期化
   useEffect(() => {
@@ -2988,7 +2992,18 @@ export default function Home() {
 
                       {/* シルバー会員 */}
                       <button
-                        onClick={() => handleMembershipChange('subscription')}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('シルバー会員ボタンクリック');
+                          handleMembershipChange('subscription');
+                        }}
+                        onTouchStart={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('シルバー会員ボタンタッチ');
+                          handleMembershipChange('subscription');
+                        }}
                         style={{
                           flex: 1,
                           padding: '8px 4px',
@@ -3006,7 +3021,9 @@ export default function Home() {
                           boxShadow: membershipType === 'subscription' 
                             ? '0 4px 12px rgba(192,192,192,0.3)' 
                             : '0 1px 3px rgba(0,0,0,0.1)',
-                          transform: membershipType === 'subscription' ? 'scale(1.02)' : 'scale(1)'
+                          transform: membershipType === 'subscription' ? 'scale(1.02)' : 'scale(1)',
+                          touchAction: 'manipulation',
+                          WebkitTapHighlightColor: 'transparent'
                         }}
                       >
                         <span style={{ fontSize: '1.25rem' }}>
@@ -3024,7 +3041,18 @@ export default function Home() {
 
                       {/* ゴールド会員 */}
                       <button
-                        onClick={() => handleMembershipChange('lifetime')}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('ゴールド会員ボタンクリック');
+                          handleMembershipChange('lifetime');
+                        }}
+                        onTouchStart={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('ゴールド会員ボタンタッチ');
+                          handleMembershipChange('lifetime');
+                        }}
                         style={{
                           flex: 1,
                           padding: '8px 4px',
@@ -3042,7 +3070,9 @@ export default function Home() {
                           boxShadow: membershipType === 'lifetime' 
                             ? '0 4px 12px rgba(255,215,0,0.4)' 
                             : '0 1px 3px rgba(0,0,0,0.1)',
-                          transform: membershipType === 'lifetime' ? 'scale(1.02)' : 'scale(1)'
+                          transform: membershipType === 'lifetime' ? 'scale(1.02)' : 'scale(1)',
+                          touchAction: 'manipulation',
+                          WebkitTapHighlightColor: 'transparent'
                         }}
                       >
                         <span style={{ fontSize: '1.25rem' }}>
