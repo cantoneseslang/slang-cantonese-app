@@ -1,0 +1,8 @@
+# 法的文書ファイル - マージ時に警告を出すように設定
+app/legal/terms/page.tsx merge=ours
+app/legal/privacy/page.tsx merge=ours
+app/legal/tokusho/page.tsx merge=ours
+
+# または、完全に保護する場合は以下をコメントアウト解除
+# app/legal/**/*.tsx merge=ours
+

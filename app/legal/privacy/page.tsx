@@ -1,3 +1,20 @@
+/**
+ * ⚠️ 重要：このファイルは法的文書（プライバシーポリシー）を含みます
+ * 
+ * このファイルは変更履歴が法的に重要です。
+ * マージや自動修正時には注意が必要です。
+ * 
+ * 変更する場合は必ず以下を確認してください：
+ * - 法的文書の内容が正しく更新されているか
+ * - 過去のコミット履歴で意図しない変更が入っていないか
+ * - すべての条項が完全に含まれているか
+ * 
+ * このファイルを簡易版に戻したり、内容を削除しないでください。
+ * 
+ * 注意：このファイルは利用規約ページのタブに統合されています。
+ * 詳細な内容は app/legal/terms/page.tsx の privacyContent を参照してください。
+ */
+
 export default function PrivacyPage() {
   return (
     <main style={{ maxWidth: 900, margin: '0 auto', padding: '2rem 1.5rem' }}>
@@ -15,8 +32,11 @@ export default function PrivacyPage() {
       <p style={{ marginTop: '1rem', color: '#6b7280', fontSize: '0.9rem' }}>
         本ポリシーの内容は、必要に応じて改定される場合があります。
       </p>
+      <p style={{ marginTop: '1rem', color: '#3b82f6', fontSize: '0.875rem' }}>
+        <a href="/legal/terms" style={{ textDecoration: 'underline' }}>
+          詳細なプライバシーポリシーはこちら（利用規約ページのプライバシータブ）
+        </a>
+      </p>
     </main>
   );
 }
-
- 
