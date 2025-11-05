@@ -3936,18 +3936,30 @@ export default function Home() {
                       style={{ width: '300px', height: '32px', flexShrink: 0 }}
                       src={`data:audio/mp3;base64,${result.audioBase64}`}
                     />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
                       <label style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>再生速度:</label>
                       <select 
                         value={playbackSpeed}
                         onChange={(e) => setPlaybackSpeed(e.target.value)}
                         style={{ 
-                          padding: isMobile ? '4px 8px' : '6px 10px', 
+                          padding: isMobile ? '6px 12px' : '8px 16px', 
                           fontSize: isMobile ? '0.875rem' : '1rem', 
-                          borderRadius: '6px', 
-                          border: '1px solid #ccc', 
+                          borderRadius: '12px', 
+                          border: '1px solid rgba(0,0,0,0.1)', 
+                          background: 'linear-gradient(145deg, #ffffff, #f5f5f7)',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
                           width: 'auto',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          outline: 'none',
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = '#007AFF';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,122,255,0.15), inset 0 1px 0 rgba(255,255,255,0.9)';
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = 'rgba(0,0,0,0.1)';
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)';
                         }}
                       >
                         <option value="0.5">0.5x</option>
@@ -3976,18 +3988,30 @@ export default function Home() {
                       style={{ width: '300px', height: '32px', flexShrink: 0 }}
                       src={`data:audio/mp3;base64,${result.exampleAudioBase64}`}
                     />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
                       <label style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>再生速度:</label>
                       <select 
                         value={examplePlaybackSpeed}
                         onChange={(e) => setExamplePlaybackSpeed(e.target.value)}
                         style={{ 
-                          padding: isMobile ? '4px 8px' : '6px 10px', 
+                          padding: isMobile ? '6px 12px' : '8px 16px', 
                           fontSize: isMobile ? '0.875rem' : '1rem', 
-                          borderRadius: '6px', 
-                          border: '1px solid #ccc', 
+                          borderRadius: '12px', 
+                          border: '1px solid rgba(0,0,0,0.1)', 
+                          background: 'linear-gradient(145deg, #ffffff, #f5f5f7)',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
                           width: 'auto',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          outline: 'none',
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = '#007AFF';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,122,255,0.15), inset 0 1px 0 rgba(255,255,255,0.9)';
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = 'rgba(0,0,0,0.1)';
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)';
                         }}
                       >
                         <option value="0.5">0.5x</option>
