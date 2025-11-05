@@ -2024,15 +2024,18 @@ export default function Home() {
     // e.targetがボタンでない場合（spanなどの子要素の場合）を考慮
     const target = e.target as HTMLElement;
     const button = target.closest('.tone-sequence-btn') as HTMLButtonElement;
-    if (!button) return;
-    
-    const sequence = button.getAttribute('data-sequence');
-    if (!sequence) {
-      console.error('連続発音ボタンにdata-sequence属性がありません');
+    if (!button) {
+      console.error('連続発音ボタンが見つかりません', target);
       return;
     }
     
-    console.log('連続発音ボタンクリック:', sequence);
+    const sequence = button.getAttribute('data-sequence');
+    if (!sequence) {
+      console.error('連続発音ボタンにdata-sequence属性がありません', button);
+      return;
+    }
+    
+    console.log('✅ 連続発音ボタンクリック:', sequence, 'button:', button);
 
     // ハプティックフィードバック
     if ('vibrate' in navigator) {
@@ -4434,18 +4437,37 @@ export default function Home() {
                     
                     // 連続発音ボタン（複数ある可能性があるためquerySelectorAllを使用）
                     const sequenceButtons = el.querySelectorAll('.tone-sequence-btn');
-                    sequenceButtons.forEach((btn) => {
-                      const handler = (e: Event) => {
+                    console.log(`連続発音ボタンを${sequenceButtons.length}個発見`);
+                    
+                    sequenceButtons.forEach((btn, index) => {
+                      const sequence = btn.getAttribute('data-sequence');
+                      console.log(`連続発音ボタン${index + 1}: data-sequence="${sequence}"`);
+                      
+                      // 既存のイベントリスナーをすべて削除（異なる関数参照を防ぐため）
+                      const newBtn = btn.cloneNode(true) as HTMLElement;
+                      btn.parentNode?.replaceChild(newBtn, btn);
+                      
+                      // クリックイベント
+                      const clickHandler = (e: Event) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        console.log(`連続発音ボタン${index + 1}クリック:`, sequence);
                         handleToneSequenceClick(e);
                       };
-                      btn.removeEventListener('click', handler as EventListener);
-                      btn.addEventListener('click', handler as EventListener);
+                      newBtn.addEventListener('click', clickHandler);
                       
                       // モバイル対応: タッチイベントも追加
-                      btn.removeEventListener('touchstart', handler as EventListener);
-                      btn.addEventListener('touchstart', handler as EventListener);
+                      const touchHandler = (e: Event) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log(`連続発音ボタン${index + 1}タッチ:`, sequence);
+                        handleToneSequenceClick(e);
+                      };
+                      newBtn.addEventListener('touchstart', touchHandler);
+                      
+                      // タッチアクションとスタイルを設定
+                      (newBtn as HTMLElement).style.touchAction = 'manipulation';
+                      (newBtn as HTMLElement).style.WebkitTapHighlightColor = 'transparent';
                     });
                     
                     console.log(`連続発音ボタンを${sequenceButtons.length}個登録しました`);
