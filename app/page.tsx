@@ -1636,6 +1636,8 @@ export default function Home() {
       return;
     }
 
+    console.log('🔍 handleSearch開始:', { query, queryLength: query.length });
+
     // 入力欄からの検索は、学習モードでなくても結果パネルを表示する
     setForceShowResult(true);
 
@@ -1643,6 +1645,7 @@ export default function Home() {
     setError(null);
 
     try {
+      console.log('📡 API呼び出し開始: /api/process-phrase');
       const response = await fetch('/api/process-phrase', {
         method: 'POST',
         headers: {
@@ -1651,11 +1654,21 @@ export default function Home() {
         body: JSON.stringify({ phrase: query }),
       });
 
+      console.log('📡 APIレスポンス:', { ok: response.ok, status: response.status, statusText: response.statusText });
+
       if (!response.ok) {
-        throw new Error('検索に失敗しました');
+        const errorText = await response.text();
+        console.error('❌ APIエラー:', { status: response.status, errorText });
+        throw new Error(`検索に失敗しました: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('✅ APIデータ受信:', { 
+        hasJyutping: !!data.jyutping, 
+        hasKatakana: !!data.katakana,
+        hasExample: !!data.exampleCantonese,
+        data 
+      });
       
       // 単語音声を生成
       const audioResponse = await fetch('/api/generate-speech', {
