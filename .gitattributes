@@ -3,6 +3,13 @@ app/legal/terms/page.tsx merge=ours
 app/legal/privacy/page.tsx merge=ours
 app/legal/tokusho/page.tsx merge=ours
 
-# または、完全に保護する場合は以下をコメントアウト解除
-# app/legal/**/*.tsx merge=ours
+# 重要なページファイル - 意図しない変更を防ぐため保護
+app/about/page.tsx merge=ours
+app/cantonese/page.tsx merge=ours
+app/updates/page.tsx merge=ours
+app/faq/page.tsx merge=ours
+app/contact/page.tsx merge=ours
+app/support/page.tsx merge=ours
+app/page.tsx merge=ours
+app/admin/page.tsx merge=ours
 
