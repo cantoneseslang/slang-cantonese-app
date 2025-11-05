@@ -289,6 +289,16 @@ function LoginForm() {
     setLoading(true);
     setError(null);
 
+    // モバイルXアプリのWebViewを検出
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    const isTwitterWebView = /Twitter/i.test(userAgent) || /XAndroid/i.test(userAgent) || /X iOS/i.test(userAgent);
+    
+    if (isTwitterWebView) {
+      setError('XアプリのブラウザからはGoogleログインができません。右上の「...」メニューから「ブラウザで開く」を選択して、SafariやChromeなどの標準ブラウザで開いてください。');
+      setLoading(false);
+      return;
+    }
+
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -299,7 +309,12 @@ function LoginForm() {
 
       if (error) throw error;
     } catch (err: any) {
-      setError(err.message || 'Google認証でエラーが発生しました');
+      // Google OAuthのdisallowed_useragentエラーの場合、より詳しい説明を表示
+      if (err.message && err.message.includes('disallowed_useragent')) {
+        setError('このブラウザからはGoogleログインができません。標準ブラウザ（Safari、Chromeなど）で開いてください。');
+      } else {
+        setError(err.message || 'Google認証でエラーが発生しました');
+      }
       setLoading(false);
     }
   };
