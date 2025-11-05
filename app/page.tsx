@@ -2146,7 +2146,14 @@ export default function Home() {
             
             {/* Noteサブカテゴリーバー（フロート形式） */}
             {showNoteSubCategories && (
-              <div style={{
+              <div 
+                onClick={(e) => {
+                  // 外側をクリックした場合はサブカテゴリーバーを閉じる
+                  if (e.target === e.currentTarget) {
+                    setShowNoteSubCategories(false);
+                  }
+                }}
+                style={{
                 position: 'absolute',
                 top: '100%',
                 left: 0,
@@ -2159,7 +2166,9 @@ export default function Home() {
                 boxShadow: '0 8px 24px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.08)',
                 border: '1px solid rgba(0,0,0,0.06)'
               }}>
-                <div style={{
+                <div 
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
                   padding: isMobile ? '0.75rem 0' : '1rem 0',
                   position: 'relative'
                 }}>
