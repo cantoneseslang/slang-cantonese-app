@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import PrivacyContent from './privacy-content';
+import TokushoContent from './tokusho-content';
 
 const termsContent = {
   ja: {
@@ -41,7 +43,18 @@ const termsContent = {
         items: [
           { label: '4.1 料金および請求サイクル:', text: 'サブスクリプション料金は、選択した期間（月間または年間など）ごとに前払いで請求されます。' },
           { label: '4.2 自動更新:', text: '現行期間終了前にキャンセルしない限り、同一期間で同額の料金にて自動更新されます。' },
-          { label: '4.3 決済処理:', text: '決済は第三者プロバイダを通じて行われ、当社はクレジットカード情報等の全情報を保存しません。' },
+          { 
+            label: '4.3 決済処理:', 
+            jsx: (
+              <>
+                決済は第三者プロバイダ（
+                <a href="https://stripe.com/jp/legal/consumer" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
+                  Stripe
+                </a>
+                ）を通じて行われ、当社はクレジットカード情報等の全情報を保存しません。
+              </>
+            )
+          },
           { label: '4.4 解約および返金:', text: 'アカウント設定からいつでも解約が可能です。解約により次回更新を停止しますが、既払い期間のサービス利用は有効期限まで継続します。既払い料金は原則として返金されません。ただし、法令により返金が義務付けられる場合はこの限りではありません。' }
         ]
       },
@@ -167,7 +180,18 @@ const termsContent = {
         items: [
           { label: '4.1 Fees and Billing Cycle:', text: 'Subscription fees are charged in advance for the selected period (monthly, annual, etc.).' },
           { label: '4.2 Auto-Renewal:', text: 'Unless cancelled before the current period ends, subscriptions automatically renew for the same period at the same fee.' },
-          { label: '4.3 Payment Processing:', text: 'Payments are processed through third-party providers, and we do not store any credit card information.' },
+          { 
+            label: '4.3 Payment Processing:', 
+            jsx: (
+              <>
+                Payments are processed through third-party providers (
+                <a href="https://stripe.com/jp/legal/consumer" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
+                  Stripe
+                </a>
+                ), and we do not store any credit card information.
+              </>
+            )
+          },
           { label: '4.4 Cancellation and Refunds:', text: 'You may cancel your subscription at any time through account settings. Cancellation stops future renewals, but service access continues until the end of the prepaid period. Prepaid fees are generally non-refundable, except where required by law.' }
         ]
       },
@@ -257,52 +281,142 @@ const termsContent = {
   }
 };
 
+type TabType = 'terms' | 'privacy' | 'tokusho';
+
 export default function TermsPage() {
+  const [activeTab, setActiveTab] = useState<TabType>('terms');
   const [language, setLanguage] = useState<'ja' | 'en'>('ja');
-  const content = termsContent[language];
 
-  return (
-    <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto', lineHeight: '1.8' }}>
-      <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '2rem' }}>
-        {content.title}
-      </h1>
-      
-      <div style={{ marginTop: '1rem' }}>
-        <p style={{ marginBottom: '2rem' }}>
-          {content.intro}
-        </p>
+  const tabs = {
+    ja: {
+      terms: '利用規約',
+      privacy: 'プライバシー',
+      tokusho: '特商法表記'
+    },
+    en: {
+      terms: 'Terms of Service',
+      privacy: 'Privacy',
+      tokusho: 'Specified Commercial Transactions Act'
+    }
+  };
 
-        {content.sections.map((section, sectionIndex) => (
-          <div key={sectionIndex}>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: '2rem', marginBottom: '1rem' }}>
-              {section.title}
-            </h2>
-            {section.items.map((item, itemIndex) => (
-              <div key={itemIndex}>
-                {item.list ? (
-                  <ul style={{ listStyle: 'disc', paddingLeft: '2rem', marginBottom: '1rem' }}>
-                    {item.list.map((listItem, listIndex) => (
-                      <li key={listIndex} style={{ marginBottom: '0.5rem' }}>
-                        {listItem}
-                      </li>
-                    ))}
-                  </ul>
+  const renderContent = () => {
+    if (activeTab === 'terms') {
+      const content = termsContent[language];
+      return (
+        <>
+          <p style={{ marginBottom: '2rem' }}>
+            {content.intro}
+          </p>
+          {content.sections.map((section, sectionIndex) => (
+            <div key={sectionIndex}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: '2rem', marginBottom: '1rem' }}>
+                {section.title}
+              </h2>
+              {section.items.map((item, itemIndex) => (
+                <div key={itemIndex}>
+                  {item.list ? (
+                    <ul style={{ listStyle: 'disc', paddingLeft: '2rem', marginBottom: '1rem' }}>
+                      {item.list.map((listItem, listIndex) => (
+                        <li key={listIndex} style={{ marginBottom: '0.5rem' }}>
+                          {listItem}
+                        </li>
+                      ))}
+                    </ul>
                 ) : (
                   <p style={{ marginBottom: item.label ? '0.5rem' : '1rem' }}>
                     {item.label && <strong>{item.label} </strong>}
-                    {item.text}
+                    {item.jsx ? item.jsx : item.text}
                   </p>
                 )}
-              </div>
-            ))}
-          </div>
-        ))}
+                </div>
+              ))}
+            </div>
+          ))}
+          <p style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid #e5e7eb', fontSize: '0.875rem', color: '#6b7280' }}>
+            {content.lastUpdated}
+          </p>
+        </>
+      );
+    } else if (activeTab === 'privacy') {
+      return <PrivacyContent language={language} />;
+    } else if (activeTab === 'tokusho') {
+      return <TokushoContent language={language} />;
+    }
+  };
 
-        <p style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid #e5e7eb', fontSize: '0.875rem', color: '#6b7280' }}>
-          {content.lastUpdated}
-        </p>
+  return (
+    <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto', lineHeight: '1.8' }}>
+      <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '2rem', textAlign: 'center' }}>
+        {language === 'ja' ? '利用規約' : 'Terms of Service'}
+      </h1>
 
-        <p style={{ marginTop: '1rem', textAlign: 'center' }}>
+      {/* タブナビゲーション */}
+      <div style={{
+        display: 'flex',
+        backgroundColor: '#e5e7eb',
+        borderRadius: '8px',
+        padding: '4px',
+        marginBottom: '2rem',
+        gap: '4px'
+      }}>
+        <button
+          onClick={() => setActiveTab('terms')}
+          style={{
+            flex: 1,
+            padding: '0.75rem 1rem',
+            border: 'none',
+            borderRadius: '6px',
+            backgroundColor: activeTab === 'terms' ? '#ffffff' : 'transparent',
+            color: activeTab === 'terms' ? '#1f2937' : '#6b7280',
+            fontWeight: activeTab === 'terms' ? 'bold' : 'normal',
+            cursor: 'pointer',
+            fontSize: '0.875rem',
+            transition: 'all 0.2s'
+          }}
+        >
+          {tabs[language].terms}
+        </button>
+        <button
+          onClick={() => setActiveTab('privacy')}
+          style={{
+            flex: 1,
+            padding: '0.75rem 1rem',
+            border: 'none',
+            borderRadius: '6px',
+            backgroundColor: activeTab === 'privacy' ? '#ffffff' : 'transparent',
+            color: activeTab === 'privacy' ? '#1f2937' : '#6b7280',
+            fontWeight: activeTab === 'privacy' ? 'bold' : 'normal',
+            cursor: 'pointer',
+            fontSize: '0.875rem',
+            transition: 'all 0.2s'
+          }}
+        >
+          {tabs[language].privacy}
+        </button>
+        <button
+          onClick={() => setActiveTab('tokusho')}
+          style={{
+            flex: 1,
+            padding: '0.75rem 1rem',
+            border: 'none',
+            borderRadius: '6px',
+            backgroundColor: activeTab === 'tokusho' ? '#ffffff' : 'transparent',
+            color: activeTab === 'tokusho' ? '#1f2937' : '#6b7280',
+            fontWeight: activeTab === 'tokusho' ? 'bold' : 'normal',
+            cursor: 'pointer',
+            fontSize: '0.875rem',
+            transition: 'all 0.2s'
+          }}
+        >
+          {tabs[language].tokusho}
+        </button>
+      </div>
+
+      <div style={{ marginTop: '1rem' }}>
+        {renderContent()}
+
+        <p style={{ marginTop: '2rem', textAlign: 'center' }}>
           <button
             onClick={() => setLanguage(language === 'ja' ? 'en' : 'ja')}
             style={{
@@ -315,7 +429,7 @@ export default function TermsPage() {
               padding: '0.5rem 1rem'
             }}
           >
-            {content.switchLanguage}
+            {language === 'ja' ? '英語版' : '日本語版'}
           </button>
         </p>
       </div>
