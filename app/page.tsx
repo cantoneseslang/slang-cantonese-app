@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import categoriesData from '@/data/categories.json';
+import noteCategoriesData from '@/data/note-categories.json';
 
 interface SearchResult {
   jyutping: string;
@@ -20,6 +21,8 @@ interface SearchResult {
 interface Word {
   chinese: string;
   japanese: string;
+  jyutping?: string; // Note記事から取得した場合は必須
+  katakana?: string; // Note記事から取得した場合は必須
 }
 
 interface PracticeGroup {
@@ -50,6 +53,13 @@ export default function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentWords, setCurrentWords] = useState<Word[]>([]);
   const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
+  
+  // Noteフレーズ機能の状態
+  const [showNoteSubCategories, setShowNoteSubCategories] = useState(false);
+  const [selectedNoteCategory, setSelectedNoteCategory] = useState<string | null>(null);
+  const noteSubCategoryScrollRef = useRef<HTMLDivElement>(null);
+  const [showNoteSubLeftArrow, setShowNoteSubLeftArrow] = useState(false);
+  const [showNoteSubRightArrow, setShowNoteSubRightArrow] = useState(true);
 
   // 総ボタン数（categories.json から動的集計、管理画面と同期）
   const totalButtons = useMemo(() => {
@@ -1019,16 +1029,34 @@ export default function Home() {
   };
 
   useEffect(() => {
-    // カテゴリデータを読み込む
-    setCategories(categoriesData as Category[]);
+    // カテゴリデータを読み込む（通常のカテゴリーのみ、Noteカテゴリーは除外）
+    const regularCategories = categoriesData as Category[];
+    setCategories(regularCategories);
     
     // 最初のカテゴリを選択（pronunciationを最初に表示）
-    if (categoriesData.length > 0 && !selectedCategory) {
-      setSelectedCategory(categoriesData[0].id);
-      setCurrentCategory(categoriesData[0]);
-      setCurrentWords(categoriesData[0].words || []);
+    if (regularCategories.length > 0 && !selectedCategory) {
+      setSelectedCategory(regularCategories[0].id);
+      setCurrentCategory(regularCategories[0]);
+      setCurrentWords(regularCategories[0].words || []);
     }
   }, []);
+  
+  // Noteサブカテゴリーバーのスクロール状態を初期化
+  useEffect(() => {
+    if (showNoteSubCategories && noteSubCategoryScrollRef.current) {
+      const checkScroll = () => {
+        if (noteSubCategoryScrollRef.current) {
+          const { scrollWidth, clientWidth } = noteSubCategoryScrollRef.current;
+          setShowNoteSubRightArrow(scrollWidth > clientWidth);
+          setShowNoteSubLeftArrow(false);
+        }
+      };
+      // 少し遅延して実行（レンダリング後に）
+      setTimeout(checkScroll, 100);
+      window.addEventListener('resize', checkScroll);
+      return () => window.removeEventListener('resize', checkScroll);
+    }
+  }, [showNoteSubCategories]);
 
   // お気に入り画面での単語と元のcategoryIdのマッピングを保持
   const favoriteWordCategoryMapRef = useRef<Map<string, string>>(new Map());
@@ -1085,8 +1113,20 @@ export default function Home() {
         setSearchQuery('');
         setActiveWordId(null);
       }
+    } else if (selectedNoteCategory) {
+      // Noteサブカテゴリーが選択された場合
+      const noteCategory = (noteCategoriesData as Category[]).find(c => c.id === selectedNoteCategory);
+      if (noteCategory) {
+        setCurrentCategory(noteCategory);
+        setCurrentWords(noteCategory.words || []);
+        // カテゴリーを切り替えた時に検索結果とアクティブな単語をクリア
+        setResult(null);
+        setError(null);
+        setSearchQuery('');
+        setActiveWordId(null);
+      }
     }
-  }, [selectedCategory, categories, favorites]);
+  }, [selectedCategory, selectedNoteCategory, categories, favorites]);
 
   // カテゴリーバーのスクロール状態を更新
   const handleCategoryScroll = () => {
@@ -1222,7 +1262,70 @@ export default function Home() {
       // 学習モード：例文も表示、音声プレイヤーを表示
       setForceShowResult(true); // 結果パネルを表示する
       setSearchQuery(word.chinese);
-      await handleSearch(word.chinese);
+      
+      // jyutpingとkatakanaが既に存在する場合はAPI呼び出しをスキップ
+      if (word.jyutping && word.katakana) {
+        setLoading(true);
+        try {
+          // 既存のjyutpingとkatakanaを使用して結果を設定
+          // 例文生成と音声生成のみAPI呼び出し
+          const exampleData = await fetch('/api/process-phrase', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phrase: word.chinese }),
+          }).then(res => res.json()).catch(() => ({
+            exampleCantonese: '',
+            exampleJapanese: '',
+            exampleFull: '',
+          }));
+
+          // 単語音声を生成
+          const audioResponse = await fetch('/api/generate-speech', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: word.chinese }),
+          });
+
+          let resultData = {
+            jyutping: word.jyutping,
+            katakana: word.katakana,
+            jyutpingMulti: '',
+            katakanaMulti: '',
+            exampleCantonese: exampleData.exampleCantonese || '',
+            exampleJapanese: exampleData.exampleJapanese || '',
+            exampleFull: exampleData.exampleFull || '',
+          };
+
+          if (audioResponse.ok) {
+            const audioData = await audioResponse.json();
+            resultData.audioBase64 = audioData.audioContent;
+          }
+
+          // 例文音声を生成
+          if (resultData.exampleCantonese && resultData.exampleCantonese !== '例文生成エラーが発生しました') {
+            const exampleAudioResponse = await fetch('/api/generate-speech', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: resultData.exampleCantonese }),
+            });
+
+            if (exampleAudioResponse.ok) {
+              const exampleAudioData = await exampleAudioResponse.json();
+              resultData.exampleAudioBase64 = exampleAudioData.audioContent;
+            }
+          }
+
+          setResult(resultData);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'エラーが発生しました');
+          setResult(null);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        // jyutpingとkatakanaが存在しない場合は通常のAPI呼び出し
+        await handleSearch(word.chinese);
+      }
     } else {
       // ノーマルモード：単語のみの音声を再生、ボタンを緑色にする（1つだけ）
       // 入力欄からの結果パネルは非表示にする
@@ -1741,7 +1844,8 @@ export default function Home() {
           <div style={{ 
             marginBottom: '1rem',
             position: 'relative',
-            padding: isMobile ? '0 1rem' : '0 1.5rem'
+            padding: isMobile ? '0 1rem' : '0 1.5rem',
+            zIndex: 10
           }}>
             {/* 左スクロールインジケーター */}
             {showLeftArrow && (
@@ -1813,6 +1917,7 @@ export default function Home() {
                       e.stopPropagation();
                       playHapticAndSound();
                       setSelectedCategory('pronunciation');
+                      setShowNoteSubCategories(false); // Noteサブカテゴリーを閉じる
                     }}
                     style={{
                       padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
@@ -1867,6 +1972,7 @@ export default function Home() {
                       e.stopPropagation();
                       playHapticAndSound();
                       setSelectedCategory('favorites');
+                      setShowNoteSubCategories(false); // Noteサブカテゴリーを閉じる
                     }}
                     style={{
                       padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
@@ -1903,62 +2009,344 @@ export default function Home() {
                   </button>
                 )}
                 
-                {/* カテゴリーボタン（発音表記についてを除く） */}
-                {categories.filter(c => c.id !== 'pronunciation').map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      playHapticAndSound();
-                      setSelectedCategory(category.id);
-                    }}
-                    style={{
-                      padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
-                      fontSize: isMobile ? '0.875rem' : '1rem',
-                      fontWeight: '600',
-                      borderRadius: '16px',
-                      background: selectedCategory === category.id 
-                        ? 'linear-gradient(145deg, #6366f1, #4f46e5)' 
-                        : 'linear-gradient(145deg, #ffffff, #f5f5f7)',
-                      color: selectedCategory === category.id ? 'white' : '#1d1d1f',
-                      border: 'none',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: selectedCategory === category.id 
-                        ? '0 4px 12px rgba(99,102,241,0.4), inset 0 1px 0 rgba(255,255,255,0.2)' 
-                        : '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)',
-                      transform: 'scale(1)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
-                      if (selectedCategory === category.id) {
-                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(99,102,241,0.5), inset 0 1px 0 rgba(255,255,255,0.2)';
-                      } else {
-                        e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'scale(1)';
-                      if (selectedCategory === category.id) {
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(99,102,241,0.4), inset 0 1px 0 rgba(255,255,255,0.2)';
-                      } else {
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)';
-                      }
-                    }}
-                    onMouseDown={(e) => {
-                      e.currentTarget.style.transform = 'scale(0.98)';
-                    }}
-                    onMouseUp={(e) => {
-                      e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
-                    }}
-                  >
-                    {category.name}
-                  </button>
-                ))}
+                {/* noteフレーズボタン */}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    playHapticAndSound();
+                    // Noteサブカテゴリーの表示を切り替え
+                    setShowNoteSubCategories(!showNoteSubCategories);
+                    // 他のカテゴリーを選択解除（必要に応じて）
+                    if (!showNoteSubCategories) {
+                      setSelectedCategory(null);
+                      setCurrentCategory(null);
+                      setCurrentWords([]);
+                    }
+                  }}
+                  style={{
+                    padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
+                    fontSize: isMobile ? '0.875rem' : '1rem',
+                    fontWeight: '600',
+                    borderRadius: '16px',
+                    background: showNoteSubCategories
+                      ? 'linear-gradient(145deg, #3b82f6, #2563eb)'
+                      : 'linear-gradient(145deg, #ffffff, #f5f5f7)',
+                    color: showNoteSubCategories ? 'white' : '#1d1d1f',
+                    border: 'none',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: showNoteSubCategories
+                      ? '0 4px 12px rgba(59,130,246,0.4), inset 0 1px 0 rgba(255,255,255,0.2)'
+                      : '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)',
+                    transform: 'scale(1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                    if (showNoteSubCategories) {
+                      e.currentTarget.style.boxShadow = '0 6px 16px rgba(59,130,246,0.5), inset 0 1px 0 rgba(255,255,255,0.2)';
+                    } else {
+                      e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    if (showNoteSubCategories) {
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(59,130,246,0.4), inset 0 1px 0 rgba(255,255,255,0.2)';
+                    } else {
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)';
+                    }
+                  }}
+                  onMouseDown={(e) => {
+                    e.currentTarget.style.transform = 'scale(0.98)';
+                  }}
+                  onMouseUp={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                  }}
+                >
+                  📝 noteフレーズ
+                </button>
+                
+                {/* カテゴリーボタン（発音表記についてとNoteカテゴリーを除く） */}
+                {categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_')).map((category) => {
+                  return (
+                    <button
+                      key={category.id}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        playHapticAndSound();
+                        setSelectedCategory(category.id);
+                        setShowNoteSubCategories(false); // Noteサブカテゴリーを閉じる
+                      }}
+                      style={{
+                        padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
+                        fontSize: isMobile ? '0.875rem' : '1rem',
+                        fontWeight: '600',
+                        borderRadius: '16px',
+                        background: selectedCategory === category.id 
+                          ? 'linear-gradient(145deg, #6366f1, #4f46e5)' 
+                          : 'linear-gradient(145deg, #ffffff, #f5f5f7)',
+                        color: selectedCategory === category.id ? 'white' : '#1d1d1f',
+                        border: 'none',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        boxShadow: selectedCategory === category.id 
+                          ? '0 4px 12px rgba(99,102,241,0.4), inset 0 1px 0 rgba(255,255,255,0.2)'
+                          : '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)',
+                        transform: 'scale(1)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                        if (selectedCategory === category.id) {
+                          e.currentTarget.style.boxShadow = '0 6px 16px rgba(99,102,241,0.5), inset 0 1px 0 rgba(255,255,255,0.2)';
+                        } else {
+                          e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)';
+                        if (selectedCategory === category.id) {
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(99,102,241,0.4), inset 0 1px 0 rgba(255,255,255,0.2)';
+                        } else {
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)';
+                        }
+                      }}
+                      onMouseDown={(e) => {
+                        e.currentTarget.style.transform = 'scale(0.98)';
+                      }}
+                      onMouseUp={(e) => {
+                        e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                      }}
+                    >
+                      {category.name}
+                    </button>
+                  );
+                })}
               </div>
             </div>
+            
+            {/* Noteサブカテゴリーバー（フロート形式） */}
+            {showNoteSubCategories && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                marginTop: '0.5rem',
+                padding: isMobile ? '0 1rem' : '0 1.5rem',
+                zIndex: 100,
+                background: 'white',
+                borderRadius: '16px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.08)',
+                border: '1px solid rgba(0,0,0,0.06)'
+              }}>
+                <div style={{
+                  padding: isMobile ? '0.75rem 0' : '1rem 0',
+                  position: 'relative'
+                }}>
+                  {/* 左スクロールインジケーター */}
+                  {showNoteSubLeftArrow && (
+                    <div style={{
+                      position: 'absolute',
+                      left: isMobile ? '1rem' : '1.5rem',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      zIndex: 10,
+                      fontSize: isMobile ? '1.5rem' : '2rem',
+                      opacity: 0.5,
+                      pointerEvents: 'none',
+                      textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }}>
+                      ⏪
+                    </div>
+                  )}
+                  
+                  {/* 右スクロールインジケーター */}
+                  {showNoteSubRightArrow && (
+                    <div style={{
+                      position: 'absolute',
+                      right: isMobile ? '1rem' : '1.5rem',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      zIndex: 10,
+                      fontSize: isMobile ? '1.5rem' : '2rem',
+                      opacity: 0.5,
+                      pointerEvents: 'none',
+                      textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }}>
+                      ⏩
+                    </div>
+                  )}
+                  
+                  <div 
+                    ref={noteSubCategoryScrollRef}
+                    onScroll={() => {
+                      if (noteSubCategoryScrollRef.current) {
+                        const { scrollLeft, scrollWidth, clientWidth } = noteSubCategoryScrollRef.current;
+                        setShowNoteSubLeftArrow(scrollLeft > 0);
+                        setShowNoteSubRightArrow(scrollLeft < scrollWidth - clientWidth - 5);
+                      }
+                    }}
+                    style={{ 
+                      overflowX: 'auto',
+                      overflowY: 'hidden',
+                      whiteSpace: 'nowrap',
+                      WebkitOverflowScrolling: 'touch',
+                      scrollbarWidth: 'none',
+                      msOverflowStyle: 'none',
+                      paddingLeft: showNoteSubLeftArrow ? '2.5rem' : '0',
+                      paddingRight: showNoteSubRightArrow ? '2.5rem' : '0',
+                      transition: 'padding 0.3s ease'
+                    }}
+                  >
+                    <style dangerouslySetInnerHTML={{
+                      __html: `
+                        div::-webkit-scrollbar {
+                          display: none;
+                        }
+                      `
+                    }} />
+                    <div style={{ 
+                      display: 'inline-flex',
+                      gap: isMobile ? '0.5rem' : '0.75rem',
+                      paddingBottom: '0.25rem'
+                    }}>
+                      {/* Note記事のサブカテゴリーボタン */}
+                      {(noteCategoriesData as Category[]).map((noteCategory) => {
+                        // 会員種別による表示制限
+                        const isPremium = membershipType === 'subscription' || membershipType === 'lifetime';
+                        const isFree = membershipType === 'free';
+                        
+                        // ブロンズ会員は部分的に表示（最初の記事のみ、または制限付き）
+                        if (isFree && noteCategory.id !== 'note_na050a2a8ccfc') {
+                          return null; // ブロンズ会員は最初の記事のみ表示
+                        }
+                        
+                        const isSelected = selectedNoteCategory === noteCategory.id;
+                        const noteUrl = (noteCategory as any).noteUrl;
+                        
+                        return (
+                          <button
+                            key={noteCategory.id}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              playHapticAndSound();
+                              setSelectedNoteCategory(noteCategory.id);
+                              setSelectedCategory(null); // 通常カテゴリーを解除
+                              setCurrentCategory(noteCategory);
+                              setCurrentWords(noteCategory.words || []);
+                            }}
+                            style={{
+                              padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
+                              fontSize: isMobile ? '0.875rem' : '1rem',
+                              fontWeight: '600',
+                              borderRadius: '16px',
+                              background: isSelected
+                                ? 'linear-gradient(145deg, #3b82f6, #2563eb)'
+                                : 'linear-gradient(145deg, #f0f9ff, #e0f2fe)',
+                              color: isSelected ? 'white' : '#1e40af',
+                              border: isSelected ? 'none' : '1px solid rgba(59,130,246,0.2)',
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                              boxShadow: isSelected
+                                ? '0 4px 12px rgba(59,130,246,0.4), inset 0 1px 0 rgba(255,255,255,0.2)'
+                                : '0 2px 8px rgba(59,130,246,0.15), inset 0 1px 0 rgba(255,255,255,0.9)',
+                              transform: 'scale(1)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              position: 'relative'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                              if (isSelected) {
+                                e.currentTarget.style.boxShadow = '0 6px 16px rgba(59,130,246,0.5), inset 0 1px 0 rgba(255,255,255,0.2)';
+                              } else {
+                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(59,130,246,0.25), inset 0 1px 0 rgba(255,255,255,0.9)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'scale(1)';
+                              if (isSelected) {
+                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(59,130,246,0.4), inset 0 1px 0 rgba(255,255,255,0.2)';
+                              } else {
+                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(59,130,246,0.15), inset 0 1px 0 rgba(255,255,255,0.9)';
+                              }
+                            }}
+                            onMouseDown={(e) => {
+                              e.currentTarget.style.transform = 'scale(0.98)';
+                            }}
+                            onMouseUp={(e) => {
+                              e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                            }}
+                          >
+                            <span>{noteCategory.name}</span>
+                            {noteUrl && (
+                              <a
+                                href={noteUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: '18px',
+                                  height: '18px',
+                                  borderRadius: '4px',
+                                  backgroundColor: isSelected 
+                                    ? 'rgba(255,255,255,0.2)' 
+                                    : 'rgba(59,130,246,0.1)',
+                                  color: isSelected ? 'white' : '#3b82f6',
+                                  textDecoration: 'none',
+                                  fontSize: '12px',
+                                  transition: 'all 0.2s',
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = isSelected 
+                                    ? 'rgba(255,255,255,0.3)' 
+                                    : 'rgba(59,130,246,0.2)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = isSelected 
+                                    ? 'rgba(255,255,255,0.2)' 
+                                    : 'rgba(59,130,246,0.1)';
+                                }}
+                                title="Note記事を開く"
+                              >
+                                ↗
+                              </a>
+                            )}
+                            {isFree && noteCategory.id === 'note_na050a2a8ccfc' && (
+                              <span style={{
+                                fontSize: '0.7rem',
+                                padding: '0.125rem 0.375rem',
+                                borderRadius: '4px',
+                                background: 'rgba(205,127,50,0.1)',
+                                color: '#cd7f32',
+                                fontWeight: '500'
+                              }}>
+                                無料
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
         </div>
 
           
