@@ -1181,7 +1181,7 @@ export default function Home() {
       setCurrentCategory(defaultCategory);
       setCurrentWords(defaultCategory.words || []);
     }
-  }, [defaultCategoryId]);
+  }, [defaultCategoryId, selectedCategory]);
   
   // Noteサブカテゴリーバーのスクロール状態を初期化
   useEffect(() => {
