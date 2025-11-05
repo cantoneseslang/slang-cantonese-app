@@ -3,19 +3,6 @@ export default function CantoneseIntroPage() {
     <main style={{ maxWidth: 900, margin: '0 auto', padding: '2rem 1.5rem' }}>
       <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '1rem' }}>カントン語（広東語）ってなに？</h1>
 
-      <section style={{ display: 'grid', gap: '0.5rem', marginBottom: '1.25rem' }}>
-        <h2 style={{ fontSize: '1.125rem', fontWeight: 800 }}>2. 発音の違い</h2>
-        <p>
-          広東語の声調（せいちょう）＝トーンは9声6調つまり９種類ということになります。
-        </p>
-        <p>
-          まずその9声6調とはどんなもんなのか一回聞いてみましょう！
-        </p>
-        <p>
-          数字で発音してみます3,9,4,0,5,2とここまでが1-6声。
-        </p>
-      </section>
-
       <section style={{ display: 'grid', gap: '0.75rem', marginBottom: '1.25rem' }}>
         <p>
           そう思われがちなのは、広東語が「中国語の方言」と呼ばれる一方で、実際には文字や発音体系が大きく異なるためです。
@@ -67,12 +54,8 @@ export default function CantoneseIntroPage() {
         <p>
           ここまで読んでいただいた方は、きっと広東語に興味をお持ちの方。
           まずは本アプリ「カントン語音れん」の使い方をみてみましょう。
+          (<a href="https://slang-cantonese-app.vercel.app/about" style={{ color: '#3b82f6', textDecoration: 'underline' }}>https://slang-cantonese-app.vercel.app/about</a>)
         </p>
-        <iframe 
-          src="https://slang-cantonese-app.vercel.app/about" 
-          style={{ width: '100%', height: '600px', border: 'none', marginTop: '1rem' }}
-          title="カントン語音れんの使い方"
-        />
       </section>
     </main>
   )
