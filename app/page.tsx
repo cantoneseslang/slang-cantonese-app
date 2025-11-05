@@ -1260,6 +1260,26 @@ export default function Home() {
     };
   }, [showAccountMenu]);
 
+  // プランカードモーダルのスクロール状態を初期化
+  useEffect(() => {
+    if (showPricingModal && pricingModalScrollRef.current && (selectedPlan === 'subscription' || selectedPlan === 'lifetime')) {
+      const checkScroll = () => {
+        if (pricingModalScrollRef.current) {
+          const { scrollTop, scrollHeight, clientHeight } = pricingModalScrollRef.current;
+          setShowPricingModalTopArrow(scrollTop > 10);
+          setShowPricingModalBottomArrow(scrollTop < scrollHeight - clientHeight - 10);
+        }
+      };
+      // 少し遅延して実行（レンダリング後に）
+      setTimeout(checkScroll, 100);
+      window.addEventListener('resize', checkScroll);
+      return () => window.removeEventListener('resize', checkScroll);
+    } else {
+      setShowPricingModalTopArrow(false);
+      setShowPricingModalBottomArrow(false);
+    }
+  }, [showPricingModal, selectedPlan]);
+
   const handleSearch = async (query: string) => {
     if (!query || query.trim() === '') {
       setError('検索文字を入力してください');
