@@ -156,7 +156,7 @@ const privacyContent = {
         ]
       }
     ],
-    lastUpdated: '最終改定日: 2025年1月14日'
+    lastUpdated: '最終改定日: 2025年10月31日'
   },
   en: {
     title: 'Privacy Policy',
@@ -311,7 +311,7 @@ const privacyContent = {
         ]
       }
     ],
-    lastUpdated: 'Last Updated: January 14, 2025'
+    lastUpdated: 'Last Updated: October 31, 2025'
   }
 };
 

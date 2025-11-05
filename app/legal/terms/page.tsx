@@ -139,7 +139,7 @@ const termsContent = {
         ]
       }
     ],
-    lastUpdated: '最終改定日: 2025年1月14日',
+    lastUpdated: '最終改定日: 2025年10月31日',
     switchLanguage: '英語版'
   },
   en: {
@@ -276,7 +276,7 @@ const termsContent = {
         ]
       }
     ],
-    lastUpdated: 'Last Updated: January 14, 2025',
+    lastUpdated: 'Last Updated: October 31, 2025',
     switchLanguage: '日本語版'
   }
 };
