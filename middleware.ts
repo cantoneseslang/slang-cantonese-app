@@ -46,6 +46,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // 管理者ページのアクセス制御（サーバーサイドでチェック）
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    const adminEmails = ['bestinksalesman@gmail.com'];
+    const isAdmin = adminEmails.includes(user.email || '') || 
+                    user.user_metadata?.is_admin === true;
+    
+    if (!isAdmin) {
+      // 管理者でない場合はトップページにリダイレクト
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
+  }
+
   return supabaseResponse
 }
 
