@@ -3601,28 +3601,45 @@ export default function Home() {
 
         {/* 料金モーダル */}
         {showPricingModal && selectedPlan && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10001,
-            padding: '1rem'
-          }}>
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '16px',
-              width: '100%',
-              maxWidth: '500px',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
+          <div 
+            onClick={(e) => {
+              // 背景クリックで閉じる
+              if (e.target === e.currentTarget) {
+                setShowPricingModal(false);
+                setSelectedPlan(null);
+                setIsDowngrade(false);
+                setCurrency('JPY');
+              }
+            }}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10001,
+              padding: '1rem'
+            }}
+          >
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '16px',
+                width: '100%',
+                maxWidth: '500px',
+                maxHeight: '90vh',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                position: 'relative',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
               {/* ヘッダー */}
               <div style={{
                 padding: '1.5rem',
