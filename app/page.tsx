@@ -4180,31 +4180,38 @@ export default function Home() {
                     marginBottom: '1rem',
                     color: '#374151'
                   }}>特典</h3>
-                  <ul style={{
-                    listStyle: 'none',
-                    padding: 0,
-                    margin: 0
+                  <div style={{
+                    maxHeight: selectedPlan === 'free' ? 'none' : '300px',
+                    overflowY: selectedPlan === 'free' ? 'visible' : 'auto',
+                    overflowX: 'hidden',
+                    paddingRight: selectedPlan === 'free' ? '0' : '0.5rem'
                   }}>
-                    {(selectedPlan === 'free' 
-                      ? ['基本カテゴリーの単語へアクセス', 'お気に入り6個まで', '発音チェックゲーム']
-                      : selectedPlan === 'subscription'
-                      ? ['お気に入り無制限', 'モード切り替え (ノーマルモード・学習)', 'note 教科書自動更新', 'テキストOCR', '発音チェック', '発音チェックゲーム', '全カテゴリーの単語へアクセス', '音声速度調整', '広告なし']
-                      : ['お気に入り無制限', 'モード切り替え (ノーマルモード・学習)', 'note 教科書自動更新', 'テキストOCR', '発音チェック', '発音チェックゲーム', '全カテゴリーの単語へアクセス', '音声速度調整', '広告なし']
-                    ).map((benefit, idx) => (
-                      <li key={idx} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.75rem',
-                        padding: '0.75rem',
-                        marginBottom: '0.5rem',
-                        backgroundColor: '#f9fafb',
-                        borderRadius: '8px'
-                      }}>
-                        <span style={{ color: '#10b981', fontSize: '1.25rem' }}>✓</span>
-                        <span style={{ color: '#1f2937' }}>{benefit}</span>
-                      </li>
-                    ))}
-                  </ul>
+                    <ul style={{
+                      listStyle: 'none',
+                      padding: 0,
+                      margin: 0
+                    }}>
+                      {(selectedPlan === 'free' 
+                        ? ['基本カテゴリーの単語へアクセス', 'お気に入り6個まで', '発音チェックゲーム']
+                        : selectedPlan === 'subscription'
+                        ? ['お気に入り無制限', 'モード切り替え (ノーマルモード・学習)', 'note 教科書自動更新', 'テキストOCR', '発音チェック', '発音チェックゲーム', '全カテゴリーの単語へアクセス', '音声速度調整', '広告なし']
+                        : ['お気に入り無制限', 'モード切り替え (ノーマルモード・学習)', 'note 教科書自動更新', 'テキストOCR', '発音チェック', '発音チェックゲーム', '全カテゴリーの単語へアクセス', '音声速度調整', '広告なし']
+                      ).map((benefit, idx) => (
+                        <li key={idx} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          padding: '0.75rem',
+                          marginBottom: '0.5rem',
+                          backgroundColor: '#f9fafb',
+                          borderRadius: '8px'
+                        }}>
+                          <span style={{ color: '#10b981', fontSize: '1.25rem' }}>✓</span>
+                          <span style={{ color: '#1f2937' }}>{benefit}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
 
                 {/* ボタン */}
