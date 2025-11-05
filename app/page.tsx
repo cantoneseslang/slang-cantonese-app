@@ -140,6 +140,11 @@ export default function Home() {
   const [showPricingModalTopArrow, setShowPricingModalTopArrow] = useState(false);
   const [showPricingModalBottomArrow, setShowPricingModalBottomArrow] = useState(false);
   
+  // デフォルトカテゴリー設定の状態
+  const [defaultCategoryId, setDefaultCategoryId] = useState<string>('pronunciation'); // デフォルトは「発音表記について」
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [isSavingDefaultCategory, setIsSavingDefaultCategory] = useState(false);
+  
   // デバッグ情報の状態
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [loadingDebugInfo, setLoadingDebugInfo] = useState(false);
@@ -203,6 +208,14 @@ export default function Home() {
       } else {
         // 会員種別がない場合、デフォルト値を設定
         setMembershipType('free');
+      }
+      
+      // デフォルトカテゴリーの設定
+      if (user.user_metadata?.default_category_id) {
+        setDefaultCategoryId(user.user_metadata.default_category_id);
+      } else {
+        // デフォルトカテゴリーがない場合、デフォルト値（pronunciation）を設定
+        setDefaultCategoryId('pronunciation');
       }
 
       // ユーザーネームまたは会員種別がない場合、Supabaseに初期値を設定
@@ -1116,18 +1129,59 @@ export default function Home() {
     router.refresh();
   };
 
+  // デフォルトカテゴリー保存処理
+  const handleDefaultCategoryChange = async (newCategoryId: string) => {
+    if (!user) return;
+    
+    setIsSavingDefaultCategory(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          default_category_id: newCategoryId
+        }
+      });
+
+      if (error) {
+        console.error('デフォルトカテゴリー保存エラー:', error);
+        alert('デフォルトカテゴリーの保存に失敗しました。');
+        return;
+      }
+
+      // 状態を更新
+      setDefaultCategoryId(newCategoryId);
+      setShowCategoryPicker(false);
+      
+      // 現在選択中のカテゴリーがデフォルトカテゴリーでない場合、デフォルトカテゴリーに切り替え
+      const regularCategories = categoriesData as Category[];
+      const newDefaultCategory = regularCategories.find(c => c.id === newCategoryId);
+      if (newDefaultCategory && selectedCategory !== newCategoryId) {
+        setSelectedCategory(newCategoryId);
+        setCurrentCategory(newDefaultCategory);
+        setCurrentWords(newDefaultCategory.words || []);
+      }
+      
+      alert('デフォルトカテゴリーを保存しました。次回のログイン時から適用されます。');
+    } catch (err) {
+      console.error('デフォルトカテゴリー保存失敗:', err);
+      alert('デフォルトカテゴリーの保存に失敗しました。');
+    } finally {
+      setIsSavingDefaultCategory(false);
+    }
+  };
+
   useEffect(() => {
     // カテゴリデータを読み込む（通常のカテゴリーのみ、Noteカテゴリーは除外）
     const regularCategories = categoriesData as Category[];
     setCategories(regularCategories);
     
-    // 最初のカテゴリを選択（pronunciationを最初に表示）
+    // デフォルトカテゴリーを適用（ユーザー設定がある場合はそれを使用、なければpronunciation）
     if (regularCategories.length > 0 && !selectedCategory) {
-      setSelectedCategory(regularCategories[0].id);
-      setCurrentCategory(regularCategories[0]);
-      setCurrentWords(regularCategories[0].words || []);
+      const defaultCategory = regularCategories.find(c => c.id === defaultCategoryId) || regularCategories[0];
+      setSelectedCategory(defaultCategory.id);
+      setCurrentCategory(defaultCategory);
+      setCurrentWords(defaultCategory.words || []);
     }
-  }, []);
+  }, [defaultCategoryId]);
   
   // Noteサブカテゴリーバーのスクロール状態を初期化
   useEffect(() => {
@@ -2852,6 +2906,49 @@ export default function Home() {
 
                   <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
 
+                  {/* デフォルトカテゴリー設定 */}
+                  <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>デフォルトで表示するカテゴリー</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                    <div style={{ color: '#374151', flex: 1 }}>
+                      {categories.find(c => c.id === defaultCategoryId)?.name || '発音表記について'}
+                    </div>
+                    {(membershipType === 'subscription' || membershipType === 'lifetime') ? (
+                      <button
+                        onClick={() => setShowCategoryPicker(true)}
+                        disabled={isSavingDefaultCategory}
+                        style={{
+                          padding: '6px 12px',
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          cursor: isSavingDefaultCategory ? 'not-allowed' : 'pointer',
+                          opacity: isSavingDefaultCategory ? 0.6 : 1,
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {isSavingDefaultCategory ? '保存中...' : '変更'}
+                      </button>
+                    ) : (
+                      <div style={{
+                        padding: '6px 12px',
+                        backgroundColor: '#f3f4f6',
+                        color: '#9ca3af',
+                        border: 'none',
+                        borderRadius: 6,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        whiteSpace: 'nowrap'
+                      }}>
+                        ブロンズは変更不可
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
+
                   <div style={{ fontSize: 12, color: '#6b7280' }}>アカウント情報</div>
                   
                   {/* ユーザーネーム */}
@@ -4546,6 +4643,141 @@ export default function Home() {
           </div>
         )}
 
+        {/* iOS風カテゴリーピッカーモーダル */}
+        {showCategoryPicker && (
+          <div
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowCategoryPicker(false);
+              }
+            }}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 10000,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'flex-end',
+              justifyContent: 'center'
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '100%',
+                maxWidth: '500px',
+                backgroundColor: 'white',
+                borderTopLeftRadius: '20px',
+                borderTopRightRadius: '20px',
+                paddingBottom: 'env(safe-area-inset-bottom)',
+                maxHeight: '80vh',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              {/* ヘッダー */}
+              <div style={{
+                padding: '1rem',
+                borderBottom: '1px solid #e5e7eb',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <h3 style={{
+                  margin: 0,
+                  fontSize: '1.125rem',
+                  fontWeight: '600',
+                  color: '#111827'
+                }}>カテゴリーを選択</h3>
+                <button
+                  onClick={() => setShowCategoryPicker(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '1.25rem',
+                    cursor: 'pointer',
+                    color: '#3b82f6',
+                    fontWeight: '600'
+                  }}
+                >
+                  完了
+                </button>
+              </div>
+
+              {/* ピッカー */}
+              <div style={{
+                flex: 1,
+                overflow: 'hidden',
+                position: 'relative',
+                height: '300px'
+              }}>
+                <div
+                  id="category-picker-scroll"
+                  style={{
+                    height: '100%',
+                    overflowY: 'auto',
+                    scrollSnapType: 'y mandatory',
+                    WebkitOverflowScrolling: 'touch'
+                  }}
+                >
+                  {categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_')).map((category) => {
+                    const isSelected = category.id === defaultCategoryId;
+                    return (
+                      <div
+                        key={category.id}
+                        onClick={() => handleDefaultCategoryChange(category.id)}
+                        style={{
+                          padding: '1.5rem 1rem',
+                          borderBottom: '1px solid #f3f4f6',
+                          backgroundColor: isSelected ? '#eff6ff' : 'white',
+                          scrollSnapAlign: 'center',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.2s',
+                          textAlign: 'center',
+                          fontSize: '1.125rem',
+                          fontWeight: isSelected ? '600' : '400',
+                          color: isSelected ? '#1e40af' : '#111827'
+                        }}
+                      >
+                        {category.name}
+                        {isSelected && (
+                          <span style={{ marginLeft: '0.5rem', fontSize: '1rem' }}>✓</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {/* 発音表記についても追加 */}
+                  {categories.find(c => c.id === 'pronunciation') && (
+                    <div
+                      onClick={() => handleDefaultCategoryChange('pronunciation')}
+                      style={{
+                        padding: '1.5rem 1rem',
+                        borderBottom: '1px solid #f3f4f6',
+                        backgroundColor: defaultCategoryId === 'pronunciation' ? '#eff6ff' : 'white',
+                        scrollSnapAlign: 'center',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s',
+                        textAlign: 'center',
+                        fontSize: '1.125rem',
+                        fontWeight: defaultCategoryId === 'pronunciation' ? '600' : '400',
+                        color: defaultCategoryId === 'pronunciation' ? '#1e40af' : '#111827'
+                      }}
+                    >
+                      発音表記について
+                      {defaultCategoryId === 'pronunciation' && (
+                        <span style={{ marginLeft: '0.5rem', fontSize: '1rem' }}>✓</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 設定画面モーダル（右側スライドイン） */}
         {showSettings && user && (
           <div
@@ -4650,6 +4882,68 @@ export default function Home() {
                     marginBottom: '1rem',
                     color: '#374151'
                   }}>アカウント情報</h3>
+
+                  {/* デフォルトカテゴリー設定 */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#6b7280',
+                      marginBottom: '0.5rem'
+                    }}>デフォルトで表示するカテゴリー</label>
+                    
+                    <div style={{
+                      display: 'flex',
+                      gap: '0.5rem',
+                      alignItems: 'center'
+                    }}>
+                      <div style={{
+                        flex: 1,
+                        padding: '0.75rem',
+                        backgroundColor: '#f9fafb',
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb',
+                        fontSize: '1rem',
+                        color: '#1f2937'
+                      }}>
+                        {categories.find(c => c.id === defaultCategoryId)?.name || '発音表記について'}
+                      </div>
+                      {(membershipType === 'subscription' || membershipType === 'lifetime') ? (
+                        <button
+                          onClick={() => setShowCategoryPicker(true)}
+                          disabled={isSavingDefaultCategory}
+                          style={{
+                            padding: '0.75rem 1rem',
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '0.875rem',
+                            fontWeight: '600',
+                            cursor: isSavingDefaultCategory ? 'not-allowed' : 'pointer',
+                            opacity: isSavingDefaultCategory ? 0.6 : 1,
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {isSavingDefaultCategory ? '保存中...' : '変更'}
+                        </button>
+                      ) : (
+                        <div style={{
+                          padding: '0.75rem 1rem',
+                          backgroundColor: '#f3f4f6',
+                          color: '#9ca3af',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          ブロンズは変更不可
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
                   {/* ユーザーネーム */}
                   <div style={{ marginBottom: '1rem' }}>
