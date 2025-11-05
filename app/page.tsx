@@ -3629,7 +3629,16 @@ export default function Home() {
                     if (!text || text.trim().length === 0) {
                       alert('画像からテキストを読み取れませんでした。');
                     } else {
-                      setSearchQuery(text);
+                      // 文字数制限チェック（最大1000文字）
+                      if (text.length > 1000) {
+                        const confirmMsg = `OCRで読み取ったテキストが1,000文字を超えています（${text.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
+                        if (confirm(confirmMsg)) {
+                          setSearchQuery(text.substring(0, 1000));
+                          alert(`最初の1,000文字を入力欄に設定しました。`);
+                        }
+                      } else {
+                        setSearchQuery(text);
+                      }
                     }
                   }
                   // PDFファイルの場合（自動テキスト抽出→OCR）
