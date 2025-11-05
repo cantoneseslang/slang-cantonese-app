@@ -4020,7 +4020,16 @@ export default function Home() {
 
         {/* 料金モーダル */}
         {showPricingModal && selectedPlan && (
-          <div style={{
+          <div 
+            onClick={(e) => {
+              // 外側をクリックした場合はモーダルを閉じる
+              if (e.target === e.currentTarget) {
+                setShowPricingModal(false);
+                setSelectedPlan(null);
+                setIsDowngrade(false);
+              }
+            }}
+            style={{
             position: 'fixed',
             top: 0,
             left: 0,
@@ -4033,7 +4042,9 @@ export default function Home() {
             zIndex: 10001,
             padding: '1rem'
           }}>
-            <div style={{
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              style={{
               backgroundColor: 'white',
               borderRadius: '16px',
               width: '100%',
