@@ -47,7 +47,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { categoryId, wordChinese, wordJapanese } = body;
     
+    // デバッグログ
+    console.log('🔍 API: お気に入り追加リクエスト:', { 
+      userId: user.id, 
+      categoryId, 
+      wordChinese, 
+      wordJapanese 
+    });
+    
     if (!categoryId || !wordChinese) {
+      console.error('❌ API: 必須パラメータが不足:', { categoryId, wordChinese });
       return NextResponse.json({ error: 'categoryId and wordChinese are required' }, { status: 400 });
     }
     
@@ -141,13 +150,15 @@ export async function POST(request: NextRequest) {
       insertData.word_japanese = wordJapanese;
     }
     
+    console.log('📤 API: Supabaseに挿入試行:', insertData);
+    
     const { data: insertData_result, error: insertError } = await supabase
       .from('user_favorites')
       .insert(insertData)
       .select();
     
     if (insertError) {
-      console.error('Insert error details:', {
+      console.error('❌ API: Insert error details:', {
         code: insertError.code,
         message: insertError.message,
         details: insertError.details,
@@ -177,6 +188,8 @@ export async function POST(request: NextRequest) {
       
       throw insertError;
     }
+    
+    console.log('✅ API: お気に入り追加成功:', insertData_result);
     
     return NextResponse.json({ success: true });
   } catch (error) {

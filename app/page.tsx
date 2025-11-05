@@ -266,8 +266,14 @@ export default function Home() {
       if (data.favorites && Array.isArray(data.favorites)) {
         // お気に入りリストをSetに変換（型アサーションでstring[]として扱う）
         const favoritesSet = new Set<string>(data.favorites as string[]);
-        console.log('✅ お気に入り読み込み成功:', { count: favoritesSet.size, favorites: Array.from(favoritesSet).slice(0, 10) });
+        console.log('✅ お気に入り読み込み成功:', { 
+          count: favoritesSet.size, 
+          favorites: Array.from(favoritesSet).slice(0, 10),
+          allFavorites: Array.from(favoritesSet) // デバッグ用：全お気に入りを表示
+        });
         setFavorites(favoritesSet);
+        // 状態更新を確認
+        console.log('📋 setFavorites呼び出し完了、次のレンダリングで反映されます');
       } else if (data.error) {
         // エラーがあっても静かに処理（テーブルが存在しない場合など）
         console.warn('⚠️ お気に入り読み込み警告:', data.error);
