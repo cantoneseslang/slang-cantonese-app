@@ -1066,35 +1066,63 @@ export default function Home() {
   const runOcr = async (file: File, onProgress?: (p: number) => void): Promise<string> => {
     const Tesseract: any = await import('tesseract.js');
     const { createWorker } = Tesseract as any;
-    const worker = await createWorker({
+    
+    // loggerオプションは関数を渡せないため、進捗更新用の変数を使用
+    let currentProgress = 0;
+    
+    const worker = await createWorker('chi_sim+chi_tra', 1, {
       logger: (m: any) => {
-        if (m.status === 'recognizing text' && onProgress) {
-          onProgress(Math.round((m.progress || 0) * 100));
+        // Worker内で実行されるため、状態を更新するだけ
+        if (m.status === 'recognizing text' && m.progress !== undefined) {
+          currentProgress = Math.round(m.progress * 100);
         }
       }
     });
-    // 中国語（簡体字+繁体字）のみ使用 - 広東語は繁体字で書かれるため
-    // chi_sim: 簡体字中国語, chi_tra: 繁体字中国語（広東語含む）
-    await worker.loadLanguage('chi_sim+chi_tra');
-    await worker.initialize('chi_sim+chi_tra');
-    const result = await worker.recognize(await file.arrayBuffer());
-    await worker.terminate();
-    // テキストの正規化とエンコーディング処理
-    let text = String(result?.data?.text || '');
-    // 連続する空白を整理
-    text = text.replace(/\s{3,}/g, ' ').trim();
-    // エンコーディングの正規化（UTF-8に統一）
-    try {
-      // テキストが正しくUTF-8として解釈できるか確認
-      const utf8Text = new TextDecoder('utf-8', { fatal: false }).decode(
-        new TextEncoder().encode(text)
-      );
-      text = utf8Text || text;
-    } catch (e) {
-      // エンコーディング変換に失敗した場合は元のテキストを使用
-      console.warn('エンコーディング変換エラー:', e);
+    
+    // 進捗監視用のインターバル（Workerのloggerは関数をクローンできないため）
+    let progressInterval: NodeJS.Timeout | null = null;
+    if (onProgress) {
+      progressInterval = setInterval(() => {
+        if (currentProgress > 0) {
+          onProgress(currentProgress);
+        }
+      }, 100); // 100msごとに進捗をチェック
     }
-    return text.length > 4000 ? text.slice(0, 4000) : text;
+    
+    try {
+      // 中国語（簡体字+繁体字）のみ使用 - 広東語は繁体字で書かれるため
+      // chi_sim: 簡体字中国語, chi_tra: 繁体字中国語（広東語含む）
+      const result = await worker.recognize(await file.arrayBuffer());
+      
+      // 最終進捗を100%に設定
+      if (onProgress) {
+        onProgress(100);
+      }
+      
+      await worker.terminate();
+      
+      // テキストの正規化とエンコーディング処理
+      let text = String(result?.data?.text || '');
+      // 連続する空白を整理
+      text = text.replace(/\s{3,}/g, ' ').trim();
+      // エンコーディングの正規化（UTF-8に統一）
+      try {
+        // テキストが正しくUTF-8として解釈できるか確認
+        const utf8Text = new TextDecoder('utf-8', { fatal: false }).decode(
+          new TextEncoder().encode(text)
+        );
+        text = utf8Text || text;
+      } catch (e) {
+        // エンコーディング変換に失敗した場合は元のテキストを使用
+        console.warn('エンコーディング変換エラー:', e);
+      }
+      return text.length > 4000 ? text.slice(0, 4000) : text;
+    } finally {
+      // 進捗監視を停止
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+    }
   };
   
   // カテゴリーバーのスクロール状態
