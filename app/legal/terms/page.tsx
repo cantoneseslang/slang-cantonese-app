@@ -465,7 +465,7 @@ export default function TermsPage() {
                   </ul>
                 ) : (
                   <p style={{ marginBottom: '1rem' }}>
-                    {'text' in item && item.text}
+                    {'text' in item && typeof item.text === 'string' ? item.text : ''}
                   </p>
                 )}
               </div>
@@ -506,7 +506,7 @@ export default function TermsPage() {
                   </ul>
                 ) : (
                   <p style={{ marginBottom: '1rem' }}>
-                    {'text' in item && item.text}
+                    {'text' in item && typeof item.text === 'string' ? item.text : ''}
                   </p>
                 )}
               </div>
