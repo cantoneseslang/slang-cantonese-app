@@ -30,13 +30,18 @@ export async function GET() {
     return NextResponse.json({ success: false, error: evErr.message }, { status: 500 })
   }
 
-  const allButtons = new Set<string>()
-  const perUser = new Map<string, Set<string>>()
+  const allButtons: Set<string> = new Set()
+  const perUser: Map<string, Set<string>> = new Map()
 
   (events || []).forEach((e: any) => {
     allButtons.add(e.button_key)
-    if (!perUser.has(e.user_id)) perUser.set(e.user_id, new Set<string>())
-    perUser.get(e.user_id)!.add(e.button_key)
+    if (!perUser.has(e.user_id)) {
+      perUser.set(e.user_id, new Set<string>())
+    }
+    const userButtons = perUser.get(e.user_id)
+    if (userButtons) {
+      userButtons.add(e.button_key)
+    }
   })
 
   const totalButtons = allButtons.size
