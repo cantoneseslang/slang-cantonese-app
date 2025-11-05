@@ -1,37 +1,4 @@
-'use client';
-
-import { useMemo } from 'react';
-import categoriesData from '@/data/categories.json';
-
-interface Category {
-  words?: Array<{ chinese: string; japanese: string }>;
-  practiceGroups?: Array<{
-    name: string;
-    words: Array<{ chinese: string; japanese: string }>;
-  }>;
-}
-
 export default function AboutPage() {
-  // カテゴリーデータから全ボタン数を計算（useMemoで一度だけ計算）
-  const totalButtons = useMemo(() => {
-    let count = 0;
-    if (Array.isArray(categoriesData)) {
-      (categoriesData as Category[]).forEach((category) => {
-        if (category.words && Array.isArray(category.words)) {
-          count += category.words.length;
-        }
-        if (category.practiceGroups && Array.isArray(category.practiceGroups)) {
-          category.practiceGroups.forEach((group) => {
-            if (group.words && Array.isArray(group.words)) {
-              count += group.words.length;
-            }
-          });
-        }
-      });
-    }
-    return count;
-  }, []);
-
   return (
     <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
       <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '1rem' }}>ようこそ！</h1>
@@ -105,17 +72,9 @@ export default function AboutPage() {
         <p style={{ fontSize: '0.875rem', color: '#374151', marginBottom: '1rem' }}>
           この文書に記載されている繁体字は、国際標準の『ISO/IEC 10646-1:2000』および『香港補助文字セット – 2001』（Hong Kong Supplementary Character Set – 2001）に含まれる全ての漢字、合計29,145個を含んでいます。
         </p>
-        <p style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-          さてそれでは早速「カントン語音れん」を始めましょう
+        <p style={{ fontSize: '1rem', marginBottom: '1rem' }}>
+          それでは早速<a href="https://slang-cantonese-app.vercel.app/" style={{ color: '#3b82f6', textDecoration: 'underline' }}>「カントン語音れん」</a>を始めてみましょう！
         </p>
-        <p style={{ fontSize: '0.875rem', color: '#374151', marginBottom: '1rem' }}>
-          このURLは「カントン語音れん」の埋め込み用です
-        </p>
-        <iframe 
-          src="https://slang-cantonese-app.vercel.app/" 
-          style={{ width: '100%', height: '800px', border: 'none', marginTop: '1rem' }}
-          title="カントン語音れん"
-        />
       </div>
     </div>
   );
