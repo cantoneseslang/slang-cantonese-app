@@ -1224,6 +1224,39 @@ export default function Home() {
     };
   }, [showSettings]);
 
+  // アカウントメニューの外側クリックで閉じる処理
+  useEffect(() => {
+    if (!showAccountMenu) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      
+      // アカウントメニュー内の要素をクリックした場合は何もしない
+      const accountMenu = document.querySelector('[data-account-menu]');
+      if (accountMenu && accountMenu.contains(target)) {
+        return;
+      }
+      
+      // アカウントメニューを開くボタンをクリックした場合は何もしない（トグル動作）
+      if (target.closest('[data-account-menu-button]')) {
+        return;
+      }
+      
+      // それ以外のクリックでアカウントメニューを閉じる
+      setShowAccountMenu(false);
+    };
+
+    // イベントリスナーを追加（少し遅延させて、メニューを開くクリックイベントが処理される前に閉じないようにする）
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside, true);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside, true);
+    };
+  }, [showAccountMenu]);
+
   const handleSearch = async (query: string) => {
     if (!query || query.trim() === '') {
       setError('検索文字を入力してください');
@@ -2417,6 +2450,7 @@ export default function Home() {
           <div style={{ position: 'fixed', top: isMobile ? 10 : 12, right: isMobile ? 10 : 12, zIndex: 50 }}>
             <button
               aria-label="アカウントメニュー"
+              data-account-menu-button
               onClick={() => setShowAccountMenu(v => !v)}
               style={{
                 width: isMobile ? 36 : 40,
@@ -2436,7 +2470,9 @@ export default function Home() {
 
             {/* ドロップダウン */}
             {showAccountMenu && (
-              <div style={{
+              <div 
+                data-account-menu
+                style={{
                 position: 'absolute',
                 right: 0,
                 marginTop: 8,
