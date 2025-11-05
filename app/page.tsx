@@ -144,6 +144,7 @@ export default function Home() {
   const [defaultCategoryId, setDefaultCategoryId] = useState<string>('pronunciation'); // デフォルトは「発音表記について」
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [isSavingDefaultCategory, setIsSavingDefaultCategory] = useState(false);
+  const categoryPickerScrollRef = useRef<HTMLDivElement>(null);
   
   // デバッグ情報の状態
   const [debugInfo, setDebugInfo] = useState<any>(null);
@@ -4739,69 +4740,161 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* ピッカー */}
+              {/* ロール型ピッカー */}
               <div style={{
                 flex: 1,
                 overflow: 'hidden',
                 position: 'relative',
-                height: '300px'
+                height: '300px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}>
+                {/* 中央の選択エリアのハイライト */}
+                <div style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: 0,
+                  right: 0,
+                  height: '60px',
+                  marginTop: '-30px',
+                  borderTop: '1px solid #e5e7eb',
+                  borderBottom: '1px solid #e5e7eb',
+                  backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                  pointerEvents: 'none',
+                  zIndex: 1
+                }} />
+                
+                {/* ピッカーホイール */}
                 <div
                   id="category-picker-scroll"
+                  ref={(el) => {
+                    categoryPickerScrollRef.current = el;
+                    if (el && showCategoryPicker) {
+                      // スクロール位置を選択中のカテゴリーに合わせる
+                      const allCategories = [
+                        ...(categories.find(c => c.id === 'pronunciation') ? [{ id: 'pronunciation', name: '発音表記について' }] : []),
+                        ...categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_'))
+                      ];
+                      const selectedIndex = allCategories.findIndex(c => c.id === defaultCategoryId);
+                      if (selectedIndex >= 0) {
+                        setTimeout(() => {
+                          const itemHeight = 60;
+                          const centerOffset = el.clientHeight / 2 - itemHeight / 2;
+                          el.scrollTop = selectedIndex * itemHeight - centerOffset;
+                        }, 100);
+                      }
+                    }
+                  }}
+                  onScroll={(e) => {
+                    const scrollTop = e.currentTarget.scrollTop;
+                    const itemHeight = 60;
+                    const centerOffset = e.currentTarget.clientHeight / 2 - itemHeight / 2;
+                    const selectedIndex = Math.round((scrollTop + centerOffset) / itemHeight);
+                    
+                    const allCategories = [
+                      ...(categories.find(c => c.id === 'pronunciation') ? [{ id: 'pronunciation', name: '発音表記について' }] : []),
+                      ...categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_'))
+                    ];
+                    
+                    if (selectedIndex >= 0 && selectedIndex < allCategories.length) {
+                      const selectedCategory = allCategories[selectedIndex];
+                      if (selectedCategory.id !== defaultCategoryId) {
+                        setDefaultCategoryId(selectedCategory.id);
+                      }
+                    }
+                  }}
                   style={{
+                    width: '100%',
                     height: '100%',
                     overflowY: 'auto',
                     scrollSnapType: 'y mandatory',
-                    WebkitOverflowScrolling: 'touch'
+                    WebkitOverflowScrolling: 'touch',
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                    paddingTop: '50%',
+                    paddingBottom: '50%',
+                    boxSizing: 'border-box'
                   }}
                 >
+                  <style>{`
+                    #category-picker-scroll::-webkit-scrollbar {
+                      display: none;
+                    }
+                  `}</style>
+                  
                   {/* 発音表記についてを最初に表示 */}
                   {categories.find(c => c.id === 'pronunciation') && (
                     <div
-                      onClick={() => handleDefaultCategoryChange('pronunciation')}
+                        onClick={() => {
+                          if (categoryPickerScrollRef.current) {
+                            const itemHeight = 60;
+                            const centerOffset = categoryPickerScrollRef.current.clientHeight / 2 - itemHeight / 2;
+                            categoryPickerScrollRef.current.scrollTo({ 
+                              top: 0 - centerOffset, 
+                              behavior: 'smooth' 
+                            });
+                          }
+                        }}
                       style={{
-                        padding: '1.5rem 1rem',
-                        borderBottom: '1px solid #f3f4f6',
-                        backgroundColor: defaultCategoryId === 'pronunciation' ? '#eff6ff' : 'white',
+                        height: '60px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         scrollSnapAlign: 'center',
                         cursor: 'pointer',
-                        transition: 'background-color 0.2s',
-                        textAlign: 'center',
-                        fontSize: '1.125rem',
+                        fontSize: '1.25rem',
                         fontWeight: defaultCategoryId === 'pronunciation' ? '600' : '400',
-                        color: defaultCategoryId === 'pronunciation' ? '#1e40af' : '#111827'
+                        color: defaultCategoryId === 'pronunciation' ? '#1e40af' : '#6b7280',
+                        transition: 'all 0.2s',
+                        transform: defaultCategoryId === 'pronunciation' ? 'scale(1.1)' : 'scale(1)',
+                        opacity: defaultCategoryId === 'pronunciation' ? 1 : 0.6
                       }}
                     >
                       発音表記について
-                      {defaultCategoryId === 'pronunciation' && (
-                        <span style={{ marginLeft: '0.5rem', fontSize: '1rem' }}>✓</span>
-                      )}
                     </div>
                   )}
                   {/* その他のカテゴリー */}
-                  {categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_')).map((category) => {
+                  {categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_')).map((category, index) => {
+                    const allCategories = [
+                      ...(categories.find(c => c.id === 'pronunciation') ? [{ id: 'pronunciation', name: '発音表記について' }] : []),
+                      ...categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_'))
+                    ];
+                    const categoryIndex = allCategories.findIndex(c => c.id === category.id);
                     const isSelected = category.id === defaultCategoryId;
+                    const distanceFromCenter = Math.abs(categoryIndex - allCategories.findIndex(c => c.id === defaultCategoryId));
+                    const scale = Math.max(0.8, 1 - distanceFromCenter * 0.1);
+                    const opacity = Math.max(0.4, 1 - distanceFromCenter * 0.2);
+                    
                     return (
                       <div
                         key={category.id}
-                        onClick={() => handleDefaultCategoryChange(category.id)}
+                        onClick={() => {
+                          if (categoryPickerScrollRef.current) {
+                            const itemHeight = 60;
+                            const centerOffset = categoryPickerScrollRef.current.clientHeight / 2 - itemHeight / 2;
+                            categoryPickerScrollRef.current.scrollTo({ 
+                              top: categoryIndex * itemHeight - centerOffset, 
+                              behavior: 'smooth' 
+                            });
+                          }
+                        }}
                         style={{
-                          padding: '1.5rem 1rem',
-                          borderBottom: '1px solid #f3f4f6',
-                          backgroundColor: isSelected ? '#eff6ff' : 'white',
+                          height: '60px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                           scrollSnapAlign: 'center',
                           cursor: 'pointer',
-                          transition: 'background-color 0.2s',
-                          textAlign: 'center',
-                          fontSize: '1.125rem',
+                          fontSize: isSelected ? '1.25rem' : '1rem',
                           fontWeight: isSelected ? '600' : '400',
-                          color: isSelected ? '#1e40af' : '#111827'
+                          color: isSelected ? '#1e40af' : '#6b7280',
+                          transition: 'all 0.2s',
+                          transform: `scale(${scale})`,
+                          opacity: opacity
                         }}
                       >
                         {category.name}
-                        {isSelected && (
-                          <span style={{ marginLeft: '0.5rem', fontSize: '1rem' }}>✓</span>
-                        )}
                       </div>
                     );
                   })}
