@@ -4178,44 +4178,46 @@ export default function Home() {
           </div>
         )}
 
-        {/* 設定画面モーダル */}
+        {/* 設定画面モーダル（右側スライドイン） */}
         {showSettings && user && (
-          <div 
-            onClick={(e) => {
-              // 外側をクリックした場合は設定を閉じる
-              if (e.target === e.currentTarget) {
+          <>
+            {/* 背景オーバーレイ */}
+            <div 
+              onClick={(e) => {
+                // 外側をクリックした場合は設定を閉じる
                 setShowSettings(false);
                 setShowPasswordChange(false);
                 setPasswordError(null);
                 setPasswordSuccess(false);
                 setNewPassword('');
                 setConfirmPassword('');
-              }
-            }}
-            style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10000,
-            padding: '1rem'
-          }}>
+              }}
+              style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.3)',
+              zIndex: 9999,
+              transition: 'opacity 0.3s ease'
+            }} />
+            {/* 設定パネル（右側） */}
             <div 
               onClick={(e) => e.stopPropagation()}
               style={{
+              position: 'fixed',
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: isMobile ? '100%' : '400px',
+              maxWidth: '90vw',
               backgroundColor: 'white',
-              borderRadius: '16px',
-              width: '100%',
-              maxWidth: '500px',
-              maxHeight: '90vh',
-              overflow: 'auto',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-              position: 'relative'
+              boxShadow: '-4px 0 24px rgba(0,0,0,0.15)',
+              zIndex: 10000,
+              overflowY: 'auto',
+              transform: 'translateX(0)',
+              transition: 'transform 0.3s ease'
             }}>
               {/* ヘッダー */}
               <div style={{
