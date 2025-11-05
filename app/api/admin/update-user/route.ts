@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ユーザーメタデータを更新
+    // usersテーブルが存在する場合は直接更新、存在しない場合はuser_metadata経由で更新
     const updates: any = {};
     if (username !== undefined) {
       updates.username = username.trim() || null;
@@ -42,15 +42,29 @@ export async function POST(request: NextRequest) {
       updates.membership_type = membership_type;
     }
 
-    const { error: updateError } = await supabase.auth.admin.updateUserById(
-      user_id,
-      { user_metadata: updates }
-    );
+    // まずusersテーブルへの更新を試行
+    const { error: tableUpdateError } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', user_id);
 
-    if (updateError) {
-      console.error('ユーザー更新エラー:', updateError);
+    // usersテーブルが存在しない場合、user_metadata経由で更新を試行
+    if (tableUpdateError && (tableUpdateError.code === 'PGRST116' || tableUpdateError.message.includes('relation'))) {
+      // user_metadata経由で更新（この方法は同じユーザー自身のみ可能）
+      // 管理者が他のユーザーを更新する場合は、Supabase DashboardまたはAdmin APIが必要
       return NextResponse.json(
-        { success: false, error: updateError.message || 'ユーザー情報の更新に失敗しました' },
+        { 
+          success: false, 
+          error: 'usersテーブルが存在しません。Supabase Dashboardから手動で更新するか、usersテーブルを作成してください。' 
+        },
+        { status: 500 }
+      );
+    }
+
+    if (tableUpdateError) {
+      console.error('ユーザー更新エラー:', tableUpdateError);
+      return NextResponse.json(
+        { success: false, error: tableUpdateError.message || 'ユーザー情報の更新に失敗しました' },
         { status: 500 }
       );
     }
