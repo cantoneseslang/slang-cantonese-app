@@ -247,45 +247,54 @@ export default function Home() {
     initializeUserMetadata();
   }, [user]);
 
-    // お気に入りの読み込み
-    useEffect(() => {
-      const loadFavorites = async () => {
-        if (!user) {
-          setFavorites(new Set());
-          return;
-        }
+  // お気に入りの読み込み関数（外部から呼び出し可能にする）
+  const loadFavorites = async () => {
+    if (!user) {
+      setFavorites(new Set());
+      return;
+    }
 
-        try {
-          setLoadingFavorites(true);
-          const response = await fetch('/api/favorites/list');
-          const data = await response.json();
-          
-          if (data.favorites && Array.isArray(data.favorites)) {
-            // お気に入りリストをSetに変換
-            setFavorites(new Set(data.favorites));
-          } else if (data.error) {
-            // エラーがあっても静かに処理（テーブルが存在しない場合など）
-            console.warn('お気に入り読み込み警告:', data.error);
-            setFavorites(new Set());
-          } else {
-            setFavorites(new Set());
-          }
-        } catch (error) {
-          // ネットワークエラーなどは静かに処理
-          console.error('お気に入り読み込みエラー:', error);
-          setFavorites(new Set());
-        } finally {
-          setLoadingFavorites(false);
-        }
-      };
+    try {
+      setLoadingFavorites(true);
+      const response = await fetch('/api/favorites/list');
+      const data = await response.json();
+      
+      if (data.favorites && Array.isArray(data.favorites)) {
+        // お気に入りリストをSetに変換
+        setFavorites(new Set(data.favorites));
+      } else if (data.error) {
+        // エラーがあっても静かに処理（テーブルが存在しない場合など）
+        console.warn('お気に入り読み込み警告:', data.error);
+        setFavorites(new Set());
+      } else {
+        setFavorites(new Set());
+      }
+    } catch (error) {
+      // ネットワークエラーなどは静かに処理
+      console.error('お気に入り読み込みエラー:', error);
+      setFavorites(new Set());
+    } finally {
+      setLoadingFavorites(false);
+    }
+  };
 
-      loadFavorites();
-    }, [user]);
+  // お気に入りの読み込み（初回ロード時）
+  useEffect(() => {
+    loadFavorites();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   // お気に入りの追加/削除
   const toggleFavorite = async (word: Word, categoryId: string) => {
     if (!user) {
       return; // ログインしていない場合は静かに処理
+    }
+
+    // categoryIdが空の場合は警告を出す
+    if (!categoryId || categoryId.trim() === '') {
+      console.error('categoryIdが空です。word:', word, 'currentCategory:', currentCategory, 'selectedNoteCategory:', selectedNoteCategory);
+      alert('エラー: カテゴリーIDが取得できませんでした。ページをリロードしてください。');
+      return;
     }
 
     const favoriteKey = `${categoryId}:${word.chinese}`;
@@ -305,9 +314,8 @@ export default function Home() {
 
         const data = await response.json();
         if (data.success) {
-          const newFavorites = new Set(favorites);
-          newFavorites.delete(favoriteKey);
-          setFavorites(newFavorites);
+          // お気に入りリストを再読み込みして最新状態を反映
+          await loadFavorites();
         } else {
           // テーブル未作成の場合はエラーを表示
           if (data.requiresTable || (data.error && (data.error.includes('テーブル') || data.error.includes('Could not find the table') || data.error.includes('schema cache')))) {
@@ -352,9 +360,8 @@ export default function Home() {
         }
         
         if (data.success) {
-          const newFavorites = new Set(favorites);
-          newFavorites.add(favoriteKey);
-          setFavorites(newFavorites);
+          // お気に入りリストを再読み込みして最新状態を反映
+          await loadFavorites();
         } else {
           // テーブル未作成の場合は明確にエラーを表示
           if (data.requiresTable || (data.error && (data.error.includes('テーブル') || data.error.includes('Could not find the table') || data.error.includes('schema cache')))) {
@@ -3566,7 +3573,9 @@ export default function Home() {
                       }}>
                         {group.words.map((word, wIdx) => {
                           const isActive = !isLearningMode && activeWordId === word.chinese;
-                          const favoriteKey = `${currentCategory?.id || ''}:${word.chinese}`;
+                          // noteカテゴリーが選択されている場合はselectedNoteCategoryを使用、それ以外はcurrentCategory.idを使用
+                          const categoryId = selectedNoteCategory || currentCategory?.id || '';
+                          const favoriteKey = `${categoryId}:${word.chinese}`;
                           const isFavorite = favorites.has(favoriteKey);
                           return (
                             <button
@@ -3584,12 +3593,16 @@ export default function Home() {
                                 handleWordClick(word);
                               }}
                               onTouchStart={(e) => {
-                                handleLongPressStart(word, currentCategory?.id || '', e);
+                                // noteカテゴリーが選択されている場合はselectedNoteCategoryを使用、それ以外はcurrentCategory.idを使用
+                                const categoryId = selectedNoteCategory || currentCategory?.id || '';
+                                handleLongPressStart(word, categoryId, e);
                               }}
                               onTouchEnd={handleLongPressEnd}
                               onTouchCancel={handleLongPressEnd}
                               onMouseDown={(e) => {
-                                handleLongPressStart(word, currentCategory?.id || '', e);
+                                // noteカテゴリーが選択されている場合はselectedNoteCategoryを使用、それ以外はcurrentCategory.idを使用
+                                const categoryId = selectedNoteCategory || currentCategory?.id || '';
+                                handleLongPressStart(word, categoryId, e);
                               }}
                               onMouseUp={handleLongPressEnd}
                               onMouseLeave={handleLongPressEnd}
@@ -3670,7 +3683,9 @@ export default function Home() {
                       }}>
                         {group.words.slice(0, 6).map((word, wIdx) => {
                           const isActive = !isLearningMode && activeWordId === word.chinese;
-                          const favoriteKey = `${currentCategory?.id || ''}:${word.chinese}`;
+                          // noteカテゴリーが選択されている場合はselectedNoteCategoryを使用、それ以外はcurrentCategory.idを使用
+                          const categoryId = selectedNoteCategory || currentCategory?.id || '';
+                          const favoriteKey = `${categoryId}:${word.chinese}`;
                           const isFavorite = favorites.has(favoriteKey);
                           return (
                             <button
@@ -3688,12 +3703,16 @@ export default function Home() {
                                 handleWordClick(word);
                               }}
                               onTouchStart={(e) => {
-                                handleLongPressStart(word, currentCategory?.id || '', e);
+                                // noteカテゴリーが選択されている場合はselectedNoteCategoryを使用、それ以外はcurrentCategory.idを使用
+                                const categoryId = selectedNoteCategory || currentCategory?.id || '';
+                                handleLongPressStart(word, categoryId, e);
                               }}
                               onTouchEnd={handleLongPressEnd}
                               onTouchCancel={handleLongPressEnd}
                               onMouseDown={(e) => {
-                                handleLongPressStart(word, currentCategory?.id || '', e);
+                                // noteカテゴリーが選択されている場合はselectedNoteCategoryを使用、それ以外はcurrentCategory.idを使用
+                                const categoryId = selectedNoteCategory || currentCategory?.id || '';
+                                handleLongPressStart(word, categoryId, e);
                               }}
                               onMouseUp={handleLongPressEnd}
                               onMouseLeave={handleLongPressEnd}
@@ -3771,7 +3790,9 @@ export default function Home() {
                       }}>
                         {group.words.slice(6, 9).map((word, wIdx) => {
                           const isActive = !isLearningMode && activeWordId === word.chinese;
-                          const favoriteKey = `${currentCategory?.id || ''}:${word.chinese}`;
+                          // noteカテゴリーが選択されている場合はselectedNoteCategoryを使用、それ以外はcurrentCategory.idを使用
+                          const categoryId = selectedNoteCategory || currentCategory?.id || '';
+                          const favoriteKey = `${categoryId}:${word.chinese}`;
                           const isFavorite = favorites.has(favoriteKey);
                           return (
                             <button
@@ -3789,12 +3810,16 @@ export default function Home() {
                                 handleWordClick(word);
                               }}
                               onTouchStart={(e) => {
-                                handleLongPressStart(word, currentCategory?.id || '', e);
+                                // noteカテゴリーが選択されている場合はselectedNoteCategoryを使用、それ以外はcurrentCategory.idを使用
+                                const categoryId = selectedNoteCategory || currentCategory?.id || '';
+                                handleLongPressStart(word, categoryId, e);
                               }}
                               onTouchEnd={handleLongPressEnd}
                               onTouchCancel={handleLongPressEnd}
                               onMouseDown={(e) => {
-                                handleLongPressStart(word, currentCategory?.id || '', e);
+                                // noteカテゴリーが選択されている場合はselectedNoteCategoryを使用、それ以外はcurrentCategory.idを使用
+                                const categoryId = selectedNoteCategory || currentCategory?.id || '';
+                                handleLongPressStart(word, categoryId, e);
                               }}
                               onMouseUp={handleLongPressEnd}
                               onMouseLeave={handleLongPressEnd}
@@ -3872,7 +3897,9 @@ export default function Home() {
                       }}>
                         {group.words.slice(9).map((word, wIdx) => {
                           const isActive = !isLearningMode && activeWordId === word.chinese;
-                          const favoriteKey = `${currentCategory?.id || ''}:${word.chinese}`;
+                          // noteカテゴリーが選択されている場合はselectedNoteCategoryを使用、それ以外はcurrentCategory.idを使用
+                          const categoryId = selectedNoteCategory || currentCategory?.id || '';
+                          const favoriteKey = `${categoryId}:${word.chinese}`;
                           const isFavorite = favorites.has(favoriteKey);
                           return (
                             <button
@@ -3890,12 +3917,16 @@ export default function Home() {
                                 handleWordClick(word);
                               }}
                               onTouchStart={(e) => {
-                                handleLongPressStart(word, currentCategory?.id || '', e);
+                                // noteカテゴリーが選択されている場合はselectedNoteCategoryを使用、それ以外はcurrentCategory.idを使用
+                                const categoryId = selectedNoteCategory || currentCategory?.id || '';
+                                handleLongPressStart(word, categoryId, e);
                               }}
                               onTouchEnd={handleLongPressEnd}
                               onTouchCancel={handleLongPressEnd}
                               onMouseDown={(e) => {
-                                handleLongPressStart(word, currentCategory?.id || '', e);
+                                // noteカテゴリーが選択されている場合はselectedNoteCategoryを使用、それ以外はcurrentCategory.idを使用
+                                const categoryId = selectedNoteCategory || currentCategory?.id || '';
+                                handleLongPressStart(word, categoryId, e);
                               }}
                               onMouseUp={handleLongPressEnd}
                               onMouseLeave={handleLongPressEnd}
