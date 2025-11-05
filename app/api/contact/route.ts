@@ -23,8 +23,16 @@ export async function POST(request: NextRequest) {
 
     if (!smtpPassword) {
       console.error('SMTP_PASSWORD環境変数が設定されていません');
+      console.error('設定が必要な環境変数:', {
+        SMTP_HOST: smtpHost,
+        SMTP_PORT: smtpPort,
+        SMTP_USER: smtpUser,
+        SMTP_FROM: smtpFrom,
+        SMTP_TO: smtpTo,
+        SMTP_PASSWORD: '***未設定***'
+      });
       return NextResponse.json(
-        { error: 'メール送信設定が完了していません' },
+        { error: 'メール送信設定が完了していません。管理者にお問い合わせください。' },
         { status: 500 }
       );
     }
@@ -69,12 +77,20 @@ ${message}
 
     await transporter.sendMail(mailOptions);
 
+    console.log('メール送信成功:', { to: smtpTo, subject: emailSubject });
+
     return NextResponse.json({ 
       success: true,
       message: 'お問い合わせを受け付けました。ありがとうございます。'
     });
   } catch (error: any) {
     console.error('Contact form error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      response: error.response,
+      stack: error.stack
+    });
     return NextResponse.json(
       { error: '送信に失敗しました。しばらくしてから再度お試しください。' },
       { status: 500 }
