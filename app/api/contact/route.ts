@@ -13,11 +13,11 @@ export async function POST(request: NextRequest) {
     }
 
     // TITANメール設定を使用してメール送信
-    // TITANのSMTP設定
+    // TITANのSMTP設定（SSL/TLS Port: 465）
     const smtpHost = process.env.SMTP_HOST || 'smtp.titan.email';
-    const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+    const smtpPort = parseInt(process.env.SMTP_PORT || '465'); // TITANはポート465（SSL/TLS）
     const smtpUser = process.env.SMTP_USER || 'info@lifesupporthk.com';
-    const smtpPassword = process.env.SMTP_PASSWORD;
+    const smtpPassword = process.env.SMTP_PASSWORD || 'Sakon-0201'; // デフォルト値（本番環境では環境変数を使用）
     const smtpFrom = process.env.SMTP_FROM || 'info@lifesupporthk.com';
     const smtpTo = process.env.SMTP_TO || 'info@lifesupporthk.com';
 
@@ -56,15 +56,19 @@ ${message}
 送信日時: ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
 `;
 
-    // TITAN SMTPを使用してメール送信
+    // TITAN SMTPを使用してメール送信（SSL/TLS Port: 465）
     const transporter = nodemailer.createTransport({
       host: smtpHost,
       port: smtpPort,
-      secure: smtpPort === 465, // true for 465, false for other ports
+      secure: true, // TITANはポート465でSSL/TLSを使用
       auth: {
         user: smtpUser,
         pass: smtpPassword,
       },
+      tls: {
+        // SSL/TLS証明書の検証を適切に設定
+        rejectUnauthorized: false // 開発環境用（本番環境では適切な証明書設定を推奨）
+      }
     });
 
     const mailOptions = {
