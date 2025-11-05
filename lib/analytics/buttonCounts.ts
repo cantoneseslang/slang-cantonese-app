@@ -1,4 +1,5 @@
 import categoriesData from '@/data/categories.json';
+import noteCategoriesData from '@/data/note-categories.json';
 
 interface Word {
   chinese: string;
@@ -22,9 +23,11 @@ interface Category {
 export function getButtonCounts() {
   try {
     const data: Category[] = categoriesData as unknown as Category[];
+    const noteData: Category[] = (noteCategoriesData as unknown as Category[]) || [];
     let total = 0;
     const byCategory: Record<string, number> = {};
 
+    // 通常のカテゴリーからカウント
     for (const c of data) {
       if (!c || c.id === 'pronunciation') continue;
 
@@ -42,6 +45,23 @@ export function getButtonCounts() {
             categoryCount += g.words.length;
           }
         }
+      }
+
+      if (categoryCount > 0) {
+        byCategory[c.name] = categoryCount;
+        total += categoryCount;
+      }
+    }
+
+    // Noteカテゴリーからカウント
+    for (const c of noteData) {
+      if (!c) continue;
+
+      let categoryCount = 0;
+
+      // words配列からカウント
+      if (Array.isArray(c.words)) {
+        categoryCount += c.words.length;
       }
 
       if (categoryCount > 0) {
