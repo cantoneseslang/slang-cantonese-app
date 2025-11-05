@@ -1068,19 +1068,15 @@ export default function Home() {
     const { createWorker } = Tesseract as any;
     
     // createWorkerの新しいAPI形式を使用（言語を最初の引数として指定）
-    // loggerオプションは使わず、進捗はrecognizeメソッドから取得
-    const worker = await createWorker('chi_sim+chi_tra', 1, {
-      // loggerオプションを削除（関数はWorkerにクローンできないため）
-    });
+    const worker = await createWorker('chi_sim+chi_tra', 1, {});
     
     try {
       // 中国語（簡体字+繁体字）のみ使用 - 広東語は繁体字で書かれるため
       // chi_sim: 簡体字中国語, chi_tra: 繁体字中国語（広東語含む）
       
-      // recognizeメソッドは進捗情報を含むPromiseを返す
-      const result = await worker.recognize(await file.arrayBuffer(), {
-        // 進捗コールバック（オプション、v5ではサポートされていない可能性がある）
-      });
+      // Fileオブジェクトを直接渡す（arrayBufferではなく）
+      // Tesseract.jsはFile、Blob、または画像URLを受け取る
+      const result = await worker.recognize(file);
       
       // 進捗を100%に設定
       if (onProgress) {
