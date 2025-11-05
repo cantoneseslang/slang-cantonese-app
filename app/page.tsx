@@ -1260,20 +1260,35 @@ export default function Home() {
     };
   }, [showAccountMenu]);
 
-  // プランカードモーダルのスクロール状態を初期化
+  // プランカードモーダルのスクロール状態を初期化と背景スクロールの無効化
   useEffect(() => {
-    if (showPricingModal && pricingModalScrollRef.current && (selectedPlan === 'subscription' || selectedPlan === 'lifetime')) {
-      const checkScroll = () => {
-        if (pricingModalScrollRef.current) {
-          const { scrollTop, scrollHeight, clientHeight } = pricingModalScrollRef.current;
-          setShowPricingModalTopArrow(scrollTop > 10);
-          setShowPricingModalBottomArrow(scrollTop < scrollHeight - clientHeight - 10);
-        }
-      };
-      // 少し遅延して実行（レンダリング後に）
-      setTimeout(checkScroll, 100);
-      window.addEventListener('resize', checkScroll);
-      return () => window.removeEventListener('resize', checkScroll);
+    if (showPricingModal) {
+      // 背景のスクロールを無効化
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      document.body.style.overflow = 'hidden';
+      
+      if (pricingModalScrollRef.current && (selectedPlan === 'subscription' || selectedPlan === 'lifetime')) {
+        const checkScroll = () => {
+          if (pricingModalScrollRef.current) {
+            const { scrollTop, scrollHeight, clientHeight } = pricingModalScrollRef.current;
+            setShowPricingModalTopArrow(scrollTop > 10);
+            setShowPricingModalBottomArrow(scrollTop < scrollHeight - clientHeight - 10);
+          }
+        };
+        // 少し遅延して実行（レンダリング後に）
+        setTimeout(checkScroll, 100);
+        window.addEventListener('resize', checkScroll);
+        return () => {
+          window.removeEventListener('resize', checkScroll);
+          document.body.style.overflow = originalStyle;
+        };
+      } else {
+        setShowPricingModalTopArrow(false);
+        setShowPricingModalBottomArrow(false);
+        return () => {
+          document.body.style.overflow = originalStyle;
+        };
+      }
     } else {
       setShowPricingModalTopArrow(false);
       setShowPricingModalBottomArrow(false);
@@ -4088,6 +4103,12 @@ export default function Home() {
                 setIsDowngrade(false);
               }
             }}
+            onTouchMove={(e) => {
+              // モーダル外のタッチスクロールを防ぐ
+              if (e.target === e.currentTarget) {
+                e.preventDefault();
+              }
+            }}
             style={{
             position: 'fixed',
             top: 0,
@@ -4099,7 +4120,9 @@ export default function Home() {
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 10001,
-            padding: '1rem'
+            padding: '1rem',
+            overflow: 'hidden',
+            touchAction: 'none'
           }}>
             <div 
               onClick={(e) => e.stopPropagation()}
