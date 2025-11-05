@@ -1268,10 +1268,11 @@ export default function Home() {
       setForceShowResult(true); // 結果パネルを表示する
       setSearchQuery(word.chinese);
       
-      // jyutpingとkatakanaが既に存在する場合でも、例文生成と音声生成は必須
-      if (word.jyutping && word.katakana) {
-        setLoading(true);
-        try {
+      // 学習モードでは常に例文生成と音声生成を実行
+      setLoading(true);
+      try {
+        // jyutpingとkatakanaが既に存在する場合
+        if (word.jyutping && word.katakana) {
           // 例文生成と音声生成を実行
           const exampleResponse = await fetch('/api/process-phrase', {
             method: 'POST',
@@ -1328,15 +1329,15 @@ export default function Home() {
           }
 
           setResult(resultData);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'エラーが発生しました');
-          setResult(null);
-        } finally {
-          setLoading(false);
+        } else {
+          // jyutpingとkatakanaが存在しない場合は通常のAPI呼び出し
+          await handleSearch(word.chinese);
         }
-      } else {
-        // jyutpingとkatakanaが存在しない場合は通常のAPI呼び出し
-        await handleSearch(word.chinese);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'エラーが発生しました');
+        setResult(null);
+      } finally {
+        setLoading(false);
       }
     } else {
       // ノーマルモード：単語のみの音声を再生、ボタンを緑色にする（1つだけ）
@@ -2254,6 +2255,7 @@ export default function Home() {
                               setSelectedCategory(null); // 通常カテゴリーを解除
                               setCurrentCategory(noteCategory);
                               setCurrentWords(noteCategory.words || []);
+                              setShowNoteSubCategories(false); // サブカテゴリーバーを閉じる
                             }}
                             style={{
                               padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
@@ -4169,7 +4171,19 @@ export default function Home() {
 
         {/* 設定画面モーダル */}
         {showSettings && user && (
-          <div style={{
+          <div 
+            onClick={(e) => {
+              // 外側をクリックした場合は設定を閉じる
+              if (e.target === e.currentTarget) {
+                setShowSettings(false);
+                setShowPasswordChange(false);
+                setPasswordError(null);
+                setPasswordSuccess(false);
+                setNewPassword('');
+                setConfirmPassword('');
+              }
+            }}
+            style={{
             position: 'fixed',
             top: 0,
             left: 0,
