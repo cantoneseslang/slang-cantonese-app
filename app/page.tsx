@@ -4755,6 +4755,30 @@ export default function Home() {
                     WebkitOverflowScrolling: 'touch'
                   }}
                 >
+                  {/* 発音表記についてを最初に表示 */}
+                  {categories.find(c => c.id === 'pronunciation') && (
+                    <div
+                      onClick={() => handleDefaultCategoryChange('pronunciation')}
+                      style={{
+                        padding: '1.5rem 1rem',
+                        borderBottom: '1px solid #f3f4f6',
+                        backgroundColor: defaultCategoryId === 'pronunciation' ? '#eff6ff' : 'white',
+                        scrollSnapAlign: 'center',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s',
+                        textAlign: 'center',
+                        fontSize: '1.125rem',
+                        fontWeight: defaultCategoryId === 'pronunciation' ? '600' : '400',
+                        color: defaultCategoryId === 'pronunciation' ? '#1e40af' : '#111827'
+                      }}
+                    >
+                      発音表記について
+                      {defaultCategoryId === 'pronunciation' && (
+                        <span style={{ marginLeft: '0.5rem', fontSize: '1rem' }}>✓</span>
+                      )}
+                    </div>
+                  )}
+                  {/* その他のカテゴリー */}
                   {categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_')).map((category) => {
                     const isSelected = category.id === defaultCategoryId;
                     return (
@@ -4781,29 +4805,6 @@ export default function Home() {
                       </div>
                     );
                   })}
-                  {/* 発音表記についても追加 */}
-                  {categories.find(c => c.id === 'pronunciation') && (
-                    <div
-                      onClick={() => handleDefaultCategoryChange('pronunciation')}
-                      style={{
-                        padding: '1.5rem 1rem',
-                        borderBottom: '1px solid #f3f4f6',
-                        backgroundColor: defaultCategoryId === 'pronunciation' ? '#eff6ff' : 'white',
-                        scrollSnapAlign: 'center',
-                        cursor: 'pointer',
-                        transition: 'background-color 0.2s',
-                        textAlign: 'center',
-                        fontSize: '1.125rem',
-                        fontWeight: defaultCategoryId === 'pronunciation' ? '600' : '400',
-                        color: defaultCategoryId === 'pronunciation' ? '#1e40af' : '#111827'
-                      }}
-                    >
-                      発音表記について
-                      {defaultCategoryId === 'pronunciation' && (
-                        <span style={{ marginLeft: '0.5rem', fontSize: '1rem' }}>✓</span>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
