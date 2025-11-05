@@ -1173,15 +1173,24 @@ export default function Home() {
     // カテゴリデータを読み込む（通常のカテゴリーのみ、Noteカテゴリーは除外）
     const regularCategories = categoriesData as Category[];
     setCategories(regularCategories);
+  }, []);
+
+  // ユーザー情報とデフォルトカテゴリーが読み込まれた後にカテゴリーを適用
+  useEffect(() => {
+    if (!user || categories.length === 0) return;
+    
+    // 既にカテゴリーが選択されている場合はスキップ
+    if (selectedCategory) return;
     
     // デフォルトカテゴリーを適用（ユーザー設定がある場合はそれを使用、なければpronunciation）
-    if (regularCategories.length > 0 && !selectedCategory) {
+    const regularCategories = categories.filter(c => !c.id.startsWith('note_'));
+    if (regularCategories.length > 0) {
       const defaultCategory = regularCategories.find(c => c.id === defaultCategoryId) || regularCategories[0];
       setSelectedCategory(defaultCategory.id);
       setCurrentCategory(defaultCategory);
       setCurrentWords(defaultCategory.words || []);
     }
-  }, [defaultCategoryId, selectedCategory]);
+  }, [user, defaultCategoryId, categories, selectedCategory]);
   
   // Noteサブカテゴリーバーのスクロール状態を初期化
   useEffect(() => {
