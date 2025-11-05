@@ -39,6 +39,8 @@ interface SearchResult {
   exampleJapanese?: string;
   exampleFull?: string;
   exampleAudioBase64?: string;
+  originalText?: string | null;
+  translatedText?: string | null;
 }
 
 interface Word {
