@@ -4179,9 +4179,11 @@ export default function Home() {
                     <button
                       onClick={async () => {
                         try {
-                          await navigator.clipboard.writeText(result.exampleCantonese);
-                          setCopySuccess('例文');
-                          setTimeout(() => setCopySuccess(null), 2000);
+                          if (result.exampleCantonese) {
+                            await navigator.clipboard.writeText(result.exampleCantonese);
+                            setCopySuccess('例文');
+                            setTimeout(() => setCopySuccess(null), 2000);
+                          }
                         } catch (err) {
                           alert('コピーに失敗しました');
                         }
