@@ -14,14 +14,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { wordChinese, categoryId } = body;
     
-    // button_keyはwordChineseを使用（一意のキーとして）
-    const buttonKey = wordChinese || '';
+    // button_keyは既存のデータ形式に合わせて "categoryId:wordChinese" 形式を使用
+    // 既存データがこの形式で保存されているため、一貫性を保つ
+    const buttonKey = categoryId && wordChinese 
+      ? `${categoryId}:${wordChinese}` 
+      : wordChinese || '';
     
     if (!buttonKey) {
       return NextResponse.json({ success: true });
     }
 
     // Supabaseのuser_button_eventsテーブルに保存
+    // 重複を防ぐため、既に存在する場合はスキップ（エラーを無視）
     const { error } = await supabase
       .from('user_button_events')
       .insert({
