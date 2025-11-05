@@ -808,7 +808,21 @@ export default function Home() {
 
       if (error) throw error;
 
-      setMembershipType(plan);
+      // ユーザー情報を再取得して最新の状態を反映
+      const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
+      
+      if (getUserError) {
+        console.error('ユーザー情報の再取得エラー:', getUserError);
+      } else if (updatedUser) {
+        // 最新のユーザー情報をセット（これによりuseEffectが再実行される）
+        setUser(updatedUser);
+        // ステートも直接更新（確実に反映させるため）
+        setMembershipType(plan);
+      } else {
+        // フォールバック: ステートのみ更新
+        setMembershipType(plan);
+      }
+
       setShowPricingModal(false);
       setSelectedPlan(null);
       setIsDowngrade(false);
