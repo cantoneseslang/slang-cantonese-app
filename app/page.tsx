@@ -1713,6 +1713,14 @@ export default function Home() {
       }
 
       setResult(resultData);
+      
+      // 長文（50文字超）の場合は粤ピン・カタカナをデフォルトで非表示
+      const textLength = (resultData.translatedText || query).length;
+      if (textLength > 50) {
+        setShowPronunciationDetails(false);
+      } else {
+        setShowPronunciationDetails(true);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
       setResult(null);
@@ -1810,6 +1818,14 @@ export default function Home() {
           }
 
           setResult(resultData);
+          
+          // 長文（50文字超）の場合は粤ピン・カタカナをデフォルトで非表示
+          const textLength = word.chinese.length;
+          if (textLength > 50) {
+            setShowPronunciationDetails(false);
+          } else {
+            setShowPronunciationDetails(true);
+          }
         } else {
           // jyutpingとkatakanaが存在しない場合は通常のAPI呼び出し
           await handleSearch(word.chinese);
@@ -3911,12 +3927,48 @@ export default function Home() {
               borderRadius: '8px', 
               background: 'white'
             }}>
-              <p style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
-                <strong style={{ textDecoration: 'underline' }}>粤ピン： {result.jyutping}</strong>
-              </p>
-              <p style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
-                <strong style={{ textDecoration: 'underline' }}>スラング式カタカナ： {result.katakana}</strong>
-              </p>
+              {/* 長文の場合の表示/非表示ボタン */}
+              {((result.translatedText || searchQuery).length > 50) && (
+                <div style={{ marginBottom: '0.75rem', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => setShowPronunciationDetails(!showPronunciationDetails)}
+                    style={{
+                      padding: isMobile ? '6px 12px' : '8px 16px',
+                      fontSize: isMobile ? '0.75rem' : '0.875rem',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(0,0,0,0.1)',
+                      background: 'linear-gradient(145deg, #ffffff, #f5f5f7)',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
+                      cursor: 'pointer',
+                      color: '#111827',
+                      fontWeight: '600',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.08)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.04)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    {showPronunciationDetails ? '発音を非表示' : '発音を表示'}
+                  </button>
+                </div>
+              )}
+              
+              {/* 粤ピンとスラング式カタカナ（長文の場合は表示/非表示切り替え可能） */}
+              {showPronunciationDetails && (
+                <>
+                  <p style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
+                    <strong style={{ textDecoration: 'underline' }}>粤ピン： {result.jyutping}</strong>
+                  </p>
+                  <p style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
+                    <strong style={{ textDecoration: 'underline' }}>スラング式カタカナ： {result.katakana}</strong>
+                  </p>
+                </>
+              )}
               
               {/* 例文表示（翻訳された場合は非表示） */}
               {result.exampleCantonese && !result.translatedText && (
