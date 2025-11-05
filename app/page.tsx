@@ -4180,11 +4180,32 @@ export default function Home() {
 
         {/* 設定画面モーダル（右側スライドイン） */}
         {showSettings && user && (
-          <>
-            {/* 背景オーバーレイ */}
+          <div
+            onClick={(e) => {
+              // 外側をクリックした場合は設定を閉じる
+              if (e.target === e.currentTarget) {
+                setShowSettings(false);
+                setShowPasswordChange(false);
+                setPasswordError(null);
+                setPasswordSuccess(false);
+                setNewPassword('');
+                setConfirmPassword('');
+              }
+            }}
+            style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 9999,
+            display: 'flex',
+            justifyContent: 'flex-end'
+          }}>
+            {/* 背景オーバーレイ（左側のスペース） */}
             <div 
               onClick={(e) => {
-                // 外側をクリックした場合は設定を閉じる
+                // 背景をクリックした場合は設定を閉じる
                 setShowSettings(false);
                 setShowPasswordChange(false);
                 setPasswordError(null);
@@ -4193,28 +4214,24 @@ export default function Home() {
                 setConfirmPassword('');
               }}
               style={{
-              position: 'fixed',
+              position: 'absolute',
               top: 0,
               left: 0,
-              right: 0,
+              right: isMobile ? 0 : '400px',
               bottom: 0,
               backgroundColor: 'rgba(0,0,0,0.3)',
-              zIndex: 9999,
               transition: 'opacity 0.3s ease'
             }} />
             {/* 設定パネル（右側） */}
             <div 
               onClick={(e) => e.stopPropagation()}
               style={{
-              position: 'fixed',
-              top: 0,
-              right: 0,
-              bottom: 0,
+              position: 'relative',
               width: isMobile ? '100%' : '400px',
               maxWidth: '90vw',
+              height: '100%',
               backgroundColor: 'white',
               boxShadow: '-4px 0 24px rgba(0,0,0,0.15)',
-              zIndex: 10000,
               overflowY: 'auto',
               transform: 'translateX(0)',
               transition: 'transform 0.3s ease'
@@ -5169,7 +5186,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          </>
+          </div>
         )}
 
       </div>
