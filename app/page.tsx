@@ -3452,11 +3452,11 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 非表示input: PDF/TXT */}
+            {/* 非表示input: PDF/画像/TXT（OCR対応） */}
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.txt"
+              accept=".pdf,.txt,image/*"
               style={{ display: 'none' }}
               onChange={async (e) => {
                 const file = e.target.files?.[0];
@@ -3465,18 +3465,88 @@ export default function Home() {
                   setIsImporting(true);
                   setImportProgress(null);
                   setImportMessage('読み取り中...');
-                  if (file.name.toLowerCase().endsWith('.txt')) {
+                  
+                  const fileName = file.name.toLowerCase();
+                  const fileType = file.type;
+                  
+                  // TXTファイルの場合
+                  if (fileName.endsWith('.txt')) {
                     const text = await readTxt(file);
                     setSearchQuery(text);
-                  } else if (file.name.toLowerCase().endsWith('.pdf')) {
-                    const text = await extractTextFromPdf(file, (p) => setImportProgress(p));
+                  }
+                  // 画像ファイルの場合（PDF/TXT以外の画像）
+                  else if (fileType.startsWith('image/')) {
+                    setImportMessage('OCR実行中...');
+                    const text = await runOcr(file, (p) => setImportProgress(p));
                     if (!text || text.trim().length === 0) {
-                      alert('PDFからテキストを抽出できませんでした。スキャンPDFの可能性があります。モバイルの📷からOCRをお試しください。');
+                      alert('画像からテキストを読み取れませんでした。');
+                    } else {
+                      setSearchQuery(text);
+                    }
+                  }
+                  // PDFファイルの場合
+                  else if (fileName.endsWith('.pdf')) {
+                    setImportMessage('PDFからテキスト抽出中...');
+                    let text = await extractTextFromPdf(file, (p) => setImportProgress(p));
+                    
+                    // テキストが抽出できない場合（スキャンPDF）、OCRを試す
+                    if (!text || text.trim().length === 0) {
+                      setImportMessage('PDFからテキストを抽出できませんでした。OCRで読み取り中...');
+                      // PDFを画像としてOCR処理するため、Canvasに変換
+                      try {
+                        const pdfjsLib: any = await import('pdfjs-dist');
+                        if (pdfjsLib?.GlobalWorkerOptions) {
+                          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+                        }
+                        const arrayBuffer = await file.arrayBuffer();
+                        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                        const pdf = await loadingTask.promise;
+                        const maxPages = Math.min(pdf.numPages, 5); // OCRは最大5ページまで
+                        let ocrText = '';
+                        
+                        for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+                          const page = await pdf.getPage(pageNum);
+                          const viewport = page.getViewport({ scale: 2.0 });
+                          const canvas = document.createElement('canvas');
+                          const context = canvas.getContext('2d');
+                          if (!context) continue;
+                          
+                          canvas.height = viewport.height;
+                          canvas.width = viewport.width;
+                          
+                          await page.render({ canvasContext: context, viewport }).promise;
+                          
+                          // CanvasをBlobに変換してOCR実行（Promiseでラップ）
+                          const blob = await new Promise<Blob | null>((resolve) => {
+                            canvas.toBlob((blob) => resolve(blob), 'image/png');
+                          });
+                          
+                          if (blob) {
+                            const imageFile = new File([blob], `page-${pageNum}.png`, { type: 'image/png' });
+                            const pageText = await runOcr(imageFile, (p) => {
+                              const totalProgress = ((pageNum - 1) / maxPages) * 100 + (p / maxPages);
+                              setImportProgress(Math.round(totalProgress));
+                            });
+                            ocrText += pageText + '\n';
+                          }
+                        }
+                        
+                        text = ocrText.trim();
+                        
+                        if (!text || text.length === 0) {
+                          alert('PDFからテキストを読み取れませんでした。');
+                        } else {
+                          setSearchQuery(text);
+                        }
+                      } catch (ocrErr: any) {
+                        console.error('PDF OCRエラー:', ocrErr);
+                        alert('PDFのOCR処理中にエラーが発生しました: ' + (ocrErr?.message || String(ocrErr)));
+                      }
                     } else {
                       setSearchQuery(text);
                     }
                   } else {
-                    alert('PDF または TXT ファイルを選択してください。');
+                    alert('PDF、TXT、または画像ファイルを選択してください。');
                   }
                 } catch (err: any) {
                   console.error(err);
