@@ -2956,7 +2956,18 @@ export default function Home() {
                     <div style={{ display: 'flex', gap: 6 }}>
                       {/* ブロンズ会員 */}
                       <button
-                        onClick={() => handleMembershipChange('free')}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('ブロンズ会員ボタンクリック（アカウントメニュー）');
+                          handleMembershipChange('free');
+                        }}
+                        onTouchStart={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('ブロンズ会員ボタンタッチ（アカウントメニュー）');
+                          handleMembershipChange('free');
+                        }}
                         style={{
                           flex: 1,
                           padding: '8px 4px',
@@ -2974,7 +2985,9 @@ export default function Home() {
                           boxShadow: membershipType === 'free' 
                             ? '0 4px 12px rgba(205,127,50,0.3)' 
                             : '0 1px 3px rgba(0,0,0,0.1)',
-                          transform: membershipType === 'free' ? 'scale(1.02)' : 'scale(1)'
+                          transform: membershipType === 'free' ? 'scale(1.02)' : 'scale(1)',
+                          touchAction: 'manipulation',
+                          WebkitTapHighlightColor: 'transparent'
                         }}
                       >
                         <span style={{ fontSize: '1.25rem' }}>
@@ -3093,7 +3106,19 @@ export default function Home() {
                   {/* パワーアップボタン（ゴールド会員以外のみ表示） */}
                   {membershipType !== 'lifetime' && (
                     <button
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('パワーアップボタンクリック');
+                        // 現在のプランより上位のプランを選択
+                        const nextPlan = membershipType === 'free' ? 'subscription' : 'lifetime';
+                        handleMembershipChange(nextPlan);
+                        setShowAccountMenu(false);
+                      }}
+                      onTouchStart={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('パワーアップボタンタッチ');
                         // 現在のプランより上位のプランを選択
                         const nextPlan = membershipType === 'free' ? 'subscription' : 'lifetime';
                         handleMembershipChange(nextPlan);
@@ -3107,7 +3132,9 @@ export default function Home() {
                         fontWeight: 700,
                         border: 'none',
                         cursor: 'pointer',
-                        fontSize: 13
+                        fontSize: 13,
+                        touchAction: 'manipulation',
+                        WebkitTapHighlightColor: 'transparent'
                       }}
                     >
                       {membershipType === 'free' ? 'シルバーにアップグレード' : 'ゴールドにアップグレード'}
@@ -3137,7 +3164,16 @@ export default function Home() {
                     <div style={{ marginLeft: 'auto', color: '#111827', fontWeight: 600 }}>日本語</div>
                   </div>
                   <button
-                    onClick={() => toggleClickSound()}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleClickSound();
+                    }}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleClickSound();
+                    }}
                     style={{ 
                       height: 36, 
                       borderRadius: 8, 
@@ -3150,7 +3186,9 @@ export default function Home() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: 6
+                      gap: 6,
+                      touchAction: 'manipulation',
+                      WebkitTapHighlightColor: 'transparent'
                     }}
                   >
                     {isClickSoundEnabled ? '🔊 クリック音オン' : '🔇 クリック音オフ'}
@@ -3522,8 +3560,32 @@ export default function Home() {
                   <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
 
                   <button
-                    onClick={async () => { setShowAccountMenu(false); await supabase.auth.signOut(); router.refresh(); }}
-                    style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700 }}
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('ログアウトボタンクリック');
+                      setShowAccountMenu(false);
+                      await supabase.auth.signOut();
+                      router.refresh();
+                    }}
+                    onTouchStart={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('ログアウトボタンタッチ');
+                      setShowAccountMenu(false);
+                      await supabase.auth.signOut();
+                      router.refresh();
+                    }}
+                    style={{ 
+                      height: 36, 
+                      borderRadius: 8, 
+                      border: '1px solid #e5e7eb', 
+                      background: '#fff', 
+                      cursor: 'pointer', 
+                      fontWeight: 700,
+                      touchAction: 'manipulation',
+                      WebkitTapHighlightColor: 'transparent'
+                    }}
                   >ログアウト</button>
                 </div>
               </div>
@@ -6036,7 +6098,18 @@ export default function Home() {
                     }}>
                       {/* ブロンズ会員 */}
                       <button
-                        onClick={() => handleMembershipChange('free')}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('ブロンズ会員ボタンクリック（設定画面）');
+                          handleMembershipChange('free');
+                        }}
+                        onTouchStart={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('ブロンズ会員ボタンタッチ（設定画面）');
+                          handleMembershipChange('free');
+                        }}
                         style={{
                           flex: 1,
                           padding: '1.25rem 0.75rem',
@@ -6054,7 +6127,9 @@ export default function Home() {
                           boxShadow: membershipType === 'free' 
                             ? '0 8px 20px rgba(205,127,50,0.4), inset 0 1px 0 rgba(255,255,255,0.3)' 
                             : '0 2px 8px rgba(0,0,0,0.1)',
-                          transform: membershipType === 'free' ? 'scale(1.05)' : 'scale(1)'
+                          transform: membershipType === 'free' ? 'scale(1.05)' : 'scale(1)',
+                          touchAction: 'manipulation',
+                          WebkitTapHighlightColor: 'transparent'
                         }}
                         onMouseEnter={(e) => {
                           if (membershipType !== 'free') {
@@ -6084,7 +6159,18 @@ export default function Home() {
 
                       {/* シルバー会員 */}
                       <button
-                        onClick={() => handleMembershipChange('subscription')}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('シルバー会員ボタンクリック（設定画面）');
+                          handleMembershipChange('subscription');
+                        }}
+                        onTouchStart={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('シルバー会員ボタンタッチ（設定画面）');
+                          handleMembershipChange('subscription');
+                        }}
                         style={{
                           flex: 1,
                           padding: '1.25rem 0.75rem',
@@ -6102,7 +6188,9 @@ export default function Home() {
                           boxShadow: membershipType === 'subscription' 
                             ? '0 8px 20px rgba(192,192,192,0.4), inset 0 1px 0 rgba(255,255,255,0.4)' 
                             : '0 2px 8px rgba(0,0,0,0.1)',
-                          transform: membershipType === 'subscription' ? 'scale(1.05)' : 'scale(1)'
+                          transform: membershipType === 'subscription' ? 'scale(1.05)' : 'scale(1)',
+                          touchAction: 'manipulation',
+                          WebkitTapHighlightColor: 'transparent'
                         }}
                         onMouseEnter={(e) => {
                           if (membershipType !== 'subscription') {
@@ -6141,7 +6229,18 @@ export default function Home() {
 
                       {/* ゴールド会員 */}
                       <button
-                        onClick={() => handleMembershipChange('lifetime')}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('ゴールド会員ボタンクリック（設定画面）');
+                          handleMembershipChange('lifetime');
+                        }}
+                        onTouchStart={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('ゴールド会員ボタンタッチ（設定画面）');
+                          handleMembershipChange('lifetime');
+                        }}
                         style={{
                           flex: 1,
                           padding: '1.25rem 0.75rem',
@@ -6161,7 +6260,9 @@ export default function Home() {
                             : '0 2px 8px rgba(0,0,0,0.1)',
                           transform: membershipType === 'lifetime' ? 'scale(1.05)' : 'scale(1)',
                           position: 'relative',
-                          overflow: 'hidden'
+                          overflow: 'hidden',
+                          touchAction: 'manipulation',
+                          WebkitTapHighlightColor: 'transparent'
                         }}
                         onMouseEnter={(e) => {
                           if (membershipType !== 'lifetime') {
