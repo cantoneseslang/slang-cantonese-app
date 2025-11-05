@@ -1,4 +1,19 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+
 export default function AboutPage() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
     <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem' }}>
@@ -6,7 +21,13 @@ export default function AboutPage() {
       </h1>
       
       <div style={{ marginTop: '2rem' }}>
-        <ul style={{ listStyle: 'disc', paddingLeft: '2rem', marginBottom: '2rem', lineHeight: 1.8 }}>
+        <ul style={{ 
+          listStyle: 'disc', 
+          paddingLeft: '2rem', 
+          marginBottom: '2rem', 
+          lineHeight: 1.8,
+          fontSize: isMobile ? '0.875rem' : '1rem'
+        }}>
           <li>ボタンを押すだけで発音を確認できます(ノーマルモード）</li>
           <li>ボタンを押すだけで発音と例文まで出てきます(学習モード）</li>
           <li>学習モードでは音声練習用に音声再生スピードの変更可能です</li>
