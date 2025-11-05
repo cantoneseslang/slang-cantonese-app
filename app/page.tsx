@@ -250,28 +250,35 @@ export default function Home() {
   // お気に入りの読み込み関数（外部から呼び出し可能にする）
   const loadFavorites = async () => {
     if (!user) {
+      console.log('📋 お気に入り読み込み: ユーザー未ログイン');
       setFavorites(new Set());
       return;
     }
 
     try {
+      console.log('📋 お気に入り読み込み開始');
       setLoadingFavorites(true);
       const response = await fetch('/api/favorites/list');
       const data = await response.json();
       
+      console.log('📋 お気に入り読み込みAPIレスポンス:', { status: response.status, data });
+      
       if (data.favorites && Array.isArray(data.favorites)) {
         // お気に入りリストをSetに変換
-        setFavorites(new Set(data.favorites));
+        const favoritesSet = new Set(data.favorites);
+        console.log('✅ お気に入り読み込み成功:', { count: favoritesSet.size, favorites: Array.from(favoritesSet).slice(0, 10) });
+        setFavorites(favoritesSet);
       } else if (data.error) {
         // エラーがあっても静かに処理（テーブルが存在しない場合など）
-        console.warn('お気に入り読み込み警告:', data.error);
+        console.warn('⚠️ お気に入り読み込み警告:', data.error);
         setFavorites(new Set());
       } else {
+        console.log('📋 お気に入り読み込み: データなし');
         setFavorites(new Set());
       }
     } catch (error) {
       // ネットワークエラーなどは静かに処理
-      console.error('お気に入り読み込みエラー:', error);
+      console.error('❌ お気に入り読み込みエラー:', error);
       setFavorites(new Set());
     } finally {
       setLoadingFavorites(false);
