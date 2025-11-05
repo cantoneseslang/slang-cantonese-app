@@ -212,9 +212,11 @@ export default function Home() {
       
       // デフォルトカテゴリーの設定
       if (user.user_metadata?.default_category_id) {
+        console.log('📋 デフォルトカテゴリーを読み込み:', user.user_metadata.default_category_id);
         setDefaultCategoryId(user.user_metadata.default_category_id);
       } else {
         // デフォルトカテゴリーがない場合、デフォルト値（pronunciation）を設定
+        console.log('📋 デフォルトカテゴリーが未設定、デフォルト値（pronunciation）を使用');
         setDefaultCategoryId('pronunciation');
       }
 
@@ -1148,6 +1150,7 @@ export default function Home() {
       }
 
       // 状態を更新
+      console.log('✅ デフォルトカテゴリーを保存:', newCategoryId);
       setDefaultCategoryId(newCategoryId);
       setShowCategoryPicker(false);
       
@@ -1155,9 +1158,17 @@ export default function Home() {
       const regularCategories = categoriesData as Category[];
       const newDefaultCategory = regularCategories.find(c => c.id === newCategoryId);
       if (newDefaultCategory && selectedCategory !== newCategoryId) {
+        console.log('🔄 カテゴリーをデフォルトカテゴリーに切り替え:', newCategoryId);
         setSelectedCategory(newCategoryId);
         setCurrentCategory(newDefaultCategory);
         setCurrentWords(newDefaultCategory.words || []);
+      }
+      
+      // ユーザー情報を再取得して最新の状態を反映
+      const { data: { user: updatedUser } } = await supabase.auth.getUser();
+      if (updatedUser) {
+        setUser(updatedUser);
+        console.log('✅ ユーザー情報を再取得完了');
       }
       
       alert('デフォルトカテゴリーを保存しました。次回のログイン時から適用されます。');
@@ -1177,15 +1188,26 @@ export default function Home() {
 
   // ユーザー情報とデフォルトカテゴリーが読み込まれた後にカテゴリーを適用
   useEffect(() => {
-    if (!user || categories.length === 0) return;
+    if (!user || categories.length === 0) {
+      console.log('⏳ カテゴリー適用待機中:', { hasUser: !!user, categoriesCount: categories.length });
+      return;
+    }
     
     // 既にカテゴリーが選択されている場合はスキップ
-    if (selectedCategory) return;
+    if (selectedCategory) {
+      console.log('✅ カテゴリーは既に選択済み:', selectedCategory);
+      return;
+    }
     
     // デフォルトカテゴリーを適用（ユーザー設定がある場合はそれを使用、なければpronunciation）
     const regularCategories = categories.filter(c => !c.id.startsWith('note_'));
     if (regularCategories.length > 0) {
       const defaultCategory = regularCategories.find(c => c.id === defaultCategoryId) || regularCategories[0];
+      console.log('🎯 デフォルトカテゴリーを適用:', { 
+        defaultCategoryId, 
+        categoryName: defaultCategory.name,
+        categoryId: defaultCategory.id 
+      });
       setSelectedCategory(defaultCategory.id);
       setCurrentCategory(defaultCategory);
       setCurrentWords(defaultCategory.words || []);
