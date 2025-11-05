@@ -2017,20 +2017,37 @@ export default function Home() {
 
             {/* ドロップダウン */}
             {showAccountMenu && (
-              <div style={{
-                position: 'absolute',
-                right: 0,
-                marginTop: 8,
-                width: isMobile ? 'calc(100vw - 20px)' : 400,
-                maxWidth: '90vw',
-                background: '#fff',
-                border: '1px solid rgba(0,0,0,0.08)',
-                borderRadius: 12,
-                boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                overflow: 'hidden',
-                maxHeight: '90vh',
-                overflowY: 'auto'
-              }}>
+              <>
+                {/* 背景オーバーレイ（クリックで閉じる） */}
+                <div
+                  onClick={() => setShowAccountMenu(false)}
+                  style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 49
+                  }}
+                />
+                <div 
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    marginTop: 8,
+                    width: isMobile ? 'calc(100vw - 20px)' : 400,
+                    maxWidth: '90vw',
+                    background: '#fff',
+                    border: '1px solid rgba(0,0,0,0.08)',
+                    borderRadius: 12,
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                    overflow: 'hidden',
+                    maxHeight: '90vh',
+                    overflowY: 'auto',
+                    zIndex: 50
+                  }}
+                >
                 <div style={{ padding: '12px 14px', borderBottom: '1px solid #f1f5f9' }}>
                   <div style={{ fontSize: 12, color: '#6b7280' }}>サインイン中</div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', wordBreak: 'break-all' }}>{user?.email || 'ゲスト'}</div>
@@ -2543,7 +2560,8 @@ export default function Home() {
                     style={{ height: 36, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontWeight: 700 }}
                   >ログアウト</button>
                 </div>
-              </div>
+                </div>
+              </>
             )}
           </div>
 
