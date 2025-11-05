@@ -1114,14 +1114,17 @@ export default function Home() {
     const worker = await createWorker('chi_tra+jpn+chi_sim', 1, {});
     
     try {
+      // PSM（Page Segmentation Mode）を設定して精度を向上
+      // PSM 6: 単一の統一されたテキストブロックとして認識（縦書き・横書き混在対応）
+      // PSM 11: 可能な限り多くのテキストを検出
+      await worker.setParameters({
+        tessedit_pageseg_mode: '6', // 単一テキストブロック
+        tessedit_char_whitelist: '', // 文字制限なし（すべての文字を認識）
+      });
+      
       // Fileオブジェクトを直接渡す（arrayBufferではなく）
       // Tesseract.jsはFile、Blob、または画像URLを受け取る
-      // PSM（Page Segmentation Mode）を設定して精度を向上
-      const result = await worker.recognize(imageFile, {
-        // PSM 6: 単一の統一されたテキストブロックとして認識
-        // PSM 11: 可能な限り多くのテキストを検出（デフォルトより良い）
-        tessedit_pageseg_mode: '6', // 単一テキストブロック
-      });
+      const result = await worker.recognize(imageFile);
       
       // 進捗を100%に設定
       if (onProgress) {
