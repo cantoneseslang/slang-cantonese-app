@@ -1997,11 +1997,24 @@ export default function Home() {
           normalModeAudioRef.current.pause();
           normalModeAudioRef.current.currentTime = 0;
           normalModeAudioRef.current.src = `data:audio/mp3;base64,${audioBase64}`;
+          
+          // 音声再生開始
           normalModeAudioRef.current.play();
+          
+          // 音声再生終了時にactiveWordIdをクリアして緑点灯を消す
+          normalModeAudioRef.current.addEventListener('ended', () => {
+            if (!isLearningMode) {
+              setActiveWordId(null);
+            }
+          }, { once: true });
         }
       }
     } catch (err) {
       console.error('音声再生エラー:', err);
+      // エラー時もactiveWordIdをクリア
+      if (!isLearningMode) {
+        setActiveWordId(null);
+      }
     }
     // categoryIdの取得: noteカテゴリーが選択されている場合はselectedNoteCategoryを優先
     const categoryId = selectedNoteCategory || currentCategory?.id || 'pronunciation';
