@@ -4022,9 +4022,11 @@ export default function Home() {
             }}>
               {currentWords.map((word, idx) => {
                 const isActive = !isLearningMode && activeWordId === word.chinese;
-                // お気に入り画面の場合は元のcategoryIdを使う
+                // categoryIdの取得: お気に入り画面、noteカテゴリー、通常カテゴリーの順で優先
                 const originalCategoryId = selectedCategory === 'favorites' 
                   ? (favoriteWordCategoryMapRef.current.get(word.chinese) || '')
+                  : selectedNoteCategory 
+                  ? selectedNoteCategory 
                   : (currentCategory?.id || '');
                 const favoriteKey = `${originalCategoryId}:${word.chinese}`;
                 const isFavorite = favorites.has(favoriteKey);
@@ -4044,7 +4046,13 @@ export default function Home() {
                     handleWordClick(word);
                   }}
                   onTouchStart={(e) => {
-                    handleLongPressStart(word, originalCategoryId, e);
+                    // categoryIdの取得: お気に入り画面、noteカテゴリー、通常カテゴリーの順で優先
+                    const categoryId = selectedCategory === 'favorites' 
+                      ? (favoriteWordCategoryMapRef.current.get(word.chinese) || '')
+                      : selectedNoteCategory 
+                      ? selectedNoteCategory 
+                      : (currentCategory?.id || '');
+                    handleLongPressStart(word, categoryId, e);
                   }}
                   onTouchEnd={handleLongPressEnd}
                   onTouchCancel={handleLongPressEnd}
@@ -4081,10 +4089,13 @@ export default function Home() {
                   }}
                   onMouseDown={(e) => {
                     e.currentTarget.style.transform = 'scale(0.98)';
-                    const originalCategoryId = selectedCategory === 'favorites' 
+                    // categoryIdの取得: お気に入り画面、noteカテゴリー、通常カテゴリーの順で優先
+                    const categoryId = selectedCategory === 'favorites' 
                       ? (favoriteWordCategoryMapRef.current.get(word.chinese) || '')
+                      : selectedNoteCategory 
+                      ? selectedNoteCategory 
                       : (currentCategory?.id || '');
-                    handleLongPressStart(word, originalCategoryId, e);
+                    handleLongPressStart(word, categoryId, e);
                   }}
                   onMouseUp={(e) => {
                     e.currentTarget.style.transform = 'scale(1.03) translateY(-2px)';
