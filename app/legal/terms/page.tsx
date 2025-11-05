@@ -21,7 +21,6 @@ const termsContent = {
           { text: '本サービスは、広東語の発音、意味、用例などの学習支援機能を提供します。' },
           { label: '無料プラン:', text: '無料プランでは利用回数に制限があります。' },
           { label: '有料サブスクリプションプラン:', text: '有料プランでは利用回数の上限が緩和され、高度な機能をご利用いただけます。' },
-          { label: 'ライフタイムプラン:', text: '一度お支払いいただくことで、継続的な利用が可能です。' },
           { text: '当社は、プランの機能、特典、利用制限を随時変更することがあります。' }
         ]
       },
@@ -41,7 +40,7 @@ const termsContent = {
         items: [
           { label: '4.1 料金および請求サイクル:', text: 'サブスクリプション料金は、選択した期間（月間または年間など）ごとに前払いで請求されます。' },
           { label: '4.2 自動更新:', text: '現行期間終了前にキャンセルしない限り、同一期間で同額の料金にて自動更新されます。' },
-          { label: '4.3 決済処理:', text: '決済は第三者プロバイダを通じて行われ、当社はクレジットカード情報等の全情報を保存しません。' },
+          { label: '4.3 決済処理:', text: '決済は第三者プロバイダであるStripeを通じて行われ、当社はクレジットカード情報等の全情報を保存しません。' },
           { label: '4.4 解約および返金:', text: 'アカウント設定からいつでも解約が可能です。解約により次回更新を停止しますが、既払い期間のサービス利用は有効期限まで継続します。既払い料金は原則として返金されません。ただし、法令により返金が義務付けられる場合はこの限りではありません。' }
         ]
       },
@@ -84,7 +83,7 @@ const termsContent = {
       {
         title: '第9条 免責事項',
         items: [
-          { text: '本サービスは「現状有姿」「現状有効」で提供されます。法令で許容される最大限の範囲で、当社は明示的、黙示的、法定のいかなる保証も否認します。これには、商品性、特定目的適合性、非侵害性、翻訳精度、継続的運用保証などが含まれます。' },
+          { text: '本サービスは「現状有姿」「現状有効」で提供されます。法令で許容される最大限の範囲で、当社は明示的、黙示的、法定のいかなる保証も否認します。これには、商品性、特定目的適合性、非侵害性、学習精度、継続的運用保証などが含まれます。' },
           { label: '不可抗力', text: '当事者は、天災地変、火災、洪水、地震、嵐、テロ、暴動、戦争、流行病、政府の行動、公私の通信網障害など、合理的な制御を超える事由による義務不履行や遅延について責任を負わないものとします。影響を受けた当事者は速やかに相手方に通知し、可能な限り履行を再開するよう努めます。' }
         ]
       },
@@ -185,7 +184,7 @@ const termsContent = {
           { text: 'You must not:' },
           { list: [
             'Use the Service for purposes that violate laws or public order and morals',
-            'Request translation of obscene, pornographic, excessively violent, hateful, or discriminatory content',
+            'Request search or learning of obscene, pornographic, excessively violent, hateful, or discriminatory content',
             'Send malware, spam, or other malicious information',
             'Create multiple free accounts or engage in unauthorized access to circumvent usage limits',
             'Interfere with or disrupt the Service or security features'
@@ -210,7 +209,7 @@ const termsContent = {
       {
         title: 'Article 9: Disclaimers',
         items: [
-          { text: 'The Service is provided "as is" and "as available." To the maximum extent permitted by law, we disclaim all express, implied, and statutory warranties, including merchantability, fitness for a particular purpose, non-infringement, translation accuracy, and continuous operation guarantees.' },
+          { text: 'The Service is provided "as is" and "as available." To the maximum extent permitted by law, we disclaim all express, implied, and statutory warranties, including merchantability, fitness for a particular purpose, non-infringement, learning accuracy, and continuous operation guarantees.' },
           { label: 'Force Majeure', text: 'Neither party shall be liable for failure or delay in performance due to causes beyond reasonable control, including natural disasters, fire, flood, earthquake, storm, terrorism, riots, war, epidemics, government actions, or public or private network failures. The affected party shall promptly notify the other and make reasonable efforts to resume performance.' }
         ]
       },
