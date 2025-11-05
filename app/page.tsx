@@ -1667,16 +1667,21 @@ export default function Home() {
         hasJyutping: !!data.jyutping, 
         hasKatakana: !!data.katakana,
         hasExample: !!data.exampleCantonese,
+        translatedText: data.translatedText,
+        originalText: data.originalText,
         data 
       });
       
-      // 単語音声を生成
+      // 翻訳されたテキストがある場合はそれを使用、なければ元のクエリを使用
+      const textForAudio = data.translatedText || query;
+      
+      // 単語音声を生成（翻訳された広東語テキストを使用）
       const audioResponse = await fetch('/api/generate-speech', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text: query }),
+        body: JSON.stringify({ text: textForAudio }),
       });
 
       let resultData = { ...data };
