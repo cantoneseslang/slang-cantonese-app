@@ -3901,10 +3901,10 @@ export default function Home() {
               borderRadius: '8px', 
               background: 'white'
             }}>
-              <p style={{ fontSize: isMobile ? '1rem' : '1.5rem' }}>
+              <p style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
                 <strong style={{ textDecoration: 'underline' }}>粤ピン： {result.jyutping}</strong>
               </p>
-              <p style={{ fontSize: isMobile ? '1rem' : '1.5rem' }}>
+              <p style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
                 <strong style={{ textDecoration: 'underline' }}>スラング式カタカナ： {result.katakana}</strong>
               </p>
               
@@ -3925,7 +3925,7 @@ export default function Home() {
               {/* 単語音声プレーヤー */}
               {result.audioBase64 && (
                 <div style={{ marginTop: '1rem' }}>
-                  <p style={{ fontSize: isMobile ? '0.875rem' : '18px', fontWeight: 'bold' }}>
+                  <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 'bold' }}>
                     単語音声: {searchQuery}
                   </p>
                   <audio 
@@ -3962,7 +3962,7 @@ export default function Home() {
               {/* 例文音声プレーヤー */}
               {result.exampleAudioBase64 && result.exampleCantonese && (
                 <div style={{ marginTop: '1rem' }}>
-                  <p style={{ fontSize: isMobile ? '0.875rem' : '18px', fontWeight: 'bold' }}>
+                  <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 'bold' }}>
                     例文音声: {result.exampleCantonese}
                   </p>
                   <audio 
@@ -3973,13 +3973,13 @@ export default function Home() {
                     src={`data:audio/mp3;base64,${result.exampleAudioBase64}`}
                   />
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px', flexWrap: 'wrap' }}>
-                    <label style={{ fontSize: isMobile ? '0.875rem' : '24px' }}>再生速度: </label>
+                    <label style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>再生速度: </label>
                     <select 
                       value={examplePlaybackSpeed}
                       onChange={(e) => setExamplePlaybackSpeed(e.target.value)}
                       style={{ 
-                        padding: isMobile ? '5px 10px' : '24px', 
-                        fontSize: isMobile ? '0.875rem' : '24px', 
+                        padding: isMobile ? '5px 10px' : '8px 12px', 
+                        fontSize: isMobile ? '0.875rem' : '1rem', 
                         borderRadius: '8px', 
                         border: '1px solid #ccc', 
                         width: 'auto' 
