@@ -1067,34 +1067,22 @@ export default function Home() {
     const Tesseract: any = await import('tesseract.js');
     const { createWorker } = Tesseract as any;
     
-    // loggerオプションは関数を渡せないため、進捗更新用の変数を使用
-    let currentProgress = 0;
-    
+    // createWorkerの新しいAPI形式を使用（言語を最初の引数として指定）
+    // loggerオプションは使わず、進捗はrecognizeメソッドから取得
     const worker = await createWorker('chi_sim+chi_tra', 1, {
-      logger: (m: any) => {
-        // Worker内で実行されるため、状態を更新するだけ
-        if (m.status === 'recognizing text' && m.progress !== undefined) {
-          currentProgress = Math.round(m.progress * 100);
-        }
-      }
+      // loggerオプションを削除（関数はWorkerにクローンできないため）
     });
-    
-    // 進捗監視用のインターバル（Workerのloggerは関数をクローンできないため）
-    let progressInterval: NodeJS.Timeout | null = null;
-    if (onProgress) {
-      progressInterval = setInterval(() => {
-        if (currentProgress > 0) {
-          onProgress(currentProgress);
-        }
-      }, 100); // 100msごとに進捗をチェック
-    }
     
     try {
       // 中国語（簡体字+繁体字）のみ使用 - 広東語は繁体字で書かれるため
       // chi_sim: 簡体字中国語, chi_tra: 繁体字中国語（広東語含む）
-      const result = await worker.recognize(await file.arrayBuffer());
       
-      // 最終進捗を100%に設定
+      // recognizeメソッドは進捗情報を含むPromiseを返す
+      const result = await worker.recognize(await file.arrayBuffer(), {
+        // 進捗コールバック（オプション、v5ではサポートされていない可能性がある）
+      });
+      
+      // 進捗を100%に設定
       if (onProgress) {
         onProgress(100);
       }
@@ -1117,11 +1105,9 @@ export default function Home() {
         console.warn('エンコーディング変換エラー:', e);
       }
       return text.length > 4000 ? text.slice(0, 4000) : text;
-    } finally {
-      // 進捗監視を停止
-      if (progressInterval) {
-        clearInterval(progressInterval);
-      }
+    } catch (error) {
+      await worker.terminate();
+      throw error;
     }
   };
   
