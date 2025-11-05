@@ -47,16 +47,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // ユーザーごとのボタン押下数を取得
-    // 現在はtrack-buttonがSupabaseに保存していないため、全ユーザーに対して0押下、全ボタン未押下として返す
-    // 将来的にSupabaseにボタン押下履歴を保存する場合は、ここでクエリを追加
+    // ユーザーごとのボタン押下数を取得（user_button_eventsテーブルから）
     const users: Array<{ user_id: string; email: string; pressed: number; not_pressed: number }> = [];
 
     if (authUsers) {
+      // 各ユーザーの押下数を取得
       for (const u of authUsers) {
-        // 現在はボタン押下履歴がSupabaseに保存されていないため、0押下として扱う
-        // 将来的にSupabaseにボタン押下履歴を保存する場合は、ここでクエリを追加
-        const pressed = 0;
+        // user_button_eventsテーブルから、このユーザーが押したボタンのユニーク数を取得
+        const { data: buttonEvents, error: eventsError } = await supabaseAdmin
+          .from('user_button_events')
+          .select('button_key')
+          .eq('user_id', u.id);
+
+        if (eventsError) {
+          console.error(`Error fetching button events for user ${u.id}:`, eventsError);
+        }
+
+        // ユニークなボタンキーの数をカウント
+        const uniqueButtons = new Set(buttonEvents?.map(e => e.button_key) || []);
+        const pressed = uniqueButtons.size;
         const not_pressed = totalButtons - pressed;
         
         users.push({
