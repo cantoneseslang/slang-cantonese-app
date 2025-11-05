@@ -4826,16 +4826,17 @@ export default function Home() {
                   {/* 発音表記についてを最初に表示 */}
                   {categories.find(c => c.id === 'pronunciation') && (
                     <div
-                        onClick={() => {
-                          if (categoryPickerScrollRef.current) {
-                            const itemHeight = 60;
-                            const centerOffset = categoryPickerScrollRef.current.clientHeight / 2 - itemHeight / 2;
-                            categoryPickerScrollRef.current.scrollTo({ 
-                              top: 0 - centerOffset, 
-                              behavior: 'smooth' 
-                            });
-                          }
-                        }}
+                      onClick={() => {
+                        if (categoryPickerScrollRef.current) {
+                          const itemHeight = 60;
+                          const centerOffset = categoryPickerScrollRef.current.clientHeight / 2 - itemHeight / 2;
+                          categoryPickerScrollRef.current.scrollTo({ 
+                            top: 0 - centerOffset, 
+                            behavior: 'smooth' 
+                          });
+                          setTimeout(() => handleDefaultCategoryChange('pronunciation'), 300);
+                        }
+                      }}
                       style={{
                         height: '60px',
                         display: 'flex',
@@ -4877,6 +4878,7 @@ export default function Home() {
                               top: categoryIndex * itemHeight - centerOffset, 
                               behavior: 'smooth' 
                             });
+                            setTimeout(() => handleDefaultCategoryChange(category.id), 300);
                           }
                         }}
                         style={{
