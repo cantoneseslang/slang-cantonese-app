@@ -1378,6 +1378,20 @@ export default function Home() {
       source.start(0);
     }
 
+    // ノーマルモードの場合、緑色に変える
+    if (!isLearningMode) {
+      setActiveWordId(`sequence-${sequence}`);
+    }
+
+    // ボタンログ送信
+    try { 
+      fetch('/api/track-button', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ wordChinese: sequence, categoryId: currentCategory?.id || 'pronunciation' }) 
+      }); 
+    } catch {}
+
     // 連続発音
     const texts = sequence.split(',').map(t => t.trim());
     const textMap: { [key: string]: string } = {
@@ -1448,6 +1462,22 @@ export default function Home() {
         if (!text) return;
         
         const isActive = !isLearningMode && activeWordId === text;
+        if (isActive) {
+          (btn as HTMLElement).style.background = 'linear-gradient(145deg, #10b981, #059669)';
+          (btn as HTMLElement).style.color = 'white';
+        } else {
+          (btn as HTMLElement).style.background = '#ffffff';
+          (btn as HTMLElement).style.color = '#111827';
+        }
+      });
+
+      // 連続発音ボタンもスタイル更新の対象にする
+      const sequenceButtons = document.querySelectorAll('.tone-sequence-btn');
+      sequenceButtons.forEach((btn) => {
+        const sequence = btn.getAttribute('data-sequence');
+        if (!sequence) return;
+        
+        const isActive = !isLearningMode && activeWordId === `sequence-${sequence}`;
         if (isActive) {
           (btn as HTMLElement).style.background = 'linear-gradient(145deg, #10b981, #059669)';
           (btn as HTMLElement).style.color = 'white';
