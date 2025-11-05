@@ -339,7 +339,7 @@ export default function PrivacyPage() {
             </h2>
             {section.items.map((item, itemIndex) => (
               <div key={itemIndex}>
-                {item.list ? (
+                {'list' in item && item.list ? (
                   <ul style={{ listStyle: 'disc', paddingLeft: '2rem', marginBottom: '1rem' }}>
                     {item.list.map((listItem, listIndex) => (
                       <li key={listIndex} style={{ marginBottom: '0.5rem' }}>
@@ -348,9 +348,9 @@ export default function PrivacyPage() {
                     ))}
                   </ul>
                 ) : (
-                  <p style={{ marginBottom: item.label ? '0.5rem' : '1rem' }}>
-                    {item.label && <strong>{item.label} </strong>}
-                    {item.jsx ? item.jsx : item.text}
+                  <p style={{ marginBottom: ('label' in item && item.label) ? '0.5rem' : '1rem' }}>
+                    {'label' in item && item.label && <strong>{item.label} </strong>}
+                    {'jsx' in item && item.jsx ? item.jsx : ('text' in item ? item.text : '')}
                   </p>
                 )}
               </div>
