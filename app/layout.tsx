@@ -15,6 +15,30 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "スラング式カントン語音れん - 広東語万能辞書",
   description: "粤ピン/スラング式カタカナ/音声検索/日本語翻訳",
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/favicon.ico',
+  },
+  openGraph: {
+    title: "スラング式カントン語音れん - 広東語万能辞書",
+    description: "粤ピン/スラング式カタカナ/音声検索/日本語翻訳",
+    type: "website",
+    siteName: "スラング式カントン語音れん",
+    images: [
+      {
+        url: '/line-logo.png',
+        width: 1200,
+        height: 630,
+        alt: 'スラング式カントン語音れん',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: "スラング式カントン語音れん - 広東語万能辞書",
+    description: "粤ピン/スラング式カタカナ/音声検索/日本語翻訳",
+    images: ['/line-logo.png'],
+  },
 };
 
 export default function RootLayout({
