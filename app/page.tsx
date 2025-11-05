@@ -4218,12 +4218,14 @@ export default function Home() {
               borderRadius: '16px',
               width: '100%',
               maxWidth: '500px',
-              maxHeight: isMobile ? '90vh' : selectedPlan === 'subscription' || selectedPlan === 'lifetime' ? '80vh' : 'auto',
+              maxHeight: isMobile ? '90vh' : '85vh',
               boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
               position: 'relative',
               display: 'flex',
               flexDirection: 'column',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              // PC版でも確実に高さを制限（すべてのプランでスクロール可能にする）
+              height: isMobile ? 'auto' : '85vh'
             }}>
               {/* ヘッダー */}
               <div style={{
