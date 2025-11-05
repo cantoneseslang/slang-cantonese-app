@@ -47,11 +47,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // ユーザーごとのボタン押下数を取得（user_button_eventsテーブルから）
-    const users: Array<{ user_id: string; email: string; pressed: number; not_pressed: number }> = [];
+    // ユーザーごとのボタン押下数とお気に入り情報を取得
+    const users: Array<{ 
+      user_id: string; 
+      email: string; 
+      pressed: number; 
+      not_pressed: number;
+      favorites_count: number;
+      favorite_words: string[];
+    }> = [];
 
     if (authUsers) {
-      // 各ユーザーの押下数を取得
+      // 各ユーザーの押下数とお気に入り情報を取得
       for (const u of authUsers) {
         // user_button_eventsテーブルから、このユーザーが押したボタンのユニーク数を取得
         const { data: buttonEvents, error: eventsError } = await supabaseAdmin
@@ -67,12 +74,27 @@ export async function GET(request: NextRequest) {
         const uniqueButtons = new Set(buttonEvents?.map(e => e.button_key) || []);
         const pressed = uniqueButtons.size;
         const not_pressed = totalButtons - pressed;
+
+        // user_favoritesテーブルから、このユーザーのお気に入りを取得
+        const { data: favorites, error: favoritesError } = await supabaseAdmin
+          .from('user_favorites')
+          .select('word_chinese')
+          .eq('user_id', u.id);
+
+        if (favoritesError) {
+          console.error(`Error fetching favorites for user ${u.id}:`, favoritesError);
+        }
+
+        const favoriteWords = (favorites || []).map((f: any) => f.word_chinese).filter(Boolean);
+        const favorites_count = favoriteWords.length;
         
         users.push({
           user_id: u.id,
           email: u.email || '',
           pressed,
-          not_pressed
+          not_pressed,
+          favorites_count,
+          favorite_words: favoriteWords
         });
       }
     }

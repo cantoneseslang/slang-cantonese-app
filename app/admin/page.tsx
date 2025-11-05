@@ -30,7 +30,7 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [favoritesCountMap, setFavoritesCountMap] = useState<Record<string, number>>({});
-  const [buttonAnalytics, setButtonAnalytics] = useState<Array<{ user_id: string; email: string; pressed: number; not_pressed: number }>>([]);
+  const [buttonAnalytics, setButtonAnalytics] = useState<Array<{ user_id: string; email: string; pressed: number; not_pressed: number; favorites_count: number; favorite_words: string[] }>>([]);
   const [buttonTotal, setButtonTotal] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<string | null>(null);
@@ -678,66 +678,6 @@ export default function AdminPage() {
         </div>
 
 
-        {/* お気に入りデータ統計 */}
-        <div style={{
-          marginTop: '2rem',
-          padding: '1.5rem',
-          backgroundColor: '#f9fafb',
-          borderRadius: '12px'
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '1rem'
-          }}>
-            <h3 style={{
-              fontSize: '1.25rem',
-              fontWeight: '600',
-              marginBottom: '1rem'
-            }}>
-              ⭐️ お気に入りデータ分析
-            </h3>
-            <button
-              onClick={async () => {
-                try {
-                  const response = await fetch('/api/admin/favorites');
-                  const data = await response.json();
-                  
-                  if (data.success) {
-                    // お気に入りデータを表示（簡易版）
-                    alert(`総ユーザー数: ${data.total_users}\n総お気に入り数: ${data.total_favorites}\n\n詳細はコンソールを確認してください。`);
-                    console.log('お気に入りデータ:', data);
-                  } else {
-                    alert('エラー: ' + data.error);
-                  }
-                } catch (error: any) {
-                  alert('エラー: ' + error.message);
-                }
-              }}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: '#f59e0b',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '600'
-              }}
-            >
-              お気に入りデータ取得
-            </button>
-          </div>
-          <p style={{
-            fontSize: '0.875rem',
-            color: '#6b7280',
-            margin: 0
-          }}>
-            全ユーザーのお気に入りデータを取得し、ユーザーの嗜好を分析できます。
-          </p>
-        </div>
-
       {/* ボタン利用分析 */}
       <div style={{
         marginTop: '2rem',
@@ -784,6 +724,8 @@ export default function AdminPage() {
                 <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>Email</th>
                 <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>押した数</th>
                 <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>未押数</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>お気に入り数</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>お気に入り単語</th>
               </tr>
             </thead>
             <tbody>
@@ -792,6 +734,12 @@ export default function AdminPage() {
                   <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937' }}>{row.email}</td>
                   <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937' }}>{row.pressed}</td>
                   <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937' }}>{row.not_pressed}</td>
+                  <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937' }}>{row.favorites_count || 0}</td>
+                  <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.favorite_words?.join(', ') || ''}>
+                    {row.favorite_words && row.favorite_words.length > 0 
+                      ? row.favorite_words.join(', ') 
+                      : 'なし'}
+                  </td>
                 </tr>
               ))}
             </tbody>
