@@ -1,7 +1,7 @@
 export default function AboutPage() {
   return (
     <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '1rem' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem' }}>
         広東語初心の方へ！ようこそスラング式カントン語音れんへ！
       </h1>
       
