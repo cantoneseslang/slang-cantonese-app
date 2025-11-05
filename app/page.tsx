@@ -113,6 +113,9 @@ export default function Home() {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'subscription' | 'lifetime' | null>(null);
   const [isDowngrade, setIsDowngrade] = useState(false); // ダウングレードかどうか
+  const pricingModalScrollRef = useRef<HTMLDivElement>(null);
+  const [showPricingModalTopArrow, setShowPricingModalTopArrow] = useState(false);
+  const [showPricingModalBottomArrow, setShowPricingModalBottomArrow] = useState(false);
   
   // デバッグ情報の状態
   const [debugInfo, setDebugInfo] = useState<any>(null);
@@ -4142,11 +4145,62 @@ export default function Home() {
 
               {/* コンテンツ（スクロール可能） */}
               <div style={{ 
-                padding: '1.5rem',
-                overflowY: 'auto',
-                overflowX: 'hidden',
+                position: 'relative',
                 flex: 1
               }}>
+                {/* 上スクロールインジケーター */}
+                {showPricingModalTopArrow && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '0.5rem',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 10,
+                    fontSize: '1.5rem',
+                    opacity: 0.5,
+                    pointerEvents: 'none',
+                    textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                  }}>
+                    ↑
+                  </div>
+                )}
+                
+                {/* 下スクロールインジケーター */}
+                {showPricingModalBottomArrow && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '0.5rem',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 10,
+                    fontSize: '1.5rem',
+                    opacity: 0.5,
+                    pointerEvents: 'none',
+                    textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                  }}>
+                    ↓
+                  </div>
+                )}
+                
+                <div 
+                  ref={pricingModalScrollRef}
+                  onScroll={() => {
+                    if (pricingModalScrollRef.current) {
+                      const { scrollTop, scrollHeight, clientHeight } = pricingModalScrollRef.current;
+                      setShowPricingModalTopArrow(scrollTop > 10);
+                      setShowPricingModalBottomArrow(scrollTop < scrollHeight - clientHeight - 10);
+                    }
+                  }}
+                  style={{ 
+                    padding: '1.5rem',
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    height: '100%',
+                    paddingTop: showPricingModalTopArrow ? '2rem' : '1.5rem',
+                    paddingBottom: showPricingModalBottomArrow ? '2rem' : '1.5rem',
+                    transition: 'padding 0.3s ease'
+                  }}
+                >
                 {/* 価格 */}
                 <div style={{
                   textAlign: 'center',
