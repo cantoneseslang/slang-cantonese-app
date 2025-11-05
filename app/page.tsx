@@ -4085,8 +4085,11 @@ export default function Home() {
               borderRadius: '16px',
               width: '100%',
               maxWidth: '500px',
+              maxHeight: '90vh',
               boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
               position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
               overflow: 'hidden'
             }}>
               {/* ヘッダー */}
@@ -4100,7 +4103,8 @@ export default function Home() {
                   ? 'linear-gradient(145deg, #d4a574 0%, #cd7f32 50%, #a85f1f 100%)'
                   : selectedPlan === 'subscription' 
                   ? 'linear-gradient(145deg, #e8e8e8 0%, #c0c0c0 50%, #a8a8a8 100%)' 
-                  : 'linear-gradient(145deg, #ffe066 0%, #ffd700 50%, #ffb700 100%)'
+                  : 'linear-gradient(145deg, #ffe066 0%, #ffd700 50%, #ffb700 100%)',
+                flexShrink: 0
               }}>
                 <h2 style={{
                   fontSize: '1.5rem',
@@ -4136,8 +4140,13 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* コンテンツ */}
-              <div style={{ padding: '1.5rem' }}>
+              {/* コンテンツ（スクロール可能） */}
+              <div style={{ 
+                padding: '1.5rem',
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                flex: 1
+              }}>
                 {/* 価格 */}
                 <div style={{
                   textAlign: 'center',
@@ -4180,41 +4189,41 @@ export default function Home() {
                     marginBottom: '1rem',
                     color: '#374151'
                   }}>特典</h3>
-                  <div style={{
-                    maxHeight: selectedPlan === 'free' ? 'none' : '300px',
-                    overflowY: selectedPlan === 'free' ? 'visible' : 'auto',
-                    overflowX: 'hidden',
-                    paddingRight: selectedPlan === 'free' ? '0' : '0.5rem'
+                  <ul style={{
+                    listStyle: 'none',
+                    padding: 0,
+                    margin: 0
                   }}>
-                    <ul style={{
-                      listStyle: 'none',
-                      padding: 0,
-                      margin: 0
-                    }}>
-                      {(selectedPlan === 'free' 
-                        ? ['基本カテゴリーの単語へアクセス', 'お気に入り6個まで', '発音チェックゲーム']
-                        : selectedPlan === 'subscription'
-                        ? ['お気に入り無制限', 'モード切り替え (ノーマルモード・学習)', 'note 教科書自動更新', 'テキストOCR', '発音チェック', '発音チェックゲーム', '全カテゴリーの単語へアクセス', '音声速度調整', '広告なし']
-                        : ['お気に入り無制限', 'モード切り替え (ノーマルモード・学習)', 'note 教科書自動更新', 'テキストOCR', '発音チェック', '発音チェックゲーム', '全カテゴリーの単語へアクセス', '音声速度調整', '広告なし']
-                      ).map((benefit, idx) => (
-                        <li key={idx} style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.75rem',
-                          padding: '0.75rem',
-                          marginBottom: '0.5rem',
-                          backgroundColor: '#f9fafb',
-                          borderRadius: '8px'
-                        }}>
-                          <span style={{ color: '#10b981', fontSize: '1.25rem' }}>✓</span>
-                          <span style={{ color: '#1f2937' }}>{benefit}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                    {(selectedPlan === 'free' 
+                      ? ['基本カテゴリーの単語へアクセス', 'お気に入り6個まで', '発音チェックゲーム']
+                      : selectedPlan === 'subscription'
+                      ? ['お気に入り無制限', 'モード切り替え (ノーマルモード・学習)', 'note 教科書自動更新', 'テキストOCR', '発音チェック', '発音チェックゲーム', '全カテゴリーの単語へアクセス', '音声速度調整', '広告なし']
+                      : ['お気に入り無制限', 'モード切り替え (ノーマルモード・学習)', 'note 教科書自動更新', 'テキストOCR', '発音チェック', '発音チェックゲーム', '全カテゴリーの単語へアクセス', '音声速度調整', '広告なし']
+                    ).map((benefit, idx) => (
+                      <li key={idx} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        padding: '0.75rem',
+                        marginBottom: '0.5rem',
+                        backgroundColor: '#f9fafb',
+                        borderRadius: '8px'
+                      }}>
+                        <span style={{ color: '#10b981', fontSize: '1.25rem' }}>✓</span>
+                        <span style={{ color: '#1f2937' }}>{benefit}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
-                {/* ボタン */}
+              </div>
+              
+              {/* フッター（ボタンエリア - 固定） */}
+              <div style={{
+                padding: '1.5rem',
+                borderTop: '1px solid #e5e7eb',
+                flexShrink: 0
+              }}>
                 <button
                   onClick={() => handleStripeCheckout(selectedPlan)}
                   style={{
