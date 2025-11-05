@@ -4726,7 +4726,29 @@ export default function Home() {
                   color: '#111827'
                 }}>カテゴリーを選択</h3>
                 <button
-                  onClick={() => setShowCategoryPicker(false)}
+                  onClick={() => {
+                    // 完了時に選択中のカテゴリーを保存
+                    if (categoryPickerScrollRef.current) {
+                      const scrollTop = categoryPickerScrollRef.current.scrollTop;
+                      const itemHeight = 60;
+                      const centerOffset = categoryPickerScrollRef.current.clientHeight / 2 - itemHeight / 2;
+                      const selectedIndex = Math.round((scrollTop + centerOffset) / itemHeight);
+                      
+                      const allCategories = [
+                        ...(categories.find(c => c.id === 'pronunciation') ? [{ id: 'pronunciation', name: '発音表記について' }] : []),
+                        ...categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_'))
+                      ];
+                      
+                      if (selectedIndex >= 0 && selectedIndex < allCategories.length) {
+                        const selectedCategory = allCategories[selectedIndex];
+                        handleDefaultCategoryChange(selectedCategory.id);
+                      } else {
+                        setShowCategoryPicker(false);
+                      }
+                    } else {
+                      setShowCategoryPicker(false);
+                    }
+                  }}
                   style={{
                     background: 'none',
                     border: 'none',
