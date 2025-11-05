@@ -4108,7 +4108,7 @@ export default function Home() {
               borderRadius: '16px',
               width: '100%',
               maxWidth: '500px',
-              maxHeight: '90vh',
+              maxHeight: isMobile ? '90vh' : selectedPlan === 'subscription' || selectedPlan === 'lifetime' ? '80vh' : 'auto',
               boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
               position: 'relative',
               display: 'flex',
@@ -4166,7 +4166,9 @@ export default function Home() {
               {/* コンテンツ（スクロール可能） */}
               <div style={{ 
                 position: 'relative',
-                flex: 1
+                flex: 1,
+                minHeight: 0,
+                overflow: 'hidden'
               }}>
                 {/* 上スクロールインジケーター */}
                 {showPricingModalTopArrow && (
@@ -4213,9 +4215,10 @@ export default function Home() {
                   }}
                   style={{ 
                     padding: '1.5rem',
-                    overflowY: 'auto',
+                    overflowY: (selectedPlan === 'subscription' || selectedPlan === 'lifetime') ? 'auto' : 'visible',
                     overflowX: 'hidden',
                     height: '100%',
+                    maxHeight: '100%',
                     paddingTop: showPricingModalTopArrow ? '2rem' : '1.5rem',
                     paddingBottom: showPricingModalBottomArrow ? '2rem' : '1.5rem',
                     transition: 'padding 0.3s ease'
