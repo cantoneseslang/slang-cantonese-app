@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     const smtpHost = process.env.SMTP_HOST || 'smtp.titan.email';
     const smtpPort = parseInt(process.env.SMTP_PORT || '465'); // TITANはポート465（SSL/TLS）
     const smtpUser = process.env.SMTP_USER || 'info@lifesupporthk.com';
-    const smtpPassword = process.env.SMTP_PASSWORD || 'Sakon-0201'; // デフォルト値（本番環境では環境変数を使用）
+    const smtpPassword = process.env.SMTP_PASSWORD;
     const smtpFrom = process.env.SMTP_FROM || 'info@lifesupporthk.com';
     const smtpTo = process.env.SMTP_TO || 'info@lifesupporthk.com';
 
