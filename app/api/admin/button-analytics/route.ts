@@ -31,17 +31,14 @@ export async function GET() {
   }
 
   const allButtons: Set<string> = new Set()
-  const perUser: Map<string, Set<string>> = new Map()
+  const perUser: Record<string, Set<string>> = {}
 
   (events || []).forEach((e: any) => {
     allButtons.add(e.button_key)
-    if (!perUser.has(e.user_id)) {
-      perUser.set(e.user_id, new Set<string>())
+    if (!perUser[e.user_id]) {
+      perUser[e.user_id] = new Set<string>()
     }
-    const userButtons = perUser.get(e.user_id)
-    if (userButtons) {
-      userButtons.add(e.button_key)
-    }
+    perUser[e.user_id].add(e.button_key)
   })
 
   const totalButtons = allButtons.size
@@ -51,7 +48,7 @@ export async function GET() {
   if (usersErr) return NextResponse.json({ success: false, error: usersErr.message }, { status: 500 })
 
   const rows = (users || []).map(u => {
-    const pressed = perUser.get(u.id)?.size || 0
+    const pressed = perUser[u.id]?.size || 0
     const notPressed = Math.max(totalButtons - pressed, 0)
     return {
       user_id: u.id,
