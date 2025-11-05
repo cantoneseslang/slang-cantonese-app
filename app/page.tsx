@@ -3988,7 +3988,10 @@ export default function Home() {
               {result.audioBase64 && (
                 <div style={{ marginTop: '0.5rem' }}>
                   <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
-                    単語音声: {result.translatedText || searchQuery}
+                    単語音声:
+                  </p>
+                  <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', marginBottom: '0.5rem' }}>
+                    {result.translatedText || searchQuery}
                   </p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <audio 
@@ -4040,7 +4043,10 @@ export default function Home() {
               {result.exampleAudioBase64 && result.exampleCantonese && (
                 <div style={{ marginTop: '0.5rem' }}>
                   <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
-                    例文音声: {result.exampleCantonese}
+                    例文音声:
+                  </p>
+                  <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', marginBottom: '0.5rem' }}>
+                    {result.exampleCantonese}
                   </p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <audio 
