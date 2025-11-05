@@ -2144,6 +2144,7 @@ export default function Home() {
                       e.stopPropagation();
                       playHapticAndSound();
                       setSelectedCategory('pronunciation');
+                      setSelectedNoteCategory(null); // Noteカテゴリーを解除
                       setShowNoteSubCategories(false); // Noteサブカテゴリーを閉じる
                     }}
                     style={{
@@ -2199,6 +2200,7 @@ export default function Home() {
                       e.stopPropagation();
                       playHapticAndSound();
                       setSelectedCategory('favorites');
+                      setSelectedNoteCategory(null); // Noteカテゴリーを解除
                       setShowNoteSubCategories(false); // Noteサブカテゴリーを閉じる
                     }}
                     style={{
