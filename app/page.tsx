@@ -287,18 +287,31 @@ export default function Home() {
   // お気に入りの追加/削除
   const toggleFavorite = async (word: Word, categoryId: string) => {
     if (!user) {
+      console.warn('お気に入り登録: ユーザーがログインしていません');
       return; // ログインしていない場合は静かに処理
     }
 
     // categoryIdが空の場合は警告を出す
     if (!categoryId || categoryId.trim() === '') {
-      console.error('categoryIdが空です。word:', word, 'currentCategory:', currentCategory, 'selectedNoteCategory:', selectedNoteCategory);
+      console.error('categoryIdが空です。word:', word, 'currentCategory:', currentCategory, 'selectedNoteCategory:', selectedNoteCategory, 'selectedCategory:', selectedCategory);
       alert('エラー: カテゴリーIDが取得できませんでした。ページをリロードしてください。');
       return;
     }
 
+    // デバッグログ（本番環境では削除推奨）
+    console.log('🔍 お気に入り登録試行:', {
+      wordChinese: word.chinese,
+      wordJapanese: word.japanese,
+      categoryId,
+      selectedNoteCategory,
+      currentCategoryId: currentCategory?.id,
+      selectedCategory
+    });
+
     const favoriteKey = `${categoryId}:${word.chinese}`;
     const isFavorite = favorites.has(favoriteKey);
+    
+    console.log('📌 お気に入り状態:', { favoriteKey, isFavorite, favoritesSize: favorites.size });
 
     try {
       if (isFavorite) {
@@ -313,10 +326,13 @@ export default function Home() {
         });
 
         const data = await response.json();
+        console.log('📥 お気に入り削除APIレスポンス:', { status: response.status, data });
         if (data.success) {
+          console.log('✅ お気に入り削除成功');
           // お気に入りリストを再読み込みして最新状態を反映
           await loadFavorites();
         } else {
+          console.error('❌ お気に入り削除失敗:', data);
           // テーブル未作成の場合はエラーを表示
           if (data.requiresTable || (data.error && (data.error.includes('テーブル') || data.error.includes('Could not find the table') || data.error.includes('schema cache')))) {
             alert(`⚠️ お気に入り機能を使用するには、Supabaseでテーブルを作成する必要があります。\n\n${data.details || 'SupabaseのSQL Editorで docs/favorites-table.sql を実行してください。'}\n\n※ テーブル作成後、ページをリロードしてください。`);
@@ -351,18 +367,23 @@ export default function Home() {
 
         const data = await response.json();
         
+        console.log('📥 APIレスポンス:', { status: response.status, data });
+        
         // レスポンスステータスをチェック（403は制限エラー）
         if (response.status === 403) {
           // バックエンドからの制限エラーを表示
           const errorMsg = data.error || 'ブロンズ会員はお気に入りを6個までしか保存できません。';
+          console.warn('⚠️ お気に入り登録制限:', errorMsg);
           alert(errorMsg);
           return;
         }
         
         if (data.success) {
+          console.log('✅ お気に入り登録成功');
           // お気に入りリストを再読み込みして最新状態を反映
           await loadFavorites();
         } else {
+          console.error('❌ お気に入り登録失敗:', data);
           // テーブル未作成の場合は明確にエラーを表示
           if (data.requiresTable || (data.error && (data.error.includes('テーブル') || data.error.includes('Could not find the table') || data.error.includes('schema cache')))) {
             alert(`⚠️ お気に入り機能を使用するには、Supabaseでテーブルを作成する必要があります。\n\n${data.details || 'SupabaseのSQL Editorで docs/favorites-table.sql を実行してください。'}\n\n※ テーブル作成後、ページをリロードしてください。`);
@@ -397,6 +418,9 @@ export default function Home() {
       return;
     }
     
+    // デバッグログ
+    console.log('👆 長押し開始:', { wordChinese: word.chinese, categoryId, selectedNoteCategory, currentCategoryId: currentCategory?.id });
+    
     longPressCompletedRef.current = false;
     longPressWordRef.current = { word, categoryId };
     
@@ -404,6 +428,10 @@ export default function Home() {
       if (longPressWordRef.current) {
         longPressCompletedRef.current = true;
         playHapticAndSound();
+        console.log('⏰ 長押し完了、お気に入り登録実行:', { 
+          wordChinese: longPressWordRef.current.word.chinese, 
+          categoryId: longPressWordRef.current.categoryId 
+        });
         toggleFavorite(longPressWordRef.current.word, longPressWordRef.current.categoryId);
         // タイマーと参照をクリア
         longPressTimerRef.current = null;
