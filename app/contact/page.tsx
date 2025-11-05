@@ -45,7 +45,7 @@ export default function ContactPage() {
       <h1>お問い合わせ</h1>
       <p>お問い合わせは以下のフォームから送信してください。</p>
       <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
-        メールアドレス: <a href="mailto:bestinksalesman@gmail.com">bestinksalesman@gmail.com</a>
+        メールアドレス: <a href="mailto:info@lifesupporthk.com">info@lifesupporthk.com</a>
         <br />
         対応時間: 平日 10:00-18:00 (JST)
       </p>
