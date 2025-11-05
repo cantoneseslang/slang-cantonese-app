@@ -103,6 +103,7 @@ export default function Home() {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'subscription' | 'lifetime' | null>(null);
   const [isDowngrade, setIsDowngrade] = useState(false); // ダウングレードかどうか
+  const [currency, setCurrency] = useState<'JPY' | 'HKD'>('JPY'); // 通貨切り替え
   
   // デバッグ情報の状態
   const [debugInfo, setDebugInfo] = useState<any>(null);
@@ -3656,6 +3657,7 @@ export default function Home() {
                     setShowPricingModal(false);
                     setSelectedPlan(null);
                     setIsDowngrade(false);
+                    setCurrency('JPY');
                   }}
                   style={{
                     background: 'none',
@@ -3669,28 +3671,84 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* コンテンツ */}
-              <div style={{ padding: '1.5rem' }}>
+              {/* コンテンツ（スクロール可能） */}
+              <div style={{ 
+                padding: '1.5rem',
+                overflowY: 'auto',
+                flex: 1
+              }}>
                 {/* 価格 */}
                 <div style={{
                   textAlign: 'center',
                   marginBottom: '2rem'
                 }}>
                   <div style={{
-                    fontSize: '3rem',
-                    fontWeight: 'bold',
-                    color: selectedPlan === 'free' 
-                      ? '#a85f1f'
-                      : selectedPlan === 'subscription' 
-                      ? '#6b7280' 
-                      : '#d97706',
-                    textShadow: selectedPlan === 'free'
-                      ? '0 2px 4px rgba(0,0,0,0.1)'
-                      : selectedPlan === 'subscription' 
-                      ? '0 2px 4px rgba(0,0,0,0.1)' 
-                      : '0 2px 4px rgba(255,215,0,0.3)'
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    marginBottom: '0.5rem'
                   }}>
-                    {selectedPlan === 'free' ? '無料' : selectedPlan === 'subscription' ? '¥980' : '¥9,800'}
+                    <div style={{
+                      fontSize: '3rem',
+                      fontWeight: 'bold',
+                      color: selectedPlan === 'free' 
+                        ? '#a85f1f'
+                        : selectedPlan === 'subscription' 
+                        ? '#6b7280' 
+                        : '#d97706',
+                      textShadow: selectedPlan === 'free'
+                        ? '0 2px 4px rgba(0,0,0,0.1)'
+                        : selectedPlan === 'subscription' 
+                        ? '0 2px 4px rgba(0,0,0,0.1)' 
+                        : '0 2px 4px rgba(255,215,0,0.3)'
+                    }}>
+                      {selectedPlan === 'free' 
+                        ? '無料' 
+                        : selectedPlan === 'subscription' 
+                        ? (currency === 'JPY' ? '¥980' : '💲50')
+                        : (currency === 'JPY' ? '¥9,800' : '💲498')}
+                    </div>
+                    {(selectedPlan === 'subscription' || selectedPlan === 'lifetime') && (
+                      <div style={{
+                        display: 'flex',
+                        gap: '0.25rem',
+                        alignItems: 'center'
+                      }}>
+                        <button
+                          onClick={() => setCurrency('JPY')}
+                          style={{
+                            padding: '0.25rem 0.5rem',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            background: currency === 'JPY' ? '#6366f1' : '#ffffff',
+                            color: currency === 'JPY' ? '#ffffff' : '#6b7280',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          JPY
+                        </button>
+                        <button
+                          onClick={() => setCurrency('HKD')}
+                          style={{
+                            padding: '0.25rem 0.5rem',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            background: currency === 'HKD' ? '#6366f1' : '#ffffff',
+                            color: currency === 'HKD' ? '#ffffff' : '#6b7280',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          HKD
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div style={{
                     fontSize: '1rem',
