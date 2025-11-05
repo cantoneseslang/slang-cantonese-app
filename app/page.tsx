@@ -85,6 +85,9 @@ export default function Home() {
   const noteSubCategoryScrollRef = useRef<HTMLDivElement>(null);
   const [showNoteSubLeftArrow, setShowNoteSubLeftArrow] = useState(false);
   const [showNoteSubRightArrow, setShowNoteSubRightArrow] = useState(true);
+  
+  // 長文の場合の粤ピン・カタカナ表示/非表示
+  const [showPronunciationDetails, setShowPronunciationDetails] = useState(true);
 
   // 総ボタン数（categories.json から動的集計、管理画面と同期）
   const totalButtons = useMemo(() => {
