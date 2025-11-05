@@ -4082,9 +4082,11 @@ export default function Home() {
                       <button
                         onClick={async () => {
                           try {
-                            await navigator.clipboard.writeText(result.translatedText);
-                            setCopySuccess('翻訳');
-                            setTimeout(() => setCopySuccess(null), 2000);
+                            if (result.translatedText) {
+                              await navigator.clipboard.writeText(result.translatedText);
+                              setCopySuccess('翻訳');
+                              setTimeout(() => setCopySuccess(null), 2000);
+                            }
                           } catch (err) {
                             alert('コピーに失敗しました');
                           }
@@ -4217,9 +4219,11 @@ export default function Home() {
                       <button
                         onClick={async () => {
                           try {
-                            await navigator.clipboard.writeText(result.exampleJapanese);
-                            setCopySuccess('例文翻訳');
-                            setTimeout(() => setCopySuccess(null), 2000);
+                            if (result.exampleJapanese) {
+                              await navigator.clipboard.writeText(result.exampleJapanese);
+                              setCopySuccess('例文翻訳');
+                              setTimeout(() => setCopySuccess(null), 2000);
+                            }
                           } catch (err) {
                             alert('コピーに失敗しました');
                           }
