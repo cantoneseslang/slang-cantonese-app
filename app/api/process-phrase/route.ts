@@ -137,7 +137,7 @@ async function translateJapaneseToCantonese(japaneseText: string): Promise<strin
       translatedText = translatedText.replace(/[（(][^）)]*[）)]/g, '');
       // 先頭・末尾の引用符や角括弧を削除
       translatedText = translatedText.replace(/^["'「」『』\[\]\s]+|["'「」『』\[\]\s]+$/g, '');
-      resultLines = translatedText.split('\n').filter(line => {
+      resultLines = translatedText.split('\n').filter((line: string) => {
         const trimmed = line.trim();
         return trimmed && /[\u4E00-\u9FFF]/.test(trimmed);
       });
