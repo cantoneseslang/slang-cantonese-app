@@ -4259,7 +4259,9 @@ export default function Home() {
                 position: 'relative',
                 flex: 1,
                 minHeight: 0,
-                overflow: 'hidden'
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column'
               }}>
                 {/* 上スクロールインジケーター */}
                 {showPricingModalTopArrow && (
@@ -4270,9 +4272,10 @@ export default function Home() {
                     transform: 'translateX(-50%)',
                     zIndex: 10,
                     fontSize: '1.5rem',
-                    opacity: 0.5,
+                    opacity: 0.7,
                     pointerEvents: 'none',
-                    textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                    color: '#6b7280'
                   }}>
                     ↑
                   </div>
@@ -4287,9 +4290,10 @@ export default function Home() {
                     transform: 'translateX(-50%)',
                     zIndex: 10,
                     fontSize: '1.5rem',
-                    opacity: 0.5,
+                    opacity: 0.7,
                     pointerEvents: 'none',
-                    textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                    color: '#6b7280'
                   }}>
                     ↓
                   </div>
@@ -4300,19 +4304,32 @@ export default function Home() {
                   onScroll={() => {
                     if (pricingModalScrollRef.current) {
                       const { scrollTop, scrollHeight, clientHeight } = pricingModalScrollRef.current;
-                      setShowPricingModalTopArrow(scrollTop > 10);
-                      setShowPricingModalBottomArrow(scrollTop < scrollHeight - clientHeight - 10);
+                      const canScroll = scrollHeight > clientHeight;
+                      const isAtTop = scrollTop <= 10;
+                      const isAtBottom = scrollTop >= scrollHeight - clientHeight - 10;
+                      
+                      if (canScroll) {
+                        setShowPricingModalTopArrow(!isAtTop);
+                        setShowPricingModalBottomArrow(!isAtBottom);
+                      } else {
+                        setShowPricingModalTopArrow(false);
+                        setShowPricingModalBottomArrow(false);
+                      }
                     }
                   }}
                   style={{ 
                     padding: '1.5rem',
-                    overflowY: (selectedPlan === 'subscription' || selectedPlan === 'lifetime') ? 'auto' : 'visible',
+                    overflowY: 'auto',
                     overflowX: 'hidden',
-                    height: '100%',
-                    maxHeight: '100%',
+                    flex: 1,
+                    minHeight: 0,
+                    WebkitOverflowScrolling: 'touch',
                     paddingTop: showPricingModalTopArrow ? '2rem' : '1.5rem',
                     paddingBottom: showPricingModalBottomArrow ? '2rem' : '1.5rem',
-                    transition: 'padding 0.3s ease'
+                    transition: 'padding 0.3s ease',
+                    // PC版でも確実にスクロール可能にするためのスタイル
+                    maxHeight: '100%',
+                    height: '100%'
                   }}
                 >
                 {/* 価格 */}
