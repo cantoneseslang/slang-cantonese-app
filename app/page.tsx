@@ -264,8 +264,8 @@ export default function Home() {
       console.log('📋 お気に入り読み込みAPIレスポンス:', { status: response.status, data });
       
       if (data.favorites && Array.isArray(data.favorites)) {
-        // お気に入りリストをSetに変換
-        const favoritesSet = new Set(data.favorites);
+        // お気に入りリストをSetに変換（型アサーションでstring[]として扱う）
+        const favoritesSet = new Set<string>(data.favorites as string[]);
         console.log('✅ お気に入り読み込み成功:', { count: favoritesSet.size, favorites: Array.from(favoritesSet).slice(0, 10) });
         setFavorites(favoritesSet);
       } else if (data.error) {
