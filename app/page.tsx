@@ -3481,7 +3481,18 @@ export default function Home() {
               type="text"
                 placeholder="こちらに広東語、日本語を入力する"
               value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                maxLength={1000}
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  // 最大文字数制限（1000文字）
+                  if (newValue.length <= 1000) {
+                    setSearchQuery(newValue);
+                  } else {
+                    // 制限を超えた場合は警告を表示（ただし、コピペなどで一気に入力された場合）
+                    alert(`入力できる文字数は最大1,000文字です。現在の文字数: ${newValue.length}`);
+                    setSearchQuery(newValue.substring(0, 1000));
+                  }
+                }}
                 onKeyDown={async (e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -3666,14 +3677,32 @@ export default function Home() {
                         if (!text || text.length === 0) {
                           alert('PDFからテキストを読み取れませんでした。');
                         } else {
-                          setSearchQuery(text);
+                          // 文字数制限チェック（最大1000文字）
+                          if (text.length > 1000) {
+                            const confirmMsg = `PDFから読み取ったテキストが1,000文字を超えています（${text.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
+                            if (confirm(confirmMsg)) {
+                              setSearchQuery(text.substring(0, 1000));
+                              alert(`最初の1,000文字を入力欄に設定しました。`);
+                            }
+                          } else {
+                            setSearchQuery(text);
+                          }
                         }
                       } catch (ocrErr: any) {
                         console.error('PDF OCRエラー:', ocrErr);
                         alert('PDFのOCR処理中にエラーが発生しました: ' + (ocrErr?.message || String(ocrErr)));
                       }
                     } else {
-                      setSearchQuery(text);
+                      // 文字数制限チェック（最大1000文字）
+                      if (text.length > 1000) {
+                        const confirmMsg = `PDFから抽出したテキストが1,000文字を超えています（${text.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
+                        if (confirm(confirmMsg)) {
+                          setSearchQuery(text.substring(0, 1000));
+                          alert(`最初の1,000文字を入力欄に設定しました。`);
+                        }
+                      } else {
+                        setSearchQuery(text);
+                      }
                     }
                   } else {
                     alert('PDFまたは画像ファイルを選択してください。');
@@ -3704,7 +3733,16 @@ export default function Home() {
                   setIsImporting(true);
                   setImportMessage('OCR実行中...');
                   const text = await runOcr(file, (p) => setImportProgress(p));
-                  setSearchQuery(text);
+                  // 文字数制限チェック（最大1000文字）
+                  if (text.length > 1000) {
+                    const confirmMsg = `OCRで読み取ったテキストが1,000文字を超えています（${text.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
+                    if (confirm(confirmMsg)) {
+                      setSearchQuery(text.substring(0, 1000));
+                      alert(`最初の1,000文字を入力欄に設定しました。`);
+                    }
+                  } else {
+                    setSearchQuery(text);
+                  }
                 } catch (err: any) {
                   console.error(err);
                   alert('OCR中にエラーが発生しました: ' + (err?.message || String(err)));
