@@ -2007,8 +2007,6 @@ export default function Home() {
   const audioRef = useRef<HTMLAudioElement>(null); // 学習モード用
   const exampleAudioRef = useRef<HTMLAudioElement>(null); // 学習モード用
   const normalModeAudioRef = useRef<HTMLAudioElement>(null); // ノーマルモード用
-  const audioBlobUrlRef = useRef<string | null>(null); // 学習モード用Blob URL
-  const exampleAudioBlobUrlRef = useRef<string | null>(null); // 学習モード用例文Blob URL
   const normalModeAudioBlobUrlRef = useRef<string | null>(null); // ノーマルモード用Blob URL
   
   // Web Audio API用のGainNode（ノーマルモード用のみ）
@@ -3502,130 +3500,6 @@ export default function Home() {
       exampleAudioRef.current.playbackRate = parseFloat(examplePlaybackSpeed);
     }
   }, [examplePlaybackSpeed]);
-
-  // 学習モードの音声をBlob URLに変換
-  useEffect(() => {
-    if (result?.audioBase64) {
-      const audioBase64 = result.audioBase64;
-      
-      // Reactのレンダリングサイクルを待つため、次のフレームで実行
-      const timeoutId = setTimeout(() => {
-        // audioRefがマウントされるまで待つ（最大2秒）
-        let attempts = 0;
-        const maxAttempts = 20;
-        const checkAndSetAudio = () => {
-          if (audioRef.current && audioBase64) {
-            // 古いBlob URLをクリア
-            if (audioBlobUrlRef.current) {
-              URL.revokeObjectURL(audioBlobUrlRef.current);
-              audioBlobUrlRef.current = null;
-            }
-            
-            // Base64をBlobに変換してBlob URLを作成
-            try {
-              const binaryString = atob(audioBase64);
-              const bytes = new Uint8Array(binaryString.length);
-              for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-              }
-              const blob = new Blob([bytes], { type: 'audio/mp3' });
-              const blobUrl = URL.createObjectURL(blob);
-              audioBlobUrlRef.current = blobUrl;
-              
-              audioRef.current.src = blobUrl;
-              audioRef.current.volume = 1.0;
-              audioRef.current.load();
-              
-              console.log('✅ 学習モード: 単語音声Blob URL設定完了', { blobUrl });
-            } catch (error) {
-              console.error('❌ Blob URL作成エラー:', error);
-            }
-          } else if (attempts < maxAttempts) {
-            attempts++;
-            setTimeout(checkAndSetAudio, 100);
-          } else {
-            console.error('❌ audioRefがマウントされませんでした', { 
-              hasAudioRef: !!audioRef.current,
-              hasAudioBase64: !!audioBase64 
-            });
-          }
-        };
-        
-        checkAndSetAudio();
-      }, 0);
-      
-      return () => {
-        clearTimeout(timeoutId);
-        // クリーンアップ
-        if (audioBlobUrlRef.current) {
-          URL.revokeObjectURL(audioBlobUrlRef.current);
-          audioBlobUrlRef.current = null;
-        }
-      };
-    }
-  }, [result?.audioBase64]);
-
-  // 学習モードの例文音声をBlob URLに変換
-  useEffect(() => {
-    if (result?.exampleAudioBase64) {
-      const exampleAudioBase64 = result.exampleAudioBase64;
-      
-      // Reactのレンダリングサイクルを待つため、次のフレームで実行
-      const timeoutId = setTimeout(() => {
-        // exampleAudioRefがマウントされるまで待つ（最大2秒）
-        let attempts = 0;
-        const maxAttempts = 20;
-        const checkAndSetAudio = () => {
-          if (exampleAudioRef.current && exampleAudioBase64) {
-            // 古いBlob URLをクリア
-            if (exampleAudioBlobUrlRef.current) {
-              URL.revokeObjectURL(exampleAudioBlobUrlRef.current);
-              exampleAudioBlobUrlRef.current = null;
-            }
-            
-            // Base64をBlobに変換してBlob URLを作成
-            try {
-              const binaryString = atob(exampleAudioBase64);
-              const bytes = new Uint8Array(binaryString.length);
-              for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-              }
-              const blob = new Blob([bytes], { type: 'audio/mp3' });
-              const blobUrl = URL.createObjectURL(blob);
-              exampleAudioBlobUrlRef.current = blobUrl;
-              
-              exampleAudioRef.current.src = blobUrl;
-              exampleAudioRef.current.volume = 1.0;
-              exampleAudioRef.current.load();
-              
-              console.log('✅ 学習モード: 例文音声Blob URL設定完了', { blobUrl });
-            } catch (error) {
-              console.error('❌ Blob URL作成エラー:', error);
-            }
-          } else if (attempts < maxAttempts) {
-            attempts++;
-            setTimeout(checkAndSetAudio, 100);
-          } else {
-            console.error('❌ exampleAudioRefがマウントされませんでした', { 
-              hasExampleAudioRef: !!exampleAudioRef.current,
-              hasExampleAudioBase64: !!exampleAudioBase64 
-            });
-          }
-        };
-        
-        checkAndSetAudio();
-      }, 0);
-      
-      return () => {
-        clearTimeout(timeoutId);
-        // クリーンアップ
-        if (exampleAudioBlobUrlRef.current) {
-          URL.revokeObjectURL(exampleAudioBlobUrlRef.current);
-          exampleAudioBlobUrlRef.current = null;
-        }
-      };
-    }
-  }, [result?.exampleAudioBase64]);
 
   // ノーマルモードのボリューム変更時にGainNodeを更新
   useEffect(() => {
@@ -6235,6 +6109,7 @@ export default function Home() {
                       controls 
                       controlsList="nodownload nofullscreen noremoteplayback"
                       style={{ width: '300px', height: '32px', flexShrink: 0 }}
+                      src={`data:audio/mp3;base64,${result.audioBase64}`}
                     />
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
                       <label style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>再生速度:</label>
@@ -6329,6 +6204,7 @@ export default function Home() {
                       controls 
                       controlsList="nodownload nofullscreen noremoteplayback"
                       style={{ width: '300px', height: '32px', flexShrink: 0 }}
+                      src={`data:audio/mp3;base64,${result.exampleAudioBase64}`}
                     />
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
                       <label style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>再生速度:</label>
