@@ -3411,7 +3411,7 @@ export default function Home() {
                 width: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
                 height: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
                 borderRadius: '50%',
-                backgroundColor: 'rgba(59, 130, 246, 0.3)',
+                backgroundColor: 'rgba(192, 216, 255, 0.3)',
                 boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
@@ -3474,7 +3474,7 @@ export default function Home() {
                 width: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
                 height: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
                 borderRadius: '50%',
-                backgroundColor: isMuted ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)',
+                backgroundColor: isMuted ? 'rgba(239, 68, 68, 0.3)' : 'rgba(192, 216, 255, 0.3)',
                 boxShadow: isMuted 
                   ? '0 0 20px rgba(239, 68, 68, 0.5)' 
                   : '0 4px 6px rgba(0, 0, 0, 0.1)',
