@@ -3999,7 +3999,7 @@ export default function Home() {
               }}
             >
               <img
-                src={translationLanguage === 'cantonese' ? "/hand-button.svg?v=7" : "/mute-button-mandarin.svg?v=7"}
+                src={translationLanguage === 'cantonese' ? "/hand-button.svg?v=8" : "/mute-button-mandarin.svg?v=8"}
                 alt="hand button"
                 draggable="false"
                 style={{
