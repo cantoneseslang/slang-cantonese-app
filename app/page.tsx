@@ -3653,10 +3653,10 @@ export default function Home() {
             bottom: isMobile ? 'calc(3rem + 120px + 96px + 2rem)' : 'auto', // ロゴの上端 + 余白（モバイルのみ）
             left: '50%',
             transform: isMobile ? 'translate(-50%, 0)' : 'translate(-50%, -50%)',
-            width: '90%',
-            maxWidth: '800px',
+            width: isMobile ? '90%' : '90%',
+            maxWidth: isMobile ? 'min(90%, 800px)' : '800px',
             maxHeight: isMobile ? 'none' : '400px', // bottom指定時はmaxHeight不要
-            padding: '2rem',
+            padding: isMobile ? '1.5rem' : '2rem',
             backgroundColor: 'rgba(255, 255, 255, 0.95)',
             border: '1px solid rgba(0, 0, 0, 0.1)',
             borderRadius: '12px',
