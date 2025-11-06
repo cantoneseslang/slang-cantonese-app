@@ -5,16 +5,19 @@ const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || 'AIzaSyBqgtrVVZ3LV3vMD-XHqe
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { text } = body;
+    const { text, language } = body;
     
     if (!text || text.trim() === '') {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 });
     }
     
+    // 言語コードの決定（デフォルトは広東語）
+    const languageCode = language === 'mandarin' ? 'zh-CN' : 'yue-Hant-HK';
+    
     const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`;
     const payload = {
       input: { text: text },
-      voice: { languageCode: 'yue-Hant-HK', ssmlGender: 'NEUTRAL' },
+      voice: { languageCode: languageCode, ssmlGender: 'NEUTRAL' },
       audioConfig: { audioEncoding: 'MP3' }
     };
 

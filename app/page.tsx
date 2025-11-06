@@ -182,6 +182,11 @@ export default function Home() {
   const [showTitle, setShowTitle] = useState(false);
   const titleAudioRef = useRef<HTMLAudioElement | null>(null);
   
+  // 言語切り替えの状態（'cantonese' | 'mandarin'）
+  const [translationLanguage, setTranslationLanguage] = useState<'cantonese' | 'mandarin'>('cantonese');
+  const titleClickCountRef = useRef(0);
+  const titleClickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
   // 音声認識の状態
   const [recognizedText, setRecognizedText] = useState('');
   const [finalText, setFinalText] = useState('');
@@ -465,7 +470,7 @@ export default function Home() {
               'Content-Type': 'application/json',
               'Priority': 'high'
             },
-            body: JSON.stringify({ text: textToTranslate }),
+            body: JSON.stringify({ text: textToTranslate, language: translationLanguage }),
             signal: abortController.signal,
             keepalive: true
           });
@@ -504,7 +509,7 @@ export default function Home() {
                       headers: {
                         'Content-Type': 'application/json',
                       },
-                      body: JSON.stringify({ text: translated }),
+                      body: JSON.stringify({ text: translated, language: translationLanguage }),
                     });
 
                     if (audioResponse.ok) {
@@ -548,7 +553,7 @@ export default function Home() {
         translateAbortControllerRef.current.abort();
       }
     };
-  }, [recognizedTextLines, recognizedText, interimText, isHiddenMode, isMuted]);
+  }, [recognizedTextLines, recognizedText, interimText, isHiddenMode, isMuted, translationLanguage]);
 
   // 隠しモード終了処理
   const exitHiddenMode = () => {
@@ -569,6 +574,14 @@ export default function Home() {
     setShowButtons(false);
     setButtonsAnimated(false);
     setIsMuted(false);
+    
+    // 言語切り替え状態をリセット
+    setTranslationLanguage('cantonese');
+    titleClickCountRef.current = 0;
+    if (titleClickTimeoutRef.current) {
+      clearTimeout(titleClickTimeoutRef.current);
+      titleClickTimeoutRef.current = null;
+    }
     
     // 翻訳リクエストをキャンセル
     if (translateDebounceRef.current) {
@@ -644,6 +657,52 @@ export default function Home() {
     }
   }, [isHiddenMode]);
 
+  // タイトルクリックハンドラー（3回クリックで言語切り替え）
+  const handleTitleClick = () => {
+    if (!isHiddenMode || !showTitle) {
+      return;
+    }
+    
+    titleClickCountRef.current += 1;
+    
+    // 既存のタイマーをクリア
+    if (titleClickTimeoutRef.current) {
+      clearTimeout(titleClickTimeoutRef.current);
+    }
+    
+    // 3秒以内に3回クリックされたら言語切り替え
+    if (titleClickCountRef.current >= 3) {
+      // 言語を切り替え
+      setTranslationLanguage(prev => {
+        const newLanguage = prev === 'cantonese' ? 'mandarin' : 'cantonese';
+        
+        // タイトル音声を再生（同じアニメーションで再表示）
+        setShowTitle(false);
+        setTimeout(() => {
+          setShowTitle(true);
+          
+          // タイトル音声を再生
+          if (titleAudioRef.current) {
+            titleAudioRef.current.currentTime = 0;
+            titleAudioRef.current.play().catch((e) => {
+              console.error('タイトル音声再生エラー:', e);
+            });
+          }
+        }, 50);
+        
+        return newLanguage;
+      });
+      
+      // カウントをリセット
+      titleClickCountRef.current = 0;
+    } else {
+      // 3秒後にカウントをリセット
+      titleClickTimeoutRef.current = setTimeout(() => {
+        titleClickCountRef.current = 0;
+      }, 3000);
+    }
+  };
+
   // 手のボタンのハンドラー
   const handleHandButtonClick = () => {
     if (!isHiddenMode) {
@@ -675,7 +734,7 @@ export default function Home() {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ text: handPhrase }),
+            body: JSON.stringify({ text: handPhrase, language: translationLanguage }),
           });
 
           if (audioResponse.ok) {
@@ -3253,15 +3312,22 @@ export default function Home() {
 
           {/* タイトル表示（ロゴマークの下、タイル回転アニメーション） */}
           {showTitle && (
-            <div style={{
-              position: 'fixed',
-              bottom: isMobile ? '3rem' : '5rem',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              textAlign: 'center',
-              animation: 'tileFlip 0.6s ease-out',
-              zIndex: 1003
-            }}>
+            <div 
+              onClick={handleTitleClick}
+              style={{
+                position: 'fixed',
+                bottom: isMobile ? '3rem' : '5rem',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                textAlign: 'center',
+                animation: 'tileFlip 0.6s ease-out',
+                zIndex: 1003,
+                cursor: 'pointer',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                WebkitTouchCallout: 'none'
+              }}
+            >
               <div style={{
                 fontSize: isMobile ? '1.5rem' : '2rem',
                 fontWeight: 800,
@@ -3269,7 +3335,7 @@ export default function Home() {
                 marginBottom: '0.5rem',
                 textShadow: 'none'
               }}>
-                カントン語通訳
+                {translationLanguage === 'cantonese' ? 'カントン語通訳' : '中国語通訳'}
               </div>
               <div style={{
                 fontSize: isMobile ? '0.875rem' : '1rem',

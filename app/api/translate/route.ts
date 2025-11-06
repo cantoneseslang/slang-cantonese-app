@@ -19,7 +19,7 @@ export async function OPTIONS(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { text } = body;
+    const { text, language } = body;
     
     if (!text || text.trim() === '') {
       return NextResponse.json({ error: 'Text is required' }, { 
@@ -32,6 +32,15 @@ export async function POST(request: NextRequest) {
       });
     }
     
+    // 言語に応じて翻訳先を決定（デフォルトは広東語）
+    const targetLanguage = language === 'mandarin' ? 'Mandarin Chinese (Simplified)' : 'Cantonese (traditional Chinese)';
+    const systemPrompt = language === 'mandarin' 
+      ? "You are a professional translator. Translate the given Japanese text to Mandarin Chinese (Simplified). Only provide the translation without any explanations or additional text. Use simplified Chinese characters. Be concise and fast."
+      : "You are a professional translator. Translate the given Japanese text to Cantonese (traditional Chinese). Only provide the translation without any explanations or additional text. Use traditional Chinese characters. Be concise and fast.";
+    const userPrompt = language === 'mandarin'
+      ? `Translate this Japanese text to Mandarin Chinese: ${text}`
+      : `Translate this Japanese text to Cantonese: ${text}`;
+    
     const response = await fetch(DEEPSEEK_API_URL, {
       method: 'POST',
       headers: {
@@ -43,11 +52,11 @@ export async function POST(request: NextRequest) {
         messages: [
           {
             role: "system",
-            content: "You are a professional translator. Translate the given Japanese text to Cantonese (traditional Chinese). Only provide the translation without any explanations or additional text. Use traditional Chinese characters. Be concise and fast."
+            content: systemPrompt
           },
           {
             role: "user",
-            content: `Translate this Japanese text to Cantonese: ${text}`
+            content: userPrompt
           }
         ],
         max_tokens: 500,
