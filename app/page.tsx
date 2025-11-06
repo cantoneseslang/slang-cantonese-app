@@ -5381,6 +5381,11 @@ export default function Home() {
                 } : {}}
                 className={isMobile ? 'intro-content-mobile' : ''}
                 ref={(el) => {
+                  // 隠しモード中は処理をスキップ（パフォーマンスとログの重複を防ぐ）
+                  if (isHiddenMode) {
+                    return;
+                  }
+                  
                   if (el && currentCategory.id === 'pronunciation') {
                     // 音声ボタンのイベントリスナーを設定
                     const toneButtons = el.querySelectorAll('.tone-audio-btn');
@@ -5395,40 +5400,36 @@ export default function Home() {
                     
                     // 連続発音ボタン（複数ある可能性があるためquerySelectorAllを使用）
                     const sequenceButtons = el.querySelectorAll('.tone-sequence-btn');
-                    console.log(`連続発音ボタンを${sequenceButtons.length}個発見`);
-                    
-                    sequenceButtons.forEach((btn, index) => {
-                      const sequence = btn.getAttribute('data-sequence');
-                      console.log(`連続発音ボタン${index + 1}: data-sequence="${sequence}"`);
-                      
-                      // 既存のイベントリスナーをすべて削除（異なる関数参照を防ぐため）
-                      const newBtn = btn.cloneNode(true) as HTMLElement;
-                      btn.parentNode?.replaceChild(newBtn, btn);
-                      
-                      // クリックイベント
-                      const clickHandler = (e: Event) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log(`連続発音ボタン${index + 1}クリック:`, sequence);
-                        handleToneSequenceClick(e);
-                      };
-                      newBtn.addEventListener('click', clickHandler);
-                      
-                      // モバイル対応: タッチイベントも追加
-                      const touchHandler = (e: Event) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log(`連続発音ボタン${index + 1}タッチ:`, sequence);
-                        handleToneSequenceClick(e);
-                      };
-                      newBtn.addEventListener('touchstart', touchHandler);
-                      
-                      // タッチアクションとスタイルを設定
-                      (newBtn as HTMLElement).style.touchAction = 'manipulation';
-                      (newBtn as HTMLElement).style.setProperty('-webkit-tap-highlight-color', 'transparent');
-                    });
-                    
-                    console.log(`連続発音ボタンを${sequenceButtons.length}個登録しました`);
+                    if (sequenceButtons.length > 0) {
+                      // デバッグログを削除（パフォーマンス改善とログの重複防止）
+                      sequenceButtons.forEach((btn, index) => {
+                        const sequence = btn.getAttribute('data-sequence');
+                        
+                        // 既存のイベントリスナーをすべて削除（異なる関数参照を防ぐため）
+                        const newBtn = btn.cloneNode(true) as HTMLElement;
+                        btn.parentNode?.replaceChild(newBtn, btn);
+                        
+                        // クリックイベント
+                        const clickHandler = (e: Event) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleToneSequenceClick(e);
+                        };
+                        newBtn.addEventListener('click', clickHandler);
+                        
+                        // モバイル対応: タッチイベントも追加
+                        const touchHandler = (e: Event) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleToneSequenceClick(e);
+                        };
+                        newBtn.addEventListener('touchstart', touchHandler);
+                        
+                        // タッチアクションとスタイルを設定
+                        (newBtn as HTMLElement).style.touchAction = 'manipulation';
+                        (newBtn as HTMLElement).style.setProperty('-webkit-tap-highlight-color', 'transparent');
+                      });
+                    }
                   }
                 }}
               />
