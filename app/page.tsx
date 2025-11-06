@@ -3492,14 +3492,14 @@ export default function Home() {
     if (audioRef.current) {
       audioRef.current.playbackRate = parseFloat(playbackSpeed);
     }
-  }, [playbackSpeed]);
+  }, [playbackSpeed, result?.audioBase64]);
 
   // 例文音声再生速度変更
   useEffect(() => {
     if (exampleAudioRef.current) {
       exampleAudioRef.current.playbackRate = parseFloat(examplePlaybackSpeed);
     }
-  }, [examplePlaybackSpeed]);
+  }, [examplePlaybackSpeed, result?.exampleAudioBase64]);
 
   // ノーマルモードのボリューム変更時にGainNodeを更新
   useEffect(() => {
