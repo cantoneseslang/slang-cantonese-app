@@ -193,6 +193,12 @@ export default function Home() {
   const recognitionRef = useRef<any>(null);
   const translateDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const translateAbortControllerRef = useRef<AbortController | null>(null);
+  
+  // 同時通訳モード用の音声再生とミュート状態
+  const simultaneousModeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [showButtons, setShowButtons] = useState(false);
+  const [buttonsAnimated, setButtonsAnimated] = useState(false);
   const lastTranslatedTextRef = useRef<string>('');
   const lastProcessedFinalTextRef = useRef<string>('');
   
@@ -409,6 +415,37 @@ export default function Home() {
                 };
                 return [newLine, ...prev].slice(0, 50);
               });
+              
+              // 音声再生（ミュートされていない場合）
+              if (!isMuted && translated) {
+                (async () => {
+                  try {
+                    const audioResponse = await fetch('/api/generate-speech', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({ text: translated }),
+                    });
+
+                    if (audioResponse.ok) {
+                      const audioData = await audioResponse.json();
+                      const audioBase64 = audioData.audioContent;
+
+                      if (simultaneousModeAudioRef.current && audioBase64) {
+                        simultaneousModeAudioRef.current.pause();
+                        simultaneousModeAudioRef.current.currentTime = 0;
+                        simultaneousModeAudioRef.current.src = `data:audio/mp3;base64,${audioBase64}`;
+                        simultaneousModeAudioRef.current.play().catch((e) => {
+                          console.error('音声再生エラー:', e);
+                        });
+                      }
+                    }
+                  } catch (err) {
+                    console.error('音声生成エラー:', err);
+                  }
+                })();
+              }
             }
           }
         } catch (error: any) {
@@ -486,6 +523,37 @@ export default function Home() {
                 };
                 return [newLine, ...prev].slice(0, 50);
               });
+              
+              // 音声再生（ミュートされていない場合）
+              if (!isMuted && translated) {
+                (async () => {
+                  try {
+                    const audioResponse = await fetch('/api/generate-speech', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({ text: translated }),
+                    });
+
+                    if (audioResponse.ok) {
+                      const audioData = await audioResponse.json();
+                      const audioBase64 = audioData.audioContent;
+
+                      if (simultaneousModeAudioRef.current && audioBase64) {
+                        simultaneousModeAudioRef.current.pause();
+                        simultaneousModeAudioRef.current.currentTime = 0;
+                        simultaneousModeAudioRef.current.src = `data:audio/mp3;base64,${audioBase64}`;
+                        simultaneousModeAudioRef.current.play().catch((e) => {
+                          console.error('音声再生エラー:', e);
+                        });
+                      }
+                    }
+                  } catch (err) {
+                    console.error('音声生成エラー:', err);
+                  }
+                })();
+              }
             }
           } else {
             console.error('翻訳APIエラー:', response.status);
@@ -509,7 +577,7 @@ export default function Home() {
         translateAbortControllerRef.current.abort();
       }
     };
-  }, [recognizedTextLines, recognizedText, interimText, isHiddenMode]);
+  }, [recognizedTextLines, recognizedText, interimText, isHiddenMode, isMuted]);
 
   // 隠しモード終了処理
   const exitHiddenMode = () => {
@@ -525,6 +593,11 @@ export default function Home() {
     lastTranslatedTextRef.current = '';
     lastProcessedFinalTextRef.current = '';
     translatedTextSetRef.current.clear();
+    
+    // ボタン状態をリセット
+    setShowButtons(false);
+    setButtonsAnimated(false);
+    setIsMuted(false);
     
     // 翻訳リクエストをキャンセル
     if (translateDebounceRef.current) {
@@ -546,6 +619,10 @@ export default function Home() {
     if (titleAudioRef.current) {
       titleAudioRef.current.pause();
       titleAudioRef.current.currentTime = 0;
+    }
+    if (simultaneousModeAudioRef.current) {
+      simultaneousModeAudioRef.current.pause();
+      simultaneousModeAudioRef.current.currentTime = 0;
     }
   };
 
@@ -577,6 +654,13 @@ export default function Home() {
             console.error('タイトル音声再生エラー:', e);
           });
         }
+        
+        // タイトル表示後にボタンを表示（最初は小さい）
+        setShowButtons(true);
+        // 少し遅延させてアニメーション開始
+        setTimeout(() => {
+          setButtonsAnimated(true);
+        }, 100);
       }, 1000); // 0.8s + 0.2s の余裕
 
       return () => clearTimeout(timer);
@@ -589,6 +673,34 @@ export default function Home() {
     }
   }, [isHiddenMode]);
 
+  // 手のボタンのハンドラー
+  const handleHandButtonClick = () => {
+    if (!isHiddenMode) {
+      return;
+    }
+    
+    const handPhrase = '我唔識講廣東話，所以我需要用翻譯機同你溝通';
+    
+    // 広東語表示エリアに表示
+    const newLine: TextLine = {
+      text: handPhrase,
+      timestamp: getTimestamp()
+    };
+    setTranslatedTextLines(prev => {
+      // 既に同じテキストが先頭にある場合はスキップ
+      if (prev.length > 0 && prev[0].text === handPhrase) {
+        return prev;
+      }
+      return [newLine, ...prev].slice(0, 50);
+    });
+    setTranslatedText(handPhrase);
+  };
+  
+  // 消音ボタンのハンドラー
+  const handleMuteButtonClick = () => {
+    setIsMuted(prev => !prev);
+  };
+  
   // マイクボタンのハンドラー（長押し方式）
   const handleMicPress = () => {
     if (!isHiddenMode) {
@@ -3178,6 +3290,12 @@ export default function Home() {
             preload="auto"
             style={{ display: 'none' }}
           />
+          
+          {/* 同時通訳モード用の音声再生（非表示） */}
+          <audio
+            ref={simultaneousModeAudioRef}
+            style={{ display: 'none' }}
+          />
 
           {/* ロゴマーク（隠しモード時、下部に表示、マイクボタンとして機能） */}
           <div
@@ -3278,6 +3396,152 @@ export default function Home() {
               }}
             />
           </div>
+          
+          {/* 手のボタン（左側） */}
+          {showButtons && (
+            <div
+              onClick={handleHandButtonClick}
+              style={{
+                position: 'fixed',
+                bottom: isMobile ? 'calc(3rem + 120px)' : 'calc(5rem + 140px)',
+                left: isMobile ? 'calc(50% - 96px - 1rem - 48px)' : 'calc(50% - 120px - 1.5rem - 60px)',
+                transform: 'translateX(-50%)',
+                width: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
+                height: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(59, 130, 246, 0.3)',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                zIndex: 1002,
+                pointerEvents: 'auto',
+                opacity: buttonsAnimated ? 1 : 0,
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                WebkitTouchCallout: 'none',
+                overflow: 'hidden'
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+              }}
+              onDragStart={(e) => {
+                e.preventDefault();
+                return false;
+              }}
+            >
+              <svg
+                width={buttonsAnimated ? (isMobile ? '48px' : '60px') : '0px'}
+                height={buttonsAnimated ? (isMobile ? '48px' : '60px') : '0px'}
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                style={{
+                  transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  color: '#007bff'
+                }}
+              >
+                <path
+                  d="M19.75 18C19.75 18.41 19.41 18.75 19 18.75H18.5C18.09 18.75 17.75 18.41 17.75 18V12.5C17.75 12.09 17.41 11.75 17 11.75C16.59 11.75 16.25 12.09 16.25 12.5V18C16.25 18.41 15.91 18.75 15.5 18.75H15C14.59 18.75 14.25 18.41 14.25 18V13.5C14.25 13.09 13.91 12.75 13.5 12.75C13.09 12.75 12.75 13.09 12.75 13.5V18C12.75 18.41 12.41 18.75 12 18.75H11.5C11.09 18.75 10.75 18.41 10.75 18V14.5C10.75 14.09 10.41 13.75 10 13.75C9.59 13.75 9.25 14.09 9.25 14.5V18C9.25 18.41 8.91 18.75 8.5 18.75H8C7.59 18.75 7.25 18.41 7.25 18V15.5C7.25 15.09 6.91 14.75 6.5 14.75C6.09 14.75 5.75 15.09 5.75 15.5V18C5.75 19.24 6.76 20.25 8 20.25H19C20.24 20.25 21.25 19.24 21.25 18V12.5C21.25 12.09 20.91 11.75 20.5 11.75C20.09 11.75 19.75 12.09 19.75 12.5V18Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M13.5 2C12.67 2 12 2.67 12 3.5V9.5C12 10.33 12.67 11 13.5 11C14.33 11 15 10.33 15 9.5V3.5C15 2.67 14.33 2 13.5 2Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M10.5 4C9.67 4 9 4.67 9 5.5V9.5C9 10.33 9.67 11 10.5 11C11.33 11 12 10.33 12 9.5V5.5C12 4.67 11.33 4 10.5 4Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M7.5 6C6.67 6 6 6.67 6 7.5V9.5C6 10.33 6.67 11 7.5 11C8.33 11 9 10.33 9 9.5V7.5C9 6.67 8.33 6 7.5 6Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M16.5 4C15.67 4 15 4.67 15 5.5V9.5C15 10.33 15.67 11 16.5 11C17.33 11 18 10.33 18 9.5V5.5C18 4.67 17.33 4 16.5 4Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </div>
+          )}
+          
+          {/* 消音ボタン（右側） */}
+          {showButtons && (
+            <div
+              onClick={handleMuteButtonClick}
+              style={{
+                position: 'fixed',
+                bottom: isMobile ? 'calc(3rem + 120px)' : 'calc(5rem + 140px)',
+                left: isMobile ? 'calc(50% + 96px + 1rem + 48px)' : 'calc(50% + 120px + 1.5rem + 60px)',
+                transform: 'translateX(-50%)',
+                width: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
+                height: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
+                borderRadius: '50%',
+                backgroundColor: isMuted ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                zIndex: 1002,
+                pointerEvents: 'auto',
+                opacity: buttonsAnimated ? 1 : 0,
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                WebkitTouchCallout: 'none',
+                overflow: 'hidden'
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+              }}
+              onDragStart={(e) => {
+                e.preventDefault();
+                return false;
+              }}
+            >
+              <svg
+                width={buttonsAnimated ? (isMobile ? '48px' : '60px') : '0px'}
+                height={buttonsAnimated ? (isMobile ? '48px' : '60px') : '0px'}
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                style={{
+                  transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  color: isMuted ? '#ef4444' : '#007bff'
+                }}
+              >
+                {isMuted ? (
+                  <>
+                    <path
+                      d="M16.5 12C16.5 10.23 15.48 8.71 14.28 7.89L15.71 6.46C17.28 7.68 18.5 9.68 18.5 12C18.5 14.32 17.28 16.32 15.71 17.54L14.28 16.11C15.48 15.29 16.5 13.77 16.5 12ZM19 10V7C19 6.45 18.55 6 18 6C17.45 6 17 6.45 17 7V10C17 10.55 17.45 11 18 11C18.55 11 19 10.55 19 10ZM3.28 2L2 3.27L8.73 10H3V14H7.73L13 19.27V21C13 21.55 13.45 22 14 22C14.28 22 14.55 21.89 14.76 21.7L16.73 19.73L20.73 23.73L22 22.46L3.28 2ZM13 17.18L9.82 14H5V10H8.18L11 7.18V17.18ZM19 14V17C19 17.55 18.55 18 18 18C17.45 18 17 17.55 17 17V14C17 13.45 17.45 13 18 13C18.55 13 19 13.45 19 14Z"
+                      fill="currentColor"
+                    />
+                    <line
+                      x1="2"
+                      y1="2"
+                      x2="22"
+                      y2="22"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </>
+                ) : (
+                  <path
+                    d="M12 2C10.34 2 9 3.34 9 5V9C9 10.66 10.34 12 12 12C13.66 12 15 10.66 15 9V5C15 3.34 13.66 2 12 2ZM19 10V7C19 6.45 18.55 6 18 6C17.45 6 17 6.45 17 7V10C17 13.87 13.87 17 10 17C6.13 17 3 13.87 3 10V7C3 6.45 2.55 6 2 6C1.45 6 1 6.45 1 7V10C1 14.97 5.03 19 10 19C14.97 19 19 14.97 19 10Z"
+                    fill="currentColor"
+                  />
+                )}
+              </svg>
+            </div>
+          )}
         </>
       )}
 
