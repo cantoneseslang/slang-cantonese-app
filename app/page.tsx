@@ -2988,13 +2988,22 @@ export default function Home() {
             const blobUrl = URL.createObjectURL(blob);
             normalModeAudioBlobUrlRef.current = blobUrl;
             
-            // Web Audio APIの接続を確立（srcを設定する前に接続を確立）
+            // 新しい音声をセット（先にsrcを設定）
+            normalModeAudioRef.current.src = blobUrl;
+            normalModeAudioRef.current.playbackRate = 1.0; // ノーマルモードでは速度固定
+            
+            // Web Audio APIの接続を確立（src設定後に接続、PCブラウザ対応）
             let useWebAudioAPI = false;
             if (normalModeAudioContextRef.current) {
               try {
+                // AudioContextがsuspended状態の場合はresume（PCブラウザ対応）
+                if (normalModeAudioContextRef.current.state === 'suspended') {
+                  await normalModeAudioContextRef.current.resume();
+                }
+                
                 // MediaElementAudioSourceNodeが既に存在する場合は再利用
                 if (!normalModeAudioSourceNodeRef.current) {
-                  // srcを設定する前に接続を確立（空のsrcでも接続可能）
+                  // srcを設定した後に接続を確立（PCブラウザ対応）
                   const source = normalModeAudioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
                   normalModeAudioSourceNodeRef.current = source;
                   
@@ -3022,10 +3031,6 @@ export default function Home() {
                 useWebAudioAPI = false;
               }
             }
-            
-            // 新しい音声をセット
-            normalModeAudioRef.current.src = blobUrl;
-            normalModeAudioRef.current.playbackRate = 1.0; // ノーマルモードでは速度固定
             
             // Web Audio APIを使用しない場合は、HTMLAudioElementのvolumeを使用
             if (!useWebAudioAPI) {
