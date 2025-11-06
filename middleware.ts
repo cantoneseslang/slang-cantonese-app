@@ -36,6 +36,7 @@ export async function middleware(request: NextRequest) {
       request.nextUrl.pathname.startsWith('/auth') ||
       request.nextUrl.pathname.startsWith('/api/auth') ||
       request.nextUrl.pathname.startsWith('/api/contact') ||
+      request.nextUrl.pathname.startsWith('/api/translate') ||
       request.nextUrl.pathname.startsWith('/_next')) {
     return supabaseResponse
   }

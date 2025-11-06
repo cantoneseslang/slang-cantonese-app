@@ -239,15 +239,31 @@ export default function Home() {
         };
 
         recognitionRef.current.onerror = (event: any) => {
-          console.error('音声認識エラー:', event.error);
-          setIsRecording(false);
+          // abortedエラーは無視（意図的な停止の場合）
+          if (event.error !== 'aborted') {
+            console.error('音声認識エラー:', event.error);
+            setIsRecording(false);
+          }
         };
 
         recognitionRef.current.onend = () => {
-          if (isRecording) {
-            // 録音継続
+          // isRecordingがtrueの時だけ再開（意図的な停止ではない場合）
+          if (isRecording && recognitionRef.current) {
             try {
-              recognitionRef.current?.start();
+              // 少し待ってから再開（ブラウザの状態をリセット）
+              setTimeout(() => {
+                if (isRecording && recognitionRef.current) {
+                  try {
+                    recognitionRef.current.start();
+                  } catch (e) {
+                    // 既に開始されている場合は無視
+                    if (e instanceof Error && !e.message.includes('already')) {
+                      console.error('音声認識再開エラー:', e);
+                      setIsRecording(false);
+                    }
+                  }
+                }
+              }, 100);
             } catch (e) {
               console.error('音声認識再開エラー:', e);
               setIsRecording(false);
@@ -260,7 +276,10 @@ export default function Home() {
 
   // 翻訳APIの呼び出し（デバウンス付き）
   useEffect(() => {
-    if (!isHiddenMode || !recognizedText.trim()) return;
+    if (!isHiddenMode || !recognizedText.trim()) {
+      setTranslatedText('');
+      return;
+    }
 
     if (translateDebounceRef.current) {
       clearTimeout(translateDebounceRef.current);
@@ -268,15 +287,21 @@ export default function Home() {
 
     translateDebounceRef.current = setTimeout(async () => {
       try {
+        const textToTranslate = recognizedText.trim();
+        if (!textToTranslate) return;
+
         const response = await fetch('/api/translate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: recognizedText.trim() }),
+          body: JSON.stringify({ text: textToTranslate }),
         });
 
         if (response.ok) {
           const data = await response.json();
-          setTranslatedText(data.translated || '');
+          // レスポンス形式を確認（translated または translatedText）
+          setTranslatedText(data.translated || data.translatedText || '');
+        } else {
+          console.error('翻訳APIエラー:', response.status, await response.text());
         }
       } catch (error) {
         console.error('翻訳エラー:', error);
@@ -323,17 +348,36 @@ export default function Home() {
 
   // マイクボタンのハンドラー
   const handleMicPress = () => {
-    if (!isHiddenMode) return;
+    if (!isHiddenMode || !recognitionRef.current) return;
     
     if (!isRecording) {
       setIsRecording(true);
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.start();
-        } catch (e) {
-          console.error('音声認識開始エラー:', e);
-          setIsRecording(false);
+      try {
+        // 既に開始されている場合は停止してから再開
+        if (recognitionRef.current) {
+          try {
+            recognitionRef.current.stop();
+          } catch (e) {
+            // 停止エラーは無視
+          }
         }
+        // 少し待ってから開始
+        setTimeout(() => {
+          if (recognitionRef.current && isRecording) {
+            try {
+              recognitionRef.current.start();
+            } catch (e) {
+              // 既に開始されている場合は無視
+              if (e instanceof Error && !e.message.includes('already')) {
+                console.error('音声認識開始エラー:', e);
+                setIsRecording(false);
+              }
+            }
+          }
+        }, 100);
+      } catch (e) {
+        console.error('音声認識開始エラー:', e);
+        setIsRecording(false);
       }
     }
   };
@@ -346,7 +390,10 @@ export default function Home() {
       try {
         recognitionRef.current.stop();
       } catch (e) {
-        console.error('音声認識停止エラー:', e);
+        // 停止エラーは無視（既に停止されている場合）
+        if (e instanceof Error && !e.message.includes('not started')) {
+          console.error('音声認識停止エラー:', e);
+        }
       }
     }
   };
