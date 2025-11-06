@@ -215,6 +215,7 @@ export default function Home() {
   const [isMuted, setIsMuted] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
   const [buttonsAnimated, setButtonsAnimated] = useState(false);
+  const [hoveredButton, setHoveredButton] = useState<'hand' | 'mic' | 'mute' | null>(null);
   const lastTranslatedTextRef = useRef<string>('');
   const lastProcessedFinalTextRef = useRef<string>('');
   
@@ -3815,6 +3816,17 @@ export default function Home() {
 
           {/* ロゴマーク（隠しモード時、下部に表示、マイクボタンとして機能） */}
           <div
+            onMouseEnter={() => setHoveredButton('mic')}
+            onMouseLeave={(e) => {
+              setHoveredButton(null);
+              // マウスがボタンの外に出た場合も停止
+              if (isRecording) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('ロゴからマウス離脱 - 音声認識停止');
+                handleMicRelease();
+              }
+            }}
             style={{
               position: 'fixed',
               bottom: isMobile ? 'calc(3rem + 120px)' : 'calc(5rem + 140px)',
@@ -3837,7 +3849,8 @@ export default function Home() {
               animation: 'fadeInUp 1s ease-out',
               userSelect: 'none',
               WebkitUserSelect: 'none',
-              WebkitTouchCallout: 'none'
+              WebkitTouchCallout: 'none',
+              overflow: 'visible'
             }}
             onMouseDown={(e) => {
               e.preventDefault();
@@ -3850,15 +3863,6 @@ export default function Home() {
               e.stopPropagation();
               console.log('ロゴ離す - 音声認識停止');
               handleMicRelease();
-            }}
-            onMouseLeave={(e) => {
-              // マウスがボタンの外に出た場合も停止
-              if (isRecording) {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('ロゴからマウス離脱 - 音声認識停止');
-                handleMicRelease();
-              }
             }}
             onContextMenu={(e) => {
               e.preventDefault();
@@ -3913,12 +3917,54 @@ export default function Home() {
                 return false;
               }}
             />
+            {/* ヘルプポップアップ */}
+            {hoveredButton === 'mic' && (
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: '100%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  marginBottom: '12px',
+                  padding: '8px 12px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  borderRadius: '16px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                  fontSize: isMobile ? '0.75rem' : '0.875rem',
+                  color: '#111827',
+                  whiteSpace: 'nowrap',
+                  zIndex: 1003,
+                  pointerEvents: 'none',
+                  animation: 'cloudPopUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  border: '1px solid rgba(0, 0, 0, 0.1)',
+                  fontWeight: 500
+                }}
+              >
+                長押しで通訳
+                {/* 雲のしっぽ */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '-8px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: 0,
+                    height: 0,
+                    borderLeft: '8px solid transparent',
+                    borderRight: '8px solid transparent',
+                    borderTop: '8px solid rgba(255, 255, 255, 0.95)'
+                  }}
+                />
+              </div>
+            )}
           </div>
           
           {/* 手のボタン（左側） */}
           {showButtons && (
             <div
               onClick={handleHandButtonClick}
+              onMouseEnter={() => setHoveredButton('hand')}
+              onMouseLeave={() => setHoveredButton(null)}
               style={{
                 position: 'fixed',
                 bottom: isMobile ? 'calc(3rem + 120px)' : 'calc(5rem + 140px)',
@@ -3940,7 +3986,7 @@ export default function Home() {
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
                 WebkitTouchCallout: 'none',
-                overflow: 'hidden'
+                overflow: 'visible'
               }}
               onContextMenu={(e) => {
                 e.preventDefault();
@@ -3977,6 +4023,46 @@ export default function Home() {
                   return false;
                 }}
               />
+              {/* ヘルプポップアップ */}
+              {hoveredButton === 'hand' && buttonsAnimated && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    marginBottom: '12px',
+                    padding: '8px 12px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderRadius: '16px',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                    fontSize: isMobile ? '0.75rem' : '0.875rem',
+                    color: '#111827',
+                    whiteSpace: 'nowrap',
+                    zIndex: 1003,
+                    pointerEvents: 'none',
+                    animation: 'cloudPopUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    border: '1px solid rgba(0, 0, 0, 0.1)',
+                    fontWeight: 500
+                  }}
+                >
+                  翻訳機使わせて
+                  {/* 雲のしっぽ */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '-8px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: 0,
+                      height: 0,
+                      borderLeft: '8px solid transparent',
+                      borderRight: '8px solid transparent',
+                      borderTop: '8px solid rgba(255, 255, 255, 0.95)'
+                    }}
+                  />
+                </div>
+              )}
             </div>
           )}
           
@@ -3984,6 +4070,8 @@ export default function Home() {
           {showButtons && (
             <div
               onClick={handleMuteButtonClick}
+              onMouseEnter={() => setHoveredButton('mute')}
+              onMouseLeave={() => setHoveredButton(null)}
               style={{
                 position: 'fixed',
                 bottom: isMobile ? 'calc(3rem + 120px)' : 'calc(5rem + 140px)',
@@ -4007,7 +4095,7 @@ export default function Home() {
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
                 WebkitTouchCallout: 'none',
-                overflow: 'hidden'
+                overflow: 'visible'
               }}
               onContextMenu={(e) => {
                 e.preventDefault();
@@ -4044,6 +4132,46 @@ export default function Home() {
                   return false;
                 }}
               />
+              {/* ヘルプポップアップ */}
+              {hoveredButton === 'mute' && buttonsAnimated && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    marginBottom: '12px',
+                    padding: '8px 12px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderRadius: '16px',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                    fontSize: isMobile ? '0.75rem' : '0.875rem',
+                    color: '#111827',
+                    whiteSpace: 'nowrap',
+                    zIndex: 1003,
+                    pointerEvents: 'none',
+                    animation: 'cloudPopUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    border: '1px solid rgba(0, 0, 0, 0.1)',
+                    fontWeight: 500
+                  }}
+                >
+                  音声ミュート
+                  {/* 雲のしっぽ */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '-8px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: 0,
+                      height: 0,
+                      borderLeft: '8px solid transparent',
+                      borderRight: '8px solid transparent',
+                      borderTop: '8px solid rgba(255, 255, 255, 0.95)'
+                    }}
+                  />
+                </div>
+              )}
             </div>
           )}
         </>
