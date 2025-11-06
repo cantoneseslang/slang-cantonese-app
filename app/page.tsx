@@ -3353,7 +3353,7 @@ export default function Home() {
     if (result?.audioBase64) {
       // audioRefがマウントされるまで待つ
       const timer = setTimeout(() => {
-        if (audioRef.current) {
+        if (audioRef.current && result.audioBase64) {
           // 古いBlob URLをクリア
           if (audioBlobUrlRef.current) {
             URL.revokeObjectURL(audioBlobUrlRef.current);
@@ -3391,7 +3391,7 @@ export default function Home() {
     if (result?.exampleAudioBase64) {
       // exampleAudioRefがマウントされるまで待つ
       const timer = setTimeout(() => {
-        if (exampleAudioRef.current) {
+        if (exampleAudioRef.current && result.exampleAudioBase64) {
           // 古いBlob URLをクリア
           if (exampleAudioBlobUrlRef.current) {
             URL.revokeObjectURL(exampleAudioBlobUrlRef.current);
