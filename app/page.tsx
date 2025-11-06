@@ -2965,40 +2965,46 @@ export default function Home() {
               width: '100%'
             }}>
               {translatedTextLines.length > 0 ? (
-                translatedTextLines.map((line, index) => (
-                  <div 
-                    key={`translated-${index}-${line.text.substring(0, 10)}`}
-                    style={{ 
-                      color: '#111827',
-                      fontSize: isMobile ? '1.25rem' : '1.5rem',
-                      lineHeight: '1.8',
-                      wordBreak: 'break-word',
-                      textAlign: 'center',
-                      padding: '0.75rem 1rem',
-                      marginBottom: '0.5rem',
-                      backgroundColor: index === 0 ? 'rgba(59, 130, 246, 0.05)' : 'rgba(0, 0, 0, 0.02)',
-                      borderRadius: '8px',
-                      borderLeft: index === 0 ? '3px solid rgba(59, 130, 246, 0.3)' : '3px solid rgba(0, 0, 0, 0.1)'
-                    }}
-                  >
-                    <div>{line.text}</div>
-                    <div style={{ 
-                      fontSize: isMobile ? '0.875rem' : '1rem', 
-                      color: '#6b7280', 
-                      marginTop: '0.5rem',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      gap: '0.75rem',
-                      transform: 'rotate(180deg)',
-                      fontWeight: '500'
-                    }}>
-                      <span>{line.timestamp}</span>
-                      {line.latency !== undefined && (
-                        <span>レイテンシー: {line.latency}ms</span>
-                      )}
-                    </div>
-                  </div>
-                ))
+                <>
+                  {/* 最新の翻訳テキストのみ表示（青い背景） */}
+                  {(() => {
+                    const latestLine = translatedTextLines[0];
+                    return (
+                      <div 
+                        key={`translated-0-${latestLine.text.substring(0, 10)}`}
+                        style={{ 
+                          color: '#111827',
+                          fontSize: isMobile ? '1.25rem' : '1.5rem',
+                          lineHeight: '1.8',
+                          wordBreak: 'break-word',
+                          textAlign: 'center',
+                          padding: '0.75rem 1rem',
+                          marginBottom: '0.5rem',
+                          backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                          borderRadius: '8px',
+                          borderLeft: '3px solid rgba(59, 130, 246, 0.3)'
+                        }}
+                      >
+                        <div>{latestLine.text}</div>
+                        <div style={{ 
+                          fontSize: isMobile ? '0.875rem' : '1rem', 
+                          color: '#6b7280', 
+                          marginTop: '0.5rem',
+                          display: 'flex',
+                          justifyContent: 'center',
+                          gap: '0.75rem',
+                          transform: 'rotate(180deg)',
+                          fontWeight: '500'
+                        }}>
+                          <span>{latestLine.timestamp}</span>
+                          {latestLine.latency !== undefined && (
+                            <span>レイテンシー: {latestLine.latency}ms</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </>
               ) : translatedText ? (
                 <div style={{ color: '#111827' }}>
                   {translatedText}
