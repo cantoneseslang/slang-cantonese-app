@@ -2874,12 +2874,6 @@ export default function Home() {
           }
 
           // 単語音声を生成
-          const audioResponse = await fetch('/api/generate-speech', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: word.chinese }),
-          });
-
           let resultData: SearchResult = {
             jyutping: word.jyutping || '',
             katakana: word.katakana || '',
@@ -2892,22 +2886,44 @@ export default function Home() {
             exampleAudioBase64: undefined,
           };
 
-          if (audioResponse.ok) {
-            const audioData = await audioResponse.json();
-            resultData.audioBase64 = audioData.audioContent;
+          try {
+            const audioResponse = await fetch('/api/generate-speech', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: word.chinese }),
+            });
+
+            if (audioResponse.ok) {
+              const audioData = await audioResponse.json();
+              resultData.audioBase64 = audioData.audioContent;
+              console.log('✅ 学習モード: 単語音声生成成功', { word: word.chinese });
+            } else {
+              const errorText = await audioResponse.text();
+              console.error('❌ 学習モード: 単語音声生成失敗', { status: audioResponse.status, error: errorText });
+            }
+          } catch (err) {
+            console.error('❌ 学習モード: 単語音声生成エラー', err);
           }
 
           // 例文音声を生成（例文が存在する場合）
           if (resultData.exampleCantonese && resultData.exampleCantonese !== '例文生成エラーが発生しました' && resultData.exampleCantonese.trim() !== '') {
-            const exampleAudioResponse = await fetch('/api/generate-speech', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text: resultData.exampleCantonese }),
-            });
+            try {
+              const exampleAudioResponse = await fetch('/api/generate-speech', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: resultData.exampleCantonese }),
+              });
 
-            if (exampleAudioResponse.ok) {
-              const exampleAudioData = await exampleAudioResponse.json();
-              resultData.exampleAudioBase64 = exampleAudioData.audioContent;
+              if (exampleAudioResponse.ok) {
+                const exampleAudioData = await exampleAudioResponse.json();
+                resultData.exampleAudioBase64 = exampleAudioData.audioContent;
+                console.log('✅ 学習モード: 例文音声生成成功', { example: resultData.exampleCantonese });
+              } else {
+                const errorText = await exampleAudioResponse.text();
+                console.error('❌ 学習モード: 例文音声生成失敗', { status: exampleAudioResponse.status, error: errorText });
+              }
+            } catch (err) {
+              console.error('❌ 学習モード: 例文音声生成エラー', err);
             }
           }
 
@@ -3532,19 +3548,27 @@ export default function Home() {
             audioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に
             audioRef.current.load();
             
-            // Web Audio APIでボリューム制御
+            // Web Audio APIでボリューム制御（既に接続されている場合は再利用）
             try {
-              const source = audioContextRef.current.createMediaElementSource(audioRef.current);
-              const gainNode = audioContextRef.current.createGain();
-              gainNode.gain.value = audioVolume;
-              
-              source.connect(gainNode);
-              gainNode.connect(audioContextRef.current.destination);
-              
-              audioSourceNodeRef.current = source;
-              audioGainNodeRef.current = gainNode;
+              if (!audioSourceNodeRef.current) {
+                const source = audioContextRef.current.createMediaElementSource(audioRef.current);
+                const gainNode = audioContextRef.current.createGain();
+                gainNode.gain.value = 1.0; // 音量は常に最大（音量スライダーは削除済み）
+                
+                source.connect(gainNode);
+                gainNode.connect(audioContextRef.current.destination);
+                
+                audioSourceNodeRef.current = source;
+                audioGainNodeRef.current = gainNode;
+              } else {
+                // 既存のGainNodeのボリュームを更新
+                if (audioGainNodeRef.current) {
+                  audioGainNodeRef.current.gain.value = 1.0;
+                }
+              }
             } catch (error) {
-              console.error('Web Audio API接続エラー（既に接続されている可能性）:', error);
+              console.error('Web Audio API接続エラー:', error);
+              // エラーが発生した場合は、Web Audio APIなしで再生を試みる
             }
           } catch (error) {
             console.error('Blob URL作成エラー:', error);
@@ -3573,7 +3597,7 @@ export default function Home() {
         }
       };
     }
-  }, [result?.audioBase64, audioVolume]);
+  }, [result?.audioBase64]);
 
   // 学習モードの例文音声をBlob URLに変換し、Web Audio APIでボリューム制御
   useEffect(() => {
@@ -3614,19 +3638,27 @@ export default function Home() {
             exampleAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に
             exampleAudioRef.current.load();
             
-            // Web Audio APIでボリューム制御
+            // Web Audio APIでボリューム制御（既に接続されている場合は再利用）
             try {
-              const source = audioContextRef.current.createMediaElementSource(exampleAudioRef.current);
-              const gainNode = audioContextRef.current.createGain();
-              gainNode.gain.value = exampleAudioVolume;
-              
-              source.connect(gainNode);
-              gainNode.connect(audioContextRef.current.destination);
-              
-              exampleAudioSourceNodeRef.current = source;
-              exampleAudioGainNodeRef.current = gainNode;
+              if (!exampleAudioSourceNodeRef.current) {
+                const source = audioContextRef.current.createMediaElementSource(exampleAudioRef.current);
+                const gainNode = audioContextRef.current.createGain();
+                gainNode.gain.value = 1.0; // 音量は常に最大（音量スライダーは削除済み）
+                
+                source.connect(gainNode);
+                gainNode.connect(audioContextRef.current.destination);
+                
+                exampleAudioSourceNodeRef.current = source;
+                exampleAudioGainNodeRef.current = gainNode;
+              } else {
+                // 既存のGainNodeのボリュームを更新
+                if (exampleAudioGainNodeRef.current) {
+                  exampleAudioGainNodeRef.current.gain.value = 1.0;
+                }
+              }
             } catch (error) {
-              console.error('Web Audio API接続エラー（既に接続されている可能性）:', error);
+              console.error('Web Audio API接続エラー:', error);
+              // エラーが発生した場合は、Web Audio APIなしで再生を試みる
             }
           } catch (error) {
             console.error('Blob URL作成エラー:', error);
@@ -3655,15 +3687,9 @@ export default function Home() {
         }
       };
     }
-  }, [result?.exampleAudioBase64, exampleAudioVolume]);
+  }, [result?.exampleAudioBase64]);
 
-  // ボリューム変更時にGainNodeを更新
-  useEffect(() => {
-    if (audioGainNodeRef.current) {
-      audioGainNodeRef.current.gain.value = audioVolume;
-    }
-  }, [audioVolume]);
-
+  // ノーマルモードのボリューム変更時にGainNodeを更新
   useEffect(() => {
     if (normalModeAudioGainNodeRef.current) {
       normalModeAudioGainNodeRef.current.gain.value = normalModeAudioVolume;
@@ -6306,24 +6332,6 @@ export default function Home() {
                         <option value="2">2x</option>
                       </select>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                      <label style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>音量:</label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        value={audioVolume}
-                        onChange={(e) => setAudioVolume(parseFloat(e.target.value))}
-                        style={{
-                          width: isMobile ? '80px' : '100px',
-                          cursor: 'pointer'
-                        }}
-                      />
-                      <span style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', minWidth: '30px' }}>
-                        {Math.round(audioVolume * 100)}%
-                      </span>
-                    </div>
                     <button
                       onClick={async () => {
                         const textToCopy = result.translatedText || searchQuery;
@@ -6417,24 +6425,6 @@ export default function Home() {
                         <option value="1.5">1.5x</option>
                         <option value="2">2x</option>
                       </select>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                      <label style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>音量:</label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        value={exampleAudioVolume}
-                        onChange={(e) => setExampleAudioVolume(parseFloat(e.target.value))}
-                        style={{
-                          width: isMobile ? '80px' : '100px',
-                          cursor: 'pointer'
-                        }}
-                      />
-                      <span style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', minWidth: '30px' }}>
-                        {Math.round(exampleAudioVolume * 100)}%
-                      </span>
                     </div>
                     <button
                       onClick={async () => {
