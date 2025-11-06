@@ -181,6 +181,8 @@ export default function Home() {
   const [finalText, setFinalText] = useState('');
   const [interimText, setInterimText] = useState('');
   const [translatedText, setTranslatedText] = useState('');
+  const [recognizedTextLines, setRecognizedTextLines] = useState<string[]>([]); // 新しいテキストが上に来る配列
+  const [translatedTextLines, setTranslatedTextLines] = useState<string[]>([]); // 広東語翻訳の配列（新しいものが上）
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<any>(null);
   const translateDebounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -317,9 +319,12 @@ export default function Home() {
     }
   }, []); // 依存配列を空にして、一度だけ初期化
 
-  // 翻訳APIの呼び出し（最速同時通訳対応）
+  // 翻訳APIの呼び出し（最速同時通訳対応、新しいテキストを上に追加）
   useEffect(() => {
-    if (!isHiddenMode || !recognizedText.trim()) {
+    // recognizedTextLinesの最新のテキストを翻訳
+    const latestText = recognizedTextLines.length > 0 ? recognizedTextLines[0] : recognizedText.trim();
+    
+    if (!isHiddenMode || !latestText.trim()) {
       setTranslatedText('');
       return;
     }
@@ -340,7 +345,7 @@ export default function Home() {
     // デバウンス時間を短縮（500ms → 200ms）で最速処理
     translateDebounceRef.current = setTimeout(async () => {
       try {
-        const textToTranslate = recognizedText.trim();
+        const textToTranslate = latestText.trim();
         if (!textToTranslate) return;
 
         // 直前の翻訳と同じテキストの場合はスキップ（無駄なリクエストを防ぐ）
@@ -373,6 +378,14 @@ export default function Home() {
           const translated = data.translated || data.translatedText || '';
           if (translated) {
             setTranslatedText(translated);
+            // 新しい翻訳を配列の先頭に追加（上に表示）
+            setTranslatedTextLines(prev => {
+              // 既に同じテキストが先頭にある場合はスキップ
+              if (prev.length > 0 && prev[0] === translated) {
+                return prev;
+              }
+              return [translated, ...prev].slice(0, 50); // 最大50行まで保持
+            });
           }
         } else {
           console.error('翻訳APIエラー:', response.status);
@@ -395,7 +408,7 @@ export default function Home() {
         translateAbortControllerRef.current.abort();
       }
     };
-  }, [recognizedText, isHiddenMode]);
+  }, [recognizedTextLines, recognizedText, isHiddenMode]);
 
   // 隠しモード終了処理
   const exitHiddenMode = () => {
@@ -405,6 +418,8 @@ export default function Home() {
     setFinalText('');
     setInterimText('');
     setTranslatedText('');
+    setRecognizedTextLines([]);
+    setTranslatedTextLines([]);
     setShowTitle(false);
     lastTranslatedTextRef.current = '';
     lastProcessedFinalTextRef.current = '';
@@ -525,38 +540,41 @@ export default function Home() {
                     return;
                   }
                   
-                  lastProcessedFinalTextRef.current = trimmedFinal;
-                  
-                  // finalTextに追加
-                  setFinalText(prev => prev + trimmedFinal + ' ');
-                  
-                  // recognizedTextを更新（interim部分を除去してからfinalを追加）
-                  setRecognizedText(prev => {
-                    // 現在のrecognizedTextからinterim部分を除去
-                    let cleanText = prev;
-                    if (interimTranscript && cleanText.includes(interimTranscript)) {
-                      const lastInterimIndex = cleanText.lastIndexOf(interimTranscript);
-                      if (lastInterimIndex !== -1) {
-                        cleanText = cleanText.substring(0, lastInterimIndex) + 
-                                   cleanText.substring(lastInterimIndex + interimTranscript.length);
-                      }
-                    }
-                    cleanText = cleanText.trim();
-                    
-                    // finalテキストを追加
-                    return cleanText + (cleanText ? ' ' : '') + trimmedFinal;
-                  });
-                  
-                  setInterimText('');
-                } else if (interimTranscript) {
-                  // interimのみの場合
-                  setRecognizedText(prev => {
-                    // 既存のfinalTextを保持し、interim部分を更新
-                    const finalPart = prev.trim();
-                    // interim部分を追加（既存のinterim部分は上書き）
-                    return finalPart + (finalPart ? ' ' : '') + interimTranscript;
-                  });
+              lastProcessedFinalTextRef.current = trimmedFinal;
+              
+              // finalTextに追加
+              setFinalText(prev => prev + trimmedFinal + ' ');
+              
+              // 新しいテキストを配列の先頭に追加（上に表示）
+              setRecognizedTextLines(prev => [trimmedFinal, ...prev].slice(0, 50)); // 最大50行まで保持
+              
+              // recognizedTextも更新（下位互換のため）
+              setRecognizedText(prev => {
+                // 現在のrecognizedTextからinterim部分を除去
+                let cleanText = prev;
+                if (interimTranscript && cleanText.includes(interimTranscript)) {
+                  const lastInterimIndex = cleanText.lastIndexOf(interimTranscript);
+                  if (lastInterimIndex !== -1) {
+                    cleanText = cleanText.substring(0, lastInterimIndex) + 
+                               cleanText.substring(lastInterimIndex + interimTranscript.length);
+                  }
                 }
+                cleanText = cleanText.trim();
+                
+                // finalテキストを追加（下位互換のため）
+                return cleanText + (cleanText ? ' ' : '') + trimmedFinal;
+              });
+              
+              setInterimText('');
+            } else if (interimTranscript) {
+              // interimのみの場合
+              setRecognizedText(prev => {
+                // 既存のfinalTextを保持し、interim部分を更新
+                const finalPart = prev.trim();
+                // interim部分を追加（既存のinterim部分は上書き）
+                return finalPart + (finalPart ? ' ' : '') + interimTranscript;
+              });
+            }
               };
 
           recognitionRef.current.onerror = (event: any) => {
@@ -2770,7 +2788,7 @@ export default function Home() {
       {/* 隠しモードUI */}
       {isHiddenMode && (
         <>
-          {/* 広東語翻訳エリア（上部、左に180度回転、浮き上がるアニメーション） */}
+          {/* 広東語翻訳エリア（上部、左に180度回転、浮き上がるアニメーション、新しいテキストが上に表示） */}
           <div style={{
             position: 'fixed',
             top: isMobile ? '2rem' : '4rem',
@@ -2778,27 +2796,56 @@ export default function Home() {
             transform: 'translateX(-50%) rotate(180deg)',
             width: '90%',
             maxWidth: '800px',
+            maxHeight: isMobile ? '250px' : '300px',
             padding: '1.5rem',
             backgroundColor: 'rgba(255, 255, 255, 0.95)',
             border: '1px solid rgba(0, 0, 0, 0.1)',
             borderRadius: '12px',
-            minHeight: '100px',
-            textAlign: 'center',
-            fontSize: isMobile ? '1.25rem' : '1.5rem',
-            lineHeight: '1.8',
-            wordBreak: 'break-word',
             animation: 'fadeInUp 0.6s ease-out',
             opacity: 1,
             zIndex: 1000,
-            color: '#111827',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-start'
           }}>
-            <div style={{ color: '#111827' }}>
-              {translatedText || '広東語翻訳がここに表示されます...'}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+              width: '100%'
+            }}>
+              {translatedTextLines.length > 0 ? (
+                translatedTextLines.map((line, index) => (
+                  <div 
+                    key={index}
+                    style={{ 
+                      color: '#111827',
+                      fontSize: isMobile ? '1.25rem' : '1.5rem',
+                      lineHeight: '1.8',
+                      wordBreak: 'break-word',
+                      textAlign: 'center',
+                      padding: '0.5rem 0'
+                    }}
+                  >
+                    {line}
+                  </div>
+                ))
+              ) : translatedText ? (
+                <div style={{ color: '#111827' }}>
+                  {translatedText}
+                </div>
+              ) : (
+                <div style={{ color: '#111827' }}>
+                  広東語翻訳がここに表示されます...
+                </div>
+              )}
             </div>
           </div>
 
-          {/* 日本語音声認識エリア（中央、浮き上がるアニメーション、最大高さ設定でスクロール可能） */}
+          {/* 日本語音声認識エリア（中央、浮き上がるアニメーション、新しいテキストが上に表示） */}
           <div style={{
             position: 'fixed',
             top: '50%',
@@ -2827,14 +2874,47 @@ export default function Home() {
             justifyContent: 'flex-start'
           }}>
             <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem',
               width: '100%',
               paddingBottom: '1rem'
             }}>
-              {recognizedText || 'マイクボタンを押して日本語を話してください...'}
-              {interimText && (
-                <span style={{ color: '#6b7280', fontStyle: 'italic' }}>
-                  {interimText}
-                </span>
+              {recognizedTextLines.length > 0 ? (
+                <>
+                  {recognizedTextLines.map((line, index) => (
+                    <div 
+                      key={index}
+                      style={{ 
+                        color: '#111827',
+                        fontSize: isMobile ? '1.5rem' : '2rem',
+                        lineHeight: '1.8',
+                        wordBreak: 'break-word',
+                        padding: '0.5rem 0'
+                      }}
+                    >
+                      {line}
+                    </div>
+                  ))}
+                  {interimText && (
+                    <div style={{ 
+                      color: '#6b7280', 
+                      fontStyle: 'italic',
+                      fontSize: isMobile ? '1.5rem' : '2rem'
+                    }}>
+                      {interimText}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {recognizedText || 'マイクボタンを押して日本語を話してください...'}
+                  {interimText && (
+                    <span style={{ color: '#6b7280', fontStyle: 'italic' }}>
+                      {interimText}
+                    </span>
+                  )}
+                </>
               )}
             </div>
           </div>
