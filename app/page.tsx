@@ -284,15 +284,28 @@ export default function Home() {
                 return baseText + (baseText ? ' ' : '') + trimmed;
               });
               
+              // finalが確定したら必ず新しい行として追加（上に表示）
+              setRecognizedTextLines(prev => {
+                // 既に同じテキストが先頭にある場合はスキップ（重複防止）
+                if (prev.length > 0 && prev[0] === trimmed) {
+                  return prev;
+                }
+                // 新しい行を先頭に追加（マイク押すたびに改行）
+                return [trimmed, ...prev].slice(0, 50); // 最大50行まで保持
+              });
+              
               setInterimText('');
             } else if (interim) {
-              // interimのみの場合
+              // interimのみの場合 - 最新のinterimを表示（確定するまで更新）
               setRecognizedText(prev => {
                 // 既存のfinalText部分を保持し、interim部分を更新
                 const baseText = prev.trim();
                 // interimの最後の部分を上書き（最新のinterimを表示）
                 return baseText + (baseText ? ' ' : '') + interim;
               });
+              
+              // interimは配列に追加しない（確定後に追加される）
+              // 表示はinterimTextステートで行う
             }
           };
 
@@ -319,10 +332,10 @@ export default function Home() {
     }
   }, []); // 依存配列を空にして、一度だけ初期化
 
-  // 翻訳APIの呼び出し（最速同時通訳対応、新しいテキストを上に追加）
+  // 翻訳APIの呼び出し（最速同時通訳対応、リアルタイム翻訳）
   useEffect(() => {
-    // recognizedTextLinesの最新のテキストを翻訳
-    const latestText = recognizedTextLines.length > 0 ? recognizedTextLines[0] : recognizedText.trim();
+    // recognizedTextLinesの最新のテキストを翻訳（interimも含む）
+    const latestText = recognizedTextLines.length > 0 ? recognizedTextLines[0] : (recognizedText.trim() || interimText.trim());
     
     if (!isHiddenMode || !latestText.trim()) {
       setTranslatedText('');
@@ -342,14 +355,15 @@ export default function Home() {
     // 新しいAbortControllerを作成
     translateAbortControllerRef.current = new AbortController();
 
-    // デバウンス時間を短縮（500ms → 200ms）で最速処理
+    // デバウンス時間を大幅に短縮（50ms）で最速リアルタイム処理
     translateDebounceRef.current = setTimeout(async () => {
       try {
         const textToTranslate = latestText.trim();
         if (!textToTranslate) return;
 
         // 直前の翻訳と同じテキストの場合はスキップ（無駄なリクエストを防ぐ）
-        if (textToTranslate === lastTranslatedTextRef.current) {
+        // ただし、interimの場合や短いテキストの場合は常に翻訳
+        if (textToTranslate === lastTranslatedTextRef.current && textToTranslate.length > 10) {
           return;
         }
 
@@ -398,7 +412,7 @@ export default function Home() {
       } finally {
         translateAbortControllerRef.current = null;
       }
-    }, 200); // 200msデバウンス（最速処理）
+    }, 50); // 50msデバウンス（最速リアルタイム処理）
 
     return () => {
       if (translateDebounceRef.current) {
@@ -408,7 +422,7 @@ export default function Home() {
         translateAbortControllerRef.current.abort();
       }
     };
-  }, [recognizedTextLines, recognizedText, isHiddenMode]);
+  }, [recognizedTextLines, recognizedText, interimText, isHiddenMode]);
 
   // 隠しモード終了処理
   const exitHiddenMode = () => {
@@ -725,6 +739,20 @@ export default function Home() {
     
     console.log('音声認識を停止します（ボタン離された）');
     setIsRecording(false);
+    
+    // 最後のinterimテキストがあれば、確定して新しい行に追加
+    if (interimText.trim()) {
+      const finalInterim = interimText.trim();
+      setRecognizedTextLines(prev => {
+        // 既に同じテキストが先頭にある場合はスキップ
+        if (prev.length > 0 && prev[0] === finalInterim) {
+          return prev;
+        }
+        // マイクを離した時に確定して新しい行に追加
+        return [finalInterim, ...prev].slice(0, 50);
+      });
+      setInterimText('');
+    }
     
     if (recognitionRef.current) {
       try {
@@ -2820,14 +2848,18 @@ export default function Home() {
               {translatedTextLines.length > 0 ? (
                 translatedTextLines.map((line, index) => (
                   <div 
-                    key={index}
+                    key={`translated-${index}-${line.substring(0, 10)}`}
                     style={{ 
                       color: '#111827',
                       fontSize: isMobile ? '1.25rem' : '1.5rem',
                       lineHeight: '1.8',
                       wordBreak: 'break-word',
                       textAlign: 'center',
-                      padding: '0.5rem 0'
+                      padding: '0.75rem 1rem',
+                      marginBottom: '0.5rem',
+                      backgroundColor: index === 0 ? 'rgba(59, 130, 246, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                      borderRadius: '8px',
+                      borderLeft: index === 0 ? '3px solid rgba(59, 130, 246, 0.3)' : '3px solid rgba(0, 0, 0, 0.1)'
                     }}
                   >
                     {line}
@@ -2884,13 +2916,18 @@ export default function Home() {
                 <>
                   {recognizedTextLines.map((line, index) => (
                     <div 
-                      key={index}
+                      key={`line-${index}-${line.substring(0, 10)}`}
                       style={{ 
                         color: '#111827',
                         fontSize: isMobile ? '1.5rem' : '2rem',
                         lineHeight: '1.8',
                         wordBreak: 'break-word',
-                        padding: '0.5rem 0'
+                        padding: '0.75rem 1rem',
+                        marginBottom: '0.5rem',
+                        backgroundColor: index === 0 ? 'rgba(59, 130, 246, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                        borderRadius: '8px',
+                        borderLeft: index === 0 ? '3px solid rgba(59, 130, 246, 0.3)' : '3px solid rgba(0, 0, 0, 0.1)',
+                        textAlign: 'left'
                       }}
                     >
                       {line}
@@ -2900,7 +2937,13 @@ export default function Home() {
                     <div style={{ 
                       color: '#6b7280', 
                       fontStyle: 'italic',
-                      fontSize: isMobile ? '1.5rem' : '2rem'
+                      fontSize: isMobile ? '1.5rem' : '2rem',
+                      padding: '0.75rem 1rem',
+                      marginBottom: '0.5rem',
+                      backgroundColor: 'rgba(107, 114, 128, 0.05)',
+                      borderRadius: '8px',
+                      borderLeft: '3px solid rgba(107, 114, 128, 0.2)',
+                      textAlign: 'left'
                     }}>
                       {interimText}
                     </div>
