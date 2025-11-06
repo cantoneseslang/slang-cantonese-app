@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 機密情報を含むドキュメント（GitHub/Vercelにアップロードしない）
+docs/PAGE_STRUCTURE.md
