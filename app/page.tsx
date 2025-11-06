@@ -3014,17 +3014,17 @@ export default function Home() {
           {/* 日本語音声認識エリア（中央、浮き上がるアニメーション、新しいテキストが上に表示、モバイルではロゴとの重なり防止） */}
           <div style={{
             position: 'fixed',
-            top: isMobile ? 'calc(2rem + 250px + 1rem)' : '50%',
+            top: isMobile ? 'calc(2rem + 350px + 2rem)' : '50%', // 広東語エリア: top(2rem) + maxHeight(250px) + padding上下(1.5rem*2≈3rem) + 余白(2rem) = 約350px + 2rem
             left: '50%',
             transform: isMobile ? 'translate(-50%, 0)' : 'translate(-50%, -50%)',
             width: '90%',
             maxWidth: '800px',
-            // モバイル: ロゴのトップ（bottom: calc(3rem + 120px)）までの距離を計算
-            // top + maxHeight <= 100vh - 3rem - 120px - 1rem (ロゴのトップ - 余白)
-            // maxHeight <= 100vh - 3rem - 120px - 1rem - top
-            // top = 2rem + 250px + 1rem = 2rem + 251px
+            // モバイル: ロゴのトップまでの距離を計算
+            // ロゴのtop = 100vh - (3rem + 120px)
+            // 日本語エリアのbottom = ロゴのtop - 1rem余白 = 100vh - 3rem - 120px - 1rem
+            // maxHeight = bottom - top = (100vh - 3rem - 120px - 1rem) - (2rem + 300px + 1.5rem)
             maxHeight: isMobile 
-              ? `calc(100vh - 2rem - 250px - 1rem - 3rem - 120px - 1rem)` // 広東語エリア(250px) + 余白 + ロゴ(120px) + 余白 + タイトルエリア
+              ? `calc(100vh - 3rem - 120px - 1rem - 2rem - 350px - 2rem)` 
               : '400px',
             padding: '2rem',
             backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -3054,32 +3054,36 @@ export default function Home() {
             }}>
               {recognizedTextLines.length > 0 ? (
                 <>
-                  {recognizedTextLines.map((line, index) => (
-                    <div 
-                      key={`line-${index}-${line.text.substring(0, 10)}`}
-                      style={{ 
-                        color: '#111827',
-                        fontSize: isMobile ? '1.5rem' : '2rem',
-                        lineHeight: '1.8',
-                        wordBreak: 'break-word',
-                        padding: '0.75rem 1rem',
-                        marginBottom: '0.5rem',
-                        backgroundColor: index === 0 ? 'rgba(59, 130, 246, 0.05)' : 'rgba(0, 0, 0, 0.02)',
-                        borderRadius: '8px',
-                        borderLeft: index === 0 ? '3px solid rgba(59, 130, 246, 0.3)' : '3px solid rgba(0, 0, 0, 0.1)',
-                        textAlign: 'left'
-                      }}
-                    >
-                      <div>{line.text}</div>
-                      <div style={{ 
-                        fontSize: isMobile ? '0.75rem' : '0.875rem', 
-                        color: '#6b7280', 
-                        marginTop: '0.25rem'
-                      }}>
-                        {line.timestamp}
+                  {/* 最新の確定テキストのみ表示（青い背景） */}
+                  {(() => {
+                    const latestLine = recognizedTextLines[0];
+                    return (
+                      <div 
+                        key={`line-0-${latestLine.text.substring(0, 10)}`}
+                        style={{ 
+                          color: '#111827',
+                          fontSize: isMobile ? '1.5rem' : '2rem',
+                          lineHeight: '1.8',
+                          wordBreak: 'break-word',
+                          padding: '0.75rem 1rem',
+                          marginBottom: '0.5rem',
+                          backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                          borderRadius: '8px',
+                          borderLeft: '3px solid rgba(59, 130, 246, 0.3)',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <div>{latestLine.text}</div>
+                        <div style={{ 
+                          fontSize: isMobile ? '0.75rem' : '0.875rem', 
+                          color: '#6b7280', 
+                          marginTop: '0.25rem'
+                        }}>
+                          {latestLine.timestamp}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })()}
                   {interimText && (
                     <div style={{ 
                       color: '#6b7280', 
@@ -3156,7 +3160,10 @@ export default function Home() {
                 fontSize: isMobile ? '0.875rem' : '1rem',
                 fontWeight: 700,
                 color: '#6b7280',
-                textShadow: 'none'
+                textShadow: 'none',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
               }}>
                 ボタンを押すだけでスパッと通訳！
               </div>
