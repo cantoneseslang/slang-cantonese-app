@@ -3039,7 +3039,7 @@ export default function Home() {
       style={{ 
         margin: 0, 
         padding: isHiddenMode ? 0 : (isMobile ? '1rem' : '3rem'), 
-        backgroundColor: isHiddenMode ? '#ffffff' : '#f3f4f6', 
+        backgroundColor: isHiddenMode ? '#f3f4f6' : '#f3f4f6', 
         minHeight: '100vh',
         position: 'relative',
         transition: 'background-color 0.5s ease-out',
