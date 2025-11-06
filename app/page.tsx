@@ -624,6 +624,7 @@ export default function Home() {
     translatedTextSetRef.current.clear();
     
     // モバイル軽量化: 音声データをクリア（メモリリーク防止）
+    // 同時通訳モードの音声を停止・クリア
     if (simultaneousModeAudioRef.current) {
       simultaneousModeAudioRef.current.pause();
       simultaneousModeAudioRef.current.currentTime = 0;
@@ -633,6 +634,28 @@ export default function Home() {
     if (simultaneousModeAudioBlobUrlRef.current) {
       URL.revokeObjectURL(simultaneousModeAudioBlobUrlRef.current);
       simultaneousModeAudioBlobUrlRef.current = null;
+    }
+    
+    // ノーマルモードの音声も停止・クリア（ホームに戻る時に確実にリセット）
+    if (normalModeAudioRef.current) {
+      normalModeAudioRef.current.pause();
+      normalModeAudioRef.current.currentTime = 0;
+      normalModeAudioRef.current.src = '';
+    }
+    // Blob URLもクリア
+    if (normalModeAudioBlobUrlRef.current) {
+      URL.revokeObjectURL(normalModeAudioBlobUrlRef.current);
+      normalModeAudioBlobUrlRef.current = null;
+    }
+    
+    // Web Audio API接続もクリア
+    if (normalModeAudioSourceNodeRef.current) {
+      normalModeAudioSourceNodeRef.current.disconnect();
+      normalModeAudioSourceNodeRef.current = null;
+    }
+    if (normalModeAudioGainNodeRef.current) {
+      normalModeAudioGainNodeRef.current.disconnect();
+      normalModeAudioGainNodeRef.current = null;
     }
     
     // ボタン状態をリセット
@@ -707,6 +730,27 @@ export default function Home() {
   // 隠しモード起動後、全てのUI要素が表示された後にタイトルを表示
   useEffect(() => {
     if (isHiddenMode) {
+      // ノーマルモードの音声を停止（通訳モードに入る時に確実に停止）
+      if (normalModeAudioRef.current) {
+        normalModeAudioRef.current.pause();
+        normalModeAudioRef.current.currentTime = 0;
+        normalModeAudioRef.current.src = '';
+      }
+      // Blob URLもクリア
+      if (normalModeAudioBlobUrlRef.current) {
+        URL.revokeObjectURL(normalModeAudioBlobUrlRef.current);
+        normalModeAudioBlobUrlRef.current = null;
+      }
+      // Web Audio API接続もクリア
+      if (normalModeAudioSourceNodeRef.current) {
+        normalModeAudioSourceNodeRef.current.disconnect();
+        normalModeAudioSourceNodeRef.current = null;
+      }
+      if (normalModeAudioGainNodeRef.current) {
+        normalModeAudioGainNodeRef.current.disconnect();
+        normalModeAudioGainNodeRef.current = null;
+      }
+      
       // 最後のアニメーション（日本語エリア: 0.8s）が完了してから、少し待ってタイトルを表示
       const timer = setTimeout(() => {
         setShowTitle(true);
