@@ -186,6 +186,8 @@ export default function Home() {
   const translateDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const translateAbortControllerRef = useRef<AbortController | null>(null);
   const lastTranslatedTextRef = useRef<string>('');
+  const lastProcessedResultIndexRef = useRef<number>(-1);
+  const lastProcessedFinalTextRef = useRef<string>('');
 
   // 音声の初期化（Web Audio APIで100%音量）
   useEffect(() => {
@@ -229,53 +231,77 @@ export default function Home() {
           recognitionRef.current.interimResults = true;
 
           recognitionRef.current.onresult = (event: any) => {
+            // 既に処理済みの結果はスキップ（重複防止）
+            if (event.resultIndex <= lastProcessedResultIndexRef.current) {
+              return;
+            }
+            
             let interim = '';
             let newFinal = '';
+            let lastFinalIndex = -1;
             
-            // resultIndexから新しい結果のみを処理（重複を防ぐ）
+            // resultIndexから新しい結果のみを処理
             for (let i = event.resultIndex; i < event.results.length; i++) {
               const transcript = event.results[i][0].transcript;
               if (event.results[i].isFinal) {
-                // finalの結果は新しいもののみ追加
+                // finalの結果を集約
                 newFinal += transcript;
+                lastFinalIndex = i;
               } else {
-                // interimは常に最新のものを表示
+                // interimは最新のもののみ（上書き）
                 interim = transcript;
               }
             }
+            
+            // 処理済みインデックスを更新
+            lastProcessedResultIndexRef.current = event.results.length - 1;
             
             // interimのテキストを更新
             setInterimText(interim);
             
             if (newFinal) {
-              // finalのテキストを追加（重複チェック）
+              const trimmed = newFinal.trim();
+              
+              // 直前のfinalテキストと比較（重複チェック）
+              if (trimmed === lastProcessedFinalTextRef.current) {
+                // 同じテキストの場合は追加しない
+                setInterimText('');
+                return;
+              }
+              
+              lastProcessedFinalTextRef.current = trimmed;
+              
+              // finalのテキストを追加
               setFinalText(prev => {
                 // 既に追加済みのテキストと重複していないかチェック
-                const trimmed = newFinal.trim();
                 if (prev.endsWith(trimmed + ' ')) {
-                  // 既に追加済みの場合は追加しない
                   return prev;
                 }
                 return prev + trimmed + ' ';
               });
               
               setRecognizedText(prev => {
-                // interimテキストを除去してから追加
-                const baseText = prev.replace(interim, '').trim();
-                const trimmed = newFinal.trim();
+                // 既存のテキストからinterim部分を除去
+                const baseText = prev.replace(new RegExp(interim.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '').trim();
+                
+                // 既に同じfinalテキストが含まれていないかチェック
                 if (baseText.endsWith(trimmed)) {
                   return baseText;
                 }
+                
                 return baseText + (baseText ? ' ' : '') + trimmed;
               });
               
               setInterimText('');
             } else if (interim) {
-              // interimのみの場合、finalTextにinterimを追加して表示
+              // interimのみの場合
               setRecognizedText(prev => {
-                // 既存のfinalTextを保持し、interimを追加
+                // 既存のfinalText部分を保持し、interim部分を更新
+                // 前回のinterim部分を削除してから新しいinterimを追加
                 const baseText = prev.trim();
-                return baseText + (baseText ? ' ' : '') + interim;
+                // 既にinterimが含まれている場合は、最後のinterim部分を置き換え
+                // 単純に、既存のテキストにinterimを追加（最後のinterimは上書き）
+                return baseText + (baseText && !baseText.endsWith(interim.substring(0, Math.max(0, interim.length - 3))) ? ' ' : '') + interim;
               });
             }
           };
@@ -393,6 +419,8 @@ export default function Home() {
     setTranslatedText('');
     setShowTitle(false);
     lastTranslatedTextRef.current = '';
+    lastProcessedResultIndexRef.current = -1;
+    lastProcessedFinalTextRef.current = '';
     
     // 翻訳リクエストをキャンセル
     if (translateDebounceRef.current) {
@@ -481,28 +509,77 @@ export default function Home() {
           recognitionRef.current.continuous = true;
           recognitionRef.current.interimResults = true;
 
-          recognitionRef.current.onresult = (event: any) => {
-            let interim = '';
-            let final = '';
-            
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-              const transcript = event.results[i][0].transcript;
-              if (event.results[i].isFinal) {
-                final += transcript;
-              } else {
-                interim += transcript;
-              }
-            }
-            
-            setInterimText(interim);
-            if (final) {
-              setFinalText(prev => prev + final + ' ');
-              setRecognizedText(prev => prev + final + ' ');
-              setInterimText('');
-            } else {
-              setRecognizedText(prev => prev + interim);
-            }
-          };
+              recognitionRef.current.onresult = (event: any) => {
+                // 既に処理済みの結果はスキップ（重複防止）
+                if (event.resultIndex <= lastProcessedResultIndexRef.current) {
+                  return;
+                }
+                
+                let interim = '';
+                let newFinal = '';
+                
+                // resultIndexから新しい結果のみを処理
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                  const transcript = event.results[i][0].transcript;
+                  if (event.results[i].isFinal) {
+                    // finalの結果を集約
+                    newFinal += transcript;
+                  } else {
+                    // interimは最新のもののみ（上書き）
+                    interim = transcript;
+                  }
+                }
+                
+                // 処理済みインデックスを更新
+                lastProcessedResultIndexRef.current = event.results.length - 1;
+                
+                // interimのテキストを更新
+                setInterimText(interim);
+                
+                if (newFinal) {
+                  const trimmed = newFinal.trim();
+                  
+                  // 直前のfinalテキストと比較（重複チェック）
+                  if (trimmed === lastProcessedFinalTextRef.current) {
+                    // 同じテキストの場合は追加しない
+                    setInterimText('');
+                    return;
+                  }
+                  
+                  lastProcessedFinalTextRef.current = trimmed;
+                  
+                  // finalのテキストを追加
+                  setFinalText(prev => {
+                    // 既に追加済みのテキストと重複していないかチェック
+                    if (prev.endsWith(trimmed + ' ')) {
+                      return prev;
+                    }
+                    return prev + trimmed + ' ';
+                  });
+                  
+                  setRecognizedText(prev => {
+                    // 既存のテキストからinterim部分を除去
+                    const baseText = prev.replace(new RegExp(interim.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '').trim();
+                    
+                    // 既に同じfinalテキストが含まれていないかチェック
+                    if (baseText.endsWith(trimmed)) {
+                      return baseText;
+                    }
+                    
+                    return baseText + (baseText ? ' ' : '') + trimmed;
+                  });
+                  
+                  setInterimText('');
+                } else if (interim) {
+                  // interimのみの場合
+                  setRecognizedText(prev => {
+                    // 既存のfinalText部分を保持し、interim部分を更新
+                    const baseText = prev.trim();
+                    // 既にinterimが含まれている場合は、最後のinterim部分を置き換え
+                    return baseText + (baseText && !baseText.endsWith(interim.substring(0, Math.max(0, interim.length - 3))) ? ' ' : '') + interim;
+                  });
+                }
+              };
 
           recognitionRef.current.onerror = (event: any) => {
             if (event.error !== 'aborted') {
