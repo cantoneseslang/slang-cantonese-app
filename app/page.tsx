@@ -217,6 +217,9 @@ export default function Home() {
     return `-${hours}:${minutes} ${seconds}s`;
   };
 
+  // モバイル軽量化: データ保持行数を削減（モバイル5行、デスクトップ10行）
+  const MAX_TEXT_LINES = isMobile ? 5 : 10;
+
   // 音声の初期化（Web Audio APIで100%音量）
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -323,7 +326,7 @@ export default function Home() {
                   text: trimmed,
                   timestamp: getTimestamp()
                 };
-                return [newLine, ...prev].slice(0, 50); // 最大50行まで保持
+                return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化: 保持行数を削減
               });
               
               setInterimText('');
@@ -419,7 +422,7 @@ export default function Home() {
                   timestamp: getTimestamp(),
                   latency: latency
                 };
-                return [newLine, ...prev].slice(0, 50);
+                return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
               });
               
               // interimテキストの音声生成は行わない（確定テキストのみ音声生成）
@@ -447,7 +450,8 @@ export default function Home() {
     // 新しいAbortControllerを作成
     translateAbortControllerRef.current = new AbortController();
 
-    // デバウンス時間を大幅に短縮（50ms）で最速リアルタイム処理
+    // モバイル軽量化: デバウンス時間を調整（モバイル200ms、デスクトップ150ms）
+    const debounceTime = isMobile ? 200 : 150;
     translateDebounceRef.current = setTimeout(async () => {
       // すべての新しいテキストを順番に翻訳
       for (const textToTranslate of textsToTranslate) {
@@ -498,7 +502,7 @@ export default function Home() {
                   timestamp: getTimestamp(),
                   latency: latency
                 };
-                return [newLine, ...prev].slice(0, 50);
+                return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
               });
               
               // 音声再生（ミュートされていない場合）
@@ -520,10 +524,18 @@ export default function Home() {
                       if (simultaneousModeAudioRef.current && audioBase64) {
                         simultaneousModeAudioRef.current.pause();
                         simultaneousModeAudioRef.current.currentTime = 0;
+                        // モバイル軽量化: 古い音声データをクリアしてから新しいデータを設定
+                        simultaneousModeAudioRef.current.src = '';
                         simultaneousModeAudioRef.current.src = `data:audio/mp3;base64,${audioBase64}`;
                         simultaneousModeAudioRef.current.play().catch((e) => {
                           console.error('音声再生エラー:', e);
                         });
+                        // モバイル軽量化: 再生後に古い音声データをクリア（メモリリーク防止）
+                        simultaneousModeAudioRef.current.addEventListener('ended', () => {
+                          if (simultaneousModeAudioRef.current) {
+                            simultaneousModeAudioRef.current.src = '';
+                          }
+                        }, { once: true });
                       }
                     } else {
                       const errorText = await audioResponse.text();
@@ -547,7 +559,7 @@ export default function Home() {
       }
       
       translateAbortControllerRef.current = null;
-    }, 50);
+    }, debounceTime);
 
     return () => {
       if (translateDebounceRef.current) {
@@ -573,6 +585,13 @@ export default function Home() {
     lastTranslatedTextRef.current = '';
     lastProcessedFinalTextRef.current = '';
     translatedTextSetRef.current.clear();
+    
+    // モバイル軽量化: 音声データをクリア（メモリリーク防止）
+    if (simultaneousModeAudioRef.current) {
+      simultaneousModeAudioRef.current.pause();
+      simultaneousModeAudioRef.current.currentTime = 0;
+      simultaneousModeAudioRef.current.src = '';
+    }
     
     // ボタン状態をリセット
     setShowButtons(false);
@@ -736,7 +755,7 @@ export default function Home() {
       if (prev.length > 0 && prev[0].text === handPhrase) {
         return prev;
       }
-      return [newLine, ...prev].slice(0, 50);
+      return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
     });
     setTranslatedText(handPhrase);
     
@@ -759,10 +778,18 @@ export default function Home() {
             if (simultaneousModeAudioRef.current && audioBase64) {
               simultaneousModeAudioRef.current.pause();
               simultaneousModeAudioRef.current.currentTime = 0;
+              // モバイル軽量化: 古い音声データをクリアしてから新しいデータを設定
+              simultaneousModeAudioRef.current.src = '';
               simultaneousModeAudioRef.current.src = `data:audio/mp3;base64,${audioBase64}`;
               simultaneousModeAudioRef.current.play().catch((e) => {
                 console.error('音声再生エラー:', e);
               });
+              // モバイル軽量化: 再生後に古い音声データをクリア（メモリリーク防止）
+              simultaneousModeAudioRef.current.addEventListener('ended', () => {
+                if (simultaneousModeAudioRef.current) {
+                  simultaneousModeAudioRef.current.src = '';
+                }
+              }, { once: true });
             }
           } else {
             const errorText = await audioResponse.text();
@@ -849,7 +876,7 @@ export default function Home() {
                   text: trimmedFinal,
                   timestamp: getTimestamp()
                 };
-                return [newLine, ...prev].slice(0, 50);
+                return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
               });
               
               // recognizedTextも更新（下位互換のため）
@@ -983,7 +1010,7 @@ export default function Home() {
                       text: trimmed,
                       timestamp: getTimestamp()
                     };
-                    return [newLine, ...prev].slice(0, 50);
+                    return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
                   });
                   
                   setInterimText('');
@@ -1059,7 +1086,7 @@ export default function Home() {
           text: finalInterim,
           timestamp: getTimestamp()
         };
-        return [newLine, ...prev].slice(0, 50);
+        return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
       });
       setInterimText('');
     }
