@@ -3517,7 +3517,7 @@ export default function Home() {
               }}
             >
               <img
-                src={translationLanguage === 'cantonese' ? "/hand-button.svg?v=1" : "/hand-button-mandarin.svg?v=1"}
+                src={translationLanguage === 'cantonese' ? "/hand-button.svg?v=1" : "/mute-button-mandarin.svg?v=1"}
                 alt="hand button"
                 draggable="false"
                 style={{
@@ -3584,7 +3584,7 @@ export default function Home() {
               }}
             >
               <img
-                src={translationLanguage === 'cantonese' ? "/mute-button.svg?v=1" : "/mute-button-mandarin.svg?v=1"}
+                src={translationLanguage === 'cantonese' ? "/mute-button.svg?v=1" : "/hand-button-mandarin.svg?v=1"}
                 alt="mute button"
                 draggable="false"
                 style={{
