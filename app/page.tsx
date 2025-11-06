@@ -122,6 +122,9 @@ export default function Home() {
   const audioBufferRef = useRef<AudioBuffer | null>(null);
   const [isClickSoundEnabled, setIsClickSoundEnabled] = useState(true);
   
+  // ノーマルモード用の独立したAudioContext（同時通訳モードと分離）
+  const normalModeAudioContextRef = useRef<AudioContext | null>(null);
+  
   // 学習モードの状態（デフォルト: false = ノーマルモード）
   const [isLearningMode, setIsLearningMode] = useState(false);
   
@@ -227,8 +230,11 @@ export default function Home() {
   // 音声の初期化（Web Audio APIで100%音量）
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // AudioContextを作成
+      // AudioContextを作成（ボタンクリック音用）
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // ノーマルモード用の独立したAudioContextを作成（同時通訳モードと分離）
+      normalModeAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       
       // MP3ファイルを読み込み
       fetch('/button-click.mp3')
@@ -2987,20 +2993,20 @@ export default function Home() {
             normalModeAudioRef.current.playbackRate = 1.0; // ノーマルモードでは速度固定
             normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に
             
-            // Web Audio APIでボリューム制御（既に接続されている場合は再利用）
-            if (audioContextRef.current) {
+            // Web Audio APIでボリューム制御（ノーマルモード専用のAudioContextを使用）
+            if (normalModeAudioContextRef.current) {
               try {
                 // MediaElementAudioSourceNodeが既に存在する場合は再利用
                 if (!normalModeAudioSourceNodeRef.current) {
-                  const source = audioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
+                  const source = normalModeAudioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
                   normalModeAudioSourceNodeRef.current = source;
                   
                   // GainNodeを作成
-                  const gainNode = audioContextRef.current.createGain();
+                  const gainNode = normalModeAudioContextRef.current.createGain();
                   gainNode.gain.value = normalModeAudioVolume;
                   
                   source.connect(gainNode);
-                  gainNode.connect(audioContextRef.current.destination);
+                  gainNode.connect(normalModeAudioContextRef.current.destination);
                   
                   normalModeAudioGainNodeRef.current = gainNode;
                 } else {
