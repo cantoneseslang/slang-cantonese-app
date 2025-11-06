@@ -337,6 +337,11 @@ export default function Home() {
         lastTranslatedTextRef.current = textToTranslate;
 
         // 高速翻訳リクエスト（AbortControllerでキャンセル可能）
+        const abortController = translateAbortControllerRef.current;
+        if (!abortController) {
+          return; // AbortControllerが存在しない場合は終了
+        }
+
         const response = await fetch('/api/translate', {
           method: 'POST',
           headers: { 
@@ -344,7 +349,7 @@ export default function Home() {
             'Priority': 'high' // ブラウザに優先度を指示
           },
           body: JSON.stringify({ text: textToTranslate }),
-          signal: translateAbortControllerRef.current.signal,
+          signal: abortController.signal,
           // Keep-Aliveで接続を維持（高速化）
           keepalive: true
         });
