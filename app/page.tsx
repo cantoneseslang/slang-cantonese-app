@@ -2972,14 +2972,10 @@ export default function Home() {
               normalModeAudioBlobUrlRef.current = null;
             }
             
-            // 古いWeb Audio API接続をクリア
-            if (normalModeAudioSourceNodeRef.current) {
-              normalModeAudioSourceNodeRef.current.disconnect();
-              normalModeAudioSourceNodeRef.current = null;
-            }
-            if (normalModeAudioGainNodeRef.current) {
-              normalModeAudioGainNodeRef.current.disconnect();
-              normalModeAudioGainNodeRef.current = null;
+            // 古いBlob URLをクリア
+            if (normalModeAudioBlobUrlRef.current) {
+              URL.revokeObjectURL(normalModeAudioBlobUrlRef.current);
+              normalModeAudioBlobUrlRef.current = null;
             }
             
             // Base64をBlobに変換してBlob URLを作成（モバイルでボリューム調整可能にするため）
@@ -2997,20 +2993,31 @@ export default function Home() {
             normalModeAudioRef.current.playbackRate = 1.0; // ノーマルモードでは速度固定
             normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に
             
-            // Web Audio APIでボリューム制御
+            // Web Audio APIでボリューム制御（既に接続されている場合は再利用）
             if (audioContextRef.current) {
               try {
-                const source = audioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
-                const gainNode = audioContextRef.current.createGain();
-                gainNode.gain.value = normalModeAudioVolume;
-                
-                source.connect(gainNode);
-                gainNode.connect(audioContextRef.current.destination);
-                
-                normalModeAudioSourceNodeRef.current = source;
-                normalModeAudioGainNodeRef.current = gainNode;
+                // MediaElementAudioSourceNodeが既に存在する場合は再利用
+                if (!normalModeAudioSourceNodeRef.current) {
+                  const source = audioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
+                  normalModeAudioSourceNodeRef.current = source;
+                  
+                  // GainNodeを作成
+                  const gainNode = audioContextRef.current.createGain();
+                  gainNode.gain.value = normalModeAudioVolume;
+                  
+                  source.connect(gainNode);
+                  gainNode.connect(audioContextRef.current.destination);
+                  
+                  normalModeAudioGainNodeRef.current = gainNode;
+                } else {
+                  // 既存のGainNodeのボリュームを更新
+                  if (normalModeAudioGainNodeRef.current) {
+                    normalModeAudioGainNodeRef.current.gain.value = normalModeAudioVolume;
+                  }
+                }
               } catch (error) {
-                console.error('Web Audio API接続エラー（既に接続されている可能性）:', error);
+                console.error('Web Audio API接続エラー:', error);
+                // エラーが発生した場合は、Web Audio APIなしで再生を試みる
               }
             }
             
@@ -3321,20 +3328,31 @@ export default function Home() {
         normalModeAudioRef.current.src = blobUrl;
         normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に
         
-        // Web Audio APIでボリューム制御
+        // Web Audio APIでボリューム制御（既に接続されている場合は再利用）
         if (audioContextRef.current) {
           try {
-            const source = audioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
-            const gainNode = audioContextRef.current.createGain();
-            gainNode.gain.value = normalModeAudioVolume;
-            
-            source.connect(gainNode);
-            gainNode.connect(audioContextRef.current.destination);
-            
-            normalModeAudioSourceNodeRef.current = source;
-            normalModeAudioGainNodeRef.current = gainNode;
+            // MediaElementAudioSourceNodeが既に存在する場合は再利用
+            if (!normalModeAudioSourceNodeRef.current) {
+              const source = audioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
+              normalModeAudioSourceNodeRef.current = source;
+              
+              // GainNodeを作成
+              const gainNode = audioContextRef.current.createGain();
+              gainNode.gain.value = normalModeAudioVolume;
+              
+              source.connect(gainNode);
+              gainNode.connect(audioContextRef.current.destination);
+              
+              normalModeAudioGainNodeRef.current = gainNode;
+            } else {
+              // 既存のGainNodeのボリュームを更新
+              if (normalModeAudioGainNodeRef.current) {
+                normalModeAudioGainNodeRef.current.gain.value = normalModeAudioVolume;
+              }
+            }
           } catch (error) {
-            console.error('Web Audio API接続エラー（既に接続されている可能性）:', error);
+            console.error('Web Audio API接続エラー:', error);
+            // エラーが発生した場合は、Web Audio APIなしで再生を試みる
           }
         }
         
