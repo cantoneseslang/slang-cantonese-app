@@ -58,3 +58,16 @@ button[title="カメラ/OCRで読み取り"] svg {
     transform: translateX(-50%) rotateY(0deg);
   }
 }
+
+/* ボタン回転アニメーション */
+@keyframes buttonRotate {
+  0% {
+    transform: rotateY(0deg);
+  }
+  50% {
+    transform: rotateY(180deg);
+  }
+  100% {
+    transform: rotateY(360deg);
+  }
+}

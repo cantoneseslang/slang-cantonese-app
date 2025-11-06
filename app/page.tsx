@@ -186,6 +186,7 @@ export default function Home() {
   const [translationLanguage, setTranslationLanguage] = useState<'cantonese' | 'mandarin'>('cantonese');
   const titleClickCountRef = useRef(0);
   const titleClickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isButtonRotating, setIsButtonRotating] = useState(false);
   
   // 音声認識の状態
   const [recognizedText, setRecognizedText] = useState('');
@@ -578,6 +579,7 @@ export default function Home() {
     // 言語切り替え状態をリセット
     setTranslationLanguage('cantonese');
     titleClickCountRef.current = 0;
+    setIsButtonRotating(false);
     if (titleClickTimeoutRef.current) {
       clearTimeout(titleClickTimeoutRef.current);
       titleClickTimeoutRef.current = null;
@@ -672,6 +674,9 @@ export default function Home() {
     
     // 3秒以内に3回クリックされたら言語切り替え
     if (titleClickCountRef.current >= 3) {
+      // ボタン回転アニメーション開始
+      setIsButtonRotating(true);
+      
       // 言語を切り替え
       setTranslationLanguage(prev => {
         const newLanguage = prev === 'cantonese' ? 'mandarin' : 'cantonese';
@@ -693,6 +698,11 @@ export default function Home() {
         return newLanguage;
       });
       
+      // 回転アニメーション終了後にstateをリセット
+      setTimeout(() => {
+        setIsButtonRotating(false);
+      }, 600); // アニメーション時間（0.6秒）
+      
       // カウントをリセット
       titleClickCountRef.current = 0;
     } else {
@@ -709,7 +719,9 @@ export default function Home() {
       return;
     }
     
-    const handPhrase = '我唔識講廣東話，所以我需要用翻譯機同你溝通';
+    const handPhrase = translationLanguage === 'cantonese' 
+      ? '我唔識講廣東話，所以我需要用翻譯機同你溝通'
+      : '我不会讲中文，所以我需要使用翻译机跟你沟通。';
     
     // 広東語表示エリアに表示
     const newLine: TextLine = {
@@ -3442,7 +3454,7 @@ export default function Home() {
           >
             <img
               ref={volumeLogoRef}
-              src="/volume-logo.svg?v=1"
+              src={translationLanguage === 'cantonese' ? "/volume-logo.svg?v=1" : "/volume-logo-mandarin.svg?v=1"}
               alt="microphone"
               draggable="false"
               style={{
@@ -3451,7 +3463,9 @@ export default function Home() {
                 objectFit: 'contain',
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
-                WebkitTouchCallout: 'none'
+                WebkitTouchCallout: 'none',
+                animation: isButtonRotating ? 'buttonRotate 0.6s ease-in-out' : 'none',
+                transform: isButtonRotating ? 'rotateY(360deg)' : 'none'
               }}
               onContextMenu={(e) => {
                 e.preventDefault();
@@ -3503,7 +3517,7 @@ export default function Home() {
               }}
             >
               <img
-                src="/hand-button.svg?v=1"
+                src={translationLanguage === 'cantonese' ? "/hand-button.svg?v=1" : "/hand-button-mandarin.svg?v=1"}
                 alt="hand button"
                 draggable="false"
                 style={{
@@ -3513,7 +3527,9 @@ export default function Home() {
                   userSelect: 'none',
                   WebkitUserSelect: 'none',
                   WebkitTouchCallout: 'none',
-                  transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                  transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  animation: isButtonRotating ? 'buttonRotate 0.6s ease-in-out' : 'none',
+                  transform: isButtonRotating ? 'rotateY(360deg)' : 'none'
                 }}
                 onContextMenu={(e) => {
                   e.preventDefault();
@@ -3568,7 +3584,7 @@ export default function Home() {
               }}
             >
               <img
-                src="/mute-button.svg?v=1"
+                src={translationLanguage === 'cantonese' ? "/mute-button.svg?v=1" : "/mute-button-mandarin.svg?v=1"}
                 alt="mute button"
                 draggable="false"
                 style={{
@@ -3578,7 +3594,9 @@ export default function Home() {
                   userSelect: 'none',
                   WebkitUserSelect: 'none',
                   WebkitTouchCallout: 'none',
-                  transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                  transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  animation: isButtonRotating ? 'buttonRotate 0.6s ease-in-out' : 'none',
+                  transform: isButtonRotating ? 'rotateY(360deg)' : 'none'
                 }}
                 onContextMenu={(e) => {
                   e.preventDefault();
