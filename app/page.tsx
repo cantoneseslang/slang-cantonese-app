@@ -3562,8 +3562,9 @@ export default function Home() {
                 audioGainNodeRef.current = gainNode;
               } else {
                 // 既存のGainNodeのボリュームを更新
-                if (audioGainNodeRef.current) {
-                  audioGainNodeRef.current.gain.value = 1.0;
+                const existingGainNode = audioGainNodeRef.current;
+                if (existingGainNode !== null) {
+                  (existingGainNode as GainNode).gain.value = 1.0;
                 }
               }
             } catch (error) {
@@ -3652,8 +3653,9 @@ export default function Home() {
                 exampleAudioGainNodeRef.current = gainNode;
               } else {
                 // 既存のGainNodeのボリュームを更新
-                if (exampleAudioGainNodeRef.current) {
-                  exampleAudioGainNodeRef.current.gain.value = 1.0;
+                const existingGainNode = exampleAudioGainNodeRef.current;
+                if (existingGainNode !== null) {
+                  (existingGainNode as GainNode).gain.value = 1.0;
                 }
               }
             } catch (error) {
