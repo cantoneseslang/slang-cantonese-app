@@ -67,7 +67,6 @@ interface Category {
 interface TextLine {
   text: string;
   timestamp: string; // タイムスタンプ（例: "12:40 39s"）
-  latency?: number; // レイテンシー（ミリ秒、広東語のみ）
 }
 
 export default function Home() {
@@ -391,7 +390,6 @@ export default function Home() {
       // interimテキストの翻訳を処理
       const translateInterim = async () => {
         try {
-          const translateStartTime = Date.now();
           const response = await fetch('/api/translate', {
             method: 'POST',
             headers: { 
@@ -407,7 +405,6 @@ export default function Home() {
             const translated = data.translated || data.translatedText || '';
             if (translated && !translatedTextSetRef.current.has(interimTextToTranslate)) {
               translatedTextSetRef.current.add(interimTextToTranslate);
-              const latency = Date.now() - translateStartTime;
               
               setTranslatedText(translated);
               setTranslatedTextLines(prev => {
@@ -416,8 +413,7 @@ export default function Home() {
                 }
                 const newLine: TextLine = {
                   text: translated,
-                  timestamp: getTimestamp(),
-                  latency: latency
+                  timestamp: getTimestamp()
                 };
                 return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
               });
@@ -457,9 +453,6 @@ export default function Home() {
         }
 
         try {
-          // レイテンシー計測開始
-          const translateStartTime = Date.now();
-
           // 高速翻訳リクエスト（AbortControllerでキャンセル可能）
           const abortController = translateAbortControllerRef.current;
           if (!abortController) {
@@ -481,14 +474,11 @@ export default function Home() {
             const data = await response.json();
             const translated = data.translated || data.translatedText || '';
             if (translated) {
-              // レイテンシー計算
-              const latency = Date.now() - translateStartTime;
-              
               // 翻訳済みとしてマーク
               translatedTextSetRef.current.add(textToTranslate);
               
               setTranslatedText(translated);
-              // 新しい翻訳を配列の先頭に追加（上に表示、タイムスタンプとレイテンシー付き）
+              // 新しい翻訳を配列の先頭に追加（上に表示、タイムスタンプ付き）
               setTranslatedTextLines(prev => {
                 // 既に同じテキストが先頭にある場合はスキップ
                 if (prev.length > 0 && prev[0].text === translated) {
@@ -496,8 +486,7 @@ export default function Home() {
                 }
                 const newLine: TextLine = {
                   text: translated,
-                  timestamp: getTimestamp(),
-                  latency: latency
+                  timestamp: getTimestamp()
                 };
                 return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
               });
@@ -3216,9 +3205,6 @@ export default function Home() {
                           fontWeight: '500'
                         }}>
                           <span>{latestLine.timestamp}</span>
-                          {latestLine.latency !== undefined && (
-                            <span>レイテンシー: {latestLine.latency}ms</span>
-                          )}
                         </div>
                       </div>
                     );
