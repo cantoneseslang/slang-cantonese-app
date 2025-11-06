@@ -208,6 +208,7 @@ export default function Home() {
   
   // 同時通訳モード用の音声再生とミュート状態
   const simultaneousModeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const simultaneousModeAudioBlobUrlRef = useRef<string | null>(null); // Blob URLを保持（メモリリーク防止）
   const [isMuted, setIsMuted] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
   const [buttonsAnimated, setButtonsAnimated] = useState(false);
@@ -517,16 +518,35 @@ export default function Home() {
                       if (simultaneousModeAudioRef.current && audioBase64) {
                         simultaneousModeAudioRef.current.pause();
                         simultaneousModeAudioRef.current.currentTime = 0;
-                        // モバイル軽量化: 古い音声データをクリアしてから新しいデータを設定
-                        simultaneousModeAudioRef.current.src = '';
-                        simultaneousModeAudioRef.current.src = `data:audio/mp3;base64,${audioBase64}`;
+                        
+                        // モバイル軽量化: 古いBlob URLをクリア（メモリリーク防止）
+                        if (simultaneousModeAudioBlobUrlRef.current) {
+                          URL.revokeObjectURL(simultaneousModeAudioBlobUrlRef.current);
+                          simultaneousModeAudioBlobUrlRef.current = null;
+                        }
+                        
+                        // Base64をBlobに変換してBlob URLを作成（モバイルでボリューム調整可能にするため）
+                        const binaryString = atob(audioBase64);
+                        const bytes = new Uint8Array(binaryString.length);
+                        for (let i = 0; i < binaryString.length; i++) {
+                          bytes[i] = binaryString.charCodeAt(i);
+                        }
+                        const blob = new Blob([bytes], { type: 'audio/mp3' });
+                        const blobUrl = URL.createObjectURL(blob);
+                        simultaneousModeAudioBlobUrlRef.current = blobUrl;
+                        
+                        simultaneousModeAudioRef.current.src = blobUrl;
+                        simultaneousModeAudioRef.current.volume = 1.0; // ボリュームを明示的に設定
                         simultaneousModeAudioRef.current.play().catch((e) => {
                           console.error('音声再生エラー:', e);
                         });
-                        // モバイル軽量化: 再生後に古い音声データをクリア（メモリリーク防止）
+                        
+                        // モバイル軽量化: 再生後にBlob URLをクリア（メモリリーク防止）
                         simultaneousModeAudioRef.current.addEventListener('ended', () => {
-                          if (simultaneousModeAudioRef.current) {
+                          if (simultaneousModeAudioRef.current && simultaneousModeAudioBlobUrlRef.current) {
                             simultaneousModeAudioRef.current.src = '';
+                            URL.revokeObjectURL(simultaneousModeAudioBlobUrlRef.current);
+                            simultaneousModeAudioBlobUrlRef.current = null;
                           }
                         }, { once: true });
                       }
@@ -585,6 +605,11 @@ export default function Home() {
       simultaneousModeAudioRef.current.currentTime = 0;
       simultaneousModeAudioRef.current.src = '';
     }
+    // Blob URLもクリア
+    if (simultaneousModeAudioBlobUrlRef.current) {
+      URL.revokeObjectURL(simultaneousModeAudioBlobUrlRef.current);
+      simultaneousModeAudioBlobUrlRef.current = null;
+    }
     
     // ボタン状態をリセット
     setShowButtons(false);
@@ -633,6 +658,11 @@ export default function Home() {
     if (simultaneousModeAudioRef.current) {
       simultaneousModeAudioRef.current.pause();
       simultaneousModeAudioRef.current.currentTime = 0;
+    }
+    // Blob URLもクリア
+    if (simultaneousModeAudioBlobUrlRef.current) {
+      URL.revokeObjectURL(simultaneousModeAudioBlobUrlRef.current);
+      simultaneousModeAudioBlobUrlRef.current = null;
     }
   };
 
@@ -822,16 +852,35 @@ export default function Home() {
             if (simultaneousModeAudioRef.current && audioBase64) {
               simultaneousModeAudioRef.current.pause();
               simultaneousModeAudioRef.current.currentTime = 0;
-              // モバイル軽量化: 古い音声データをクリアしてから新しいデータを設定
-              simultaneousModeAudioRef.current.src = '';
-              simultaneousModeAudioRef.current.src = `data:audio/mp3;base64,${audioBase64}`;
+              
+              // モバイル軽量化: 古いBlob URLをクリア（メモリリーク防止）
+              if (simultaneousModeAudioBlobUrlRef.current) {
+                URL.revokeObjectURL(simultaneousModeAudioBlobUrlRef.current);
+                simultaneousModeAudioBlobUrlRef.current = null;
+              }
+              
+              // Base64をBlobに変換してBlob URLを作成（モバイルでボリューム調整可能にするため）
+              const binaryString = atob(audioBase64);
+              const bytes = new Uint8Array(binaryString.length);
+              for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+              }
+              const blob = new Blob([bytes], { type: 'audio/mp3' });
+              const blobUrl = URL.createObjectURL(blob);
+              simultaneousModeAudioBlobUrlRef.current = blobUrl;
+              
+              simultaneousModeAudioRef.current.src = blobUrl;
+              simultaneousModeAudioRef.current.volume = 1.0; // ボリュームを明示的に設定
               simultaneousModeAudioRef.current.play().catch((e) => {
                 console.error('音声再生エラー:', e);
               });
-              // モバイル軽量化: 再生後に古い音声データをクリア（メモリリーク防止）
+              
+              // モバイル軽量化: 再生後にBlob URLをクリア（メモリリーク防止）
               simultaneousModeAudioRef.current.addEventListener('ended', () => {
-                if (simultaneousModeAudioRef.current) {
+                if (simultaneousModeAudioRef.current && simultaneousModeAudioBlobUrlRef.current) {
                   simultaneousModeAudioRef.current.src = '';
+                  URL.revokeObjectURL(simultaneousModeAudioBlobUrlRef.current);
+                  simultaneousModeAudioBlobUrlRef.current = null;
                 }
               }, { once: true });
             }
