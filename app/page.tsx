@@ -3376,7 +3376,7 @@ export default function Home() {
           >
             <img
               ref={volumeLogoRef}
-              src="/volume-logo.png?v=1"
+              src="/volume-logo.svg?v=1"
               alt="microphone"
               draggable="false"
               style={{
@@ -3406,7 +3406,7 @@ export default function Home() {
               style={{
                 position: 'fixed',
                 bottom: isMobile ? 'calc(3rem + 120px)' : 'calc(5rem + 140px)',
-                left: isMobile ? 'calc(50% - 96px - 0.5rem - 48px)' : 'calc(50% - 120px - 0.75rem - 60px)',
+                left: isMobile ? 'calc(50% - 96px - 0.25rem - 48px)' : 'calc(50% - 120px - 0.75rem - 60px)',
                 transform: 'translateX(-50%)',
                 width: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
                 height: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
@@ -3469,13 +3469,15 @@ export default function Home() {
               style={{
                 position: 'fixed',
                 bottom: isMobile ? 'calc(3rem + 120px)' : 'calc(5rem + 140px)',
-                left: isMobile ? 'calc(50% + 96px + 0.5rem + 48px)' : 'calc(50% + 120px + 0.75rem + 60px)',
+                left: isMobile ? 'calc(50% + 96px + 0.25rem + 48px)' : 'calc(50% + 120px + 0.75rem + 60px)',
                 transform: 'translateX(-50%)',
                 width: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
                 height: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
                 borderRadius: '50%',
                 backgroundColor: isMuted ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)',
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                boxShadow: isMuted 
+                  ? '0 0 20px rgba(239, 68, 68, 0.5)' 
+                  : '0 4px 6px rgba(0, 0, 0, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -3761,7 +3763,7 @@ export default function Home() {
             }}>
               <img 
                 ref={volumeLogoRef}
-                src="/volume-logo.png?v=1" 
+                src="/volume-logo.svg?v=1" 
                 alt="logo" 
                 draggable="false"
                 style={{ 
