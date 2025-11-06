@@ -1,15 +1,18 @@
-# 法的文書ファイル - マージ時に警告を出すように設定
+# 法的文書ファイル - マージ時に自動的に上書きされないように保護
 app/legal/terms/page.tsx merge=ours
 app/legal/privacy/page.tsx merge=ours
 app/legal/tokusho/page.tsx merge=ours
 
 # 重要なページファイル - 意図しない変更を防ぐため保護
+# メインページ（app/page.tsx）は保護対象外（変更可能）
 app/about/page.tsx merge=ours
 app/cantonese/page.tsx merge=ours
 app/updates/page.tsx merge=ours
 app/faq/page.tsx merge=ours
 app/contact/page.tsx merge=ours
 app/support/page.tsx merge=ours
-app/page.tsx merge=ours
 app/admin/page.tsx merge=ours
+
+# 注意: app/page.tsx（メインページ）は保護対象外です
+# 他の保護されたページは、メインページが変更されても影響を受けません
 
