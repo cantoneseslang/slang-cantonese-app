@@ -184,6 +184,8 @@ export default function Home() {
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<any>(null);
   const translateDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const translateAbortControllerRef = useRef<AbortController | null>(null);
+  const lastTranslatedTextRef = useRef<string>('');
 
   // 音声の初期化（Web Audio APIで100%音量）
   useEffect(() => {
