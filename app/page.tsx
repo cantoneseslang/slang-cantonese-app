@@ -3297,6 +3297,16 @@ export default function Home() {
           normalModeAudioBlobUrlRef.current = null;
         }
         
+        // 古いWeb Audio API接続をクリア
+        if (normalModeAudioSourceNodeRef.current) {
+          normalModeAudioSourceNodeRef.current.disconnect();
+          normalModeAudioSourceNodeRef.current = null;
+        }
+        if (normalModeAudioGainNodeRef.current) {
+          normalModeAudioGainNodeRef.current.disconnect();
+          normalModeAudioGainNodeRef.current = null;
+        }
+        
         // Base64をBlobに変換してBlob URLを作成（モバイルでボリューム調整可能にするため）
         const binaryString = atob(audioBase64);
         const bytes = new Uint8Array(binaryString.length);
@@ -3309,7 +3319,24 @@ export default function Home() {
         
         // 新しい音声を設定
         normalModeAudioRef.current.src = blobUrl;
-        normalModeAudioRef.current.volume = 1.0; // ボリュームを明示的に設定
+        normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に
+        
+        // Web Audio APIでボリューム制御
+        if (audioContextRef.current) {
+          try {
+            const source = audioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
+            const gainNode = audioContextRef.current.createGain();
+            gainNode.gain.value = normalModeAudioVolume;
+            
+            source.connect(gainNode);
+            gainNode.connect(audioContextRef.current.destination);
+            
+            normalModeAudioSourceNodeRef.current = source;
+            normalModeAudioGainNodeRef.current = gainNode;
+          } catch (error) {
+            console.error('Web Audio API接続エラー（既に接続されている可能性）:', error);
+          }
+        }
         
         // 音声をロードして再生
         await new Promise<void>((resolve, reject) => {
