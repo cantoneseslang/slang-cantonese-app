@@ -3509,25 +3509,17 @@ export default function Home() {
     }
   }, [examplePlaybackSpeed]);
 
-  // 学習モードの音声をBlob URLに変換し、Web Audio APIでボリューム制御
+  // 学習モードの音声をBlob URLに変換
   useEffect(() => {
-    if (result?.audioBase64 && audioContextRef.current) {
+    if (result?.audioBase64) {
       const audioBase64 = result.audioBase64;
       
       // audioRefがマウントされるまで待つ（最大1秒）
       let attempts = 0;
       const maxAttempts = 10;
       const checkAndSetAudio = () => {
-        if (audioRef.current && audioBase64 && audioContextRef.current) {
-          // 古い接続をクリア
-          if (audioSourceNodeRef.current) {
-            audioSourceNodeRef.current.disconnect();
-            audioSourceNodeRef.current = null;
-          }
-          if (audioGainNodeRef.current) {
-            audioGainNodeRef.current.disconnect();
-            audioGainNodeRef.current = null;
-          }
+        if (audioRef.current && audioBase64) {
+          // 古いBlob URLをクリア
           if (audioBlobUrlRef.current) {
             URL.revokeObjectURL(audioBlobUrlRef.current);
             audioBlobUrlRef.current = null;
@@ -3545,38 +3537,18 @@ export default function Home() {
             audioBlobUrlRef.current = blobUrl;
             
             audioRef.current.src = blobUrl;
-            audioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に
+            audioRef.current.volume = 1.0;
             audioRef.current.load();
             
-            // Web Audio APIでボリューム制御（既に接続されている場合は再利用）
-            try {
-              if (!audioSourceNodeRef.current) {
-                const source = audioContextRef.current.createMediaElementSource(audioRef.current);
-                const gainNode = audioContextRef.current.createGain();
-                gainNode.gain.value = 1.0; // 音量は常に最大（音量スライダーは削除済み）
-                
-                source.connect(gainNode);
-                gainNode.connect(audioContextRef.current.destination);
-                
-                audioSourceNodeRef.current = source;
-                audioGainNodeRef.current = gainNode;
-              } else {
-                // 既存のGainNodeのボリュームを更新
-                const existingGainNode = audioGainNodeRef.current;
-                if (existingGainNode !== null) {
-                  (existingGainNode as GainNode).gain.value = 1.0;
-                }
-              }
-            } catch (error) {
-              console.error('Web Audio API接続エラー:', error);
-              // エラーが発生した場合は、Web Audio APIなしで再生を試みる
-            }
+            console.log('✅ 学習モード: 単語音声Blob URL設定完了', { blobUrl });
           } catch (error) {
-            console.error('Blob URL作成エラー:', error);
+            console.error('❌ Blob URL作成エラー:', error);
           }
         } else if (attempts < maxAttempts) {
           attempts++;
           setTimeout(checkAndSetAudio, 100);
+        } else {
+          console.error('❌ audioRefがマウントされませんでした');
         }
       };
       
@@ -3584,14 +3556,6 @@ export default function Home() {
       
       return () => {
         // クリーンアップ
-        if (audioSourceNodeRef.current) {
-          audioSourceNodeRef.current.disconnect();
-          audioSourceNodeRef.current = null;
-        }
-        if (audioGainNodeRef.current) {
-          audioGainNodeRef.current.disconnect();
-          audioGainNodeRef.current = null;
-        }
         if (audioBlobUrlRef.current) {
           URL.revokeObjectURL(audioBlobUrlRef.current);
           audioBlobUrlRef.current = null;
@@ -3600,25 +3564,17 @@ export default function Home() {
     }
   }, [result?.audioBase64]);
 
-  // 学習モードの例文音声をBlob URLに変換し、Web Audio APIでボリューム制御
+  // 学習モードの例文音声をBlob URLに変換
   useEffect(() => {
-    if (result?.exampleAudioBase64 && audioContextRef.current) {
+    if (result?.exampleAudioBase64) {
       const exampleAudioBase64 = result.exampleAudioBase64;
       
       // exampleAudioRefがマウントされるまで待つ（最大1秒）
       let attempts = 0;
       const maxAttempts = 10;
       const checkAndSetAudio = () => {
-        if (exampleAudioRef.current && exampleAudioBase64 && audioContextRef.current) {
-          // 古い接続をクリア
-          if (exampleAudioSourceNodeRef.current) {
-            exampleAudioSourceNodeRef.current.disconnect();
-            exampleAudioSourceNodeRef.current = null;
-          }
-          if (exampleAudioGainNodeRef.current) {
-            exampleAudioGainNodeRef.current.disconnect();
-            exampleAudioGainNodeRef.current = null;
-          }
+        if (exampleAudioRef.current && exampleAudioBase64) {
+          // 古いBlob URLをクリア
           if (exampleAudioBlobUrlRef.current) {
             URL.revokeObjectURL(exampleAudioBlobUrlRef.current);
             exampleAudioBlobUrlRef.current = null;
@@ -3636,38 +3592,18 @@ export default function Home() {
             exampleAudioBlobUrlRef.current = blobUrl;
             
             exampleAudioRef.current.src = blobUrl;
-            exampleAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に
+            exampleAudioRef.current.volume = 1.0;
             exampleAudioRef.current.load();
             
-            // Web Audio APIでボリューム制御（既に接続されている場合は再利用）
-            try {
-              if (!exampleAudioSourceNodeRef.current) {
-                const source = audioContextRef.current.createMediaElementSource(exampleAudioRef.current);
-                const gainNode = audioContextRef.current.createGain();
-                gainNode.gain.value = 1.0; // 音量は常に最大（音量スライダーは削除済み）
-                
-                source.connect(gainNode);
-                gainNode.connect(audioContextRef.current.destination);
-                
-                exampleAudioSourceNodeRef.current = source;
-                exampleAudioGainNodeRef.current = gainNode;
-              } else {
-                // 既存のGainNodeのボリュームを更新
-                const existingGainNode = exampleAudioGainNodeRef.current;
-                if (existingGainNode !== null) {
-                  (existingGainNode as GainNode).gain.value = 1.0;
-                }
-              }
-            } catch (error) {
-              console.error('Web Audio API接続エラー:', error);
-              // エラーが発生した場合は、Web Audio APIなしで再生を試みる
-            }
+            console.log('✅ 学習モード: 例文音声Blob URL設定完了', { blobUrl });
           } catch (error) {
-            console.error('Blob URL作成エラー:', error);
+            console.error('❌ Blob URL作成エラー:', error);
           }
         } else if (attempts < maxAttempts) {
           attempts++;
           setTimeout(checkAndSetAudio, 100);
+        } else {
+          console.error('❌ exampleAudioRefがマウントされませんでした');
         }
       };
       
@@ -3675,14 +3611,6 @@ export default function Home() {
       
       return () => {
         // クリーンアップ
-        if (exampleAudioSourceNodeRef.current) {
-          exampleAudioSourceNodeRef.current.disconnect();
-          exampleAudioSourceNodeRef.current = null;
-        }
-        if (exampleAudioGainNodeRef.current) {
-          exampleAudioGainNodeRef.current.disconnect();
-          exampleAudioGainNodeRef.current = null;
-        }
         if (exampleAudioBlobUrlRef.current) {
           URL.revokeObjectURL(exampleAudioBlobUrlRef.current);
           exampleAudioBlobUrlRef.current = null;
