@@ -3196,7 +3196,7 @@ export default function Home() {
                 </div>
               ) : (
                 <div style={{ color: '#111827' }}>
-                  広東語翻訳がここに表示されます...
+                  {translationLanguage === 'cantonese' ? '広東語翻訳がここに表示されます...' : '中国語翻訳がここに表示されます...'}
                 </div>
               )}
             </div>
