@@ -2501,12 +2501,12 @@ export default function Home() {
       {/* 隠しモードUI */}
       {isHiddenMode && (
         <>
-          {/* 広東語翻訳エリア（上部、水平方向反転、浮き上がるアニメーション） */}
+          {/* 広東語翻訳エリア（上部、左に180度回転、浮き上がるアニメーション） */}
           <div style={{
             position: 'fixed',
             top: isMobile ? '2rem' : '4rem',
             left: '50%',
-            transform: 'translateX(-50%) scaleX(-1)',
+            transform: 'translateX(-50%) rotate(180deg)',
             width: '90%',
             maxWidth: '800px',
             padding: '1.5rem',
@@ -2523,7 +2523,7 @@ export default function Home() {
             zIndex: 1000,
             color: '#ffffff'
           }}>
-            <div style={{ transform: 'scaleX(-1)', color: '#ffffff' }}>
+            <div style={{ color: '#ffffff' }}>
               {translatedText || '広東語翻訳がここに表示されます...'}
             </div>
           </div>
@@ -2584,7 +2584,7 @@ export default function Home() {
           {showTitle && (
             <div style={{
               position: 'fixed',
-              bottom: isMobile ? 'calc(3rem + 100px)' : 'calc(5rem + 120px)',
+              bottom: isMobile ? '3rem' : '5rem',
               left: '50%',
               transform: 'translateX(-50%)',
               textAlign: 'center',
@@ -2626,9 +2626,9 @@ export default function Home() {
             alt="microphone"
             style={{
               position: 'fixed',
-              bottom: isMobile ? '3rem' : '5rem',
+              bottom: isMobile ? 'calc(3rem + 120px)' : 'calc(5rem + 140px)',
               left: '50%',
-              transform: 'translateX(-50%) scale(1.8)',
+              transform: 'translateX(-50%) scale(1.2)',
               width: isMobile ? 48 : 56,
               height: isMobile ? 48 : 56,
               cursor: 'pointer',
