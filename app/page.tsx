@@ -380,55 +380,93 @@ export default function Home() {
     }
   }, [isHiddenMode]);
 
-  // マイクボタンのハンドラー
+  // マイクボタンのハンドラー（長押し方式）
   const handleMicPress = () => {
     if (!isHiddenMode) {
       console.log('隠しモードではないため、マイク機能は無効です');
       return;
     }
     
-    if (!recognitionRef.current) {
-      console.error('音声認識が初期化されていません');
+    // 既に録音中の場合は何もしない
+    if (isRecording) {
+      console.log('既に録音中です');
       return;
     }
     
-    if (!isRecording) {
-      console.log('音声認識を開始します');
-      setIsRecording(true);
-      try {
-        // 既に開始されている場合は停止してから再開
-        if (recognitionRef.current) {
-          try {
-            recognitionRef.current.stop();
-          } catch (e) {
-            // 停止エラーは無視
-            console.log('音声認識停止（既に停止済み）:', e);
-          }
-        }
-        // 少し待ってから開始
-        setTimeout(() => {
-          if (recognitionRef.current && isRecording) {
-            try {
-              recognitionRef.current.start();
-              console.log('音声認識開始成功');
-            } catch (e) {
-              // 既に開始されている場合は無視
-              if (e instanceof Error && !e.message.includes('already')) {
-                console.error('音声認識開始エラー:', e);
-                setIsRecording(false);
+    // 音声認識が初期化されていない場合は再初期化
+    if (!recognitionRef.current) {
+      console.log('音声認識を再初期化します');
+      if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
+        const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+        if (SpeechRecognition) {
+          recognitionRef.current = new SpeechRecognition();
+          recognitionRef.current.lang = 'ja-JP';
+          recognitionRef.current.continuous = true;
+          recognitionRef.current.interimResults = true;
+
+          recognitionRef.current.onresult = (event: any) => {
+            let interim = '';
+            let final = '';
+            
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              const transcript = event.results[i][0].transcript;
+              if (event.results[i].isFinal) {
+                final += transcript;
               } else {
-                console.log('音声認識は既に開始されています');
+                interim += transcript;
               }
             }
+            
+            setInterimText(interim);
+            if (final) {
+              setFinalText(prev => prev + final + ' ');
+              setRecognizedText(prev => prev + final + ' ');
+              setInterimText('');
+            } else {
+              setRecognizedText(prev => prev + interim);
+            }
+          };
+
+          recognitionRef.current.onerror = (event: any) => {
+            if (event.error !== 'aborted') {
+              console.error('音声認識エラー:', event.error);
+              setIsRecording(false);
+            }
+          };
+
+          recognitionRef.current.onend = () => {
+            // 長押し方式なので、onendで自動再開しない
+            // ユーザーがボタンを離したら停止する
+            console.log('音声認識終了（ボタン離された）');
+          };
+        }
+      }
+    }
+    
+    console.log('音声認識を開始します（長押し）');
+    setIsRecording(true);
+    
+    // 少し待ってから開始（状態更新を確実にするため）
+    setTimeout(() => {
+      if (recognitionRef.current && isRecording) {
+        try {
+          recognitionRef.current.start();
+          console.log('音声認識開始成功');
+        } catch (e: any) {
+          console.error('音声認識開始エラー:', e);
+          // エラーメッセージを確認
+          if (e.message && e.message.includes('already')) {
+            console.log('音声認識は既に開始されています');
+          } else {
+            console.error('音声認識開始に失敗:', e.message || e);
+            setIsRecording(false);
           }
-        }, 100);
-      } catch (e) {
-        console.error('音声認識開始エラー:', e);
+        }
+      } else {
+        console.error('音声認識が初期化できませんでした');
         setIsRecording(false);
       }
-    } else {
-      console.log('既に録音中です');
-    }
+    }, 200);
   };
 
   const handleMicRelease = () => {
@@ -437,15 +475,22 @@ export default function Home() {
       return;
     }
     
-    console.log('音声認識を停止します');
+    // 録音中でない場合は何もしない
+    if (!isRecording) {
+      console.log('録音中ではないため、停止処理をスキップします');
+      return;
+    }
+    
+    console.log('音声認識を停止します（ボタン離された）');
     setIsRecording(false);
+    
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
         console.log('音声認識停止成功');
-      } catch (e) {
+      } catch (e: any) {
         // 停止エラーは無視（既に停止されている場合）
-        if (e instanceof Error && !e.message.includes('not started')) {
+        if (e.message && !e.message.includes('not started')) {
           console.error('音声認識停止エラー:', e);
         } else {
           console.log('音声認識は既に停止されています');
@@ -2491,7 +2536,7 @@ export default function Home() {
       style={{ 
         margin: 0, 
         padding: isHiddenMode ? 0 : (isMobile ? '1rem' : '3rem'), 
-        backgroundColor: isHiddenMode ? '#0f172a' : '#f3f4f6', 
+        backgroundColor: isHiddenMode ? '#ffffff' : '#f3f4f6', 
         minHeight: '100vh',
         position: 'relative',
         transition: 'background-color 0.5s ease-out',
@@ -2510,8 +2555,8 @@ export default function Home() {
             width: '90%',
             maxWidth: '800px',
             padding: '1.5rem',
-            backgroundColor: 'rgba(30, 41, 59, 0.8)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            border: '1px solid rgba(0, 0, 0, 0.1)',
             borderRadius: '12px',
             minHeight: '100px',
             textAlign: 'center',
@@ -2521,9 +2566,10 @@ export default function Home() {
             animation: 'fadeInUp 0.6s ease-out',
             opacity: 1,
             zIndex: 1000,
-            color: '#ffffff'
+            color: '#111827',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
           }}>
-            <div style={{ color: '#ffffff' }}>
+            <div style={{ color: '#111827' }}>
               {translatedText || '広東語翻訳がここに表示されます...'}
             </div>
           </div>
@@ -2537,8 +2583,8 @@ export default function Home() {
             width: '90%',
             maxWidth: '800px',
             padding: '2rem',
-            backgroundColor: 'rgba(30, 41, 59, 0.8)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            border: '1px solid rgba(0, 0, 0, 0.1)',
             borderRadius: '12px',
             minHeight: '150px',
             textAlign: 'center',
@@ -2548,11 +2594,12 @@ export default function Home() {
             animation: 'fadeInUp 0.8s ease-out',
             opacity: 1,
             zIndex: 1000,
-            color: '#ffffff'
+            color: '#111827',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
           }}>
             {recognizedText || 'マイクボタンを押して日本語を話してください...'}
             {interimText && (
-              <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>
+              <span style={{ color: '#6b7280', fontStyle: 'italic' }}>
                 {interimText}
               </span>
             )}
@@ -2566,15 +2613,16 @@ export default function Home() {
               top: '1rem',
               right: '1rem',
               padding: '0.5rem 1rem',
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
               borderRadius: '8px',
-              color: '#ffffff',
+              color: '#111827',
               cursor: 'pointer',
               fontSize: '0.875rem',
               animation: 'fadeInUp 0.4s ease-out',
               opacity: 1,
-              zIndex: 1001
+              zIndex: 1001,
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
             }}
           >
             ESCで終了
@@ -2594,17 +2642,17 @@ export default function Home() {
               <div style={{
                 fontSize: isMobile ? '1.5rem' : '2rem',
                 fontWeight: 800,
-                color: '#ffffff',
+                color: '#111827',
                 marginBottom: '0.5rem',
-                textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+                textShadow: 'none'
               }}>
                 カントン語通訳
               </div>
               <div style={{
                 fontSize: isMobile ? '0.875rem' : '1rem',
                 fontWeight: 700,
-                color: '#d1d5db',
-                textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'
+                color: '#6b7280',
+                textShadow: 'none'
               }}>
                 ボタンを押すだけでスパッと通訳！
               </div>
@@ -2624,13 +2672,14 @@ export default function Home() {
             ref={volumeLogoRef}
             src="/volume-logo.png?v=1"
             alt="microphone"
+            draggable="false"
             style={{
               position: 'fixed',
               bottom: isMobile ? 'calc(3rem + 120px)' : 'calc(5rem + 140px)',
               left: '50%',
-              transform: 'translateX(-50%) scale(1.2)',
-              width: isMobile ? 48 : 56,
-              height: isMobile ? 48 : 56,
+              transform: 'translateX(-50%) scale(1.5)',
+              width: isMobile ? 56 : 64,
+              height: isMobile ? 56 : 64,
               cursor: 'pointer',
               transition: 'all 0.5s ease-out',
               zIndex: 1002,
@@ -2642,22 +2691,57 @@ export default function Home() {
                 ? '0 0 20px rgba(239, 68, 68, 0.5)' 
                 : '0 4px 6px rgba(0, 0, 0, 0.1)',
               objectFit: 'contain',
-              animation: 'fadeInUp 1s ease-out'
+              animation: 'fadeInUp 1s ease-out',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+              WebkitTouchCallout: 'none'
             }}
-            onClick={() => {
-              if (!isRecording) {
-                handleMicPress();
-              } else {
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('ロゴ長押し開始 - 音声認識開始');
+              handleMicPress();
+            }}
+            onMouseUp={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('ロゴ離す - 音声認識停止');
+              handleMicRelease();
+            }}
+            onMouseLeave={(e) => {
+              // マウスがボタンの外に出た場合も停止
+              if (isRecording) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('ロゴからマウス離脱 - 音声認識停止');
                 handleMicRelease();
               }
             }}
-            onMouseUp={handleMicRelease}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              return false;
+            }}
+            onDragStart={(e) => {
+              e.preventDefault();
+              return false;
+            }}
             onTouchStart={(e) => {
               e.preventDefault();
+              e.stopPropagation();
+              console.log('ロゴ長押し開始（タッチ） - 音声認識開始');
               handleMicPress();
             }}
             onTouchEnd={(e) => {
               e.preventDefault();
+              e.stopPropagation();
+              console.log('ロゴ離す（タッチ） - 音声認識停止');
+              handleMicRelease();
+            }}
+            onTouchCancel={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('ロゴタッチキャンセル - 音声認識停止');
               handleMicRelease();
             }}
           />
@@ -2900,12 +2984,25 @@ export default function Home() {
                 ref={volumeLogoRef}
                 src="/volume-logo.png?v=1" 
                 alt="logo" 
+                draggable="false"
                 style={{ 
                   width: isMobile ? 48 : 56, 
                   height: isMobile ? 48 : 56,
                   cursor: 'pointer',
                   transition: 'transform 0.5s ease-out',
-                  transform: isHiddenMode ? 'scale(1.5)' : 'scale(1)'
+                  transform: isHiddenMode ? 'scale(1.5)' : 'scale(1)',
+                  userSelect: 'none',
+                  WebkitUserSelect: 'none',
+                  WebkitTouchCallout: 'none'
+                }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  return false;
+                }}
+                onDragStart={(e) => {
+                  e.preventDefault();
+                  return false;
                 }}
                 onClick={() => {
                   // 音が再生中は無視
