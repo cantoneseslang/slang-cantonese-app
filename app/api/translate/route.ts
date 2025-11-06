@@ -119,10 +119,10 @@ export async function POST(request: NextRequest) {
     // 北京語モードの場合、レスポンスをクリーンアップ
     if (language === 'mandarin') {
       // 改行で分割して、最初の有効な行を取得（説明文をスキップ）
-      const lines = translated.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+      const lines = translated.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
       
       // 繁体字が含まれている行を検出して削除
-      const simplifiedLines = lines.filter(line => {
+      const simplifiedLines = lines.filter((line: string) => {
         // 繁体字のパターンをチェック（簡体字と繁体字の違いを検出）
         // 一般的な繁体字文字をチェック
         const hasTraditionalChars = /[繁體廣東語話]/g.test(line);
