@@ -34,11 +34,47 @@ export async function POST(request: NextRequest) {
     
     // 言語に応じて翻訳先を決定（デフォルトは広東語）
     const systemPrompt = language === 'mandarin' 
-      ? "You are a professional translator specializing in Japanese to Mandarin Chinese translation. Your task is to translate Japanese text DIRECTLY to Mandarin Chinese (Simplified Chinese) in ONE SINGLE STEP. CRITICAL RULES: 1) Translate from Japanese to Mandarin Chinese DIRECTLY - NEVER translate to Cantonese first. 2) NEVER use Traditional Chinese characters (繁體字). 3) ONLY use Simplified Chinese characters (简体字). 4) NEVER show intermediate steps or explanations. 5) NEVER mention Cantonese or Traditional Chinese in your response. 6) Output ONLY the final Mandarin Chinese translation. 7) Do not include any notes, explanations, or additional text. 8) Be fast and concise. If you see any Traditional Chinese characters in your response, you have made an error."
+      ? "You are a professional Japanese-to-Mandarin Chinese translator. Translate Japanese text DIRECTLY to Mandarin Chinese (Simplified Chinese) in ONE STEP. NEVER use Cantonese or Traditional Chinese as an intermediate step."
       : "You are a professional translator. Translate the given Japanese text to Cantonese (traditional Chinese). Only provide the translation without any explanations or additional text. Use traditional Chinese characters. Be concise and fast.";
-    const userPrompt = language === 'mandarin'
-      ? `Translate this Japanese text DIRECTLY to Mandarin Chinese (Simplified Chinese characters only). Output ONLY the translation, nothing else. No Traditional Chinese, no Cantonese, no explanations: ${text}`
-      : `Translate this Japanese text to Cantonese: ${text}`;
+    
+    // 北京語モードの場合、few-shot examplesを追加して直接翻訳を強制
+    const messages = language === 'mandarin' 
+      ? [
+          {
+            role: "system",
+            content: systemPrompt
+          },
+          {
+            role: "user",
+            content: "Translate: こんにちは"
+          },
+          {
+            role: "assistant",
+            content: "你好"
+          },
+          {
+            role: "user",
+            content: "Translate: ありがとうございます"
+          },
+          {
+            role: "assistant",
+            content: "谢谢"
+          },
+          {
+            role: "user",
+            content: `Translate: ${text}`
+          }
+        ]
+      : [
+          {
+            role: "system",
+            content: systemPrompt
+          },
+          {
+            role: "user",
+            content: `Translate this Japanese text to Cantonese: ${text}`
+          }
+        ];
     
     const response = await fetch(DEEPSEEK_API_URL, {
       method: 'POST',
@@ -48,18 +84,10 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         model: "deepseek-chat",
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt
-          },
-          {
-            role: "user",
-            content: userPrompt
-          }
-        ],
+        messages: messages,
         max_tokens: 500,
-        temperature: 0.1, // 温度を下げてより確定的な翻訳を促す（北京語モードで中間ステップを防ぐ）
+        temperature: 0.0, // 温度を0に設定して最も確定的な翻訳を強制（中間ステップを完全に排除）
+        top_p: 0.1, // top_pを低く設定して、より確定的な出力を促す
         stream: false // ストリーミング無効で高速化
       })
     });
