@@ -173,6 +173,8 @@ export default function Home() {
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
   const volumeLogoRef = useRef<HTMLImageElement | null>(null);
   const isPlayingSoundRef = useRef(false);
+  const [showTitle, setShowTitle] = useState(false);
+  const titleAudioRef = useRef<HTMLAudioElement | null>(null);
   
   // 音声認識の状態
   const [recognizedText, setRecognizedText] = useState('');
@@ -324,12 +326,17 @@ export default function Home() {
     setFinalText('');
     setInterimText('');
     setTranslatedText('');
+    setShowTitle(false);
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch (e) {
         console.error('音声認識停止エラー:', e);
       }
+    }
+    if (titleAudioRef.current) {
+      titleAudioRef.current.pause();
+      titleAudioRef.current.currentTime = 0;
     }
   };
 
@@ -347,11 +354,46 @@ export default function Home() {
     }
   }, [isHiddenMode]);
 
+  // 隠しモード起動後、全てのUI要素が表示された後にタイトルを表示
+  useEffect(() => {
+    if (isHiddenMode) {
+      // 最後のアニメーション（日本語エリア: 0.8s）が完了してから、少し待ってタイトルを表示
+      const timer = setTimeout(() => {
+        setShowTitle(true);
+        
+        // タイトル表示と同時に音声を再生
+        if (titleAudioRef.current) {
+          titleAudioRef.current.currentTime = 0;
+          titleAudioRef.current.play().catch((e) => {
+            console.error('タイトル音声再生エラー:', e);
+          });
+        }
+      }, 1000); // 0.8s + 0.2s の余裕
+
+      return () => clearTimeout(timer);
+    } else {
+      setShowTitle(false);
+      if (titleAudioRef.current) {
+        titleAudioRef.current.pause();
+        titleAudioRef.current.currentTime = 0;
+      }
+    }
+  }, [isHiddenMode]);
+
   // マイクボタンのハンドラー
   const handleMicPress = () => {
-    if (!isHiddenMode || !recognitionRef.current) return;
+    if (!isHiddenMode) {
+      console.log('隠しモードではないため、マイク機能は無効です');
+      return;
+    }
+    
+    if (!recognitionRef.current) {
+      console.error('音声認識が初期化されていません');
+      return;
+    }
     
     if (!isRecording) {
+      console.log('音声認識を開始します');
       setIsRecording(true);
       try {
         // 既に開始されている場合は停止してから再開
@@ -360,6 +402,7 @@ export default function Home() {
             recognitionRef.current.stop();
           } catch (e) {
             // 停止エラーは無視
+            console.log('音声認識停止（既に停止済み）:', e);
           }
         }
         // 少し待ってから開始
@@ -367,11 +410,14 @@ export default function Home() {
           if (recognitionRef.current && isRecording) {
             try {
               recognitionRef.current.start();
+              console.log('音声認識開始成功');
             } catch (e) {
               // 既に開始されている場合は無視
               if (e instanceof Error && !e.message.includes('already')) {
                 console.error('音声認識開始エラー:', e);
                 setIsRecording(false);
+              } else {
+                console.log('音声認識は既に開始されています');
               }
             }
           }
@@ -380,20 +426,29 @@ export default function Home() {
         console.error('音声認識開始エラー:', e);
         setIsRecording(false);
       }
+    } else {
+      console.log('既に録音中です');
     }
   };
 
   const handleMicRelease = () => {
-    if (!isHiddenMode) return;
+    if (!isHiddenMode) {
+      console.log('隠しモードではないため、マイク機能は無効です');
+      return;
+    }
     
+    console.log('音声認識を停止します');
     setIsRecording(false);
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
+        console.log('音声認識停止成功');
       } catch (e) {
         // 停止エラーは無視（既に停止されている場合）
         if (e instanceof Error && !e.message.includes('not started')) {
           console.error('音声認識停止エラー:', e);
+        } else {
+          console.log('音声認識は既に停止されています');
         }
       }
     }
@@ -2436,7 +2491,7 @@ export default function Home() {
       style={{ 
         margin: 0, 
         padding: isHiddenMode ? 0 : (isMobile ? '1rem' : '3rem'), 
-        backgroundColor: isHiddenMode ? '#1f2937' : '#f3f4f6', 
+        backgroundColor: isHiddenMode ? '#0f172a' : '#f3f4f6', 
         minHeight: '100vh',
         position: 'relative',
         transition: 'background-color 0.5s ease-out',
@@ -2455,7 +2510,8 @@ export default function Home() {
             width: '90%',
             maxWidth: '800px',
             padding: '1.5rem',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            backgroundColor: 'rgba(30, 41, 59, 0.8)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: '12px',
             minHeight: '100px',
             textAlign: 'center',
@@ -2464,9 +2520,10 @@ export default function Home() {
             wordBreak: 'break-word',
             animation: 'fadeInUp 0.6s ease-out',
             opacity: 1,
-            zIndex: 1000
+            zIndex: 1000,
+            color: '#ffffff'
           }}>
-            <div style={{ transform: 'scaleX(-1)' }}>
+            <div style={{ transform: 'scaleX(-1)', color: '#ffffff' }}>
               {translatedText || '広東語翻訳がここに表示されます...'}
             </div>
           </div>
@@ -2480,7 +2537,8 @@ export default function Home() {
             width: '90%',
             maxWidth: '800px',
             padding: '2rem',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            backgroundColor: 'rgba(30, 41, 59, 0.8)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: '12px',
             minHeight: '150px',
             textAlign: 'center',
@@ -2489,11 +2547,12 @@ export default function Home() {
             wordBreak: 'break-word',
             animation: 'fadeInUp 0.8s ease-out',
             opacity: 1,
-            zIndex: 1000
+            zIndex: 1000,
+            color: '#ffffff'
           }}>
             {recognizedText || 'マイクボタンを押して日本語を話してください...'}
             {interimText && (
-              <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>
+              <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>
                 {interimText}
               </span>
             )}
@@ -2520,6 +2579,88 @@ export default function Home() {
           >
             ESCで終了
           </button>
+
+          {/* タイトル表示（ロゴマークの下、タイル回転アニメーション） */}
+          {showTitle && (
+            <div style={{
+              position: 'fixed',
+              bottom: isMobile ? 'calc(3rem + 100px)' : 'calc(5rem + 120px)',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              textAlign: 'center',
+              animation: 'tileFlip 0.6s ease-out',
+              zIndex: 1003
+            }}>
+              <div style={{
+                fontSize: isMobile ? '1.5rem' : '2rem',
+                fontWeight: 800,
+                color: '#ffffff',
+                marginBottom: '0.5rem',
+                textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+              }}>
+                カントン語通訳
+              </div>
+              <div style={{
+                fontSize: isMobile ? '0.875rem' : '1rem',
+                fontWeight: 700,
+                color: '#d1d5db',
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'
+              }}>
+                ボタンを押すだけでスパッと通訳！
+              </div>
+            </div>
+          )}
+
+          {/* タイトル音声（非表示） */}
+          <audio
+            ref={titleAudioRef}
+            src="/interpreter-start.mp3"
+            preload="auto"
+            style={{ display: 'none' }}
+          />
+
+          {/* ロゴマーク（隠しモード時、下部に表示、マイクボタンとして機能） */}
+          <img
+            ref={volumeLogoRef}
+            src="/volume-logo.png?v=1"
+            alt="microphone"
+            style={{
+              position: 'fixed',
+              bottom: isMobile ? '3rem' : '5rem',
+              left: '50%',
+              transform: 'translateX(-50%) scale(1.8)',
+              width: isMobile ? 48 : 56,
+              height: isMobile ? 48 : 56,
+              cursor: 'pointer',
+              transition: 'all 0.5s ease-out',
+              zIndex: 1002,
+              pointerEvents: 'auto',
+              backgroundColor: isRecording ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)',
+              borderRadius: '50%',
+              padding: '20px',
+              boxShadow: isRecording 
+                ? '0 0 20px rgba(239, 68, 68, 0.5)' 
+                : '0 4px 6px rgba(0, 0, 0, 0.1)',
+              objectFit: 'contain',
+              animation: 'fadeInUp 1s ease-out'
+            }}
+            onClick={() => {
+              if (!isRecording) {
+                handleMicPress();
+              } else {
+                handleMicRelease();
+              }
+            }}
+            onMouseUp={handleMicRelease}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              handleMicPress();
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              handleMicRelease();
+            }}
+          />
         </>
       )}
 
