@@ -3020,7 +3020,7 @@ export default function Home() {
           {/* 日本語音声認識エリア（中央、浮き上がるアニメーション、新しいテキストが上に表示、モバイルではロゴとの重なり防止） */}
           <div style={{
             position: 'fixed',
-            top: isMobile ? 'calc(2rem + 350px + 2rem)' : '50%', // 広東語エリアの下（モバイル）または中央（デスクトップ）
+            top: isMobile ? 'calc(2rem + 250px + 0.5rem)' : '50%', // 広東語エリアの直下: top(2rem) + maxHeight(250px) + 最小余白(0.5rem)
             bottom: isMobile ? 'calc(3rem + 120px + 96px + 2rem)' : 'auto', // ロゴの上端 + 余白（モバイルのみ）
             left: '50%',
             transform: isMobile ? 'translate(-50%, 0)' : 'translate(-50%, -50%)',
