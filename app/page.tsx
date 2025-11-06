@@ -2972,12 +2972,6 @@ export default function Home() {
               normalModeAudioBlobUrlRef.current = null;
             }
             
-            // 古いBlob URLをクリア
-            if (normalModeAudioBlobUrlRef.current) {
-              URL.revokeObjectURL(normalModeAudioBlobUrlRef.current);
-              normalModeAudioBlobUrlRef.current = null;
-            }
-            
             // Base64をBlobに変換してBlob URLを作成（モバイルでボリューム調整可能にするため）
             const binaryString = atob(audioBase64);
             const bytes = new Uint8Array(binaryString.length);
