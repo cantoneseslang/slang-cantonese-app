@@ -525,6 +525,9 @@ export default function Home() {
                           console.error('音声再生エラー:', e);
                         });
                       }
+                    } else {
+                      const errorText = await audioResponse.text();
+                      console.error('音声生成APIエラー:', audioResponse.status, errorText);
                     }
                   } catch (err) {
                     console.error('音声生成エラー:', err);
@@ -761,6 +764,9 @@ export default function Home() {
                 console.error('音声再生エラー:', e);
               });
             }
+          } else {
+            const errorText = await audioResponse.text();
+            console.error('音声生成APIエラー:', audioResponse.status, errorText);
           }
         } catch (err) {
           console.error('音声生成エラー:', err);
