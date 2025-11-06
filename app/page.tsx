@@ -537,9 +537,27 @@ export default function Home() {
                         
                         simultaneousModeAudioRef.current.src = blobUrl;
                         simultaneousModeAudioRef.current.volume = 1.0; // ボリュームを明示的に設定
-                        simultaneousModeAudioRef.current.play().catch((e) => {
-                          console.error('音声再生エラー:', e);
-                        });
+                        
+                        // 音声がロードされるまで待ってから再生
+                        const playAudio = () => {
+                          if (simultaneousModeAudioRef.current) {
+                            simultaneousModeAudioRef.current.play().catch((e) => {
+                              console.error('音声再生エラー:', e);
+                            });
+                          }
+                        };
+                        
+                        // 既にロード済みの場合は即座に再生
+                        if (simultaneousModeAudioRef.current.readyState >= 2) {
+                          playAudio();
+                        } else {
+                          simultaneousModeAudioRef.current.addEventListener('loadeddata', playAudio, { once: true });
+                        }
+                        
+                        // エラー処理
+                        simultaneousModeAudioRef.current.addEventListener('error', (e) => {
+                          console.error('音声ロードエラー:', e);
+                        }, { once: true });
                         
                         // モバイル軽量化: 再生後にBlob URLをクリア（メモリリーク防止）
                         simultaneousModeAudioRef.current.addEventListener('ended', () => {
@@ -871,9 +889,27 @@ export default function Home() {
               
               simultaneousModeAudioRef.current.src = blobUrl;
               simultaneousModeAudioRef.current.volume = 1.0; // ボリュームを明示的に設定
-              simultaneousModeAudioRef.current.play().catch((e) => {
-                console.error('音声再生エラー:', e);
-              });
+              
+              // 音声がロードされるまで待ってから再生
+              const playAudio = () => {
+                if (simultaneousModeAudioRef.current) {
+                  simultaneousModeAudioRef.current.play().catch((e) => {
+                    console.error('音声再生エラー:', e);
+                  });
+                }
+              };
+              
+              // 既にロード済みの場合は即座に再生
+              if (simultaneousModeAudioRef.current.readyState >= 2) {
+                playAudio();
+              } else {
+                simultaneousModeAudioRef.current.addEventListener('loadeddata', playAudio, { once: true });
+              }
+              
+              // エラー処理
+              simultaneousModeAudioRef.current.addEventListener('error', (e) => {
+                console.error('音声ロードエラー:', e);
+              }, { once: true });
               
               // モバイル軽量化: 再生後にBlob URLをクリア（メモリリーク防止）
               simultaneousModeAudioRef.current.addEventListener('ended', () => {
