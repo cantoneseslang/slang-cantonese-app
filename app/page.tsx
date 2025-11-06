@@ -3350,64 +3350,78 @@ export default function Home() {
 
   // 学習モードの音声をBlob URLに変換（モバイルでボリューム調整可能にするため）
   useEffect(() => {
-    if (result?.audioBase64 && audioRef.current) {
-      // 古いBlob URLをクリア
-      if (audioBlobUrlRef.current) {
-        URL.revokeObjectURL(audioBlobUrlRef.current);
-        audioBlobUrlRef.current = null;
-      }
+    if (result?.audioBase64) {
+      // audioRefがマウントされるまで待つ
+      const timer = setTimeout(() => {
+        if (audioRef.current) {
+          // 古いBlob URLをクリア
+          if (audioBlobUrlRef.current) {
+            URL.revokeObjectURL(audioBlobUrlRef.current);
+            audioBlobUrlRef.current = null;
+          }
+          
+          // Base64をBlobに変換してBlob URLを作成
+          const binaryString = atob(result.audioBase64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const blob = new Blob([bytes], { type: 'audio/mp3' });
+          const blobUrl = URL.createObjectURL(blob);
+          audioBlobUrlRef.current = blobUrl;
+          
+          audioRef.current.src = blobUrl;
+          audioRef.current.volume = 1.0; // ボリュームを明示的に設定
+        }
+      }, 100);
       
-      // Base64をBlobに変換してBlob URLを作成
-      const binaryString = atob(result.audioBase64);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      const blob = new Blob([bytes], { type: 'audio/mp3' });
-      const blobUrl = URL.createObjectURL(blob);
-      audioBlobUrlRef.current = blobUrl;
-      
-      audioRef.current.src = blobUrl;
+      return () => {
+        clearTimeout(timer);
+        // クリーンアップ
+        if (audioBlobUrlRef.current) {
+          URL.revokeObjectURL(audioBlobUrlRef.current);
+          audioBlobUrlRef.current = null;
+        }
+      };
     }
-    
-    return () => {
-      // クリーンアップ
-      if (audioBlobUrlRef.current) {
-        URL.revokeObjectURL(audioBlobUrlRef.current);
-        audioBlobUrlRef.current = null;
-      }
-    };
   }, [result?.audioBase64]);
 
   // 学習モードの例文音声をBlob URLに変換（モバイルでボリューム調整可能にするため）
   useEffect(() => {
-    if (result?.exampleAudioBase64 && exampleAudioRef.current) {
-      // 古いBlob URLをクリア
-      if (exampleAudioBlobUrlRef.current) {
-        URL.revokeObjectURL(exampleAudioBlobUrlRef.current);
-        exampleAudioBlobUrlRef.current = null;
-      }
+    if (result?.exampleAudioBase64) {
+      // exampleAudioRefがマウントされるまで待つ
+      const timer = setTimeout(() => {
+        if (exampleAudioRef.current) {
+          // 古いBlob URLをクリア
+          if (exampleAudioBlobUrlRef.current) {
+            URL.revokeObjectURL(exampleAudioBlobUrlRef.current);
+            exampleAudioBlobUrlRef.current = null;
+          }
+          
+          // Base64をBlobに変換してBlob URLを作成
+          const binaryString = atob(result.exampleAudioBase64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const blob = new Blob([bytes], { type: 'audio/mp3' });
+          const blobUrl = URL.createObjectURL(blob);
+          exampleAudioBlobUrlRef.current = blobUrl;
+          
+          exampleAudioRef.current.src = blobUrl;
+          exampleAudioRef.current.volume = 1.0; // ボリュームを明示的に設定
+        }
+      }, 100);
       
-      // Base64をBlobに変換してBlob URLを作成
-      const binaryString = atob(result.exampleAudioBase64);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      const blob = new Blob([bytes], { type: 'audio/mp3' });
-      const blobUrl = URL.createObjectURL(blob);
-      exampleAudioBlobUrlRef.current = blobUrl;
-      
-      exampleAudioRef.current.src = blobUrl;
+      return () => {
+        clearTimeout(timer);
+        // クリーンアップ
+        if (exampleAudioBlobUrlRef.current) {
+          URL.revokeObjectURL(exampleAudioBlobUrlRef.current);
+          exampleAudioBlobUrlRef.current = null;
+        }
+      };
     }
-    
-    return () => {
-      // クリーンアップ
-      if (exampleAudioBlobUrlRef.current) {
-        URL.revokeObjectURL(exampleAudioBlobUrlRef.current);
-        exampleAudioBlobUrlRef.current = null;
-      }
-    };
   }, [result?.exampleAudioBase64]);
 
   return (
@@ -5924,10 +5938,23 @@ export default function Home() {
             </div>
           )}
 
-          {/* ノーマルモード用の非表示audio要素（常にDOMに存在） */}
+          {/* ノーマルモード用の非表示audio要素（常にDOMに存在、ボリューム調整可能） */}
           <audio 
             ref={normalModeAudioRef}
-            style={{ display: 'none' }}
+            controls
+            controlsList="nodownload nofullscreen noremoteplayback"
+            style={{ 
+              position: 'fixed',
+              bottom: isMobile ? '1rem' : '2rem',
+              right: isMobile ? '1rem' : '2rem',
+              width: isMobile ? '200px' : '300px',
+              height: '32px',
+              zIndex: 1000,
+              opacity: 0.8,
+              borderRadius: '8px',
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+            }}
           />
 
           {/* 結果エリア（学習モード または 入力欄からの検索時に表示） */}
