@@ -210,72 +210,67 @@ export default function Home() {
 
   // 音声認識の初期化（Web Speech API）
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
+    if (typeof window !== 'undefined') {
+      // 音声認識APIが利用可能かチェック
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      
       if (SpeechRecognition) {
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.lang = 'ja-JP';
-        recognitionRef.current.continuous = true;
-        recognitionRef.current.interimResults = true;
+        // 既に初期化されている場合はスキップ
+        if (recognitionRef.current) {
+          return;
+        }
+        
+        try {
+          recognitionRef.current = new SpeechRecognition();
+          recognitionRef.current.lang = 'ja-JP';
+          recognitionRef.current.continuous = true;
+          recognitionRef.current.interimResults = true;
 
-        recognitionRef.current.onresult = (event: any) => {
-          let interim = '';
-          let final = '';
-          
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            const transcript = event.results[i][0].transcript;
-            if (event.results[i].isFinal) {
-              final += transcript;
-            } else {
-              interim += transcript;
+          recognitionRef.current.onresult = (event: any) => {
+            let interim = '';
+            let final = '';
+            
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              const transcript = event.results[i][0].transcript;
+              if (event.results[i].isFinal) {
+                final += transcript;
+              } else {
+                interim += transcript;
+              }
             }
-          }
-          
-          setInterimText(interim);
-          if (final) {
-            setFinalText(prev => prev + final + ' ');
-            setRecognizedText(prev => prev + final + ' ');
-            setInterimText('');
-          } else {
-            setRecognizedText(finalText + interim);
-          }
-        };
+            
+            setInterimText(interim);
+            if (final) {
+              setFinalText(prev => prev + final + ' ');
+              setRecognizedText(prev => prev + final + ' ');
+              setInterimText('');
+            } else {
+              setRecognizedText(prev => prev + interim);
+            }
+          };
 
-        recognitionRef.current.onerror = (event: any) => {
-          // abortedエラーは無視（意図的な停止の場合）
-          if (event.error !== 'aborted') {
-            console.error('音声認識エラー:', event.error);
-            setIsRecording(false);
-          }
-        };
-
-        recognitionRef.current.onend = () => {
-          // isRecordingがtrueの時だけ再開（意図的な停止ではない場合）
-          if (isRecording && recognitionRef.current) {
-            try {
-              // 少し待ってから再開（ブラウザの状態をリセット）
-              setTimeout(() => {
-                if (isRecording && recognitionRef.current) {
-                  try {
-                    recognitionRef.current.start();
-                  } catch (e) {
-                    // 既に開始されている場合は無視
-                    if (e instanceof Error && !e.message.includes('already')) {
-                      console.error('音声認識再開エラー:', e);
-                      setIsRecording(false);
-                    }
-                  }
-                }
-              }, 100);
-            } catch (e) {
-              console.error('音声認識再開エラー:', e);
+          recognitionRef.current.onerror = (event: any) => {
+            // abortedエラーは無視（意図的な停止の場合）
+            if (event.error !== 'aborted') {
+              console.error('音声認識エラー:', event.error);
               setIsRecording(false);
             }
-          }
-        };
+          };
+
+          recognitionRef.current.onend = () => {
+            // 長押し方式なので、onendで自動再開しない
+            console.log('音声認識終了');
+          };
+          
+          console.log('音声認識を初期化しました');
+        } catch (e) {
+          console.error('音声認識初期化エラー:', e);
+        }
+      } else {
+        console.warn('音声認識APIが利用できません');
       }
     }
-  }, [isRecording, finalText]);
+  }, []); // 依存配列を空にして、一度だけ初期化
 
   // 翻訳APIの呼び出し（デバウンス付き）
   useEffect(() => {
@@ -448,7 +443,8 @@ export default function Home() {
     
     // 少し待ってから開始（状態更新を確実にするため）
     setTimeout(() => {
-      if (recognitionRef.current && isRecording) {
+      // recognitionRef.currentを直接チェック（isRecordingの状態に依存しない）
+      if (recognitionRef.current) {
         try {
           recognitionRef.current.start();
           console.log('音声認識開始成功');
@@ -463,8 +459,70 @@ export default function Home() {
           }
         }
       } else {
-        console.error('音声認識が初期化できませんでした');
+        console.error('音声認識が初期化できませんでした - recognitionRef.current:', recognitionRef.current);
         setIsRecording(false);
+        // 再初期化を試みる
+        if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
+          const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+          if (SpeechRecognition) {
+            try {
+              recognitionRef.current = new SpeechRecognition();
+              recognitionRef.current.lang = 'ja-JP';
+              recognitionRef.current.continuous = true;
+              recognitionRef.current.interimResults = true;
+              
+              recognitionRef.current.onresult = (event: any) => {
+                let interim = '';
+                let final = '';
+                
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                  const transcript = event.results[i][0].transcript;
+                  if (event.results[i].isFinal) {
+                    final += transcript;
+                  } else {
+                    interim += transcript;
+                  }
+                }
+                
+                setInterimText(interim);
+                if (final) {
+                  setFinalText(prev => prev + final + ' ');
+                  setRecognizedText(prev => prev + final + ' ');
+                  setInterimText('');
+                } else {
+                  setRecognizedText(prev => prev + interim);
+                }
+              };
+              
+              recognitionRef.current.onerror = (event: any) => {
+                if (event.error !== 'aborted') {
+                  console.error('音声認識エラー:', event.error);
+                  setIsRecording(false);
+                }
+              };
+              
+              recognitionRef.current.onend = () => {
+                console.log('音声認識終了');
+              };
+              
+              // 再初期化後、再度開始を試みる
+              setTimeout(() => {
+                if (recognitionRef.current) {
+                  try {
+                    recognitionRef.current.start();
+                    console.log('音声認識再初期化後に開始成功');
+                  } catch (e: any) {
+                    console.error('再初期化後の音声認識開始エラー:', e);
+                    setIsRecording(false);
+                  }
+                }
+              }, 100);
+            } catch (e) {
+              console.error('音声認識再初期化エラー:', e);
+              setIsRecording(false);
+            }
+          }
+        }
       }
     }, 200);
   };
@@ -2668,29 +2726,26 @@ export default function Home() {
           />
 
           {/* ロゴマーク（隠しモード時、下部に表示、マイクボタンとして機能） */}
-          <img
-            ref={volumeLogoRef}
-            src="/volume-logo.png?v=1"
-            alt="microphone"
-            draggable="false"
+          <div
             style={{
               position: 'fixed',
               bottom: isMobile ? 'calc(3rem + 120px)' : 'calc(5rem + 140px)',
               left: '50%',
-              transform: 'translateX(-50%) scale(1.5)',
-              width: isMobile ? 56 : 64,
-              height: isMobile ? 56 : 64,
+              transform: 'translateX(-50%)',
+              width: isMobile ? '96px' : '120px',
+              height: isMobile ? '96px' : '120px',
+              borderRadius: '50%',
+              backgroundColor: isRecording ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)',
+              boxShadow: isRecording 
+                ? '0 0 20px rgba(239, 68, 68, 0.5)' 
+                : '0 4px 6px rgba(0, 0, 0, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               cursor: 'pointer',
               transition: 'all 0.5s ease-out',
               zIndex: 1002,
               pointerEvents: 'auto',
-              backgroundColor: isRecording ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)',
-              borderRadius: '50%',
-              padding: '20px',
-              boxShadow: isRecording 
-                ? '0 0 20px rgba(239, 68, 68, 0.5)' 
-                : '0 4px 6px rgba(0, 0, 0, 0.1)',
-              objectFit: 'contain',
               animation: 'fadeInUp 1s ease-out',
               userSelect: 'none',
               WebkitUserSelect: 'none',
@@ -2744,7 +2799,31 @@ export default function Home() {
               console.log('ロゴタッチキャンセル - 音声認識停止');
               handleMicRelease();
             }}
-          />
+          >
+            <img
+              ref={volumeLogoRef}
+              src="/volume-logo.png?v=1"
+              alt="microphone"
+              draggable="false"
+              style={{
+                width: isMobile ? '96px' : '120px',
+                height: isMobile ? '96px' : '120px',
+                objectFit: 'contain',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                WebkitTouchCallout: 'none'
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+              }}
+              onDragStart={(e) => {
+                e.preventDefault();
+                return false;
+              }}
+            />
+          </div>
         </>
       )}
 
