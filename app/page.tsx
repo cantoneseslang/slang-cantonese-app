@@ -217,9 +217,6 @@ export default function Home() {
     return `-${hours}:${minutes} ${seconds}s`;
   };
 
-  // モバイル軽量化: データ保持行数を削減（モバイル5行、デスクトップ10行）
-  const MAX_TEXT_LINES = isMobile ? 5 : 10;
-
   // 音声の初期化（Web Audio APIで100%音量）
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1865,6 +1862,10 @@ export default function Home() {
     }
   };
   const [isMobile, setIsMobile] = useState(false);
+  
+  // モバイル軽量化: データ保持行数を削減（モバイル5行、デスクトップ10行）
+  const MAX_TEXT_LINES = useMemo(() => isMobile ? 5 : 10, [isMobile]);
+  
   const audioRef = useRef<HTMLAudioElement>(null); // 学習モード用
   const exampleAudioRef = useRef<HTMLAudioElement>(null); // 学習モード用
   const normalModeAudioRef = useRef<HTMLAudioElement>(null); // ノーマルモード用
