@@ -665,6 +665,37 @@ export default function Home() {
       return [newLine, ...prev].slice(0, 50);
     });
     setTranslatedText(handPhrase);
+    
+    // 音声生成（ミュートされていない場合）
+    if (!isMuted && handPhrase) {
+      (async () => {
+        try {
+          const audioResponse = await fetch('/api/generate-speech', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ text: handPhrase }),
+          });
+
+          if (audioResponse.ok) {
+            const audioData = await audioResponse.json();
+            const audioBase64 = audioData.audioContent;
+
+            if (simultaneousModeAudioRef.current && audioBase64) {
+              simultaneousModeAudioRef.current.pause();
+              simultaneousModeAudioRef.current.currentTime = 0;
+              simultaneousModeAudioRef.current.src = `data:audio/mp3;base64,${audioBase64}`;
+              simultaneousModeAudioRef.current.play().catch((e) => {
+                console.error('音声再生エラー:', e);
+              });
+            }
+          }
+        } catch (err) {
+          console.error('音声生成エラー:', err);
+        }
+      })();
+    }
   };
   
   // 消音ボタンのハンドラー
