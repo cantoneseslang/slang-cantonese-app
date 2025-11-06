@@ -228,24 +228,53 @@ export default function Home() {
 
           recognitionRef.current.onresult = (event: any) => {
             let interim = '';
-            let final = '';
+            let newFinal = '';
             
+            // resultIndexから新しい結果のみを処理（重複を防ぐ）
             for (let i = event.resultIndex; i < event.results.length; i++) {
               const transcript = event.results[i][0].transcript;
               if (event.results[i].isFinal) {
-                final += transcript;
+                // finalの結果は新しいもののみ追加
+                newFinal += transcript;
               } else {
-                interim += transcript;
+                // interimは常に最新のものを表示
+                interim = transcript;
               }
             }
             
+            // interimのテキストを更新
             setInterimText(interim);
-            if (final) {
-              setFinalText(prev => prev + final + ' ');
-              setRecognizedText(prev => prev + final + ' ');
+            
+            if (newFinal) {
+              // finalのテキストを追加（重複チェック）
+              setFinalText(prev => {
+                // 既に追加済みのテキストと重複していないかチェック
+                const trimmed = newFinal.trim();
+                if (prev.endsWith(trimmed + ' ')) {
+                  // 既に追加済みの場合は追加しない
+                  return prev;
+                }
+                return prev + trimmed + ' ';
+              });
+              
+              setRecognizedText(prev => {
+                // interimテキストを除去してから追加
+                const baseText = prev.replace(interim, '').trim();
+                const trimmed = newFinal.trim();
+                if (baseText.endsWith(trimmed)) {
+                  return baseText;
+                }
+                return baseText + (baseText ? ' ' : '') + trimmed;
+              });
+              
               setInterimText('');
-            } else {
-              setRecognizedText(prev => prev + interim);
+            } else if (interim) {
+              // interimのみの場合、finalTextにinterimを追加して表示
+              setRecognizedText(prev => {
+                // 既存のfinalTextを保持し、interimを追加
+                const baseText = prev.trim();
+                return baseText + (baseText ? ' ' : '') + interim;
+              });
             }
           };
 
@@ -272,43 +301,77 @@ export default function Home() {
     }
   }, []); // 依存配列を空にして、一度だけ初期化
 
-  // 翻訳APIの呼び出し（デバウンス付き）
+  // 翻訳APIの呼び出し（最速同時通訳対応）
   useEffect(() => {
     if (!isHiddenMode || !recognizedText.trim()) {
       setTranslatedText('');
       return;
     }
 
+    // 前回のデバウンスタイマーをキャンセル
     if (translateDebounceRef.current) {
       clearTimeout(translateDebounceRef.current);
     }
 
+    // 前回の翻訳リクエストをキャンセル（AbortController使用）
+    if (translateAbortControllerRef.current) {
+      translateAbortControllerRef.current.abort();
+    }
+
+    // 新しいAbortControllerを作成
+    translateAbortControllerRef.current = new AbortController();
+
+    // デバウンス時間を短縮（500ms → 200ms）で最速処理
     translateDebounceRef.current = setTimeout(async () => {
       try {
         const textToTranslate = recognizedText.trim();
         if (!textToTranslate) return;
 
+        // 直前の翻訳と同じテキストの場合はスキップ（無駄なリクエストを防ぐ）
+        if (textToTranslate === lastTranslatedTextRef.current) {
+          return;
+        }
+
+        lastTranslatedTextRef.current = textToTranslate;
+
+        // 高速翻訳リクエスト（AbortControllerでキャンセル可能）
         const response = await fetch('/api/translate', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Priority': 'high' // ブラウザに優先度を指示
+          },
           body: JSON.stringify({ text: textToTranslate }),
+          signal: translateAbortControllerRef.current.signal,
+          // Keep-Aliveで接続を維持（高速化）
+          keepalive: true
         });
 
         if (response.ok) {
           const data = await response.json();
-          // レスポンス形式を確認（translated または translatedText）
-          setTranslatedText(data.translated || data.translatedText || '');
+          const translated = data.translated || data.translatedText || '';
+          if (translated) {
+            setTranslatedText(translated);
+          }
         } else {
-          console.error('翻訳APIエラー:', response.status, await response.text());
+          console.error('翻訳APIエラー:', response.status);
         }
-      } catch (error) {
-        console.error('翻訳エラー:', error);
+      } catch (error: any) {
+        // AbortErrorは無視（キャンセルされた場合は正常）
+        if (error.name !== 'AbortError') {
+          console.error('翻訳エラー:', error);
+        }
+      } finally {
+        translateAbortControllerRef.current = null;
       }
-    }, 500); // 500msデバウンス
+    }, 200); // 200msデバウンス（最速処理）
 
     return () => {
       if (translateDebounceRef.current) {
         clearTimeout(translateDebounceRef.current);
+      }
+      if (translateAbortControllerRef.current) {
+        translateAbortControllerRef.current.abort();
       }
     };
   }, [recognizedText, isHiddenMode]);
@@ -322,6 +385,18 @@ export default function Home() {
     setInterimText('');
     setTranslatedText('');
     setShowTitle(false);
+    lastTranslatedTextRef.current = '';
+    
+    // 翻訳リクエストをキャンセル
+    if (translateDebounceRef.current) {
+      clearTimeout(translateDebounceRef.current);
+      translateDebounceRef.current = null;
+    }
+    if (translateAbortControllerRef.current) {
+      translateAbortControllerRef.current.abort();
+      translateAbortControllerRef.current = null;
+    }
+    
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -473,24 +548,53 @@ export default function Home() {
               
               recognitionRef.current.onresult = (event: any) => {
                 let interim = '';
-                let final = '';
+                let newFinal = '';
                 
+                // resultIndexから新しい結果のみを処理（重複を防ぐ）
                 for (let i = event.resultIndex; i < event.results.length; i++) {
                   const transcript = event.results[i][0].transcript;
                   if (event.results[i].isFinal) {
-                    final += transcript;
+                    // finalの結果は新しいもののみ追加
+                    newFinal += transcript;
                   } else {
-                    interim += transcript;
+                    // interimは常に最新のものを表示
+                    interim = transcript;
                   }
                 }
                 
+                // interimのテキストを更新
                 setInterimText(interim);
-                if (final) {
-                  setFinalText(prev => prev + final + ' ');
-                  setRecognizedText(prev => prev + final + ' ');
+                
+                if (newFinal) {
+                  // finalのテキストを追加（重複チェックなし、新しいfinalのみ追加）
+                  setFinalText(prev => {
+                    // 既に追加済みのテキストと重複していないかチェック
+                    const trimmed = newFinal.trim();
+                    if (prev.endsWith(trimmed + ' ')) {
+                      // 既に追加済みの場合は追加しない
+                      return prev;
+                    }
+                    return prev + trimmed + ' ';
+                  });
+                  
+                  setRecognizedText(prev => {
+                    // interimテキストを除去してから追加
+                    const baseText = prev.replace(interim, '').trim();
+                    const trimmed = newFinal.trim();
+                    if (baseText.endsWith(trimmed)) {
+                      return baseText;
+                    }
+                    return baseText + (baseText ? ' ' : '') + trimmed;
+                  });
+                  
                   setInterimText('');
-                } else {
-                  setRecognizedText(prev => prev + interim);
+                } else if (interim) {
+                  // interimのみの場合、finalTextにinterimを追加して表示
+                  setRecognizedText(prev => {
+                    // 既存のfinalTextを保持し、interimを追加
+                    const baseText = prev.trim();
+                    return baseText + (baseText ? ' ' : '') + interim;
+                  });
                 }
               };
               
@@ -2632,7 +2736,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 日本語音声認識エリア（中央、浮き上がるアニメーション） */}
+          {/* 日本語音声認識エリア（中央、浮き上がるアニメーション、最大高さ設定でスクロール可能） */}
           <div style={{
             position: 'fixed',
             top: '50%',
@@ -2640,11 +2744,11 @@ export default function Home() {
             transform: 'translate(-50%, -50%)',
             width: '90%',
             maxWidth: '800px',
+            maxHeight: isMobile ? '300px' : '400px',
             padding: '2rem',
             backgroundColor: 'rgba(255, 255, 255, 0.95)',
             border: '1px solid rgba(0, 0, 0, 0.1)',
             borderRadius: '12px',
-            minHeight: '150px',
             textAlign: 'center',
             fontSize: isMobile ? '1.5rem' : '2rem',
             lineHeight: '1.8',
@@ -2653,14 +2757,24 @@ export default function Home() {
             opacity: 1,
             zIndex: 1000,
             color: '#111827',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-start'
           }}>
-            {recognizedText || 'マイクボタンを押して日本語を話してください...'}
-            {interimText && (
-              <span style={{ color: '#6b7280', fontStyle: 'italic' }}>
-                {interimText}
-              </span>
-            )}
+            <div style={{
+              width: '100%',
+              paddingBottom: '1rem'
+            }}>
+              {recognizedText || 'マイクボタンを押して日本語を話してください...'}
+              {interimText && (
+                <span style={{ color: '#6b7280', fontStyle: 'italic' }}>
+                  {interimText}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* 終了ボタン（右上、浮き上がるアニメーション） */}
