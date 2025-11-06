@@ -3194,18 +3194,6 @@ export default function Home() {
                         }}
                       >
                         <div>{latestLine.text}</div>
-                        <div style={{ 
-                          fontSize: isMobile ? '0.875rem' : '1rem', 
-                          color: '#6b7280', 
-                          marginTop: '0.5rem',
-                          display: 'flex',
-                          justifyContent: 'center',
-                          gap: '0.75rem',
-                          transform: 'rotate(180deg)',
-                          fontWeight: '500'
-                        }}>
-                          <span>{latestLine.timestamp}</span>
-                        </div>
                       </div>
                     );
                   })()}
@@ -3280,13 +3268,6 @@ export default function Home() {
                         }}
                       >
                         <div>{latestLine.text}</div>
-                        <div style={{ 
-                          fontSize: isMobile ? '0.75rem' : '0.875rem', 
-                          color: '#6b7280', 
-                          marginTop: '0.25rem'
-                        }}>
-                          {latestLine.timestamp}
-                        </div>
                       </div>
                     );
                   })()}
