@@ -2988,16 +2988,13 @@ export default function Home() {
             const blobUrl = URL.createObjectURL(blob);
             normalModeAudioBlobUrlRef.current = blobUrl;
             
-            // 新しい音声をセット
-            normalModeAudioRef.current.src = blobUrl;
-            normalModeAudioRef.current.playbackRate = 1.0; // ノーマルモードでは速度固定
-            normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に
-            
-            // Web Audio APIでボリューム制御（ノーマルモード専用のAudioContextを使用）
+            // Web Audio APIの接続を確立（srcを設定する前に接続を確立）
+            let useWebAudioAPI = false;
             if (normalModeAudioContextRef.current) {
               try {
                 // MediaElementAudioSourceNodeが既に存在する場合は再利用
                 if (!normalModeAudioSourceNodeRef.current) {
+                  // srcを設定する前に接続を確立（空のsrcでも接続可能）
                   const source = normalModeAudioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
                   normalModeAudioSourceNodeRef.current = source;
                   
@@ -3009,16 +3006,33 @@ export default function Home() {
                   gainNode.connect(normalModeAudioContextRef.current.destination);
                   
                   normalModeAudioGainNodeRef.current = gainNode;
+                  useWebAudioAPI = true;
+                  console.log('ノーマルモード: Web Audio API接続成功');
                 } else {
                   // 既存のGainNodeのボリュームを更新
                   if (normalModeAudioGainNodeRef.current) {
                     normalModeAudioGainNodeRef.current.gain.value = normalModeAudioVolume;
                   }
+                  useWebAudioAPI = true;
+                  console.log('ノーマルモード: Web Audio API接続再利用');
                 }
               } catch (error) {
-                console.error('Web Audio API接続エラー:', error);
+                console.error('ノーマルモード: Web Audio API接続エラー:', error);
                 // エラーが発生した場合は、Web Audio APIなしで再生を試みる
+                useWebAudioAPI = false;
               }
+            }
+            
+            // 新しい音声をセット
+            normalModeAudioRef.current.src = blobUrl;
+            normalModeAudioRef.current.playbackRate = 1.0; // ノーマルモードでは速度固定
+            
+            // Web Audio APIを使用しない場合は、HTMLAudioElementのvolumeを使用
+            if (!useWebAudioAPI) {
+              normalModeAudioRef.current.volume = normalModeAudioVolume;
+              console.log('ノーマルモード: HTMLAudioElementのvolumeを使用', { volume: normalModeAudioVolume });
+            } else {
+              normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に（Web Audio APIで制御）
             }
             
             // 音声がロードされるまで待ってから再生
@@ -3028,7 +3042,7 @@ export default function Home() {
                 if (playPromise !== undefined) {
                   playPromise
                     .then(() => {
-                      console.log('ノーマルモード: 音声再生成功');
+                      console.log('ノーマルモード: 音声再生成功', { useWebAudioAPI });
                     })
                     .catch(e => {
                       console.error('ノーマルモード: 音声再生失敗', e);
@@ -3140,35 +3154,47 @@ export default function Home() {
           const blobUrl = URL.createObjectURL(blob);
           normalModeAudioBlobUrlRef.current = blobUrl;
           
-          normalModeAudioRef.current.src = blobUrl;
-          normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に
-          
-          // Web Audio APIでボリューム制御（既に接続されている場合は再利用）
-          if (audioContextRef.current) {
+          // Web Audio APIの接続を確立（srcを設定する前に接続を確立）
+          let useWebAudioAPI = false;
+          if (normalModeAudioContextRef.current) {
             try {
               // MediaElementAudioSourceNodeが既に存在する場合は再利用
               if (!normalModeAudioSourceNodeRef.current) {
-                const source = audioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
+                // srcを設定する前に接続を確立（空のsrcでも接続可能）
+                const source = normalModeAudioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
                 normalModeAudioSourceNodeRef.current = source;
                 
                 // GainNodeを作成
-                const gainNode = audioContextRef.current.createGain();
+                const gainNode = normalModeAudioContextRef.current.createGain();
                 gainNode.gain.value = normalModeAudioVolume;
                 
                 source.connect(gainNode);
-                gainNode.connect(audioContextRef.current.destination);
+                gainNode.connect(normalModeAudioContextRef.current.destination);
                 
                 normalModeAudioGainNodeRef.current = gainNode;
+                useWebAudioAPI = true;
               } else {
                 // 既存のGainNodeのボリュームを更新
                 if (normalModeAudioGainNodeRef.current) {
                   normalModeAudioGainNodeRef.current.gain.value = normalModeAudioVolume;
                 }
+                useWebAudioAPI = true;
               }
             } catch (error) {
               console.error('Web Audio API接続エラー:', error);
               // エラーが発生した場合は、Web Audio APIなしで再生を試みる
+              useWebAudioAPI = false;
             }
+          }
+          
+          // 新しい音声をセット
+          normalModeAudioRef.current.src = blobUrl;
+          
+          // Web Audio APIを使用しない場合は、HTMLAudioElementのvolumeを使用
+          if (!useWebAudioAPI) {
+            normalModeAudioRef.current.volume = normalModeAudioVolume;
+          } else {
+            normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に（Web Audio APIで制御）
           }
           
           // 音声がロードされるまで待ってから再生
@@ -3315,36 +3341,47 @@ export default function Home() {
         const blobUrl = URL.createObjectURL(blob);
         normalModeAudioBlobUrlRef.current = blobUrl;
         
-        // 新しい音声を設定
-        normalModeAudioRef.current.src = blobUrl;
-        normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に
-        
-        // Web Audio APIでボリューム制御（既に接続されている場合は再利用）
-        if (audioContextRef.current) {
+        // Web Audio APIの接続を確立（srcを設定する前に接続を確立）
+        let useWebAudioAPI = false;
+        if (normalModeAudioContextRef.current) {
           try {
             // MediaElementAudioSourceNodeが既に存在する場合は再利用
             if (!normalModeAudioSourceNodeRef.current) {
-              const source = audioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
+              // srcを設定する前に接続を確立（空のsrcでも接続可能）
+              const source = normalModeAudioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
               normalModeAudioSourceNodeRef.current = source;
               
               // GainNodeを作成
-              const gainNode = audioContextRef.current.createGain();
+              const gainNode = normalModeAudioContextRef.current.createGain();
               gainNode.gain.value = normalModeAudioVolume;
               
               source.connect(gainNode);
-              gainNode.connect(audioContextRef.current.destination);
+              gainNode.connect(normalModeAudioContextRef.current.destination);
               
               normalModeAudioGainNodeRef.current = gainNode;
+              useWebAudioAPI = true;
             } else {
               // 既存のGainNodeのボリュームを更新
               if (normalModeAudioGainNodeRef.current) {
                 normalModeAudioGainNodeRef.current.gain.value = normalModeAudioVolume;
               }
+              useWebAudioAPI = true;
             }
           } catch (error) {
             console.error('Web Audio API接続エラー:', error);
             // エラーが発生した場合は、Web Audio APIなしで再生を試みる
+            useWebAudioAPI = false;
           }
+        }
+        
+        // 新しい音声を設定
+        normalModeAudioRef.current.src = blobUrl;
+        
+        // Web Audio APIを使用しない場合は、HTMLAudioElementのvolumeを使用
+        if (!useWebAudioAPI) {
+          normalModeAudioRef.current.volume = normalModeAudioVolume;
+        } else {
+          normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に（Web Audio APIで制御）
         }
         
         // 音声をロードして再生
