@@ -187,6 +187,13 @@ export default function Home() {
   const titleClickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isButtonRotating, setIsButtonRotating] = useState(false);
   
+  // 広東語エリアの回転状態（デフォルト: true = 180度回転）
+  const [isTranslationAreaRotated, setIsTranslationAreaRotated] = useState(true);
+  const translationAreaClickCountRef = useRef(0);
+  const translationAreaClickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isTranslationAreaRotating, setIsTranslationAreaRotating] = useState(false);
+  const translationAreaRotationDirectionRef = useRef<'forward' | 'reverse'>('forward');
+  
   // 音声認識の状態
   const [recognizedText, setRecognizedText] = useState('');
   const [finalText, setFinalText] = useState('');
@@ -593,6 +600,15 @@ export default function Home() {
       titleClickTimeoutRef.current = null;
     }
     
+    // 広東語エリアの回転状態をリセット
+    setIsTranslationAreaRotated(true);
+    translationAreaClickCountRef.current = 0;
+    setIsTranslationAreaRotating(false);
+    if (translationAreaClickTimeoutRef.current) {
+      clearTimeout(translationAreaClickTimeoutRef.current);
+      translationAreaClickTimeoutRef.current = null;
+    }
+    
     // 翻訳リクエストをキャンセル
     if (translateDebounceRef.current) {
       clearTimeout(translateDebounceRef.current);
@@ -717,6 +733,48 @@ export default function Home() {
       // 3秒後にカウントをリセット
       titleClickTimeoutRef.current = setTimeout(() => {
         titleClickCountRef.current = 0;
+      }, 3000);
+    }
+  };
+
+  // 広東語エリアクリックハンドラー（3回クリックで回転切り替え）
+  const handleTranslationAreaClick = () => {
+    if (!isHiddenMode) {
+      return;
+    }
+    
+    translationAreaClickCountRef.current += 1;
+    
+    // 既存のタイマーをクリア
+    if (translationAreaClickTimeoutRef.current) {
+      clearTimeout(translationAreaClickTimeoutRef.current);
+    }
+    
+    // 3秒以内に3回クリックされたら回転切り替え
+    if (translationAreaClickCountRef.current >= 3) {
+      // 現在の回転状態を保存（アニメーション方向を決定するため）
+      const currentRotated = isTranslationAreaRotated;
+      
+      // アニメーション方向を決定（180度→0度: forward, 0度→180度: reverse）
+      translationAreaRotationDirectionRef.current = currentRotated ? 'forward' : 'reverse';
+      
+      // 回転アニメーション開始
+      setIsTranslationAreaRotating(true);
+      
+      // 回転状態を切り替え
+      setIsTranslationAreaRotated(!currentRotated);
+      
+      // 回転アニメーション終了後にstateをリセット
+      setTimeout(() => {
+        setIsTranslationAreaRotating(false);
+      }, 600); // アニメーション時間（0.6秒）
+      
+      // カウントをリセット
+      translationAreaClickCountRef.current = 0;
+    } else {
+      // 3秒後にカウントをリセット
+      translationAreaClickTimeoutRef.current = setTimeout(() => {
+        translationAreaClickCountRef.current = 0;
       }, 3000);
     }
   };
@@ -3144,28 +3202,39 @@ export default function Home() {
       {isHiddenMode && (
         <>
           {/* 広東語翻訳エリア（上部、左に180度回転、浮き上がるアニメーション、新しいテキストが上に表示） */}
-          <div style={{
-            position: 'fixed',
-            top: isMobile ? '2rem' : '4rem',
-            left: '50%',
-            transform: 'translateX(-50%) rotate(-180deg)', // 左に180度回転
-            width: '90%',
-            maxWidth: '800px',
-            maxHeight: isMobile ? '250px' : '300px',
-            padding: '1.5rem',
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            border: '1px solid rgba(0, 0, 0, 0.1)',
-            borderRadius: '12px',
-            animation: 'fadeInUp 0.6s ease-out',
-            opacity: 1,
-            zIndex: 1000,
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'flex-start'
-          }}>
+          <div 
+            onClick={handleTranslationAreaClick}
+            style={{
+              position: 'fixed',
+              top: isMobile ? '2rem' : '4rem',
+              left: '50%',
+              transform: isTranslationAreaRotated 
+                ? 'translateX(-50%) rotate(-180deg)' 
+                : 'translateX(-50%) rotate(0deg)',
+              width: '90%',
+              maxWidth: '800px',
+              maxHeight: isMobile ? '250px' : '300px',
+              padding: '1.5rem',
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              borderRadius: '12px',
+              animation: isTranslationAreaRotating 
+                ? (translationAreaRotationDirectionRef.current === 'forward'
+                    ? 'translationAreaRotate 0.6s ease-in-out' 
+                    : 'translationAreaRotateReverse 0.6s ease-in-out')
+                : 'fadeInUp 0.6s ease-out',
+              opacity: 1,
+              zIndex: 1000,
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-start',
+              cursor: 'pointer',
+              transition: isTranslationAreaRotating ? 'none' : 'transform 0.3s ease-in-out'
+            }}
+          >
             <div style={{
               display: 'flex',
               flexDirection: 'column',
