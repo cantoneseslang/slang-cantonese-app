@@ -3299,16 +3299,6 @@ export default function Home() {
           normalModeAudioBlobUrlRef.current = null;
         }
         
-        // 古いWeb Audio API接続をクリア
-        if (normalModeAudioSourceNodeRef.current) {
-          normalModeAudioSourceNodeRef.current.disconnect();
-          normalModeAudioSourceNodeRef.current = null;
-        }
-        if (normalModeAudioGainNodeRef.current) {
-          normalModeAudioGainNodeRef.current.disconnect();
-          normalModeAudioGainNodeRef.current = null;
-        }
-        
         // Base64をBlobに変換してBlob URLを作成（モバイルでボリューム調整可能にするため）
         const binaryString = atob(audioBase64);
         const bytes = new Uint8Array(binaryString.length);
