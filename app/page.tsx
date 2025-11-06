@@ -64,6 +64,12 @@ interface Category {
   style?: string;
 }
 
+interface TextLine {
+  text: string;
+  timestamp: string; // タイムスタンプ（例: "12:40 39s"）
+  latency?: number; // レイテンシー（ミリ秒、広東語のみ）
+}
+
 export default function Home() {
   const router = useRouter();
   const supabase = createClient();
@@ -181,14 +187,23 @@ export default function Home() {
   const [finalText, setFinalText] = useState('');
   const [interimText, setInterimText] = useState('');
   const [translatedText, setTranslatedText] = useState('');
-  const [recognizedTextLines, setRecognizedTextLines] = useState<string[]>([]); // 新しいテキストが上に来る配列
-  const [translatedTextLines, setTranslatedTextLines] = useState<string[]>([]); // 広東語翻訳の配列（新しいものが上）
+  const [recognizedTextLines, setRecognizedTextLines] = useState<TextLine[]>([]); // タイムスタンプ付きテキスト行
+  const [translatedTextLines, setTranslatedTextLines] = useState<TextLine[]>([]); // タイムスタンプ付き広東語翻訳行
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<any>(null);
   const translateDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const translateAbortControllerRef = useRef<AbortController | null>(null);
   const lastTranslatedTextRef = useRef<string>('');
   const lastProcessedFinalTextRef = useRef<string>('');
+  
+  // タイムスタンプ生成関数（-12:40 39s形式）
+  const getTimestamp = (): string => {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    return `-${hours}:${minutes} ${seconds}s`;
+  };
 
   // 音声の初期化（Web Audio APIで100%音量）
   useEffect(() => {
@@ -286,12 +301,17 @@ export default function Home() {
               
               // finalが確定したら必ず新しい行として追加（上に表示）
               setRecognizedTextLines(prev => {
-                // 既に同じテキストが先頭にある場合はスキップ（重複防止）
-                if (prev.length > 0 && prev[0] === trimmed) {
-                  return prev;
+                // 配列全体をチェックして重複を防ぐ（完全一致）
+                const isDuplicate = prev.some(line => line.text === trimmed);
+                if (isDuplicate) {
+                  return prev; // 重複している場合は追加しない
                 }
-                // 新しい行を先頭に追加（マイク押すたびに改行）
-                return [trimmed, ...prev].slice(0, 50); // 最大50行まで保持
+                // 新しい行を先頭に追加（タイムスタンプ付き）
+                const newLine: TextLine = {
+                  text: trimmed,
+                  timestamp: getTimestamp()
+                };
+                return [newLine, ...prev].slice(0, 50); // 最大50行まで保持
               });
               
               setInterimText('');
@@ -332,13 +352,71 @@ export default function Home() {
     }
   }, []); // 依存配列を空にして、一度だけ初期化
 
+  // 翻訳済みテキストを追跡するためのref
+  const translatedTextSetRef = useRef<Set<string>>(new Set());
+
   // 翻訳APIの呼び出し（最速同時通訳対応、リアルタイム翻訳）
   useEffect(() => {
-    // recognizedTextLinesの最新のテキストを翻訳（interimも含む）
-    const latestText = recognizedTextLines.length > 0 ? recognizedTextLines[0] : (recognizedText.trim() || interimText.trim());
-    
-    if (!isHiddenMode || !latestText.trim()) {
+    if (!isHiddenMode) {
       setTranslatedText('');
+      translatedTextSetRef.current.clear();
+      return;
+    }
+
+    // recognizedTextLinesのすべての新しいテキストを翻訳
+    // まだ翻訳されていないテキストのみを翻訳
+    const textsToTranslate = recognizedTextLines
+      .map(line => line.text.trim())
+      .filter(text => text && !translatedTextSetRef.current.has(text));
+
+    if (textsToTranslate.length === 0) {
+      // interimテキストがあれば、それも翻訳対象に
+      const interimTextToTranslate = interimText.trim();
+      if (!interimTextToTranslate || translatedTextSetRef.current.has(interimTextToTranslate)) {
+        return;
+      }
+      
+      // interimテキストの翻訳を処理
+      const translateInterim = async () => {
+        try {
+          const translateStartTime = Date.now();
+          const response = await fetch('/api/translate', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Priority': 'high'
+            },
+            body: JSON.stringify({ text: interimTextToTranslate }),
+            keepalive: true
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const translated = data.translated || data.translatedText || '';
+            if (translated && !translatedTextSetRef.current.has(interimTextToTranslate)) {
+              translatedTextSetRef.current.add(interimTextToTranslate);
+              const latency = Date.now() - translateStartTime;
+              
+              setTranslatedText(translated);
+              setTranslatedTextLines(prev => {
+                if (prev.length > 0 && prev[0].text === translated) {
+                  return prev;
+                }
+                const newLine: TextLine = {
+                  text: translated,
+                  timestamp: getTimestamp(),
+                  latency: latency
+                };
+                return [newLine, ...prev].slice(0, 50);
+              });
+            }
+          }
+        } catch (error: any) {
+          console.error('翻訳エラー:', error);
+        }
+      };
+
+      translateInterim();
       return;
     }
 
@@ -357,62 +435,71 @@ export default function Home() {
 
     // デバウンス時間を大幅に短縮（50ms）で最速リアルタイム処理
     translateDebounceRef.current = setTimeout(async () => {
-      try {
-        const textToTranslate = latestText.trim();
-        if (!textToTranslate) return;
-
-        // 直前の翻訳と同じテキストの場合はスキップ（無駄なリクエストを防ぐ）
-        // ただし、interimの場合や短いテキストの場合は常に翻訳
-        if (textToTranslate === lastTranslatedTextRef.current && textToTranslate.length > 10) {
-          return;
+      // すべての新しいテキストを順番に翻訳
+      for (const textToTranslate of textsToTranslate) {
+        if (!textToTranslate || translatedTextSetRef.current.has(textToTranslate)) {
+          continue;
         }
 
-        lastTranslatedTextRef.current = textToTranslate;
+        try {
+          // レイテンシー計測開始
+          const translateStartTime = Date.now();
 
-        // 高速翻訳リクエスト（AbortControllerでキャンセル可能）
-        const abortController = translateAbortControllerRef.current;
-        if (!abortController) {
-          return; // AbortControllerが存在しない場合は終了
-        }
-
-        const response = await fetch('/api/translate', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Priority': 'high' // ブラウザに優先度を指示
-          },
-          body: JSON.stringify({ text: textToTranslate }),
-          signal: abortController.signal,
-          // Keep-Aliveで接続を維持（高速化）
-          keepalive: true
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const translated = data.translated || data.translatedText || '';
-          if (translated) {
-            setTranslatedText(translated);
-            // 新しい翻訳を配列の先頭に追加（上に表示）
-            setTranslatedTextLines(prev => {
-              // 既に同じテキストが先頭にある場合はスキップ
-              if (prev.length > 0 && prev[0] === translated) {
-                return prev;
-              }
-              return [translated, ...prev].slice(0, 50); // 最大50行まで保持
-            });
+          // 高速翻訳リクエスト（AbortControllerでキャンセル可能）
+          const abortController = translateAbortControllerRef.current;
+          if (!abortController) {
+            return;
           }
-        } else {
-          console.error('翻訳APIエラー:', response.status);
+
+          const response = await fetch('/api/translate', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Priority': 'high'
+            },
+            body: JSON.stringify({ text: textToTranslate }),
+            signal: abortController.signal,
+            keepalive: true
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const translated = data.translated || data.translatedText || '';
+            if (translated) {
+              // レイテンシー計算
+              const latency = Date.now() - translateStartTime;
+              
+              // 翻訳済みとしてマーク
+              translatedTextSetRef.current.add(textToTranslate);
+              
+              setTranslatedText(translated);
+              // 新しい翻訳を配列の先頭に追加（上に表示、タイムスタンプとレイテンシー付き）
+              setTranslatedTextLines(prev => {
+                // 既に同じテキストが先頭にある場合はスキップ
+                if (prev.length > 0 && prev[0].text === translated) {
+                  return prev;
+                }
+                const newLine: TextLine = {
+                  text: translated,
+                  timestamp: getTimestamp(),
+                  latency: latency
+                };
+                return [newLine, ...prev].slice(0, 50);
+              });
+            }
+          } else {
+            console.error('翻訳APIエラー:', response.status);
+          }
+        } catch (error: any) {
+          // AbortErrorは無視（キャンセルされた場合は正常）
+          if (error.name !== 'AbortError') {
+            console.error('翻訳エラー:', error);
+          }
         }
-      } catch (error: any) {
-        // AbortErrorは無視（キャンセルされた場合は正常）
-        if (error.name !== 'AbortError') {
-          console.error('翻訳エラー:', error);
-        }
-      } finally {
-        translateAbortControllerRef.current = null;
       }
-    }, 50); // 50msデバウンス（最速リアルタイム処理）
+      
+      translateAbortControllerRef.current = null;
+    }, 50);
 
     return () => {
       if (translateDebounceRef.current) {
@@ -437,6 +524,7 @@ export default function Home() {
     setShowTitle(false);
     lastTranslatedTextRef.current = '';
     lastProcessedFinalTextRef.current = '';
+    translatedTextSetRef.current.clear();
     
     // 翻訳リクエストをキャンセル
     if (translateDebounceRef.current) {
@@ -559,8 +647,19 @@ export default function Home() {
               // finalTextに追加
               setFinalText(prev => prev + trimmedFinal + ' ');
               
-              // 新しいテキストを配列の先頭に追加（上に表示）
-              setRecognizedTextLines(prev => [trimmedFinal, ...prev].slice(0, 50)); // 最大50行まで保持
+              // 新しいテキストを配列の先頭に追加（上に表示、タイムスタンプ付き）
+              setRecognizedTextLines(prev => {
+                // 配列全体をチェックして重複を防ぐ（完全一致）
+                const isDuplicate = prev.some(line => line.text === trimmedFinal);
+                if (isDuplicate) {
+                  return prev; // 重複している場合は追加しない
+                }
+                const newLine: TextLine = {
+                  text: trimmedFinal,
+                  timestamp: getTimestamp()
+                };
+                return [newLine, ...prev].slice(0, 50);
+              });
               
               // recognizedTextも更新（下位互換のため）
               setRecognizedText(prev => {
@@ -660,30 +759,45 @@ export default function Home() {
                 setInterimText(interim);
                 
                 if (newFinal) {
-                  // finalのテキストを追加（重複チェックなし、新しいfinalのみ追加）
-                  setFinalText(prev => {
-                    // 既に追加済みのテキストと重複していないかチェック
-                    const trimmed = newFinal.trim();
-                    if (prev.endsWith(trimmed + ' ')) {
-                      // 既に追加済みの場合は追加しない
-                      return prev;
-                    }
-                    return prev + trimmed + ' ';
-                  });
+                  const trimmed = newFinal.trim();
+                  
+                  // 直前のfinalテキストと比較（重複チェック）
+                  if (trimmed === lastProcessedFinalTextRef.current && trimmed.length > 0) {
+                    setInterimText('');
+                    return;
+                  }
+                  
+                  lastProcessedFinalTextRef.current = trimmed;
+                  
+                  // finalのテキストを追加
+                  setFinalText(prev => prev + trimmed + ' ');
                   
                   setRecognizedText(prev => {
                     // interimテキストを除去してから追加
                     const baseText = prev.replace(interim, '').trim();
-                    const trimmed = newFinal.trim();
                     if (baseText.endsWith(trimmed)) {
                       return baseText;
                     }
                     return baseText + (baseText ? ' ' : '') + trimmed;
                   });
                   
+                  // recognizedTextLinesに追加（重複チェック付き）
+                  setRecognizedTextLines(prev => {
+                    // 配列全体をチェックして重複を防ぐ（完全一致）
+                    const isDuplicate = prev.some(line => line.text === trimmed);
+                    if (isDuplicate) {
+                      return prev;
+                    }
+                    const newLine: TextLine = {
+                      text: trimmed,
+                      timestamp: getTimestamp()
+                    };
+                    return [newLine, ...prev].slice(0, 50);
+                  });
+                  
                   setInterimText('');
                 } else if (interim) {
-                  // interimのみの場合、finalTextにinterimを追加して表示
+                  // interimのみの場合
                   setRecognizedText(prev => {
                     // 既存のfinalTextを保持し、interimを追加
                     const baseText = prev.trim();
@@ -744,12 +858,17 @@ export default function Home() {
     if (interimText.trim()) {
       const finalInterim = interimText.trim();
       setRecognizedTextLines(prev => {
-        // 既に同じテキストが先頭にある場合はスキップ
-        if (prev.length > 0 && prev[0] === finalInterim) {
-          return prev;
+        // 配列全体をチェックして重複を防ぐ（完全一致）
+        const isDuplicate = prev.some(line => line.text === finalInterim);
+        if (isDuplicate) {
+          return prev; // 重複している場合は追加しない
         }
-        // マイクを離した時に確定して新しい行に追加
-        return [finalInterim, ...prev].slice(0, 50);
+        // マイクを離した時に確定して新しい行に追加（タイムスタンプ付き）
+        const newLine: TextLine = {
+          text: finalInterim,
+          timestamp: getTimestamp()
+        };
+        return [newLine, ...prev].slice(0, 50);
       });
       setInterimText('');
     }
@@ -2821,7 +2940,7 @@ export default function Home() {
             position: 'fixed',
             top: isMobile ? '2rem' : '4rem',
             left: '50%',
-            transform: 'translateX(-50%) rotate(180deg)',
+            transform: 'translateX(-50%) rotate(-180deg)', // 左に180度回転
             width: '90%',
             maxWidth: '800px',
             maxHeight: isMobile ? '250px' : '300px',
@@ -2848,7 +2967,7 @@ export default function Home() {
               {translatedTextLines.length > 0 ? (
                 translatedTextLines.map((line, index) => (
                   <div 
-                    key={`translated-${index}-${line.substring(0, 10)}`}
+                    key={`translated-${index}-${line.text.substring(0, 10)}`}
                     style={{ 
                       color: '#111827',
                       fontSize: isMobile ? '1.25rem' : '1.5rem',
@@ -2862,7 +2981,22 @@ export default function Home() {
                       borderLeft: index === 0 ? '3px solid rgba(59, 130, 246, 0.3)' : '3px solid rgba(0, 0, 0, 0.1)'
                     }}
                   >
-                    {line}
+                    <div>{line.text}</div>
+                    <div style={{ 
+                      fontSize: isMobile ? '0.875rem' : '1rem', 
+                      color: '#6b7280', 
+                      marginTop: '0.5rem',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      gap: '0.75rem',
+                      transform: 'rotate(180deg)',
+                      fontWeight: '500'
+                    }}>
+                      <span>{line.timestamp}</span>
+                      {line.latency !== undefined && (
+                        <span>レイテンシー: {line.latency}ms</span>
+                      )}
+                    </div>
                   </div>
                 ))
               ) : translatedText ? (
@@ -2877,15 +3011,21 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 日本語音声認識エリア（中央、浮き上がるアニメーション、新しいテキストが上に表示） */}
+          {/* 日本語音声認識エリア（中央、浮き上がるアニメーション、新しいテキストが上に表示、モバイルではロゴとの重なり防止） */}
           <div style={{
             position: 'fixed',
-            top: '50%',
+            top: isMobile ? 'calc(2rem + 250px + 1rem)' : '50%',
             left: '50%',
-            transform: 'translate(-50%, -50%)',
+            transform: isMobile ? 'translate(-50%, 0)' : 'translate(-50%, -50%)',
             width: '90%',
             maxWidth: '800px',
-            maxHeight: isMobile ? '300px' : '400px',
+            // モバイル: ロゴのトップ（bottom: calc(3rem + 120px)）までの距離を計算
+            // top + maxHeight <= 100vh - 3rem - 120px - 1rem (ロゴのトップ - 余白)
+            // maxHeight <= 100vh - 3rem - 120px - 1rem - top
+            // top = 2rem + 250px + 1rem = 2rem + 251px
+            maxHeight: isMobile 
+              ? `calc(100vh - 2rem - 250px - 1rem - 3rem - 120px - 1rem)` // 広東語エリア(250px) + 余白 + ロゴ(120px) + 余白 + タイトルエリア
+              : '400px',
             padding: '2rem',
             backgroundColor: 'rgba(255, 255, 255, 0.95)',
             border: '1px solid rgba(0, 0, 0, 0.1)',
@@ -2916,7 +3056,7 @@ export default function Home() {
                 <>
                   {recognizedTextLines.map((line, index) => (
                     <div 
-                      key={`line-${index}-${line.substring(0, 10)}`}
+                      key={`line-${index}-${line.text.substring(0, 10)}`}
                       style={{ 
                         color: '#111827',
                         fontSize: isMobile ? '1.5rem' : '2rem',
@@ -2930,7 +3070,14 @@ export default function Home() {
                         textAlign: 'left'
                       }}
                     >
-                      {line}
+                      <div>{line.text}</div>
+                      <div style={{ 
+                        fontSize: isMobile ? '0.75rem' : '0.875rem', 
+                        color: '#6b7280', 
+                        marginTop: '0.25rem'
+                      }}>
+                        {line.timestamp}
+                      </div>
                     </div>
                   ))}
                   {interimText && (
