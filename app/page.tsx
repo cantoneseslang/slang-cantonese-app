@@ -186,7 +186,6 @@ export default function Home() {
   const translateDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const translateAbortControllerRef = useRef<AbortController | null>(null);
   const lastTranslatedTextRef = useRef<string>('');
-  const lastProcessedResultIndexRef = useRef<number>(-1);
   const lastProcessedFinalTextRef = useRef<string>('');
 
   // 音声の初期化（Web Audio APIで100%音量）
@@ -231,14 +230,8 @@ export default function Home() {
           recognitionRef.current.interimResults = true;
 
           recognitionRef.current.onresult = (event: any) => {
-            // 既に処理済みの結果はスキップ（重複防止）
-            if (event.resultIndex <= lastProcessedResultIndexRef.current) {
-              return;
-            }
-            
             let interim = '';
             let newFinal = '';
-            let lastFinalIndex = -1;
             
             // resultIndexから新しい結果のみを処理
             for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -246,15 +239,11 @@ export default function Home() {
               if (event.results[i].isFinal) {
                 // finalの結果を集約
                 newFinal += transcript;
-                lastFinalIndex = i;
               } else {
                 // interimは最新のもののみ（上書き）
                 interim = transcript;
               }
             }
-            
-            // 処理済みインデックスを更新
-            lastProcessedResultIndexRef.current = event.results.length - 1;
             
             // interimのテキストを更新
             setInterimText(interim);
@@ -262,9 +251,9 @@ export default function Home() {
             if (newFinal) {
               const trimmed = newFinal.trim();
               
-              // 直前のfinalテキストと比較（重複チェック）
-              if (trimmed === lastProcessedFinalTextRef.current) {
-                // 同じテキストの場合は追加しない
+              // 直前のfinalテキストと比較（重複チェック - 完全一致のみ）
+              if (trimmed === lastProcessedFinalTextRef.current && trimmed.length > 0) {
+                // 完全に同じテキストの場合のみスキップ
                 setInterimText('');
                 return;
               }
@@ -273,22 +262,23 @@ export default function Home() {
               
               // finalのテキストを追加
               setFinalText(prev => {
-                // 既に追加済みのテキストと重複していないかチェック
-                if (prev.endsWith(trimmed + ' ')) {
-                  return prev;
-                }
-                return prev + trimmed + ' ';
+                const result = prev + trimmed + ' ';
+                return result;
               });
               
               setRecognizedText(prev => {
-                // 既存のテキストからinterim部分を除去
-                const baseText = prev.replace(new RegExp(interim.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '').trim();
-                
-                // 既に同じfinalテキストが含まれていないかチェック
-                if (baseText.endsWith(trimmed)) {
-                  return baseText;
+                // 既存のテキストからinterim部分を除去してから追加
+                let baseText = prev;
+                if (interim && baseText.includes(interim)) {
+                  // interim部分を除去（最後の出現のみ）
+                  const lastIndex = baseText.lastIndexOf(interim);
+                  if (lastIndex !== -1) {
+                    baseText = baseText.substring(0, lastIndex) + baseText.substring(lastIndex + interim.length);
+                  }
                 }
+                baseText = baseText.trim();
                 
+                // finalテキストを追加
                 return baseText + (baseText ? ' ' : '') + trimmed;
               });
               
@@ -297,11 +287,9 @@ export default function Home() {
               // interimのみの場合
               setRecognizedText(prev => {
                 // 既存のfinalText部分を保持し、interim部分を更新
-                // 前回のinterim部分を削除してから新しいinterimを追加
                 const baseText = prev.trim();
-                // 既にinterimが含まれている場合は、最後のinterim部分を置き換え
-                // 単純に、既存のテキストにinterimを追加（最後のinterimは上書き）
-                return baseText + (baseText && !baseText.endsWith(interim.substring(0, Math.max(0, interim.length - 3))) ? ' ' : '') + interim;
+                // interimの最後の部分を上書き（最新のinterimを表示）
+                return baseText + (baseText ? ' ' : '') + interim;
               });
             }
           };
@@ -419,7 +407,6 @@ export default function Home() {
     setTranslatedText('');
     setShowTitle(false);
     lastTranslatedTextRef.current = '';
-    lastProcessedResultIndexRef.current = -1;
     lastProcessedFinalTextRef.current = '';
     
     // 翻訳リクエストをキャンセル
@@ -510,73 +497,64 @@ export default function Home() {
           recognitionRef.current.interimResults = true;
 
               recognitionRef.current.onresult = (event: any) => {
-                // 既に処理済みの結果はスキップ（重複防止）
-                if (event.resultIndex <= lastProcessedResultIndexRef.current) {
-                  return;
-                }
+                let interimTranscript = '';
+                let finalTranscript = '';
                 
-                let interim = '';
-                let newFinal = '';
-                
-                // resultIndexから新しい結果のみを処理
+                // 全ての結果を処理（resultIndexから最後まで）
                 for (let i = event.resultIndex; i < event.results.length; i++) {
                   const transcript = event.results[i][0].transcript;
                   if (event.results[i].isFinal) {
-                    // finalの結果を集約
-                    newFinal += transcript;
+                    // final結果を追加（空白で区切る）
+                    finalTranscript += (finalTranscript ? ' ' : '') + transcript;
                   } else {
-                    // interimは最新のもののみ（上書き）
-                    interim = transcript;
+                    // interim結果は最新のものを保持（上書き）
+                    interimTranscript = transcript;
                   }
                 }
                 
-                // 処理済みインデックスを更新
-                lastProcessedResultIndexRef.current = event.results.length - 1;
+                // interim結果を表示
+                setInterimText(interimTranscript);
                 
-                // interimのテキストを更新
-                setInterimText(interim);
-                
-                if (newFinal) {
-                  const trimmed = newFinal.trim();
+                // final結果がある場合
+                if (finalTranscript) {
+                  const trimmedFinal = finalTranscript.trim();
                   
-                  // 直前のfinalテキストと比較（重複チェック）
-                  if (trimmed === lastProcessedFinalTextRef.current) {
-                    // 同じテキストの場合は追加しない
+                  // 直前のfinalテキストと完全一致する場合はスキップ（重複防止）
+                  if (trimmedFinal === lastProcessedFinalTextRef.current) {
                     setInterimText('');
                     return;
                   }
                   
-                  lastProcessedFinalTextRef.current = trimmed;
+                  lastProcessedFinalTextRef.current = trimmedFinal;
                   
-                  // finalのテキストを追加
-                  setFinalText(prev => {
-                    // 既に追加済みのテキストと重複していないかチェック
-                    if (prev.endsWith(trimmed + ' ')) {
-                      return prev;
-                    }
-                    return prev + trimmed + ' ';
-                  });
+                  // finalTextに追加
+                  setFinalText(prev => prev + trimmedFinal + ' ');
                   
+                  // recognizedTextを更新（interim部分を除去してからfinalを追加）
                   setRecognizedText(prev => {
-                    // 既存のテキストからinterim部分を除去
-                    const baseText = prev.replace(new RegExp(interim.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '').trim();
-                    
-                    // 既に同じfinalテキストが含まれていないかチェック
-                    if (baseText.endsWith(trimmed)) {
-                      return baseText;
+                    // 現在のrecognizedTextからinterim部分を除去
+                    let cleanText = prev;
+                    if (interimTranscript && cleanText.includes(interimTranscript)) {
+                      const lastInterimIndex = cleanText.lastIndexOf(interimTranscript);
+                      if (lastInterimIndex !== -1) {
+                        cleanText = cleanText.substring(0, lastInterimIndex) + 
+                                   cleanText.substring(lastInterimIndex + interimTranscript.length);
+                      }
                     }
+                    cleanText = cleanText.trim();
                     
-                    return baseText + (baseText ? ' ' : '') + trimmed;
+                    // finalテキストを追加
+                    return cleanText + (cleanText ? ' ' : '') + trimmedFinal;
                   });
                   
                   setInterimText('');
-                } else if (interim) {
+                } else if (interimTranscript) {
                   // interimのみの場合
                   setRecognizedText(prev => {
-                    // 既存のfinalText部分を保持し、interim部分を更新
-                    const baseText = prev.trim();
-                    // 既にinterimが含まれている場合は、最後のinterim部分を置き換え
-                    return baseText + (baseText && !baseText.endsWith(interim.substring(0, Math.max(0, interim.length - 3))) ? ' ' : '') + interim;
+                    // 既存のfinalTextを保持し、interim部分を更新
+                    const finalPart = prev.trim();
+                    // interim部分を追加（既存のinterim部分は上書き）
+                    return finalPart + (finalPart ? ' ' : '') + interimTranscript;
                   });
                 }
               };
