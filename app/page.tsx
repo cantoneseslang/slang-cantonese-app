@@ -172,6 +172,7 @@ export default function Home() {
   const clickCountRef = useRef(0);
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
   const volumeLogoRef = useRef<HTMLImageElement | null>(null);
+  const isPlayingSoundRef = useRef(false);
   
   // 音声認識の状態
   const [recognizedText, setRecognizedText] = useState('');
@@ -2430,154 +2431,108 @@ export default function Home() {
     }
   }, [examplePlaybackSpeed]);
 
-  // 隠しモード専用UI
-  if (isHiddenMode) {
-    return (
-      <div 
-        style={{ 
-          margin: 0, 
-          padding: 0, 
-          backgroundColor: '#1f2937', 
-          minHeight: '100vh',
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#ffffff',
-          transition: 'opacity 0.3s ease',
-          opacity: 1
-        }}
-      >
-        {/* 広東語翻訳エリア（上部、180度回転） */}
-        <div style={{
-          position: 'absolute',
-          top: isMobile ? '2rem' : '4rem',
-          left: '50%',
-          transform: 'translateX(-50%) rotateX(180deg)',
-          width: '90%',
-          maxWidth: '800px',
-          padding: '1.5rem',
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          borderRadius: '12px',
-          minHeight: '100px',
-          textAlign: 'center',
-          fontSize: isMobile ? '1.25rem' : '1.5rem',
-          lineHeight: '1.8',
-          wordBreak: 'break-word'
-        }}>
-          {translatedText || '広東語翻訳がここに表示されます...'}
-        </div>
-
-        {/* 日本語音声認識エリア（中央） */}
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '90%',
-          maxWidth: '800px',
-          padding: '2rem',
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          borderRadius: '12px',
-          minHeight: '150px',
-          textAlign: 'center',
-          fontSize: isMobile ? '1.5rem' : '2rem',
-          lineHeight: '1.8',
-          wordBreak: 'break-word',
-          marginTop: '4rem'
-        }}>
-          {recognizedText || 'マイクボタンを押して日本語を話してください...'}
-          {interimText && (
-            <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>
-              {interimText}
-            </span>
-          )}
-        </div>
-
-        {/* マイクボタン（下部） */}
-        <div style={{
-          position: 'absolute',
-          bottom: isMobile ? '3rem' : '5rem',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          transition: 'transform 0.3s ease'
-        }}>
-          <button
-            onMouseDown={handleMicPress}
-            onMouseUp={handleMicRelease}
-            onTouchStart={(e) => {
-              e.preventDefault();
-              handleMicPress();
-            }}
-            onTouchEnd={(e) => {
-              e.preventDefault();
-              handleMicRelease();
-            }}
-            style={{
-              width: isMobile ? '80px' : '100px',
-              height: isMobile ? '80px' : '100px',
-              borderRadius: '50%',
-              backgroundColor: isRecording ? '#ef4444' : '#3b82f6',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: isRecording ? '0 0 20px rgba(239, 68, 68, 0.5)' : '0 4px 6px rgba(0, 0, 0, 0.1)',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <svg 
-              width={isMobile ? '40' : '50'} 
-              height={isMobile ? '40' : '50'} 
-              fill="white" 
-              viewBox="0 0 24 24"
-            >
-              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-            </svg>
-          </button>
-        </div>
-
-        {/* 終了ボタン（右上） */}
-        <button
-          onClick={exitHiddenMode}
-          style={{
-            position: 'absolute',
-            top: '1rem',
-            right: '1rem',
-            padding: '0.5rem 1rem',
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
-            borderRadius: '8px',
-            color: '#ffffff',
-            cursor: 'pointer',
-            fontSize: '0.875rem'
-          }}
-        >
-          ESCで終了
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div 
       style={{ 
         margin: 0, 
-        padding: isMobile ? '1rem' : '3rem', 
-        backgroundColor: '#f3f4f6', 
+        padding: isHiddenMode ? 0 : (isMobile ? '1rem' : '3rem'), 
+        backgroundColor: isHiddenMode ? '#1f2937' : '#f3f4f6', 
         minHeight: '100vh',
-        position: 'relative'
+        position: 'relative',
+        transition: 'background-color 0.5s ease-out',
+        overflow: isHiddenMode ? 'hidden' : 'visible'
       }}
     >
+      {/* 隠しモードUI */}
+      {isHiddenMode && (
+        <>
+          {/* 広東語翻訳エリア（上部、水平方向反転、浮き上がるアニメーション） */}
+          <div style={{
+            position: 'fixed',
+            top: isMobile ? '2rem' : '4rem',
+            left: '50%',
+            transform: 'translateX(-50%) scaleX(-1)',
+            width: '90%',
+            maxWidth: '800px',
+            padding: '1.5rem',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            borderRadius: '12px',
+            minHeight: '100px',
+            textAlign: 'center',
+            fontSize: isMobile ? '1.25rem' : '1.5rem',
+            lineHeight: '1.8',
+            wordBreak: 'break-word',
+            animation: 'fadeInUp 0.6s ease-out',
+            opacity: 1,
+            zIndex: 1000
+          }}>
+            <div style={{ transform: 'scaleX(-1)' }}>
+              {translatedText || '広東語翻訳がここに表示されます...'}
+            </div>
+          </div>
+
+          {/* 日本語音声認識エリア（中央、浮き上がるアニメーション） */}
+          <div style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '90%',
+            maxWidth: '800px',
+            padding: '2rem',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            borderRadius: '12px',
+            minHeight: '150px',
+            textAlign: 'center',
+            fontSize: isMobile ? '1.5rem' : '2rem',
+            lineHeight: '1.8',
+            wordBreak: 'break-word',
+            animation: 'fadeInUp 0.8s ease-out',
+            opacity: 1,
+            zIndex: 1000
+          }}>
+            {recognizedText || 'マイクボタンを押して日本語を話してください...'}
+            {interimText && (
+              <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>
+                {interimText}
+              </span>
+            )}
+          </div>
+
+          {/* 終了ボタン（右上、浮き上がるアニメーション） */}
+          <button
+            onClick={exitHiddenMode}
+            style={{
+              position: 'fixed',
+              top: '1rem',
+              right: '1rem',
+              padding: '0.5rem 1rem',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              borderRadius: '8px',
+              color: '#ffffff',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              animation: 'fadeInUp 0.4s ease-out',
+              opacity: 1,
+              zIndex: 1001
+            }}
+          >
+            ESCで終了
+          </button>
+        </>
+      )}
+
+      {/* 通常モードコンテンツ */}
       <div style={{ 
         width: '100%', 
         maxWidth: '1200px',
         margin: '0 auto',
         position: 'relative',
-        zIndex: 1
+        zIndex: 1,
+        opacity: isHiddenMode ? 0 : 1,
+        transition: 'opacity 0.3s ease-out',
+        pointerEvents: isHiddenMode ? 'none' : 'auto'
       }}>
 
         {/* フロートヘルプカードのオーバーレイ */}
@@ -2795,7 +2750,11 @@ export default function Home() {
             textAlign: 'center'
           }}>
             {/* 三列: ロゴ / タイトル / サブ見出し */}
-            <div style={{ marginBottom: '0.25rem' }}>
+            <div style={{ 
+              marginBottom: '0.25rem',
+              transition: 'transform 0.5s ease-out',
+              transform: isHiddenMode ? `translateY(calc(100vh - ${isMobile ? '3rem' : '5rem'} - ${isMobile ? '48px' : '56px'} - 0.25rem))` : 'translateY(0)'
+            }}>
               <img 
                 ref={volumeLogoRef}
                 src="/volume-logo.png?v=1" 
@@ -2804,35 +2763,58 @@ export default function Home() {
                   width: isMobile ? 48 : 56, 
                   height: isMobile ? 48 : 56,
                   cursor: 'pointer',
-                  transition: 'transform 0.2s ease',
-                  transform: isHiddenMode ? 'translateY(100px)' : 'translateY(0)'
+                  transition: 'transform 0.5s ease-out',
+                  transform: isHiddenMode ? 'scale(1.5)' : 'scale(1)'
                 }}
                 onClick={() => {
-                  clickCountRef.current += 1;
-                  
-                  // クリック音を再生
-                  if (audioContextRef.current && audioBufferRef.current) {
-                    const source = audioContextRef.current.createBufferSource();
-                    source.buffer = audioBufferRef.current;
-                    source.connect(audioContextRef.current.destination);
-                    source.start(0);
+                  // 音が再生中は無視
+                  if (isPlayingSoundRef.current) {
+                    return;
                   }
+                  
+                  clickCountRef.current += 1;
                   
                   // クリックタイマーをリセット
                   if (clickTimerRef.current) {
                     clearTimeout(clickTimerRef.current);
                   }
                   
-                  // 3回クリックで隠しモード起動
-                  if (clickCountRef.current >= 3) {
-                    // 音を再生しながら隠しモードに切り替え
-                    setIsHiddenMode(true);
-                    clickCountRef.current = 0;
-                    if (clickTimerRef.current) {
-                      clearTimeout(clickTimerRef.current);
+                  // 3回目のクリックの時だけ音を再生
+                  if (clickCountRef.current === 3) {
+                    // 音を再生中フラグを立てる
+                    isPlayingSoundRef.current = true;
+                    
+                    // クリック音を再生
+                    if (audioContextRef.current && audioBufferRef.current) {
+                      const source = audioContextRef.current.createBufferSource();
+                      source.buffer = audioBufferRef.current;
+                      source.connect(audioContextRef.current.destination);
+                      
+                      // 音声の長さを取得（秒）
+                      const duration = audioBufferRef.current.duration;
+                      
+                      // 音声再生完了後に隠しモードを起動
+                      source.onended = () => {
+                        isPlayingSoundRef.current = false;
+                        setIsHiddenMode(true);
+                        clickCountRef.current = 0;
+                        if (clickTimerRef.current) {
+                          clearTimeout(clickTimerRef.current);
+                        }
+                      };
+                      
+                      source.start(0);
+                    } else {
+                      // 音声ファイルが読み込まれていない場合は即座に起動
+                      isPlayingSoundRef.current = false;
+                      setIsHiddenMode(true);
+                      clickCountRef.current = 0;
                     }
+                  } else if (clickCountRef.current > 3) {
+                    // 4回目以降は無視（音が再生中）
+                    return;
                   } else {
-                    // 1秒以内にクリックがなければリセット
+                    // 1回目、2回目: 1秒以内にクリックがなければリセット
                     clickTimerRef.current = setTimeout(() => {
                       clickCountRef.current = 0;
                     }, 1000);
