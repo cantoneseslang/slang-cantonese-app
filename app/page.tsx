@@ -2011,17 +2011,11 @@ export default function Home() {
   const exampleAudioBlobUrlRef = useRef<string | null>(null); // 学習モード用例文Blob URL
   const normalModeAudioBlobUrlRef = useRef<string | null>(null); // ノーマルモード用Blob URL
   
-  // Web Audio API用のGainNode（ボリューム制御）
-  const audioGainNodeRef = useRef<GainNode | null>(null);
-  const exampleAudioGainNodeRef = useRef<GainNode | null>(null);
+  // Web Audio API用のGainNode（ノーマルモード用のみ）
   const normalModeAudioGainNodeRef = useRef<GainNode | null>(null);
-  const audioSourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
-  const exampleAudioSourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
   const normalModeAudioSourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
   
   // ボリューム状態（0.0-1.0）
-  const [audioVolume, setAudioVolume] = useState(1.0);
-  const [exampleAudioVolume, setExampleAudioVolume] = useState(1.0);
   const [normalModeAudioVolume, setNormalModeAudioVolume] = useState(1.0);
   const [playbackSpeed, setPlaybackSpeed] = useState('1');
   const [examplePlaybackSpeed, setExamplePlaybackSpeed] = useState('1');
@@ -3514,47 +3508,54 @@ export default function Home() {
     if (result?.audioBase64) {
       const audioBase64 = result.audioBase64;
       
-      // audioRefがマウントされるまで待つ（最大1秒）
-      let attempts = 0;
-      const maxAttempts = 10;
-      const checkAndSetAudio = () => {
-        if (audioRef.current && audioBase64) {
-          // 古いBlob URLをクリア
-          if (audioBlobUrlRef.current) {
-            URL.revokeObjectURL(audioBlobUrlRef.current);
-            audioBlobUrlRef.current = null;
-          }
-          
-          // Base64をBlobに変換してBlob URLを作成
-          try {
-            const binaryString = atob(audioBase64);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-              bytes[i] = binaryString.charCodeAt(i);
+      // Reactのレンダリングサイクルを待つため、次のフレームで実行
+      const timeoutId = setTimeout(() => {
+        // audioRefがマウントされるまで待つ（最大2秒）
+        let attempts = 0;
+        const maxAttempts = 20;
+        const checkAndSetAudio = () => {
+          if (audioRef.current && audioBase64) {
+            // 古いBlob URLをクリア
+            if (audioBlobUrlRef.current) {
+              URL.revokeObjectURL(audioBlobUrlRef.current);
+              audioBlobUrlRef.current = null;
             }
-            const blob = new Blob([bytes], { type: 'audio/mp3' });
-            const blobUrl = URL.createObjectURL(blob);
-            audioBlobUrlRef.current = blobUrl;
             
-            audioRef.current.src = blobUrl;
-            audioRef.current.volume = 1.0;
-            audioRef.current.load();
-            
-            console.log('✅ 学習モード: 単語音声Blob URL設定完了', { blobUrl });
-          } catch (error) {
-            console.error('❌ Blob URL作成エラー:', error);
+            // Base64をBlobに変換してBlob URLを作成
+            try {
+              const binaryString = atob(audioBase64);
+              const bytes = new Uint8Array(binaryString.length);
+              for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+              }
+              const blob = new Blob([bytes], { type: 'audio/mp3' });
+              const blobUrl = URL.createObjectURL(blob);
+              audioBlobUrlRef.current = blobUrl;
+              
+              audioRef.current.src = blobUrl;
+              audioRef.current.volume = 1.0;
+              audioRef.current.load();
+              
+              console.log('✅ 学習モード: 単語音声Blob URL設定完了', { blobUrl });
+            } catch (error) {
+              console.error('❌ Blob URL作成エラー:', error);
+            }
+          } else if (attempts < maxAttempts) {
+            attempts++;
+            setTimeout(checkAndSetAudio, 100);
+          } else {
+            console.error('❌ audioRefがマウントされませんでした', { 
+              hasAudioRef: !!audioRef.current,
+              hasAudioBase64: !!audioBase64 
+            });
           }
-        } else if (attempts < maxAttempts) {
-          attempts++;
-          setTimeout(checkAndSetAudio, 100);
-        } else {
-          console.error('❌ audioRefがマウントされませんでした');
-        }
-      };
-      
-      checkAndSetAudio();
+        };
+        
+        checkAndSetAudio();
+      }, 0);
       
       return () => {
+        clearTimeout(timeoutId);
         // クリーンアップ
         if (audioBlobUrlRef.current) {
           URL.revokeObjectURL(audioBlobUrlRef.current);
@@ -3569,47 +3570,54 @@ export default function Home() {
     if (result?.exampleAudioBase64) {
       const exampleAudioBase64 = result.exampleAudioBase64;
       
-      // exampleAudioRefがマウントされるまで待つ（最大1秒）
-      let attempts = 0;
-      const maxAttempts = 10;
-      const checkAndSetAudio = () => {
-        if (exampleAudioRef.current && exampleAudioBase64) {
-          // 古いBlob URLをクリア
-          if (exampleAudioBlobUrlRef.current) {
-            URL.revokeObjectURL(exampleAudioBlobUrlRef.current);
-            exampleAudioBlobUrlRef.current = null;
-          }
-          
-          // Base64をBlobに変換してBlob URLを作成
-          try {
-            const binaryString = atob(exampleAudioBase64);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-              bytes[i] = binaryString.charCodeAt(i);
+      // Reactのレンダリングサイクルを待つため、次のフレームで実行
+      const timeoutId = setTimeout(() => {
+        // exampleAudioRefがマウントされるまで待つ（最大2秒）
+        let attempts = 0;
+        const maxAttempts = 20;
+        const checkAndSetAudio = () => {
+          if (exampleAudioRef.current && exampleAudioBase64) {
+            // 古いBlob URLをクリア
+            if (exampleAudioBlobUrlRef.current) {
+              URL.revokeObjectURL(exampleAudioBlobUrlRef.current);
+              exampleAudioBlobUrlRef.current = null;
             }
-            const blob = new Blob([bytes], { type: 'audio/mp3' });
-            const blobUrl = URL.createObjectURL(blob);
-            exampleAudioBlobUrlRef.current = blobUrl;
             
-            exampleAudioRef.current.src = blobUrl;
-            exampleAudioRef.current.volume = 1.0;
-            exampleAudioRef.current.load();
-            
-            console.log('✅ 学習モード: 例文音声Blob URL設定完了', { blobUrl });
-          } catch (error) {
-            console.error('❌ Blob URL作成エラー:', error);
+            // Base64をBlobに変換してBlob URLを作成
+            try {
+              const binaryString = atob(exampleAudioBase64);
+              const bytes = new Uint8Array(binaryString.length);
+              for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+              }
+              const blob = new Blob([bytes], { type: 'audio/mp3' });
+              const blobUrl = URL.createObjectURL(blob);
+              exampleAudioBlobUrlRef.current = blobUrl;
+              
+              exampleAudioRef.current.src = blobUrl;
+              exampleAudioRef.current.volume = 1.0;
+              exampleAudioRef.current.load();
+              
+              console.log('✅ 学習モード: 例文音声Blob URL設定完了', { blobUrl });
+            } catch (error) {
+              console.error('❌ Blob URL作成エラー:', error);
+            }
+          } else if (attempts < maxAttempts) {
+            attempts++;
+            setTimeout(checkAndSetAudio, 100);
+          } else {
+            console.error('❌ exampleAudioRefがマウントされませんでした', { 
+              hasExampleAudioRef: !!exampleAudioRef.current,
+              hasExampleAudioBase64: !!exampleAudioBase64 
+            });
           }
-        } else if (attempts < maxAttempts) {
-          attempts++;
-          setTimeout(checkAndSetAudio, 100);
-        } else {
-          console.error('❌ exampleAudioRefがマウントされませんでした');
-        }
-      };
-      
-      checkAndSetAudio();
+        };
+        
+        checkAndSetAudio();
+      }, 0);
       
       return () => {
+        clearTimeout(timeoutId);
         // クリーンアップ
         if (exampleAudioBlobUrlRef.current) {
           URL.revokeObjectURL(exampleAudioBlobUrlRef.current);
