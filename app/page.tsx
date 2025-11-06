@@ -2004,6 +2004,19 @@ export default function Home() {
   const audioBlobUrlRef = useRef<string | null>(null); // 学習モード用Blob URL
   const exampleAudioBlobUrlRef = useRef<string | null>(null); // 学習モード用例文Blob URL
   const normalModeAudioBlobUrlRef = useRef<string | null>(null); // ノーマルモード用Blob URL
+  
+  // Web Audio API用のGainNode（ボリューム制御）
+  const audioGainNodeRef = useRef<GainNode | null>(null);
+  const exampleAudioGainNodeRef = useRef<GainNode | null>(null);
+  const normalModeAudioGainNodeRef = useRef<GainNode | null>(null);
+  const audioSourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const exampleAudioSourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const normalModeAudioSourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
+  
+  // ボリューム状態（0.0-1.0）
+  const [audioVolume, setAudioVolume] = useState(1.0);
+  const [exampleAudioVolume, setExampleAudioVolume] = useState(1.0);
+  const [normalModeAudioVolume, setNormalModeAudioVolume] = useState(1.0);
   const [playbackSpeed, setPlaybackSpeed] = useState('1');
   const [examplePlaybackSpeed, setExamplePlaybackSpeed] = useState('1');
   const [showHelpCard, setShowHelpCard] = useState(false);
@@ -2959,6 +2972,16 @@ export default function Home() {
               normalModeAudioBlobUrlRef.current = null;
             }
             
+            // 古いWeb Audio API接続をクリア
+            if (normalModeAudioSourceNodeRef.current) {
+              normalModeAudioSourceNodeRef.current.disconnect();
+              normalModeAudioSourceNodeRef.current = null;
+            }
+            if (normalModeAudioGainNodeRef.current) {
+              normalModeAudioGainNodeRef.current.disconnect();
+              normalModeAudioGainNodeRef.current = null;
+            }
+            
             // Base64をBlobに変換してBlob URLを作成（モバイルでボリューム調整可能にするため）
             const binaryString = atob(audioBase64);
             const bytes = new Uint8Array(binaryString.length);
@@ -2972,7 +2995,24 @@ export default function Home() {
             // 新しい音声をセット
             normalModeAudioRef.current.src = blobUrl;
             normalModeAudioRef.current.playbackRate = 1.0; // ノーマルモードでは速度固定
-            normalModeAudioRef.current.volume = 1.0; // ボリュームを明示的に設定
+            normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に
+            
+            // Web Audio APIでボリューム制御
+            if (audioContextRef.current) {
+              try {
+                const source = audioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
+                const gainNode = audioContextRef.current.createGain();
+                gainNode.gain.value = normalModeAudioVolume;
+                
+                source.connect(gainNode);
+                gainNode.connect(audioContextRef.current.destination);
+                
+                normalModeAudioSourceNodeRef.current = source;
+                normalModeAudioGainNodeRef.current = gainNode;
+              } catch (error) {
+                console.error('Web Audio API接続エラー（既に接続されている可能性）:', error);
+              }
+            }
             
             // 音声がロードされるまで待ってから再生
             const playAudio = () => {
@@ -3083,6 +3123,16 @@ export default function Home() {
             normalModeAudioBlobUrlRef.current = null;
           }
           
+          // 古いWeb Audio API接続をクリア
+          if (normalModeAudioSourceNodeRef.current) {
+            normalModeAudioSourceNodeRef.current.disconnect();
+            normalModeAudioSourceNodeRef.current = null;
+          }
+          if (normalModeAudioGainNodeRef.current) {
+            normalModeAudioGainNodeRef.current.disconnect();
+            normalModeAudioGainNodeRef.current = null;
+          }
+          
           // Base64をBlobに変換してBlob URLを作成（モバイルでボリューム調整可能にするため）
           const binaryString = atob(audioBase64);
           const bytes = new Uint8Array(binaryString.length);
@@ -3094,7 +3144,24 @@ export default function Home() {
           normalModeAudioBlobUrlRef.current = blobUrl;
           
           normalModeAudioRef.current.src = blobUrl;
-          normalModeAudioRef.current.volume = 1.0; // ボリュームを明示的に設定
+          normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に
+          
+          // Web Audio APIでボリューム制御
+          if (audioContextRef.current) {
+            try {
+              const source = audioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
+              const gainNode = audioContextRef.current.createGain();
+              gainNode.gain.value = normalModeAudioVolume;
+              
+              source.connect(gainNode);
+              gainNode.connect(audioContextRef.current.destination);
+              
+              normalModeAudioSourceNodeRef.current = source;
+              normalModeAudioGainNodeRef.current = gainNode;
+            } catch (error) {
+              console.error('Web Audio API接続エラー（既に接続されている可能性）:', error);
+            }
+          }
           
           // 音声がロードされるまで待ってから再生
           const playAudio = () => {
@@ -3348,17 +3415,25 @@ export default function Home() {
     }
   }, [examplePlaybackSpeed]);
 
-  // 学習モードの音声をBlob URLに変換（モバイルでボリューム調整可能にするため）
+  // 学習モードの音声をBlob URLに変換し、Web Audio APIでボリューム制御
   useEffect(() => {
-    if (result?.audioBase64) {
+    if (result?.audioBase64 && audioContextRef.current) {
       const audioBase64 = result.audioBase64;
       
       // audioRefがマウントされるまで待つ（最大1秒）
       let attempts = 0;
       const maxAttempts = 10;
       const checkAndSetAudio = () => {
-        if (audioRef.current && audioBase64) {
-          // 古いBlob URLをクリア
+        if (audioRef.current && audioBase64 && audioContextRef.current) {
+          // 古い接続をクリア
+          if (audioSourceNodeRef.current) {
+            audioSourceNodeRef.current.disconnect();
+            audioSourceNodeRef.current = null;
+          }
+          if (audioGainNodeRef.current) {
+            audioGainNodeRef.current.disconnect();
+            audioGainNodeRef.current = null;
+          }
           if (audioBlobUrlRef.current) {
             URL.revokeObjectURL(audioBlobUrlRef.current);
             audioBlobUrlRef.current = null;
@@ -3376,8 +3451,23 @@ export default function Home() {
             audioBlobUrlRef.current = blobUrl;
             
             audioRef.current.src = blobUrl;
-            audioRef.current.volume = 1.0; // ボリュームを明示的に設定
-            audioRef.current.load(); // 音声を再ロード
+            audioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に
+            audioRef.current.load();
+            
+            // Web Audio APIでボリューム制御
+            try {
+              const source = audioContextRef.current.createMediaElementSource(audioRef.current);
+              const gainNode = audioContextRef.current.createGain();
+              gainNode.gain.value = audioVolume;
+              
+              source.connect(gainNode);
+              gainNode.connect(audioContextRef.current.destination);
+              
+              audioSourceNodeRef.current = source;
+              audioGainNodeRef.current = gainNode;
+            } catch (error) {
+              console.error('Web Audio API接続エラー（既に接続されている可能性）:', error);
+            }
           } catch (error) {
             console.error('Blob URL作成エラー:', error);
           }
@@ -3391,25 +3481,41 @@ export default function Home() {
       
       return () => {
         // クリーンアップ
+        if (audioSourceNodeRef.current) {
+          audioSourceNodeRef.current.disconnect();
+          audioSourceNodeRef.current = null;
+        }
+        if (audioGainNodeRef.current) {
+          audioGainNodeRef.current.disconnect();
+          audioGainNodeRef.current = null;
+        }
         if (audioBlobUrlRef.current) {
           URL.revokeObjectURL(audioBlobUrlRef.current);
           audioBlobUrlRef.current = null;
         }
       };
     }
-  }, [result?.audioBase64]);
+  }, [result?.audioBase64, audioVolume]);
 
-  // 学習モードの例文音声をBlob URLに変換（モバイルでボリューム調整可能にするため）
+  // 学習モードの例文音声をBlob URLに変換し、Web Audio APIでボリューム制御
   useEffect(() => {
-    if (result?.exampleAudioBase64) {
+    if (result?.exampleAudioBase64 && audioContextRef.current) {
       const exampleAudioBase64 = result.exampleAudioBase64;
       
       // exampleAudioRefがマウントされるまで待つ（最大1秒）
       let attempts = 0;
       const maxAttempts = 10;
       const checkAndSetAudio = () => {
-        if (exampleAudioRef.current && exampleAudioBase64) {
-          // 古いBlob URLをクリア
+        if (exampleAudioRef.current && exampleAudioBase64 && audioContextRef.current) {
+          // 古い接続をクリア
+          if (exampleAudioSourceNodeRef.current) {
+            exampleAudioSourceNodeRef.current.disconnect();
+            exampleAudioSourceNodeRef.current = null;
+          }
+          if (exampleAudioGainNodeRef.current) {
+            exampleAudioGainNodeRef.current.disconnect();
+            exampleAudioGainNodeRef.current = null;
+          }
           if (exampleAudioBlobUrlRef.current) {
             URL.revokeObjectURL(exampleAudioBlobUrlRef.current);
             exampleAudioBlobUrlRef.current = null;
@@ -3427,8 +3533,23 @@ export default function Home() {
             exampleAudioBlobUrlRef.current = blobUrl;
             
             exampleAudioRef.current.src = blobUrl;
-            exampleAudioRef.current.volume = 1.0; // ボリュームを明示的に設定
-            exampleAudioRef.current.load(); // 音声を再ロード
+            exampleAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に
+            exampleAudioRef.current.load();
+            
+            // Web Audio APIでボリューム制御
+            try {
+              const source = audioContextRef.current.createMediaElementSource(exampleAudioRef.current);
+              const gainNode = audioContextRef.current.createGain();
+              gainNode.gain.value = exampleAudioVolume;
+              
+              source.connect(gainNode);
+              gainNode.connect(audioContextRef.current.destination);
+              
+              exampleAudioSourceNodeRef.current = source;
+              exampleAudioGainNodeRef.current = gainNode;
+            } catch (error) {
+              console.error('Web Audio API接続エラー（既に接続されている可能性）:', error);
+            }
           } catch (error) {
             console.error('Blob URL作成エラー:', error);
           }
@@ -3442,13 +3563,34 @@ export default function Home() {
       
       return () => {
         // クリーンアップ
+        if (exampleAudioSourceNodeRef.current) {
+          exampleAudioSourceNodeRef.current.disconnect();
+          exampleAudioSourceNodeRef.current = null;
+        }
+        if (exampleAudioGainNodeRef.current) {
+          exampleAudioGainNodeRef.current.disconnect();
+          exampleAudioGainNodeRef.current = null;
+        }
         if (exampleAudioBlobUrlRef.current) {
           URL.revokeObjectURL(exampleAudioBlobUrlRef.current);
           exampleAudioBlobUrlRef.current = null;
         }
       };
     }
-  }, [result?.exampleAudioBase64]);
+  }, [result?.exampleAudioBase64, exampleAudioVolume]);
+
+  // ボリューム変更時にGainNodeを更新
+  useEffect(() => {
+    if (audioGainNodeRef.current) {
+      audioGainNodeRef.current.gain.value = audioVolume;
+    }
+  }, [audioVolume]);
+
+  useEffect(() => {
+    if (normalModeAudioGainNodeRef.current) {
+      normalModeAudioGainNodeRef.current.gain.value = normalModeAudioVolume;
+    }
+  }, [normalModeAudioVolume]);
 
   return (
     <div 
@@ -6086,6 +6228,24 @@ export default function Home() {
                         <option value="2">2x</option>
                       </select>
                     </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      <label style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>音量:</label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={audioVolume}
+                        onChange={(e) => setAudioVolume(parseFloat(e.target.value))}
+                        style={{
+                          width: isMobile ? '80px' : '100px',
+                          cursor: 'pointer'
+                        }}
+                      />
+                      <span style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', minWidth: '30px' }}>
+                        {Math.round(audioVolume * 100)}%
+                      </span>
+                    </div>
                     <button
                       onClick={async () => {
                         const textToCopy = result.translatedText || searchQuery;
@@ -6179,6 +6339,24 @@ export default function Home() {
                         <option value="1.5">1.5x</option>
                         <option value="2">2x</option>
                       </select>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      <label style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>音量:</label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={exampleAudioVolume}
+                        onChange={(e) => setExampleAudioVolume(parseFloat(e.target.value))}
+                        style={{
+                          width: isMobile ? '80px' : '100px',
+                          cursor: 'pointer'
+                        }}
+                      />
+                      <span style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', minWidth: '30px' }}>
+                        {Math.round(exampleAudioVolume * 100)}%
+                      </span>
                     </div>
                     <button
                       onClick={async () => {
