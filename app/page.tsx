@@ -167,6 +167,21 @@ export default function Home() {
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const longPressWordRef = useRef<{word: Word, categoryId: string} | null>(null);
 
+  // 隠しモード（同時通訳モード）の状態
+  const [isHiddenMode, setIsHiddenMode] = useState(false);
+  const clickCountRef = useRef(0);
+  const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const volumeLogoRef = useRef<HTMLImageElement | null>(null);
+  
+  // 音声認識の状態
+  const [recognizedText, setRecognizedText] = useState('');
+  const [finalText, setFinalText] = useState('');
+  const [interimText, setInterimText] = useState('');
+  const [translatedText, setTranslatedText] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const translateDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
   // 音声の初期化（Web Audio APIで100%音量）
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -189,6 +204,152 @@ export default function Home() {
       }
     }
   }, []);
+
+  // 音声認識の初期化（Web Speech API）
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.lang = 'ja-JP';
+        recognitionRef.current.continuous = true;
+        recognitionRef.current.interimResults = true;
+
+        recognitionRef.current.onresult = (event: any) => {
+          let interim = '';
+          let final = '';
+          
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              final += transcript;
+            } else {
+              interim += transcript;
+            }
+          }
+          
+          setInterimText(interim);
+          if (final) {
+            setFinalText(prev => prev + final + ' ');
+            setRecognizedText(prev => prev + final + ' ');
+            setInterimText('');
+          } else {
+            setRecognizedText(finalText + interim);
+          }
+        };
+
+        recognitionRef.current.onerror = (event: any) => {
+          console.error('音声認識エラー:', event.error);
+          setIsRecording(false);
+        };
+
+        recognitionRef.current.onend = () => {
+          if (isRecording) {
+            // 録音継続
+            try {
+              recognitionRef.current?.start();
+            } catch (e) {
+              console.error('音声認識再開エラー:', e);
+              setIsRecording(false);
+            }
+          }
+        };
+      }
+    }
+  }, [isRecording, finalText]);
+
+  // 翻訳APIの呼び出し（デバウンス付き）
+  useEffect(() => {
+    if (!isHiddenMode || !recognizedText.trim()) return;
+
+    if (translateDebounceRef.current) {
+      clearTimeout(translateDebounceRef.current);
+    }
+
+    translateDebounceRef.current = setTimeout(async () => {
+      try {
+        const response = await fetch('/api/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: recognizedText.trim() }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setTranslatedText(data.translated || '');
+        }
+      } catch (error) {
+        console.error('翻訳エラー:', error);
+      }
+    }, 500); // 500msデバウンス
+
+    return () => {
+      if (translateDebounceRef.current) {
+        clearTimeout(translateDebounceRef.current);
+      }
+    };
+  }, [recognizedText, isHiddenMode]);
+
+  // 隠しモード終了処理
+  const exitHiddenMode = () => {
+    setIsHiddenMode(false);
+    setIsRecording(false);
+    setRecognizedText('');
+    setFinalText('');
+    setInterimText('');
+    setTranslatedText('');
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        console.error('音声認識停止エラー:', e);
+      }
+    }
+  };
+
+  // ESCキーで隠しモード終了
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isHiddenMode) {
+        exitHiddenMode();
+      }
+    };
+
+    if (isHiddenMode) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isHiddenMode]);
+
+  // マイクボタンのハンドラー
+  const handleMicPress = () => {
+    if (!isHiddenMode) return;
+    
+    if (!isRecording) {
+      setIsRecording(true);
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+        } catch (e) {
+          console.error('音声認識開始エラー:', e);
+          setIsRecording(false);
+        }
+      }
+    }
+  };
+
+  const handleMicRelease = () => {
+    if (!isHiddenMode) return;
+    
+    setIsRecording(false);
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        console.error('音声認識停止エラー:', e);
+      }
+    }
+  };
 
   // クリック音のオン/オフを切り替える
   const toggleClickSound = () => {
@@ -2222,6 +2383,138 @@ export default function Home() {
     }
   }, [examplePlaybackSpeed]);
 
+  // 隠しモード専用UI
+  if (isHiddenMode) {
+    return (
+      <div 
+        style={{ 
+          margin: 0, 
+          padding: 0, 
+          backgroundColor: '#1f2937', 
+          minHeight: '100vh',
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#ffffff',
+          transition: 'opacity 0.3s ease',
+          opacity: 1
+        }}
+      >
+        {/* 広東語翻訳エリア（上部、180度回転） */}
+        <div style={{
+          position: 'absolute',
+          top: isMobile ? '2rem' : '4rem',
+          left: '50%',
+          transform: 'translateX(-50%) rotateX(180deg)',
+          width: '90%',
+          maxWidth: '800px',
+          padding: '1.5rem',
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: '12px',
+          minHeight: '100px',
+          textAlign: 'center',
+          fontSize: isMobile ? '1.25rem' : '1.5rem',
+          lineHeight: '1.8',
+          wordBreak: 'break-word'
+        }}>
+          {translatedText || '広東語翻訳がここに表示されます...'}
+        </div>
+
+        {/* 日本語音声認識エリア（中央） */}
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '90%',
+          maxWidth: '800px',
+          padding: '2rem',
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: '12px',
+          minHeight: '150px',
+          textAlign: 'center',
+          fontSize: isMobile ? '1.5rem' : '2rem',
+          lineHeight: '1.8',
+          wordBreak: 'break-word',
+          marginTop: '4rem'
+        }}>
+          {recognizedText || 'マイクボタンを押して日本語を話してください...'}
+          {interimText && (
+            <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>
+              {interimText}
+            </span>
+          )}
+        </div>
+
+        {/* マイクボタン（下部） */}
+        <div style={{
+          position: 'absolute',
+          bottom: isMobile ? '3rem' : '5rem',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          transition: 'transform 0.3s ease'
+        }}>
+          <button
+            onMouseDown={handleMicPress}
+            onMouseUp={handleMicRelease}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              handleMicPress();
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              handleMicRelease();
+            }}
+            style={{
+              width: isMobile ? '80px' : '100px',
+              height: isMobile ? '80px' : '100px',
+              borderRadius: '50%',
+              backgroundColor: isRecording ? '#ef4444' : '#3b82f6',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: isRecording ? '0 0 20px rgba(239, 68, 68, 0.5)' : '0 4px 6px rgba(0, 0, 0, 0.1)',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <svg 
+              width={isMobile ? '40' : '50'} 
+              height={isMobile ? '40' : '50'} 
+              fill="white" 
+              viewBox="0 0 24 24"
+            >
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* 終了ボタン（右上） */}
+        <button
+          onClick={exitHiddenMode}
+          style={{
+            position: 'absolute',
+            top: '1rem',
+            right: '1rem',
+            padding: '0.5rem 1rem',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            borderRadius: '8px',
+            color: '#ffffff',
+            cursor: 'pointer',
+            fontSize: '0.875rem'
+          }}
+        >
+          ESCで終了
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div 
       style={{ 
@@ -2456,7 +2749,49 @@ export default function Home() {
           }}>
             {/* 三列: ロゴ / タイトル / サブ見出し */}
             <div style={{ marginBottom: '0.25rem' }}>
-              <img src="/volume-logo.png?v=1" alt="logo" style={{ width: isMobile ? 48 : 56, height: isMobile ? 48 : 56 }} />
+              <img 
+                ref={volumeLogoRef}
+                src="/volume-logo.png?v=1" 
+                alt="logo" 
+                style={{ 
+                  width: isMobile ? 48 : 56, 
+                  height: isMobile ? 48 : 56,
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s ease',
+                  transform: isHiddenMode ? 'translateY(100px)' : 'translateY(0)'
+                }}
+                onClick={() => {
+                  clickCountRef.current += 1;
+                  
+                  // クリック音を再生
+                  if (audioContextRef.current && audioBufferRef.current) {
+                    const source = audioContextRef.current.createBufferSource();
+                    source.buffer = audioBufferRef.current;
+                    source.connect(audioContextRef.current.destination);
+                    source.start(0);
+                  }
+                  
+                  // クリックタイマーをリセット
+                  if (clickTimerRef.current) {
+                    clearTimeout(clickTimerRef.current);
+                  }
+                  
+                  // 3回クリックで隠しモード起動
+                  if (clickCountRef.current >= 3) {
+                    // 音を再生しながら隠しモードに切り替え
+                    setIsHiddenMode(true);
+                    clickCountRef.current = 0;
+                    if (clickTimerRef.current) {
+                      clearTimeout(clickTimerRef.current);
+                    }
+                  } else {
+                    // 1秒以内にクリックがなければリセット
+                    clickTimerRef.current = setTimeout(() => {
+                      clickCountRef.current = 0;
+                    }, 1000);
+                  }
+                }}
+              />
             </div>
             <div style={{ 
               fontSize: isMobile ? '1.625rem' : '2.25rem', 
