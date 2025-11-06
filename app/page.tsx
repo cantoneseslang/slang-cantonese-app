@@ -416,36 +416,7 @@ export default function Home() {
                 return [newLine, ...prev].slice(0, 50);
               });
               
-              // 音声再生（ミュートされていない場合）
-              if (!isMuted && translated) {
-                (async () => {
-                  try {
-                    const audioResponse = await fetch('/api/generate-speech', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify({ text: translated }),
-                    });
-
-                    if (audioResponse.ok) {
-                      const audioData = await audioResponse.json();
-                      const audioBase64 = audioData.audioContent;
-
-                      if (simultaneousModeAudioRef.current && audioBase64) {
-                        simultaneousModeAudioRef.current.pause();
-                        simultaneousModeAudioRef.current.currentTime = 0;
-                        simultaneousModeAudioRef.current.src = `data:audio/mp3;base64,${audioBase64}`;
-                        simultaneousModeAudioRef.current.play().catch((e) => {
-                          console.error('音声再生エラー:', e);
-                        });
-                      }
-                    }
-                  } catch (err) {
-                    console.error('音声生成エラー:', err);
-                  }
-                })();
-              }
+              // interimテキストの音声生成は行わない（確定テキストのみ音声生成）
             }
           }
         } catch (error: any) {
@@ -3404,7 +3375,7 @@ export default function Home() {
               style={{
                 position: 'fixed',
                 bottom: isMobile ? 'calc(3rem + 120px)' : 'calc(5rem + 140px)',
-                left: isMobile ? 'calc(50% - 96px - 1rem - 48px)' : 'calc(50% - 120px - 1.5rem - 60px)',
+                left: isMobile ? 'calc(50% - 96px - 0.5rem - 48px)' : 'calc(50% - 120px - 0.75rem - 60px)',
                 transform: 'translateX(-50%)',
                 width: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
                 height: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
@@ -3467,7 +3438,7 @@ export default function Home() {
               style={{
                 position: 'fixed',
                 bottom: isMobile ? 'calc(3rem + 120px)' : 'calc(5rem + 140px)',
-                left: isMobile ? 'calc(50% + 96px + 1rem + 48px)' : 'calc(50% + 120px + 1.5rem + 60px)',
+                left: isMobile ? 'calc(50% + 96px + 0.5rem + 48px)' : 'calc(50% + 120px + 0.75rem + 60px)',
                 transform: 'translateX(-50%)',
                 width: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
                 height: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
