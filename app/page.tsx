@@ -3894,7 +3894,7 @@ export default function Home() {
           >
             <img
               ref={volumeLogoRef}
-              src={translationLanguage === 'cantonese' ? "/volume-logo.svg?v=1" : "/volume-logo-mandarin.svg?v=1"}
+              src={translationLanguage === 'cantonese' ? "/volume-logo.svg?v=2" : "/volume-logo-mandarin.svg?v=2"}
               alt="microphone"
               draggable="false"
               style={{
@@ -3999,7 +3999,7 @@ export default function Home() {
               }}
             >
               <img
-                src={translationLanguage === 'cantonese' ? "/hand-button.svg?v=1" : "/mute-button-mandarin.svg?v=1"}
+                src={translationLanguage === 'cantonese' ? "/hand-button.svg?v=2" : "/mute-button-mandarin.svg?v=2"}
                 alt="hand button"
                 draggable="false"
                 style={{
@@ -4108,7 +4108,7 @@ export default function Home() {
               }}
             >
               <img
-                src={translationLanguage === 'cantonese' ? "/mute-button.svg?v=1" : "/hand-button-mandarin.svg?v=1"}
+                src={translationLanguage === 'cantonese' ? "/mute-button.svg?v=2" : "/hand-button-mandarin.svg?v=2"}
                 alt="mute button"
                 draggable="false"
                 style={{
@@ -4411,7 +4411,7 @@ export default function Home() {
             }}>
               <img 
                 ref={volumeLogoRef}
-                src="/volume-logo.svg?v=1" 
+                src="/volume-logo.svg?v=2" 
                 alt="logo" 
                 draggable="false"
                 style={{ 
