@@ -3020,18 +3020,13 @@ export default function Home() {
           {/* 日本語音声認識エリア（中央、浮き上がるアニメーション、新しいテキストが上に表示、モバイルではロゴとの重なり防止） */}
           <div style={{
             position: 'fixed',
-            top: isMobile ? 'calc(2rem + 350px + 2rem)' : '50%', // 広東語エリア: top(2rem) + maxHeight(250px) + padding上下(1.5rem*2≈3rem) + 余白(2rem) = 約350px + 2rem
+            top: isMobile ? 'calc(2rem + 350px + 2rem)' : '50%', // 広東語エリアの下（モバイル）または中央（デスクトップ）
+            bottom: isMobile ? 'calc(3rem + 120px + 96px + 2rem)' : 'auto', // ロゴの上端 + 余白（モバイルのみ）
             left: '50%',
             transform: isMobile ? 'translate(-50%, 0)' : 'translate(-50%, -50%)',
             width: '90%',
             maxWidth: '800px',
-            // モバイル: ロゴのトップまでの距離を計算
-            // ロゴのtop = 100vh - (3rem + 120px)
-            // 日本語エリアのbottom = ロゴのtop - 1rem余白 = 100vh - 3rem - 120px - 1rem
-            // maxHeight = bottom - top = (100vh - 3rem - 120px - 1rem) - (2rem + 300px + 1.5rem)
-            maxHeight: isMobile 
-              ? `calc(100vh - 3rem - 120px - 1rem - 2rem - 350px - 2rem)` 
-              : '400px',
+            maxHeight: isMobile ? 'none' : '400px', // bottom指定時はmaxHeight不要
             padding: '2rem',
             backgroundColor: 'rgba(255, 255, 255, 0.95)',
             border: '1px solid rgba(0, 0, 0, 0.1)',
