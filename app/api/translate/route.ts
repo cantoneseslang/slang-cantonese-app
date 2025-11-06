@@ -33,12 +33,11 @@ export async function POST(request: NextRequest) {
     }
     
     // 言語に応じて翻訳先を決定（デフォルトは広東語）
-    const targetLanguage = language === 'mandarin' ? 'Mandarin Chinese (Simplified)' : 'Cantonese (traditional Chinese)';
     const systemPrompt = language === 'mandarin' 
-      ? "You are a professional translator. Translate the given Japanese text to Mandarin Chinese (Simplified). Only provide the translation without any explanations or additional text. Use simplified Chinese characters. Be concise and fast."
+      ? "You are a professional translator. Translate the given Japanese text DIRECTLY to Mandarin Chinese (Simplified Chinese). DO NOT translate to Cantonese first. DO NOT use Traditional Chinese characters. Only use Simplified Chinese characters. Only provide the translation without any explanations or additional text. Be concise and fast."
       : "You are a professional translator. Translate the given Japanese text to Cantonese (traditional Chinese). Only provide the translation without any explanations or additional text. Use traditional Chinese characters. Be concise and fast.";
     const userPrompt = language === 'mandarin'
-      ? `Translate this Japanese text to Mandarin Chinese: ${text}`
+      ? `Translate this Japanese text DIRECTLY to Mandarin Chinese (Simplified Chinese characters only, no Traditional Chinese): ${text}`
       : `Translate this Japanese text to Cantonese: ${text}`;
     
     const response = await fetch(DEEPSEEK_API_URL, {
