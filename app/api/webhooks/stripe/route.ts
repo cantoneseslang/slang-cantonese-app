@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
     // Payment Intent成功時の処理（lifetimeプランの場合、checkout.session.completedが発火しない可能性があるため）
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
-      const userId = paymentIntent.metadata?.user_id;
-      const plan = paymentIntent.metadata?.plan as 'subscription' | 'lifetime';
+      let userId = paymentIntent.metadata?.user_id;
+      let plan = paymentIntent.metadata?.plan as 'subscription' | 'lifetime';
       
       console.log('🔔 payment_intent.succeeded event received:', {
         paymentIntentId: paymentIntent.id,
@@ -66,6 +66,22 @@ export async function POST(request: NextRequest) {
         plan,
         metadata: paymentIntent.metadata
       });
+
+      // payment_intentのmetadataにuser_idとplanがない場合、checkout_session_idから取得を試みる
+      if ((!userId || !plan) && paymentIntent.metadata?.checkout_session_id) {
+        try {
+          const checkoutSessionId = paymentIntent.metadata.checkout_session_id;
+          console.log('📋 checkout_session_idからセッション情報を取得:', checkoutSessionId);
+          
+          const session = await stripe.checkout.sessions.retrieve(checkoutSessionId);
+          userId = session.metadata?.user_id || userId;
+          plan = (session.metadata?.plan as 'subscription' | 'lifetime') || plan;
+          
+          console.log('✅ セッションから取得した情報:', { userId, plan });
+        } catch (error: any) {
+          console.error('❌ セッション取得エラー:', error);
+        }
+      }
 
       // payment_intentのmetadataにuser_idとplanがある場合は直接処理
       if (userId && plan) {

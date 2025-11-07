@@ -37,17 +37,19 @@ function PaymentSuccessContent() {
         // 会員種別が既に更新されているか確認
         const currentMembershipType = updatedUser.user_metadata?.membership_type;
         
-          // まだ更新されていない場合、Stripeセッションを直接確認して更新
-          if (currentMembershipType === 'free') {
+        // まだ更新されていない場合、Stripeセッションを直接確認して更新
+        // subscriptionからlifetimeへのアップグレードの場合もチェック
+        if (currentMembershipType === 'free' || (currentMembershipType === 'subscription' && sessionId)) {
             console.log('⚠️ Webhookで更新されていないため、セッションを直接確認します', {
               sessionId,
               currentMembershipType,
               userId: updatedUser.id
             });
             
-            // まずverify-sessionを試す
+            // まずverify-sessionを試す（即座に実行、待機なし）
             let verifyData: any = null;
             try {
+              console.log('🔄 verify-sessionを即座に実行します...');
               const verifyResponse = await fetch('/api/stripe/verify-session', {
                 method: 'POST',
                 headers: {
@@ -62,6 +64,8 @@ function PaymentSuccessContent() {
                 
                 if (!verifyData.success) {
                   console.warn('⚠️ verify-sessionが成功したが、会員種別の更新に失敗');
+                } else {
+                  console.log('✅ verify-sessionで会員種別が更新されました:', verifyData.membershipType);
                 }
               } else {
                 const errorData = await verifyResponse.json();

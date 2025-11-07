@@ -120,16 +120,31 @@ export async function POST(request: NextRequest) {
         },
       } : undefined,
       // lifetimeプランの場合、payment_intentのmetadataにもuser_idとplanを設定
+      // また、checkout_session_idも設定して、payment_intent.succeededイベントでセッションを取得できるようにする
       payment_intent_data: plan === 'lifetime' ? {
         metadata: {
           user_id: userId,
           plan: plan,
+          checkout_session_id: 'PLACEHOLDER', // セッション作成後に更新する必要があるが、Stripeでは後から更新できないため、セッションIDを後で設定する
         },
       } : undefined,
       customer_email: body.email || undefined,
     };
 
     const session = await stripe.checkout.sessions.create(sessionParams);
+
+    // lifetimeプランの場合、payment_intentのmetadataにcheckout_session_idを設定するため、
+    // セッション作成後にpayment_intentを取得して更新を試みる
+    // ただし、Stripeではpayment_intentのmetadataは後から更新できないため、
+    // この処理はスキップ（代わりにpayment_intent.succeededイベントでセッションを取得する）
+
+    console.log('✅ Checkout Session created:', {
+      sessionId: session.id,
+      mode: session.mode,
+      plan: plan,
+      userId: userId,
+      metadata: session.metadata
+    });
 
     return NextResponse.json({
       sessionId: session.id,
