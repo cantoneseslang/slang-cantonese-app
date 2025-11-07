@@ -69,7 +69,7 @@ interface TextLine {
   timestamp: string; // タイムスタンプ（例: "12:40 39s"）
 }
 
-// 改行を検知するコンポーネント
+// 改行を検知するコンポーネント（ResizeObserverとより確実な測定方法を使用）
 function CantoneseText({ 
   text, 
   isMobile, 
@@ -100,22 +100,51 @@ function CantoneseText({
       ? (isMobile ? '1.25rem' : '1.5rem')
       : (isMobile ? '1rem' : '1.5rem');
     
-    // まず基本フォントサイズで測定
-    element.style.fontSize = baseFontSize;
-    
-    // レイアウトを再計算するために少し待つ
-    requestAnimationFrame(() => {
+    // 測定関数
+    const measureText = () => {
       if (!textRef.current) return;
       
-      // 要素の高さを測定
-      const lineHeight = parseFloat(getComputedStyle(element).lineHeight) || parseFloat(baseFontSize) * 1.5;
-      const scrollHeight = element.scrollHeight;
+      const el = textRef.current;
       
-      // 改行が発生しているかチェック（高さが1行分を超えている場合）
-      const wrapped = scrollHeight > lineHeight * 1.2; // 20%のマージンを持たせる
+      // まず基本フォントサイズで測定
+      el.style.fontSize = baseFontSize;
       
-      setFontSize(wrapped ? smallFontSize : baseFontSize);
+      // レイアウトを強制的に再計算
+      void el.offsetHeight; // リフローを強制
+      
+      // 少し待ってから測定（レイアウトが確定するまで）
+      setTimeout(() => {
+        if (!textRef.current) return;
+        
+        const computedStyle = getComputedStyle(el);
+        const lineHeight = parseFloat(computedStyle.lineHeight) || parseFloat(baseFontSize) * 1.5;
+        const scrollHeight = el.scrollHeight;
+        const clientHeight = el.clientHeight;
+        
+        // 改行が発生しているかチェック
+        // scrollHeightがlineHeightの1.3倍を超えている場合、改行と判定
+        const wrapped = scrollHeight > lineHeight * 1.3;
+        
+        // デバッグ用（本番では削除）
+        // console.log('Text wrap check:', { text: text.substring(0, 20), scrollHeight, lineHeight, wrapped });
+        
+        setFontSize(wrapped ? smallFontSize : baseFontSize);
+      }, 50); // 50ms待つ
+    };
+    
+    // 初回測定
+    measureText();
+    
+    // ResizeObserverでサイズ変更を監視
+    const resizeObserver = new ResizeObserver(() => {
+      measureText();
     });
+    
+    resizeObserver.observe(element);
+    
+    return () => {
+      resizeObserver.disconnect();
+    };
   }, [text, isMobile, baseSize]);
 
   return (
@@ -130,7 +159,9 @@ function CantoneseText({
         overflowWrap: 'break-word',
         maxWidth: '100%',
         width: '100%',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        display: 'block', // ブロック要素にして測定を確実に
+        lineHeight: '1.5' // 明示的にline-heightを設定
       }}
     >
       {text}
