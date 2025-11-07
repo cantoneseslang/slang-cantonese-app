@@ -884,6 +884,12 @@ export default function Home() {
       return;
     }
     
+    // 音声認識中はタイトル音声を再生しない（マイク入力の精度を保つため）
+    if (isRecording) {
+      console.log('音声認識中のため、タイトル音声の再生をスキップします');
+      return;
+    }
+    
     titleClickCountRef.current += 1;
     
     // 既存のタイマーをクリア
@@ -905,8 +911,8 @@ export default function Home() {
         setTimeout(() => {
           setShowTitle(true);
           
-          // タイトル音声を再生
-          if (titleAudioRef.current) {
+          // タイトル音声を再生（音声認識中でない場合のみ）
+          if (titleAudioRef.current && !isRecording) {
             titleAudioRef.current.currentTime = 0;
             titleAudioRef.current.play().catch((e) => {
               console.error('タイトル音声再生エラー:', e);
