@@ -39,7 +39,11 @@ function PaymentSuccessContent() {
         
         // まだ更新されていない場合、Stripeセッションを直接確認して更新
         if (currentMembershipType === 'free') {
-          console.log('⚠️ Webhookで更新されていないため、セッションを直接確認します');
+          console.log('⚠️ Webhookで更新されていないため、セッションを直接確認します', {
+            sessionId,
+            currentMembershipType,
+            userId: updatedUser.id
+          });
           
           // Stripeセッションを確認して会員種別を更新
           const verifyResponse = await fetch('/api/stripe/verify-session', {
@@ -52,12 +56,20 @@ function PaymentSuccessContent() {
 
           if (!verifyResponse.ok) {
             const errorData = await verifyResponse.json();
-            console.error('セッション確認エラー:', errorData);
-            throw new Error('決済の確認に失敗しました。');
+            console.error('❌ セッション確認エラー:', {
+              status: verifyResponse.status,
+              statusText: verifyResponse.statusText,
+              error: errorData
+            });
+            throw new Error(`決済の確認に失敗しました: ${errorData.error || verifyResponse.statusText}`);
           }
 
           const verifyData = await verifyResponse.json();
           console.log('✅ セッション確認完了:', verifyData);
+          
+          if (!verifyData.success) {
+            throw new Error('セッション確認は成功しましたが、会員種別の更新に失敗しました。');
+          }
 
           // ユーザー情報を再取得
           const { data: { user: finalUser }, error: finalError } = await supabase.auth.getUser();
