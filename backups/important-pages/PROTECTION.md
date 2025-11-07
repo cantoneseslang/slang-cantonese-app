@@ -99,3 +99,11 @@ git config core.hooksPath .githooks
 - バックアップファイルは定期的に更新することを推奨します
 - メインページ（`app/page.tsx`）は保護対象外です
 
+
+
+
+
+
+
+
+
