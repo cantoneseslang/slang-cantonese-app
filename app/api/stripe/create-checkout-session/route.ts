@@ -68,19 +68,16 @@ export async function POST(request: NextRequest) {
     const successUrl = `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${baseUrl}/payment/cancel`;
 
+    // テストモードの場合は動的に価格を作成（価格IDが存在しない可能性があるため）
+    // 本番モードの場合は価格IDを使用
+    const useDynamicPricing = isTestMode || !priceId;
+
     // Stripe Checkoutセッションを作成
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ['card'],
-      line_items: priceId 
+      line_items: useDynamicPricing
         ? [
-            // 既存の価格IDを使用
-            {
-              price: priceId,
-              quantity: 1,
-            },
-          ]
-        : [
-            // 動的に価格を作成（フォールバック）
+            // 動的に価格を作成（テストモードまたは価格IDが存在しない場合）
             {
               price_data: {
                 currency: selectedCurrency,
@@ -99,6 +96,13 @@ export async function POST(request: NextRequest) {
                   },
                 }),
               },
+              quantity: 1,
+            },
+          ]
+        : [
+            // 既存の価格IDを使用（本番モード）
+            {
+              price: priceId!,
               quantity: 1,
             },
           ],
