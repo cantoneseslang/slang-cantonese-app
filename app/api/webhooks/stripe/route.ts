@@ -114,6 +114,7 @@ export async function POST(request: NextRequest) {
       }
 
       // 2. usersテーブルも確実に更新（user_metadataの更新が成功しても失敗しても実行）
+      // usersテーブルが存在しない場合はスキップ（エラーを無視）
       const { data: dbData, error: dbError } = await supabase
         .from('users')
         .update({
@@ -125,7 +126,16 @@ export async function POST(request: NextRequest) {
         .select();
 
       if (dbError) {
-        console.error('❌ Failed to update users table:', dbError);
+        // usersテーブルが存在しない場合は警告のみ（user_metadataは更新済み）
+        if (dbError.code === 'PGRST116' || dbError.message.includes('relation') || dbError.message.includes('does not exist')) {
+          console.warn('⚠️ usersテーブルが存在しないため、user_metadataのみ更新しました:', {
+            userId,
+            plan,
+            error: dbError.message
+          });
+        } else {
+          console.error('❌ Failed to update users table:', dbError);
+        }
       } else {
         console.log('✅ Users table updated successfully:', {
           userId,
@@ -134,9 +144,16 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // エラーが発生した場合はログに記録（ただし処理は続行）
-      if (userError && dbError) {
-        console.error('⚠️ Both user_metadata and users table updates failed');
+      // user_metadataの更新が失敗した場合はエラーを返す
+      if (userError) {
+        console.error('❌ Failed to update user_metadata - this is critical:', userError);
+        return NextResponse.json(
+          { 
+            error: 'Failed to update user membership', 
+            details: { userError: userError.message, userId, plan }
+          },
+          { status: 500 }
+        );
       }
     }
 
