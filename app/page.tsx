@@ -71,6 +71,15 @@ interface TextLine {
 
 export default function Home() {
   const router = useRouter();
+  
+  // Safari検出
+  const [isSafari, setIsSafari] = useState(false);
+  useEffect(() => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isSafariBrowser = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || 
+                           (userAgent.includes('safari') && !userAgent.includes('chrome'));
+    setIsSafari(isSafariBrowser);
+  }, []);
   const supabase = createClient();
   const [user, setUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -4011,7 +4020,7 @@ export default function Home() {
               onClick={handleTitleClick}
               style={{
                 position: 'fixed',
-                bottom: isMobile ? '3rem' : '5rem',
+                bottom: isMobile ? (isSafari ? 'calc(3rem + env(safe-area-inset-bottom))' : '3rem') : '5rem',
                 left: '50%',
                 transform: 'translateX(-50%)',
                 textAlign: 'center',
@@ -4020,7 +4029,9 @@ export default function Home() {
                 cursor: 'pointer',
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
-                WebkitTouchCallout: 'none'
+                WebkitTouchCallout: 'none',
+                WebkitTransform: 'translateX(-50%)',
+                paddingBottom: isMobile && isSafari ? 'env(safe-area-inset-bottom)' : '0'
               }}
             >
               <div style={{
@@ -4078,9 +4089,10 @@ export default function Home() {
             }}
             style={{
               position: 'fixed',
-              bottom: isMobile ? 'calc(3rem + 120px)' : 'calc(5rem + 140px)',
+              bottom: isMobile ? (isSafari ? 'calc(3rem + 120px + env(safe-area-inset-bottom))' : 'calc(3rem + 120px)') : 'calc(5rem + 140px)',
               left: '50%',
               transform: 'translateX(-50%)',
+              WebkitTransform: 'translateX(-50%)',
               width: isMobile ? '96px' : '120px',
               height: isMobile ? '96px' : '120px',
               borderRadius: '50%',
@@ -4093,9 +4105,11 @@ export default function Home() {
               justifyContent: 'center',
               cursor: 'pointer',
               transition: 'all 0.5s ease-out',
+              WebkitTransition: 'all 0.5s ease-out',
               zIndex: 1002,
               pointerEvents: 'auto',
               animation: 'fadeInUp 1s ease-out',
+              WebkitAnimation: 'fadeInUp 1s ease-out',
               userSelect: 'none',
               WebkitUserSelect: 'none',
               WebkitTouchCallout: 'none',
@@ -4218,9 +4232,10 @@ export default function Home() {
               onMouseLeave={() => setHoveredButton(null)}
               style={{
                 position: 'fixed',
-                bottom: isMobile ? 'calc(3rem + 120px)' : 'calc(5rem + 140px)',
+                bottom: isMobile ? (isSafari ? 'calc(3rem + 120px + env(safe-area-inset-bottom))' : 'calc(3rem + 120px)') : 'calc(5rem + 140px)',
                 left: isMobile ? 'calc(50% - 96px - 0.25rem - 48px)' : 'calc(50% - 120px - 0.75rem - 60px)',
                 transform: 'translateX(-50%)',
+                WebkitTransform: 'translateX(-50%)',
                 width: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
                 height: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
                 borderRadius: '50%',
@@ -4231,6 +4246,7 @@ export default function Home() {
                 justifyContent: 'center',
                 cursor: 'pointer',
                 transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                WebkitTransition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
                 zIndex: 1002,
                 pointerEvents: 'auto',
                 opacity: buttonsAnimated ? 1 : 0,
@@ -4327,9 +4343,10 @@ export default function Home() {
               onMouseLeave={() => setHoveredButton(null)}
               style={{
                 position: 'fixed',
-                bottom: isMobile ? 'calc(3rem + 120px)' : 'calc(5rem + 140px)',
+                bottom: isMobile ? (isSafari ? 'calc(3rem + 120px + env(safe-area-inset-bottom))' : 'calc(3rem + 120px)') : 'calc(5rem + 140px)',
                 left: isMobile ? 'calc(50% + 96px + 0.25rem + 48px)' : 'calc(50% + 120px + 0.75rem + 60px)',
                 transform: 'translateX(-50%)',
+                WebkitTransform: 'translateX(-50%)',
                 width: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
                 height: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
                 borderRadius: '50%',
@@ -4342,6 +4359,7 @@ export default function Home() {
                 justifyContent: 'center',
                 cursor: 'pointer',
                 transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                WebkitTransition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
                 zIndex: 1002,
                 pointerEvents: 'auto',
                 opacity: buttonsAnimated ? 1 : 0,
