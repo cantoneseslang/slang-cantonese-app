@@ -2059,7 +2059,21 @@ export default function Home() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Checkout session creation failed');
+        console.error('Stripe Checkout API error:', errorData);
+        
+        // 詳細なエラー情報を構築
+        let errorMessage = errorData.error || 'Checkout session creation failed';
+        if (errorData.details) {
+          errorMessage += `\n詳細: ${errorData.details}`;
+        }
+        if (errorData.debug) {
+          errorMessage += `\nデバッグ情報: ${JSON.stringify(errorData.debug, null, 2)}`;
+        }
+        if (errorData.errorInfo) {
+          errorMessage += `\nエラー情報: ${JSON.stringify(errorData.errorInfo, null, 2)}`;
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const { url } = await response.json();
@@ -2072,7 +2086,11 @@ export default function Home() {
       }
     } catch (err: any) {
       console.error('Stripe Checkout error:', err);
-      alert('決済処理中にエラーが発生しました: ' + err.message);
+      console.error('Error details:', err.message);
+      
+      // エラーメッセージを表示（詳細情報を含む）
+      const errorMsg = err.message || '決済処理中にエラーが発生しました';
+      alert(errorMsg);
       setShowPricingModal(true);
     }
   };
