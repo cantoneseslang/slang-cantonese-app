@@ -13,6 +13,9 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const isTestMode = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_') || false;
 
 export async function POST(request: NextRequest) {
+  let plan: string | undefined;
+  let currency: string | undefined;
+  
   try {
     // 環境変数の確認
     if (!process.env.STRIPE_SECRET_KEY) {
@@ -24,7 +27,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { plan, userId, currency = 'jpy' } = body; // 通貨を取得（デフォルト: JPY）
+    plan = body.plan;
+    currency = body.currency || 'jpy';
+    const userId = body.userId;
 
     if (!plan || !userId) {
       return NextResponse.json(
@@ -43,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     // プランの価格ID設定（Stripeで作成済みの価格IDを使用）
     // 通貨に応じて適切な価格IDを選択
-    const selectedCurrency = currency === 'hkd' ? 'hkd' : 'jpy';
+    const selectedCurrency = (currency === 'hkd' ? 'hkd' : 'jpy') as 'jpy' | 'hkd';
     const priceIdMap: Record<string, Record<string, string>> = {
       subscription: {
         jpy: process.env.STRIPE_PRICE_ID_SUBSCRIPTION_JPY || 'price_1SQildLopXhymmb3EAPe789Q', // シルバー会員（月額）- JPY
