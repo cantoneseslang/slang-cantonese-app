@@ -31,11 +31,14 @@ Vercelダッシュボードで以下の環境変数を設定：
 
 **設定手順**:
 1. Vercelダッシュボード → プロジェクト → Settings → Environment Variables
-2. 「Add New」をクリック
-3. Keyに`STRIPE_SECRET_KEY`を入力
-4. Valueにテストモードのシークレットキーを貼り付け（`sk_test_...`で始まる）
-5. Environment: Production, Preview, Development すべてに適用
-6. 「Save」をクリック
+2. `STRIPE_SECRET_KEY`を検索または新規追加
+3. Valueにテストモードのシークレットキーを貼り付け（`sk_test_...`で始まる）
+4. Environment: Production, Preview, Development すべてに適用
+5. 「Save」をクリック
+
+**注意**: 
+- シークレットキーは機密情報のため、コードやドキュメントに直接記載しないでください
+- 公開可能キー（`pk_test_...`）は現在の実装では使用していませんが、将来的にフロントエンドで使用する場合は`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`として設定できます
 
 ### 4. テスト用Webhookシークレットを設定
 
