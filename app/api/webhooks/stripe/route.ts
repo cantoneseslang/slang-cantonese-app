@@ -156,6 +156,107 @@ export async function POST(request: NextRequest) {
           plan,
           metadata: paymentIntent.metadata
         });
+        
+        // セッションIDがない場合でも、payment_intentから直接セッションを検索する
+        // これは最後の手段として使用
+        if (!userId || !plan) {
+          console.log('🔄 payment_intentから直接セッションを検索します...');
+          try {
+            // 最近のセッションを検索（最大50件）
+            const sessions = await stripe.checkout.sessions.list({
+              limit: 50,
+            });
+            
+            // payment_intent.idに一致するセッションを検索
+            const foundSession = sessions.data.find(s => {
+              // セッションのpayment_intentを取得
+              if (s.payment_intent && typeof s.payment_intent === 'string') {
+                return s.payment_intent === paymentIntent.id;
+              }
+              return false;
+            });
+            
+            if (foundSession) {
+              userId = foundSession.metadata?.user_id || userId;
+              plan = (foundSession.metadata?.plan as 'subscription' | 'lifetime') || plan;
+              
+              console.log('✅ セッション検索で見つかりました:', { 
+                sessionId: foundSession.id,
+                userId, 
+                plan,
+                paymentIntentId: paymentIntent.id
+              });
+              
+              // 見つかった場合は処理を続行
+              if (userId && plan) {
+                const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+                const updateData: any = { membership_type: plan };
+                let expiresAt: string | null = null;
+
+                if (plan === 'subscription') {
+                  const expiresDate = new Date();
+                  expiresDate.setMonth(expiresDate.getMonth() + 1);
+                  expiresAt = expiresDate.toISOString();
+                  updateData.subscription_expires_at = expiresAt;
+                } else if (plan === 'lifetime') {
+                  expiresAt = null;
+                  updateData.subscription_expires_at = null;
+                }
+
+                console.log('📝 Updating user membership from payment_intent (found via session search):', {
+                  userId,
+                  plan,
+                  expiresAt,
+                  updateData
+                });
+
+                const { data: userData, error: userError } = await supabase.auth.admin.updateUserById(
+                  userId,
+                  { user_metadata: updateData }
+                );
+
+                if (userError) {
+                  console.error('❌ Failed to update user metadata from payment_intent (session search):', userError);
+                } else {
+                  console.log('✅ User metadata updated successfully from payment_intent (session search):', {
+                    userId: userData?.user?.id,
+                    membershipType: userData?.user?.user_metadata?.membership_type
+                  });
+                }
+
+                const { data: dbData, error: dbError } = await supabase
+                  .from('users')
+                  .update({
+                    membership_type: plan,
+                    subscription_expires_at: expiresAt,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', userId)
+                  .select();
+
+                if (dbError) {
+                  if (dbError.code === 'PGRST116' || dbError.message.includes('relation') || dbError.message.includes('does not exist')) {
+                    console.warn('⚠️ usersテーブルが存在しないため、user_metadataのみ更新しました（session search）');
+                  } else {
+                    console.error('❌ Failed to update users table from payment_intent (session search):', dbError);
+                  }
+                } else {
+                  console.log('✅ Users table updated successfully from payment_intent (session search):', {
+                    userId,
+                    updatedRows: dbData?.length || 0
+                  });
+                }
+              }
+            } else {
+              console.log('⚠️ payment_intentに対応するセッションが見つかりませんでした:', {
+                paymentIntentId: paymentIntent.id,
+                searchedSessions: sessions.data.length
+              });
+            }
+          } catch (searchError: any) {
+            console.error('❌ セッション検索エラー:', searchError);
+          }
+        }
       }
     }
 
