@@ -3398,7 +3398,6 @@ export default function Home() {
       // ノーマルモード：単語のみの音声を再生、ボタンを緑色にする（1つだけ）
       // 入力欄からの結果パネルは非表示にする
       setForceShowResult(false);
-      const wordId = word.chinese;
       
       // 音声再生（共通関数を使用）
       await playAudioFromText(text);
