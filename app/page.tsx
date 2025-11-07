@@ -5861,7 +5861,10 @@ export default function Home() {
               </div>
             </div>
             {/* 入力欄＋右端アイコン用のラッパ（入力の高さに合わせて相対配置） */}
-            <div style={{ position: 'relative' }}>
+            <div style={{ 
+              position: 'relative',
+              height: isMobile ? '3rem' : '3.5rem'
+            }}>
               <input
               type="text"
                 placeholder="こちらに広東語、日本語を入力する"
@@ -5916,10 +5919,11 @@ export default function Home() {
               <div style={{
                 position: 'absolute',
                 right: isMobile ? '0.5rem' : '0.75rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
+                top: 0,
+                bottom: 0,
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '0.25rem',
                 background: 'transparent',
                 border: 'none',
@@ -5927,7 +5931,7 @@ export default function Home() {
                 boxShadow: 'none',
                 zIndex: 3,
                 pointerEvents: 'auto',
-                height: 'auto'
+                height: isMobile ? '3rem' : '3.5rem'
               }}>
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -5942,7 +5946,7 @@ export default function Home() {
                     lineHeight: 0,
                     color: '#6b7280',
                     width: isMobile ? 40 : 48,
-                    height: '100%',
+                    height: isMobile ? 40 : 48,
                     minHeight: 0,
                     borderRadius: 9999,
                     display: 'flex',
