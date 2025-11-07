@@ -5860,10 +5860,19 @@ export default function Home() {
                 入力可能文字数: {searchQuery.length} / 1,000文字
               </div>
             </div>
+            {/* 
+              ⚠️ IMPORTANT: フォルダアイコンの中央配置設定
+              - ラッパーdivの高さは入力欄の高さと完全に一致させる必要がある
+              - アイコンラッパーdivも入力欄の高さと完全に一致させる必要がある
+              - フォーカス時はboxShadowではなくoutlineを使用する
+              - 入力欄のline-heightは高さと完全に一致させる必要がある
+              - これらの設定を変更すると、アイコンの位置がずれる可能性があります
+              - 変更する場合は、docs/FOLDER_ICON_CENTERING_SOLUTION.mdを参照してください
+            */}
             {/* 入力欄＋右端アイコン用のラッパ（入力の高さに合わせて相対配置） */}
             <div style={{ 
               position: 'relative',
-              height: isMobile ? '3rem' : '3.5rem'
+              height: isMobile ? '3rem' : '3.5rem'  // ⚠️ 入力欄の高さと完全に一致
             }}>
               <input
               type="text"
@@ -5915,15 +5924,22 @@ export default function Home() {
                 e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)';
               }}
             />
+              {/* 
+                ⚠️ IMPORTANT: アイコンラッパーdivの設定
+                - top: 0, bottom: 0で上下を固定
+                - heightは入力欄の高さと完全に一致させる必要がある
+                - alignItems: 'center'とjustifyContent: 'center'で中央配置
+                - これらの設定を変更すると、アイコンの位置がずれる可能性があります
+              */}
               {/* 右端アイコン（入力欄の内側右上、白枠内） */}
               <div style={{
                 position: 'absolute',
                 right: isMobile ? '0.5rem' : '0.75rem',
-                top: 0,
-                bottom: 0,
+                top: 0,  // ⚠️ 上端を固定
+                bottom: 0,  // ⚠️ 下端を固定
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                alignItems: 'center',  // ⚠️ 垂直方向の中央配置
+                justifyContent: 'center',  // ⚠️ 水平方向の中央配置
                 gap: '0.25rem',
                 background: 'transparent',
                 border: 'none',
@@ -5931,7 +5947,7 @@ export default function Home() {
                 boxShadow: 'none',
                 zIndex: 3,
                 pointerEvents: 'auto',
-                height: isMobile ? '3rem' : '3.5rem'
+                height: isMobile ? '3rem' : '3.5rem'  // ⚠️ 入力欄の高さと完全に一致
               }}>
               <button
                 onClick={() => fileInputRef.current?.click()}
