@@ -3330,12 +3330,22 @@ export default function Home() {
           });
           
           // 音声を自動再生（ノーマルモード専用audio要素を使用）
+          if (!normalModeAudioRef.current) {
+            console.error('❌ ノーマルモード: audio要素が存在しません！', { wordId });
+            alert('音声再生エラー: audio要素が初期化されていません。ページを再読み込みしてください。');
+            return;
+          }
+          
           if (normalModeAudioRef.current && audioBase64) {
             console.log('ノーマルモード: 音声再生開始', { wordId, audioBase64Length: audioBase64.length });
             
             // 既存の音声を停止
-            normalModeAudioRef.current.pause();
-            normalModeAudioRef.current.currentTime = 0;
+            try {
+              normalModeAudioRef.current.pause();
+              normalModeAudioRef.current.currentTime = 0;
+            } catch (e) {
+              console.error('❌ 音声停止エラー:', e);
+            }
             
             // 古いBlob URLをクリア
             if (normalModeAudioBlobUrlRef.current) {
@@ -3448,13 +3458,30 @@ export default function Home() {
             if (normalModeAudioRef.current.readyState >= 2) {
               playAudio();
             } else {
-              normalModeAudioRef.current.addEventListener('loadeddata', playAudio, { once: true });
+              // loadeddataイベントを待つ（タイムアウトも設定）
+              const timeoutId = setTimeout(() => {
+                console.warn('⚠️ ノーマルモード: loadeddataイベントがタイムアウトしました。強制的に再生を試みます。');
+                playAudio();
+              }, 3000); // 3秒でタイムアウト
+              
+              normalModeAudioRef.current.addEventListener('loadeddata', () => {
+                clearTimeout(timeoutId);
+                playAudio();
+              }, { once: true });
+              
+              // canplayイベントも試す（フォールバック）
+              normalModeAudioRef.current.addEventListener('canplay', () => {
+                clearTimeout(timeoutId);
+                playAudio();
+              }, { once: true });
             }
           } else {
-            console.error('ノーマルモード: audio要素またはaudioBase64が存在しない', {
+            console.error('❌ ノーマルモード: audio要素またはaudioBase64が存在しない', {
               hasAudioRef: !!normalModeAudioRef.current,
-              hasAudioBase64: !!audioBase64
+              hasAudioBase64: !!audioBase64,
+              wordId
             });
+            alert('音声データの取得に失敗しました。もう一度お試しください。');
           }
         } else {
           console.error('ノーマルモード: API呼び出し失敗', { 
