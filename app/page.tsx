@@ -3511,7 +3511,8 @@ export default function Home() {
       }
       
       // 音声データが取得できた場合のみ再生処理を実行
-      if (audioBase64) {
+      try {
+        if (audioBase64) {
           
           // 音声を自動再生（ノーマルモード専用audio要素を使用）
           if (!normalModeAudioRef.current) {
