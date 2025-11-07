@@ -68,37 +68,38 @@ function PaymentSuccessContent() {
               userId: updatedUser.id
             });
             
-            // まずverify-sessionを試す（即座に実行、待機なし）
-            let verifyData: any = null;
-            try {
-              console.log('🔄 verify-sessionを即座に実行します...');
-              const verifyResponse = await fetch('/api/stripe/verify-session', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ sessionId }),
-              });
-
-              if (verifyResponse.ok) {
-                verifyData = await verifyResponse.json();
-                console.log('✅ セッション確認完了:', verifyData);
-                
-                if (!verifyData.success) {
-                  console.warn('⚠️ verify-sessionが成功したが、会員種別の更新に失敗');
-                } else {
-                  console.log('✅ verify-sessionで会員種別が更新されました:', verifyData.membershipType);
-                }
-              } else {
-                const errorData = await verifyResponse.json();
-                console.error('❌ セッション確認エラー:', {
-                  status: verifyResponse.status,
-                  statusText: verifyResponse.statusText,
-                  error: errorData
+            // verify-sessionがまだ実行されていない、または失敗した場合、再度実行
+            if (!verifyData || !verifyData.success) {
+              try {
+                console.log('🔄 verify-sessionを再実行します...');
+                const verifyResponse = await fetch('/api/stripe/verify-session', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ sessionId }),
                 });
+
+                if (verifyResponse.ok) {
+                  verifyData = await verifyResponse.json();
+                  console.log('✅ セッション確認完了（再実行）:', verifyData);
+                  
+                  if (!verifyData.success) {
+                    console.warn('⚠️ verify-sessionが成功したが、会員種別の更新に失敗');
+                  } else {
+                    console.log('✅ verify-sessionで会員種別が更新されました:', verifyData.membershipType);
+                  }
+                } else {
+                  const errorData = await verifyResponse.json();
+                  console.error('❌ セッション確認エラー（再実行）:', {
+                    status: verifyResponse.status,
+                    statusText: verifyResponse.statusText,
+                    error: errorData
+                  });
+                }
+              } catch (error: any) {
+                console.error('❌ verify-sessionエラー（再実行）:', error);
               }
-            } catch (error: any) {
-              console.error('❌ verify-sessionエラー:', error);
             }
 
             // verify-sessionが失敗した場合、またはまだ更新されていない場合、手動更新を試す
