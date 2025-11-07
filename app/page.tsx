@@ -324,11 +324,6 @@ export default function Home() {
       clearInterval(checkInterval);
     };
   }, [isPageInitialized]);
-        } catch (error) {
-          console.error('❌ 音声初期化エラー:', error);
-          // エラーが発生しても初期化完了として扱う（フォールバック）
-          setIsPageInitialized(true);
-        }
       };
       
       initializeAudio();
