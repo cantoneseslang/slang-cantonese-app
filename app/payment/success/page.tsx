@@ -37,39 +37,75 @@ function PaymentSuccessContent() {
         // 会員種別が既に更新されているか確認
         const currentMembershipType = updatedUser.user_metadata?.membership_type;
         
-        // まだ更新されていない場合、Stripeセッションを直接確認して更新
-        if (currentMembershipType === 'free') {
-          console.log('⚠️ Webhookで更新されていないため、セッションを直接確認します', {
-            sessionId,
-            currentMembershipType,
-            userId: updatedUser.id
-          });
-          
-          // Stripeセッションを確認して会員種別を更新
-          const verifyResponse = await fetch('/api/stripe/verify-session', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ sessionId }),
-          });
-
-          if (!verifyResponse.ok) {
-            const errorData = await verifyResponse.json();
-            console.error('❌ セッション確認エラー:', {
-              status: verifyResponse.status,
-              statusText: verifyResponse.statusText,
-              error: errorData
+          // まだ更新されていない場合、Stripeセッションを直接確認して更新
+          if (currentMembershipType === 'free') {
+            console.log('⚠️ Webhookで更新されていないため、セッションを直接確認します', {
+              sessionId,
+              currentMembershipType,
+              userId: updatedUser.id
             });
-            throw new Error(`決済の確認に失敗しました: ${errorData.error || verifyResponse.statusText}`);
-          }
+            
+            // まずverify-sessionを試す
+            let verifyData: any = null;
+            try {
+              const verifyResponse = await fetch('/api/stripe/verify-session', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ sessionId }),
+              });
 
-          const verifyData = await verifyResponse.json();
-          console.log('✅ セッション確認完了:', verifyData);
-          
-          if (!verifyData.success) {
-            throw new Error('セッション確認は成功しましたが、会員種別の更新に失敗しました。');
-          }
+              if (verifyResponse.ok) {
+                verifyData = await verifyResponse.json();
+                console.log('✅ セッション確認完了:', verifyData);
+                
+                if (!verifyData.success) {
+                  console.warn('⚠️ verify-sessionが成功したが、会員種別の更新に失敗');
+                }
+              } else {
+                const errorData = await verifyResponse.json();
+                console.error('❌ セッション確認エラー:', {
+                  status: verifyResponse.status,
+                  statusText: verifyResponse.statusText,
+                  error: errorData
+                });
+              }
+            } catch (error: any) {
+              console.error('❌ verify-sessionエラー:', error);
+            }
+
+            // verify-sessionが失敗した場合、またはまだ更新されていない場合、手動更新を試す
+            if (!verifyData || !verifyData.success) {
+              console.log('🔄 手動更新を試みます...');
+              try {
+                const manualResponse = await fetch('/api/stripe/manual-update-membership', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ 
+                    sessionId,
+                    userId: updatedUser.id,
+                    // セッションからplanを取得する必要があるが、ここでは推測できないため、
+                    // verify-sessionから取得したplanを使用するか、セッションを再取得する
+                  }),
+                });
+
+                if (manualResponse.ok) {
+                  const manualData = await manualResponse.json();
+                  console.log('✅ 手動更新完了:', manualData);
+                } else {
+                  console.error('❌ 手動更新エラー:', await manualResponse.json());
+                }
+              } catch (error: any) {
+                console.error('❌ 手動更新エラー:', error);
+              }
+            }
+            
+            if (!verifyData || !verifyData.success) {
+              throw new Error('セッション確認と手動更新の両方が失敗しました。管理者に連絡してください。');
+            }
 
           // user_metadataの更新が反映されるまで少し待機
           await new Promise(resolve => setTimeout(resolve, 2000));

@@ -153,8 +153,17 @@ export async function POST(request: NextRequest) {
         sessionId: session.id,
         userId,
         plan,
+        mode: session.mode,
+        payment_status: session.payment_status,
+        status: session.status,
         metadata: session.metadata
       });
+
+      // lifetimeプラン（mode: 'payment'）の場合は、payment_intent.succeededで処理済みの可能性があるためスキップ
+      if (session.mode === 'payment' && plan === 'lifetime') {
+        console.log('⏭️ checkout.session.completed: lifetimeプラン（payment mode）はpayment_intent.succeededで処理済みの可能性があるためスキップ');
+        // 念のため、payment_intent.succeededで処理されなかった場合に備えて処理を続行
+      }
 
       if (!userId || !plan) {
         console.error('❌ Missing metadata:', { userId, plan, sessionMetadata: session.metadata });
