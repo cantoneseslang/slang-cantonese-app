@@ -216,6 +216,7 @@ export default function Home() {
   const [showButtons, setShowButtons] = useState(false);
   const [buttonsAnimated, setButtonsAnimated] = useState(false);
   const [hoveredButton, setHoveredButton] = useState<'hand' | 'mic' | 'mute' | null>(null);
+  const [showHelpPopups, setShowHelpPopups] = useState(false); // モバイルでヘルプを表示するかどうか
   const lastTranslatedTextRef = useRef<string>('');
   const lastProcessedFinalTextRef = useRef<string>('');
   
@@ -663,6 +664,7 @@ export default function Home() {
     setShowButtons(false);
     setButtonsAnimated(false);
     setIsMuted(false);
+    setShowHelpPopups(false);
     
     // 言語切り替え状態をリセット
     setTranslationLanguage('cantonese');
@@ -884,6 +886,11 @@ export default function Home() {
       return;
     }
     
+    // モバイルでヘルプを消す
+    if (isMobile) {
+      setShowHelpPopups(false);
+    }
+    
     const handPhrase = translationLanguage === 'cantonese' 
       ? '我唔識講廣東話，所以我需要用翻譯機同你溝通'
       : '我不会讲中文，所以我需要使用翻译机跟你沟通。';
@@ -984,6 +991,10 @@ export default function Home() {
   
   // 消音ボタンのハンドラー
   const handleMuteButtonClick = () => {
+    // モバイルでヘルプを消す
+    if (isMobile) {
+      setShowHelpPopups(false);
+    }
     setIsMuted(prev => !prev);
   };
   
@@ -992,6 +1003,11 @@ export default function Home() {
     if (!isHiddenMode) {
       console.log('隠しモードではないため、マイク機能は無効です');
       return;
+    }
+    
+    // モバイルでヘルプを消す
+    if (isMobile) {
+      setShowHelpPopups(false);
     }
     
     // 既に録音中の場合は何もしない
@@ -2045,6 +2061,20 @@ export default function Home() {
     }
   };
   const [isMobile, setIsMobile] = useState(false);
+  
+  // モバイルでボタンが表示された時と言語切り替え時にヘルプを表示
+  useEffect(() => {
+    if (isMobile && buttonsAnimated && showButtons) {
+      // ボタン表示完了後にヘルプを表示
+      const timer = setTimeout(() => {
+        setShowHelpPopups(true);
+      }, 100); // ボタンアニメーション完了後に表示
+      return () => clearTimeout(timer);
+    } else if (!isMobile) {
+      // PCの場合はヘルプを非表示
+      setShowHelpPopups(false);
+    }
+  }, [isMobile, buttonsAnimated, showButtons, translationLanguage]);
   
   // モバイル軽量化: データ保持行数を削減（モバイル5行、デスクトップ10行）
   const MAX_TEXT_LINES = useMemo(() => isMobile ? 5 : 10, [isMobile]);
@@ -3918,7 +3948,7 @@ export default function Home() {
               }}
             />
             {/* ヘルプポップアップ */}
-            {hoveredButton === 'mic' && (
+            {((isMobile && showHelpPopups) || (!isMobile && hoveredButton === 'mic')) && (
               <div
                 style={{
                   position: 'absolute',
@@ -4024,7 +4054,7 @@ export default function Home() {
                 }}
               />
               {/* ヘルプポップアップ */}
-              {hoveredButton === 'hand' && buttonsAnimated && (
+              {((isMobile && showHelpPopups) || (!isMobile && hoveredButton === 'hand')) && buttonsAnimated && (
                 <div
                   style={{
                     position: 'absolute',
@@ -4133,7 +4163,7 @@ export default function Home() {
                 }}
               />
               {/* ヘルプポップアップ */}
-              {hoveredButton === 'mute' && buttonsAnimated && (
+              {((isMobile && showHelpPopups) || (!isMobile && hoveredButton === 'mute')) && buttonsAnimated && (
                 <div
                   style={{
                     position: 'absolute',
