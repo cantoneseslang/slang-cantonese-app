@@ -97,7 +97,9 @@ export async function POST(request: NextRequest) {
         const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
         
         // 次の請求日の1ヶ月後を有効期限として設定
-        const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+        const currentPeriodEnd = subscription.current_period_end 
+          ? new Date(subscription.current_period_end * 1000)
+          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // フォールバック: 30日後
         const expiresAt = new Date(currentPeriodEnd);
         expiresAt.setMonth(expiresAt.getMonth() + 1);
 
@@ -119,7 +121,9 @@ export async function POST(request: NextRequest) {
         const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
         
         // 現在の期間終了日を有効期限として設定（その後はブロンズにダウングレード）
-        const expiresAt = new Date(subscription.current_period_end * 1000);
+        const expiresAt = subscription.current_period_end
+          ? new Date(subscription.current_period_end * 1000)
+          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // フォールバック: 30日後
 
         await supabase.auth.admin.updateUserById(userId, {
           user_metadata: {
