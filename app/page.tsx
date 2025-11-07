@@ -7370,7 +7370,7 @@ export default function Home() {
                       color: '#6b7280',
                       marginTop: '0.5rem'
                     }}>
-                      {selectedPlan === 'subscription' ? '$50' : '$498'}
+                      {selectedPlan === 'subscription' ? 'HKD$50' : 'HKD$498'}
                     </div>
                   )}
                   <div style={{
