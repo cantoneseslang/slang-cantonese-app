@@ -14,6 +14,15 @@ const isTestMode = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_') || fals
 
 export async function POST(request: NextRequest) {
   try {
+    // 環境変数の確認
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('STRIPE_SECRET_KEY is not set');
+      return NextResponse.json(
+        { error: 'Stripe configuration error', details: 'STRIPE_SECRET_KEY is not configured' },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json();
     const { plan, userId, currency = 'jpy' } = body; // 通貨を取得（デフォルト: JPY）
 
@@ -112,8 +121,34 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Stripe Checkout error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      type: error.type,
+      code: error.code,
+      statusCode: error.statusCode,
+      raw: error.raw,
+    });
+    
+    // より詳細なエラー情報を返す
+    const errorDetails = {
+      message: error.message || 'Unknown error',
+      type: error.type,
+      code: error.code,
+      statusCode: error.statusCode,
+    };
+
     return NextResponse.json(
-      { error: 'Failed to create checkout session', details: error.message },
+      { 
+        error: 'Failed to create checkout session', 
+        details: error.message,
+        errorInfo: errorDetails,
+        debug: {
+          hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
+          isTestMode: isTestMode,
+          plan: plan,
+          currency: currency,
+        }
+      },
       { status: 500 }
     );
   }
