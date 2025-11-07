@@ -5900,7 +5900,8 @@ export default function Home() {
                 backgroundColor: '#ffffff',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                outline: 'none'
+                outline: 'none',
+                lineHeight: isMobile ? '3rem' : '3.5rem'
               }}
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = '#007AFF';
