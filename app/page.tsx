@@ -3600,118 +3600,42 @@ export default function Home() {
               normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に（Web Audio APIで制御）
             }
             
-            // 音声がロードされるまで待ってから再生（確実に再生するための強化版）
-            const playAudio = async () => {
-              if (!normalModeAudioRef.current) {
-                console.error('❌ playAudio: audio要素が存在しません');
-                return;
+            // AudioContextを確実にresume（モバイル対応）
+            if (normalModeAudioContextRef.current && normalModeAudioContextRef.current.state === 'suspended') {
+              try {
+                await normalModeAudioContextRef.current.resume();
+                console.log('✅ ノーマルモード: AudioContextをresumeしました');
+              } catch (e) {
+                console.error('❌ ノーマルモード: AudioContextのresumeに失敗', e);
               }
-              
-              // メディアセッションAPIでメタデータを設定（ロック画面のアイコン変更）
-              if ('mediaSession' in navigator) {
-                const categoryName = currentCategory?.name || 'カントン語音れん';
-                const wordJapanese = word.japanese || word.chinese;
-                
-                try {
-                  navigator.mediaSession.metadata = new MediaMetadata({
-                    title: wordJapanese,
-                    artist: 'スラング式カントン語音れん',
-                    album: categoryName,
-                    artwork: [
-                      { src: '/volume-logo-circle.svg', sizes: '512x512', type: 'image/svg+xml' },
-                      { src: '/volume-logo.png', sizes: '512x512', type: 'image/png' },
-                      { src: '/line-logo.png', sizes: '512x512', type: 'image/png' },
-                    ],
-                  });
-                  
-                  console.log('メディアセッションAPI: メタデータ設定完了', {
-                    title: wordJapanese,
-                    artist: 'スラング式カントン語音れん',
-                    album: categoryName,
-                  });
-                } catch (e) {
-                  console.warn('メディアセッションAPI設定エラー（無視）:', e);
-                }
-              }
-              
-              // 確実に再生するための複数の試行
-              let playAttempts = 0;
-              const maxPlayAttempts = 3;
-              
-              while (playAttempts < maxPlayAttempts) {
-                try {
-                  // 現在の再生位置をリセット
-                  normalModeAudioRef.current.currentTime = 0;
-                  
-                  // 再生を試みる
-                  const playPromise = normalModeAudioRef.current.play();
-                  
-                  if (playPromise !== undefined) {
-                    await playPromise;
-                    console.log(`✅ ノーマルモード: 音声再生成功 (試行 ${playAttempts + 1}/${maxPlayAttempts})`, { useWebAudioAPI });
-                    return; // 成功したら終了
-                  } else {
-                    console.log(`✅ ノーマルモード: 音声再生成功（同期） (試行 ${playAttempts + 1}/${maxPlayAttempts})`);
-                    return; // 成功したら終了
-                  }
-                } catch (e: any) {
-                  playAttempts++;
-                  console.error(`❌ ノーマルモード: 音声再生失敗 (試行 ${playAttempts}/${maxPlayAttempts})`, e);
-                  
-                  if (playAttempts < maxPlayAttempts) {
-                    // 少し待ってから再試行
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                    // srcを再設定してから再試行
-                    if (normalModeAudioRef.current && normalModeAudioBlobUrlRef.current) {
-                      normalModeAudioRef.current.src = normalModeAudioBlobUrlRef.current;
-                    }
-                  } else {
-                    console.error('❌ ノーマルモード: 音声再生に全試行失敗', e);
-                    alert('音声の再生に失敗しました。もう一度お試しください。');
-                  }
-                }
-              }
-            };
-            
-            // 既にロード済みの場合は即座に再生
-            if (normalModeAudioRef.current.readyState >= 2) {
-              console.log('✅ ノーマルモード: 音声は既にロード済み、即座に再生');
-              playAudio();
-            } else {
-              console.log('⏳ ノーマルモード: 音声のロードを待機中...', {
-                readyState: normalModeAudioRef.current.readyState
-              });
-              
-              // loadeddataイベントを待つ（タイムアウトも設定）
-              let timeoutId: NodeJS.Timeout | null = null;
-              let hasPlayed = false;
-              
-              const tryPlay = () => {
-                if (!hasPlayed && normalModeAudioRef.current) {
-                  hasPlayed = true;
-                  if (timeoutId) clearTimeout(timeoutId);
-                  playAudio();
-                }
-              };
-              
-              // タイムアウト設定（2秒でタイムアウト）
-              timeoutId = setTimeout(() => {
-                console.warn('⚠️ ノーマルモード: loadeddataイベントがタイムアウトしました。強制的に再生を試みます。');
-                tryPlay();
-              }, 2000);
-              
-              // 複数のイベントリスナーを設定（確実に再生するため）
-              normalModeAudioRef.current.addEventListener('loadeddata', tryPlay, { once: true });
-              normalModeAudioRef.current.addEventListener('canplay', tryPlay, { once: true });
-              normalModeAudioRef.current.addEventListener('canplaythrough', tryPlay, { once: true });
-              
-              // エラー時の処理
-              normalModeAudioRef.current.addEventListener('error', (e) => {
-                console.error('❌ ノーマルモード: audio要素のエラー', e);
-                if (timeoutId) clearTimeout(timeoutId);
-                alert('音声ファイルの読み込みに失敗しました。もう一度お試しください。');
-              }, { once: true });
             }
+            
+            // メディアセッションAPIでメタデータを設定（ロック画面のアイコン変更）
+            if ('mediaSession' in navigator) {
+              const categoryName = currentCategory?.name || 'カントン語音れん';
+              const wordJapanese = word.japanese || word.chinese;
+              
+              try {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                  title: wordJapanese,
+                  artist: 'スラング式カントン語音れん',
+                  album: categoryName,
+                  artwork: [
+                    { src: '/volume-logo-circle.svg', sizes: '512x512', type: 'image/svg+xml' },
+                    { src: '/volume-logo.png', sizes: '512x512', type: 'image/png' },
+                    { src: '/line-logo.png', sizes: '512x512', type: 'image/png' },
+                  ],
+                });
+              } catch (e) {
+                console.warn('メディアセッションAPI設定エラー（無視）:', e);
+              }
+            }
+            
+            // 他の場所と同じように、シンプルに即座に再生
+            normalModeAudioRef.current.currentTime = 0;
+            normalModeAudioRef.current.play().catch((e) => {
+              console.error('❌ ノーマルモード: 音声再生エラー', e);
+            });
           } else {
             console.error('❌ ノーマルモード: audio要素またはaudioBase64が存在しない', {
               hasAudioRef: !!normalModeAudioRef.current,
@@ -3858,19 +3782,21 @@ export default function Home() {
             normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に（Web Audio APIで制御）
           }
           
-          // 音声がロードされるまで待ってから再生
-          const playAudio = () => {
-            if (normalModeAudioRef.current) {
-              normalModeAudioRef.current.play();
+          // AudioContextを確実にresume（モバイル対応）
+          if (normalModeAudioContextRef.current && normalModeAudioContextRef.current.state === 'suspended') {
+            try {
+              await normalModeAudioContextRef.current.resume();
+              console.log('✅ トーン音声: AudioContextをresumeしました');
+            } catch (e) {
+              console.error('❌ トーン音声: AudioContextのresumeに失敗', e);
             }
-          };
-          
-          // 既にロード済みの場合は即座に再生
-          if (normalModeAudioRef.current.readyState >= 2) {
-            playAudio();
-          } else {
-            normalModeAudioRef.current.addEventListener('loadeddata', playAudio, { once: true });
           }
+          
+          // 他の場所と同じように、シンプルに即座に再生
+          normalModeAudioRef.current.currentTime = 0;
+          normalModeAudioRef.current.play().catch((e) => {
+            console.error('❌ トーン音声: 音声再生エラー', e);
+          });
           
           // 音声再生終了時にactiveWordIdをクリアして緑点灯を消す
           normalModeAudioRef.current.addEventListener('ended', () => {
