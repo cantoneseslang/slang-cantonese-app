@@ -24,8 +24,24 @@ export async function POST(request: NextRequest) {
     // Stripeセッションを取得
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
+    console.log('🔔 verify-session: Session retrieved:', {
+      sessionId: session.id,
+      payment_status: session.payment_status,
+      status: session.status,
+      mode: session.mode,
+      metadata: session.metadata
+    });
+
     // セッションが完了していない場合はエラー
-    if (session.payment_status !== 'paid') {
+    // lifetimeプランの場合、payment_statusが'paid'またはstatusが'complete'のいずれかでOK
+    const isPaid = session.payment_status === 'paid' || session.status === 'complete';
+    if (!isPaid) {
+      console.warn('⚠️ verify-session: Session not paid or not complete:', {
+        sessionId: session.id,
+        payment_status: session.payment_status,
+        status: session.status,
+        mode: session.mode
+      });
       return NextResponse.json(
         { error: 'Payment not completed' },
         { status: 400 }
@@ -49,13 +65,17 @@ export async function POST(request: NextRequest) {
       membership_type: plan,
     };
 
-    // サブスクリプションの場合は有効期限を設定
+    // サブスクリプションの場合は有効期限を設定、lifetimeの場合はnullに設定
     let expiresAt: string | null = null;
     if (plan === 'subscription') {
       const expiresDate = new Date();
       expiresDate.setMonth(expiresDate.getMonth() + 1);
       expiresAt = expiresDate.toISOString();
       updateData.subscription_expires_at = expiresAt;
+    } else if (plan === 'lifetime') {
+      // lifetimeプランの場合はsubscription_expires_atをnullに設定（期限なし）
+      expiresAt = null;
+      updateData.subscription_expires_at = null;
     }
 
     // 1. user_metadataを更新
@@ -110,4 +130,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 

@@ -80,20 +80,26 @@ export async function POST(request: NextRequest) {
         membership_type: plan,
       };
 
-      // サブスクリプションの場合は有効期限を設定
+      // サブスクリプションの場合は有効期限を設定、lifetimeの場合はnullに設定
       let expiresAt: string | null = null;
       if (plan === 'subscription') {
         const expiresDate = new Date();
         expiresDate.setMonth(expiresDate.getMonth() + 1);
         expiresAt = expiresDate.toISOString();
         updateData.subscription_expires_at = expiresAt;
+      } else if (plan === 'lifetime') {
+        // lifetimeプランの場合はsubscription_expires_atをnullに設定（期限なし）
+        expiresAt = null;
+        updateData.subscription_expires_at = null;
       }
 
       console.log('📝 Updating user membership:', {
         userId,
         plan,
         expiresAt,
-        updateData
+        updateData,
+        isLifetime: plan === 'lifetime',
+        isSubscription: plan === 'subscription'
       });
 
       // 1. user_metadataを更新
