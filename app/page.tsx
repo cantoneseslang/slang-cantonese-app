@@ -1073,26 +1073,126 @@ export default function Home() {
         // ボタン回転アニメーション開始
         setIsButtonRotating(true);
         
-        // 言語を切り替え
-        setTranslationLanguage(prev => {
-          const newLanguage = prev === 'cantonese' ? 'mandarin' : 'cantonese';
-          
-          // タイトル音声を再生（同じアニメーションで再表示）
-          setShowTitle(false);
-          setTimeout(() => {
-            setShowTitle(true);
+        // アニメーションの途中（180度の時点、300ms後）で画像を切り替え
+        // これにより、裏側が見える時点で新しい画像が表示され、360度回転完了時に新しい画像が正面に来る
+        setTimeout(() => {
+          setTranslationLanguage(prev => {
+            const newLanguage = prev === 'cantonese' ? 'mandarin' : 'cantonese';
             
-            // タイトル音声を再生（音声認識中でない場合のみ）
-            if (titleAudioRef.current && !isRecording) {
-              titleAudioRef.current.currentTime = 0;
-              titleAudioRef.current.play().catch((e) => {
-                console.error('タイトル音声再生エラー:', e);
-              });
+            // 言語切り替え時に状態をリセット
+            // 翻訳済みテキストのセットをクリア（新しい言語で再翻訳するため）
+            translatedTextSetRef.current.clear();
+            
+            // 音声認識を停止して再初期化（言語切り替え後の音声認識を確実にするため）
+            if (recognitionRef.current) {
+              try {
+                recognitionRef.current.stop();
+              } catch (e) {
+                // 停止エラーは無視
+              }
+              recognitionRef.current = null;
             }
-          }, 50);
-          
-          return newLanguage;
-        });
+            
+            // 音声認識を再初期化
+            if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
+              const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+              if (SpeechRecognition) {
+                try {
+                  recognitionRef.current = new SpeechRecognition();
+                  recognitionRef.current.lang = 'ja-JP';
+                  recognitionRef.current.continuous = true;
+                  recognitionRef.current.interimResults = true;
+
+                  recognitionRef.current.onresult = (event: any) => {
+                    let interim = '';
+                    let newFinal = '';
+                    
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                      const transcript = event.results[i][0].transcript;
+                      if (event.results[i].isFinal) {
+                        newFinal += transcript;
+                      } else {
+                        interim = transcript;
+                      }
+                    }
+                    
+                    setInterimText(interim);
+                    
+                    if (newFinal) {
+                      const trimmed = newFinal.trim();
+                      
+                      if (trimmed === lastProcessedFinalTextRef.current && trimmed.length > 0) {
+                        setInterimText('');
+                        return;
+                      }
+                      
+                      lastProcessedFinalTextRef.current = trimmed;
+                      setFinalText(prev => prev + trimmed + ' ');
+                      
+                      setRecognizedText(prev => {
+                        const baseText = prev.replace(interim, '').trim();
+                        if (baseText.endsWith(trimmed)) {
+                          return baseText;
+                        }
+                        return baseText + (baseText ? ' ' : '') + trimmed;
+                      });
+                      
+                      setRecognizedTextLines(prev => {
+                        const isDuplicate = prev.some(line => line.text === trimmed);
+                        if (isDuplicate) {
+                          return prev;
+                        }
+                        const newLine: TextLine = {
+                          text: trimmed,
+                          timestamp: getTimestamp()
+                        };
+                        return [newLine, ...prev].slice(0, MAX_TEXT_LINES);
+                      });
+                      
+                      setInterimText('');
+                    } else if (interim) {
+                      setRecognizedText(prev => {
+                        const baseText = prev.trim();
+                        return baseText + (baseText ? ' ' : '') + interim;
+                      });
+                    }
+                  };
+
+                  recognitionRef.current.onerror = (event: any) => {
+                    if (event.error !== 'aborted') {
+                      console.error('音声認識エラー:', event.error);
+                      setIsRecording(false);
+                    }
+                  };
+
+                  recognitionRef.current.onend = () => {
+                    console.log('音声認識終了');
+                  };
+                  
+                  console.log('言語切り替え後、音声認識を再初期化しました');
+                } catch (e) {
+                  console.error('音声認識再初期化エラー:', e);
+                }
+              }
+            }
+            
+            // タイトル音声を再生（同じアニメーションで再表示）
+            setShowTitle(false);
+            setTimeout(() => {
+              setShowTitle(true);
+              
+              // タイトル音声を再生（音声認識中でない場合のみ）
+              if (titleAudioRef.current && !isRecording) {
+                titleAudioRef.current.currentTime = 0;
+                titleAudioRef.current.play().catch((e) => {
+                  console.error('タイトル音声再生エラー:', e);
+                });
+              }
+            }, 50);
+            
+            return newLanguage;
+          });
+        }, 300); // アニメーションの半分（180度の時点）
         
         // 回転アニメーション終了後にstateをリセット
         setTimeout(() => {
@@ -1171,35 +1271,37 @@ export default function Home() {
       setShowHelpPopups(false);
     }
     
-    const handPhrase = translationLanguage === 'cantonese' 
-      ? '我唔識講廣東話，所以我需要用翻譯機同你溝通'
-      : '我不会讲中文，所以我需要使用翻译机跟你沟通。';
-    
-    // 広東語表示エリアに表示
-    const newLine: TextLine = {
-      text: handPhrase,
-      timestamp: getTimestamp()
-    };
-    setTranslatedTextLines(prev => {
-      // 既に同じテキストが先頭にある場合はスキップ
-      if (prev.length > 0 && prev[0].text === handPhrase) {
-        return prev;
-      }
-      return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
-    });
-    setTranslatedText(handPhrase);
-    
-    // 音声生成（ミュートされていない場合）
-    if (!isMuted && handPhrase) {
-      (async () => {
-        try {
-          const audioResponse = await fetch('/api/generate-speech', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ text: handPhrase, language: translationLanguage }),
-          });
+    // 最新のtranslationLanguageを確実に取得（言語切り替え直後の問題を回避）
+    setTranslationLanguage(currentLang => {
+      const handPhrase = currentLang === 'cantonese' 
+        ? '我唔識講廣東話，所以我需要用翻譯機同你溝通'
+        : '我不会讲中文，所以我需要使用翻译机跟你沟通。';
+      
+      // 広東語表示エリアに表示
+      const newLine: TextLine = {
+        text: handPhrase,
+        timestamp: getTimestamp()
+      };
+      setTranslatedTextLines(prev => {
+        // 既に同じテキストが先頭にある場合はスキップ
+        if (prev.length > 0 && prev[0].text === handPhrase) {
+          return prev;
+        }
+        return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
+      });
+      setTranslatedText(handPhrase);
+      
+      // 音声生成（ミュートされていない場合）
+      if (!isMuted && handPhrase) {
+        (async () => {
+          try {
+            const audioResponse = await fetch('/api/generate-speech', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ text: handPhrase, language: currentLang }),
+            });
 
           if (audioResponse.ok) {
             const audioData = await audioResponse.json();
@@ -1318,7 +1420,11 @@ export default function Home() {
           console.error('音声生成エラー:', err);
         }
       })();
-    }
+      }
+      
+      // translationLanguageを変更しない（現在の値を返す）
+      return currentLang;
+    });
   };
   
   // 消音ボタンのハンドラー
@@ -4292,10 +4398,12 @@ export default function Home() {
               width: isMobile ? '96px' : '120px',
               height: isMobile ? '96px' : '120px',
               borderRadius: '50%',
-              backgroundColor: isRecording ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)',
-              boxShadow: isRecording 
-                ? '0 0 20px rgba(239, 68, 68, 0.5)' 
-                : '0 4px 6px rgba(0, 0, 0, 0.1)',
+              backgroundColor: translationLanguage === 'cantonese' 
+                ? (isRecording ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.3)')
+                : (isRecording ? 'rgba(239, 68, 68, 0.5)' : 'rgba(239, 68, 68, 0.3)'),
+              boxShadow: translationLanguage === 'cantonese'
+                ? (isRecording ? '0 0 20px rgba(59, 130, 246, 0.5)' : '0 4px 6px rgba(0, 0, 0, 0.1)')
+                : (isRecording ? '0 0 20px rgba(239, 68, 68, 0.5)' : '0 4px 6px rgba(0, 0, 0, 0.1)'),
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
