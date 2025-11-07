@@ -1968,9 +1968,11 @@ export default function Home() {
       isMobile 
     });
     
-    // 現在の会員種別と同じ場合は何もしない
+    // 現在の会員種別と同じ場合でも、変更を許可する（UIの変更を反映するため）
+    // ただし、実際の変更処理は行わない（同じプランなので）
     if (membershipType === newType) {
-      console.log('⚠️ 同じプランなのでスキップ');
+      console.log('⚠️ 同じプランですが、UIの変更を反映します');
+      // UIの変更を反映するため、モーダルを表示しないが、変更は許可する
       return;
     }
 
@@ -5193,7 +5195,7 @@ export default function Home() {
                           background: membershipType === 'free' 
                             ? 'linear-gradient(145deg, #d4a574 0%, #cd7f32 50%, #a85f1f 100%)' 
                             : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
-                          cursor: membershipType === 'free' ? 'default' : 'pointer',
+                          cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
@@ -5242,7 +5244,7 @@ export default function Home() {
                           background: membershipType === 'subscription' 
                             ? 'linear-gradient(145deg, #e8e8e8 0%, #c0c0c0 50%, #a8a8a8 100%)' 
                             : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
-                          cursor: membershipType === 'subscription' ? 'default' : 'pointer',
+                          cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
@@ -5291,7 +5293,7 @@ export default function Home() {
                           background: membershipType === 'lifetime' 
                             ? 'linear-gradient(145deg, #ffe066 0%, #ffd700 50%, #ffb700 100%)' 
                             : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
-                          cursor: membershipType === 'lifetime' ? 'default' : 'pointer',
+                          cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
@@ -8384,7 +8386,7 @@ export default function Home() {
                           background: membershipType === 'free' 
                             ? 'linear-gradient(145deg, #d4a574 0%, #cd7f32 50%, #a85f1f 100%)' 
                             : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
-                          cursor: membershipType === 'free' ? 'default' : 'pointer',
+                          cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
@@ -8445,7 +8447,7 @@ export default function Home() {
                           background: membershipType === 'subscription' 
                             ? 'linear-gradient(145deg, #e8e8e8 0%, #c0c0c0 50%, #a8a8a8 100%)' 
                             : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
-                          cursor: membershipType === 'subscription' ? 'default' : 'pointer',
+                          cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
@@ -8515,7 +8517,7 @@ export default function Home() {
                           background: membershipType === 'lifetime' 
                             ? 'linear-gradient(145deg, #ffe066 0%, #ffd700 50%, #ffb700 100%)' 
                             : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
-                          cursor: membershipType === 'lifetime' ? 'default' : 'pointer',
+                          cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
