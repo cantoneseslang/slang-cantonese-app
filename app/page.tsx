@@ -2058,8 +2058,19 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          // JSONパースエラーの場合
+          const text = await response.text();
+          console.error('Stripe Checkout API error (non-JSON):', text);
+          throw new Error(`Checkout session creation failed: ${response.status} ${response.statusText}`);
+        }
+        
         console.error('Stripe Checkout API error:', errorData);
+        console.error('Response status:', response.status);
+        console.error('Response headers:', Object.fromEntries(response.headers.entries()));
         
         // 詳細なエラー情報を構築
         let errorMessage = errorData.error || 'Checkout session creation failed';
@@ -2067,9 +2078,11 @@ export default function Home() {
           errorMessage += `\n詳細: ${errorData.details}`;
         }
         if (errorData.debug) {
+          console.error('Debug info:', errorData.debug);
           errorMessage += `\nデバッグ情報: ${JSON.stringify(errorData.debug, null, 2)}`;
         }
         if (errorData.errorInfo) {
+          console.error('Error info:', errorData.errorInfo);
           errorMessage += `\nエラー情報: ${JSON.stringify(errorData.errorInfo, null, 2)}`;
         }
         
