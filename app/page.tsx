@@ -82,26 +82,40 @@ export default function Home() {
                            (userAgent.includes('safari') && !userAgent.includes('chrome'));
     setIsSafari(isSafariBrowser);
     
-    // 実際のビューポート高さをCSS変数に設定
-    const setViewportHeight = () => {
+    // 実際のビューポート高さと幅をCSS変数に設定（Safari/Chromeの違いを解決）
+    const setViewportSize = () => {
+      // 実際のビューポート高さ（アドレスバーを除く）
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty('--vh', `${vh}px`);
+      
+      // 実際のビューポート幅（スクロールバーを除く）
+      // モバイルではより安全な幅を設定（余白を考慮）
+      const vw = window.innerWidth * 0.01;
+      document.documentElement.style.setProperty('--vw', `${vw}px`);
+      
+      // モバイル用の安全な幅（左右に1remの余白を確保）
+      if (window.innerWidth < 768) {
+        const safeWidth = (window.innerWidth - 32) * 0.01; // 32px = 2rem
+        document.documentElement.style.setProperty('--safe-width', `${safeWidth}px`);
+      } else {
+        document.documentElement.style.setProperty('--safe-width', `${vw}px`);
+      }
     };
     
     // 初期設定
-    setViewportHeight();
+    setViewportSize();
     
     // リサイズ時に再計算（ツールバーの表示/非表示に対応）
-    window.addEventListener('resize', setViewportHeight);
+    window.addEventListener('resize', setViewportSize);
     
     // オリエンテーション変更時にも再計算
     window.addEventListener('orientationchange', () => {
-      setTimeout(setViewportHeight, 100);
+      setTimeout(setViewportSize, 100);
     });
     
     return () => {
-      window.removeEventListener('resize', setViewportHeight);
-      window.removeEventListener('orientationchange', setViewportHeight);
+      window.removeEventListener('resize', setViewportSize);
+      window.removeEventListener('orientationchange', setViewportSize);
     };
   }, []);
   const supabase = createClient();
@@ -3906,10 +3920,10 @@ export default function Home() {
               transform: isTranslationAreaRotated 
                 ? 'translateX(-50%) rotate(-180deg)' 
                 : 'translateX(-50%) rotate(0deg)',
-              width: '90%',
-              maxWidth: '800px',
+              width: isMobile ? 'calc(var(--safe-width, 1vw) * 100)' : '90%',
+              maxWidth: isMobile ? 'calc(var(--safe-width, 1vw) * 100)' : '800px',
               maxHeight: isMobile ? '250px' : '300px',
-              padding: '1.5rem',
+              padding: isMobile ? '1rem' : '1.5rem',
               backgroundColor: 'rgba(255, 255, 255, 0.95)',
               border: '1px solid rgba(0, 0, 0, 0.1)',
               borderRadius: '12px',
@@ -3984,11 +3998,11 @@ export default function Home() {
             bottom: isMobile ? 'calc(3rem + 120px + 96px + 1.5rem + 3rem + 1rem)' : 'auto', // タイトルの上端 + 余白（モバイルのみ）
             left: '50%',
             transform: isMobile ? 'translate(-50%, 0)' : 'translate(-50%, -50%)',
-            width: isMobile ? 'calc(100vw - 2rem)' : '90%',
-            maxWidth: isMobile ? 'calc(100vw - 2rem)' : '800px',
+            width: isMobile ? 'calc(var(--safe-width, 1vw) * 100)' : '90%',
+            maxWidth: isMobile ? 'calc(var(--safe-width, 1vw) * 100)' : '800px',
             minHeight: isMobile ? '150px' : 'auto', // 最小高さを確保（テキストが確実に表示されるように、2行分のテキストに対応）
             maxHeight: isMobile ? 'none' : '400px', // bottom指定時はmaxHeight不要
-            padding: isMobile ? '1.5rem' : '2rem',
+            padding: isMobile ? '1rem' : '2rem',
             backgroundColor: 'rgba(255, 255, 255, 0.95)',
             border: '1px solid rgba(0, 0, 0, 0.1)',
             borderRadius: '12px',
@@ -4572,9 +4586,9 @@ export default function Home() {
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              width: isMobile ? '90vw' : '960px',
-              maxWidth: '95vw',
-              maxHeight: '70vh',
+              width: isMobile ? 'calc(var(--safe-width, 1vw) * 100)' : '960px',
+              maxWidth: isMobile ? 'calc(var(--safe-width, 1vw) * 100)' : '95vw',
+              maxHeight: isMobile ? 'calc(var(--vh, 1vh) * 70)' : '70vh',
               overflowY: 'auto',
               background: 'white',
               padding: isMobile ? '1rem' : '1.5rem',
@@ -5440,8 +5454,8 @@ export default function Home() {
                 position: 'absolute',
                 right: 0,
                 marginTop: 8,
-                width: isMobile ? 'calc(100vw - 20px)' : 400,
-                maxWidth: '90vw',
+                width: isMobile ? 'calc(var(--safe-width, 1vw) * 100)' : 400,
+                maxWidth: isMobile ? 'calc(var(--safe-width, 1vw) * 100)' : '90vw',
                 background: '#fff',
                 border: '1px solid rgba(0,0,0,0.08)',
                 borderRadius: 12,
@@ -8285,8 +8299,8 @@ export default function Home() {
               onClick={(e) => e.stopPropagation()}
               style={{
               position: 'relative',
-              width: isMobile ? '100%' : '400px',
-              maxWidth: '90vw',
+              width: isMobile ? 'calc(var(--safe-width, 1vw) * 100)' : '400px',
+              maxWidth: isMobile ? 'calc(var(--safe-width, 1vw) * 100)' : '90vw',
               height: '100%',
               backgroundColor: 'white',
               boxShadow: '-4px 0 24px rgba(0,0,0,0.15)',
