@@ -1359,7 +1359,26 @@ export default function Home() {
   };
 
   // 学習モードのオン/オフを切り替える
-  const toggleLearningMode = () => {
+  const toggleLearningMode = async () => {
+    // ブロンズ会員の場合、使用回数をチェック
+    if (membershipType === 'free') {
+      const usageCount = user?.user_metadata?.learning_mode_usage_count || 0;
+      if (usageCount >= 100) {
+        alert('ブロンズ会員は学習モードを100回まで使用できます。\nお試し期間が終了しました。シルバー会員またはゴールド会員にアップグレードすると、無制限で学習モードをご利用いただけます。');
+        return;
+      }
+      
+      // 使用可能回数を表示
+      const remainingCount = 100 - usageCount;
+      if (!isLearningMode) {
+        // 学習モードをONにする場合のみ確認
+        const confirmMsg = `学習モードを使用しますか？\n残り使用可能回数: ${remainingCount}回`;
+        if (!confirm(confirmMsg)) {
+          return;
+        }
+      }
+    }
+    
     setIsLearningMode(!isLearningMode);
     // モードを切り替えたらアクティブな単語をクリア
     setActiveWordId(null);
@@ -3100,6 +3119,40 @@ export default function Home() {
     }
     
     if (isLearningMode) {
+      // ブロンズ会員の場合、使用回数をカウント
+      if (membershipType === 'free') {
+        const currentCount = user?.user_metadata?.learning_mode_usage_count || 0;
+        if (currentCount >= 100) {
+          alert('ブロンズ会員は学習モードを100回まで使用できます。\nお試し期間が終了しました。シルバー会員またはゴールド会員にアップグレードすると、無制限で学習モードをご利用いただけます。');
+          setIsLearningMode(false);
+          return;
+        }
+        
+        // 使用回数を増やす
+        const newCount = currentCount + 1;
+        try {
+          const { data: updatedUser, error: updateError } = await supabase.auth.updateUser({
+            data: {
+              ...user?.user_metadata,
+              learning_mode_usage_count: newCount
+            }
+          });
+          
+          if (updateError) {
+            console.error('学習モード使用回数の更新エラー:', updateError);
+          } else {
+            console.log(`✅ 学習モード使用回数更新: ${newCount}/100`);
+            // ユーザー情報を再取得
+            const { data: { user: refreshedUser } } = await supabase.auth.getUser();
+            if (refreshedUser) {
+              setUser(refreshedUser);
+            }
+          }
+        } catch (err) {
+          console.error('学習モード使用回数の更新エラー:', err);
+        }
+      }
+      
       // 学習モード：例文も表示、音声プレイヤーを表示
       setForceShowResult(true); // 結果パネルを表示する
       setSearchQuery(word.chinese);
