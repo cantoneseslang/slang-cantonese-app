@@ -52,6 +52,97 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString()
     });
 
+    // Payment Intent成功時の処理（lifetimeプランの場合、checkout.session.completedが発火しない可能性があるため）
+    if (event.type === 'payment_intent.succeeded') {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      const userId = paymentIntent.metadata?.user_id;
+      const plan = paymentIntent.metadata?.plan as 'subscription' | 'lifetime';
+      
+      console.log('🔔 payment_intent.succeeded event received:', {
+        paymentIntentId: paymentIntent.id,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+        userId,
+        plan,
+        metadata: paymentIntent.metadata
+      });
+
+      // payment_intentのmetadataにuser_idとplanがある場合は直接処理
+      if (userId && plan) {
+        const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+        const updateData: any = { membership_type: plan };
+        let expiresAt: string | null = null;
+
+        if (plan === 'subscription') {
+          const expiresDate = new Date();
+          expiresDate.setMonth(expiresDate.getMonth() + 1);
+          expiresAt = expiresDate.toISOString();
+          updateData.subscription_expires_at = expiresAt;
+        } else if (plan === 'lifetime') {
+          expiresAt = null;
+          updateData.subscription_expires_at = null;
+        }
+
+        console.log('📝 Updating user membership from payment_intent:', {
+          userId,
+          plan,
+          expiresAt,
+          updateData,
+          isLifetime: plan === 'lifetime'
+        });
+
+        // 1. user_metadataを更新
+        const { data: userData, error: userError } = await supabase.auth.admin.updateUserById(
+          userId,
+          { user_metadata: updateData }
+        );
+
+        if (userError) {
+          console.error('❌ Failed to update user metadata from payment_intent:', userError);
+        } else {
+          console.log('✅ User metadata updated successfully from payment_intent:', {
+            userId: userData?.user?.id,
+            membershipType: userData?.user?.user_metadata?.membership_type
+          });
+        }
+
+        // 2. usersテーブルも確実に更新
+        const { data: dbData, error: dbError } = await supabase
+          .from('users')
+          .update({
+            membership_type: plan,
+            subscription_expires_at: expiresAt,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId)
+          .select();
+
+        if (dbError) {
+          if (dbError.code === 'PGRST116' || dbError.message.includes('relation') || dbError.message.includes('does not exist')) {
+            console.warn('⚠️ usersテーブルが存在しないため、user_metadataのみ更新しました（payment_intent）:', {
+              userId,
+              plan,
+              error: dbError.message
+            });
+          } else {
+            console.error('❌ Failed to update users table from payment_intent:', dbError);
+          }
+        } else {
+          console.log('✅ Users table updated successfully from payment_intent:', {
+            userId,
+            updatedRows: dbData?.length || 0,
+            data: dbData
+          });
+        }
+      } else {
+        console.log('⚠️ payment_intent.succeeded: metadataにuser_idまたはplanが含まれていません:', {
+          userId,
+          plan,
+          metadata: paymentIntent.metadata
+        });
+      }
+    }
+
     // Checkoutセッション完了時の処理
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;

@@ -119,6 +119,13 @@ export async function POST(request: NextRequest) {
           plan: plan,
         },
       } : undefined,
+      // lifetimeプランの場合、payment_intentのmetadataにもuser_idとplanを設定
+      payment_intent_data: plan === 'lifetime' ? {
+        metadata: {
+          user_id: userId,
+          plan: plan,
+        },
+      } : undefined,
       customer_email: body.email || undefined,
     };
 
