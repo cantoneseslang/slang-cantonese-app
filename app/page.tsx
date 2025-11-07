@@ -553,12 +553,16 @@ export default function Home() {
                             // メディアセッションAPIでメタデータを設定（ロック画面のアイコン変更）
                             if ('mediaSession' in navigator) {
                               const translatedText = lastTranslatedTextRef.current || '同時通訳';
+                              const logoPath = translationLanguage === 'cantonese' 
+                                ? '/volume-logo-circle.svg' 
+                                : '/volume-logo-mandarin-circle.svg';
                               
                               navigator.mediaSession.metadata = new MediaMetadata({
                                 title: translatedText,
                                 artist: 'スラング式カントン語音れん',
-                                album: '同時通訳モード',
+                                album: translationLanguage === 'cantonese' ? 'カントン語通訳' : '中国語通訳',
                                 artwork: [
+                                  { src: logoPath, sizes: '512x512', type: 'image/svg+xml' },
                                   { src: '/volume-logo.png', sizes: '512x512', type: 'image/png' },
                                   { src: '/line-logo.png', sizes: '512x512', type: 'image/png' },
                                 ],
@@ -974,12 +978,16 @@ export default function Home() {
                   // メディアセッションAPIでメタデータを設定（ロック画面のアイコン変更）
                   if ('mediaSession' in navigator) {
                     const translatedText = lastTranslatedTextRef.current || '同時通訳';
+                    const logoPath = translationLanguage === 'cantonese' 
+                      ? '/volume-logo-circle.svg' 
+                      : '/volume-logo-mandarin-circle.svg';
                     
                     navigator.mediaSession.metadata = new MediaMetadata({
                       title: translatedText,
                       artist: 'スラング式カントン語音れん',
-                      album: '同時通訳モード',
+                      album: translationLanguage === 'cantonese' ? 'カントン語通訳' : '中国語通訳',
                       artwork: [
+                        { src: logoPath, sizes: '512x512', type: 'image/svg+xml' },
                         { src: '/volume-logo.png', sizes: '512x512', type: 'image/png' },
                         { src: '/line-logo.png', sizes: '512x512', type: 'image/png' },
                       ],
@@ -4090,7 +4098,7 @@ export default function Home() {
           >
             <img
               ref={volumeLogoRef}
-              src={translationLanguage === 'cantonese' ? "/volume-logo.svg?v=2" : "/volume-logo-mandarin.svg?v=2"}
+              src={translationLanguage === 'cantonese' ? "/volume-logo-circle.svg?v=2" : "/volume-logo-mandarin-circle.svg?v=2"}
               alt="microphone"
               draggable="false"
               style={{
@@ -4613,7 +4621,7 @@ export default function Home() {
             }}>
               <img 
                 ref={volumeLogoRef}
-                src="/volume-logo.svg?v=2" 
+                src="/volume-logo-circle.svg?v=2" 
                 alt="logo" 
                 draggable="false"
                 style={{ 
