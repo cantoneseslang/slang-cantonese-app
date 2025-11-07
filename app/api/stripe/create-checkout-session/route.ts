@@ -12,7 +12,7 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { plan, userId } = body;
+    const { plan, userId, currency = 'jpy' } = body; // 通貨を取得（デフォルト: JPY）
 
     if (!plan || !userId) {
       return NextResponse.json(
@@ -30,14 +30,21 @@ export async function POST(request: NextRequest) {
     }
 
     // プランの価格ID設定（Stripeで作成済みの価格IDを使用）
-    // 環境変数で設定するか、直接指定する
-    const priceIdMap: Record<string, string> = {
-      subscription: process.env.STRIPE_PRICE_ID_SUBSCRIPTION || 'price_1SQildLopXhymmb3EAPe789Q', // シルバー会員（月額）
-      lifetime: process.env.STRIPE_PRICE_ID_LIFETIME || 'price_1SQiVQLopXhymmb32pf7GnDc', // ゴールド会員（買い切り）- JPY価格
+    // 通貨に応じて適切な価格IDを選択
+    const selectedCurrency = currency === 'hkd' ? 'hkd' : 'jpy';
+    const priceIdMap: Record<string, Record<string, string>> = {
+      subscription: {
+        jpy: process.env.STRIPE_PRICE_ID_SUBSCRIPTION_JPY || 'price_1SQildLopXhymmb3EAPe789Q', // シルバー会員（月額）- JPY
+        hkd: process.env.STRIPE_PRICE_ID_SUBSCRIPTION_HKD || 'price_1SQildLopXhymmb3EAPe789Q', // シルバー会員（月額）- HKD（同じ価格IDを使用）
+      },
+      lifetime: {
+        jpy: process.env.STRIPE_PRICE_ID_LIFETIME_JPY || 'price_1SQiVQLopXhymmb32pf7GnDc', // ゴールド会員（買い切り）- JPY
+        hkd: process.env.STRIPE_PRICE_ID_LIFETIME_HKD || 'price_1SQiS1LopXhymmb3dZDWJV73', // ゴールド会員（買い切り）- HKD
+      },
     };
 
-    // 既存の価格IDが設定されている場合はそれを使用、なければ動的に作成
-    const priceId = priceIdMap[plan];
+    // 選択された通貨に応じて価格IDを取得
+    const priceId = priceIdMap[plan]?.[selectedCurrency];
     
     // 成功時のリダイレクトURLとキャンセル時のリダイレクトURL
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
