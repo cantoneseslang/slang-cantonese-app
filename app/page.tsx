@@ -157,6 +157,9 @@ export default function Home() {
   const [showPricingModalTopArrow, setShowPricingModalTopArrow] = useState(false);
   const [showPricingModalBottomArrow, setShowPricingModalBottomArrow] = useState(false);
   
+  // ページ初期化完了フラグ（音声生成を確実にするため）
+  const [isPageInitialized, setIsPageInitialized] = useState(false);
+  
   // デフォルトカテゴリー設定の状態
   const [defaultCategoryId, setDefaultCategoryId] = useState<string>('pronunciation'); // デフォルトは「発音表記について」
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
@@ -233,26 +236,105 @@ export default function Home() {
   // 音声の初期化（Web Audio APIで100%音量）
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // AudioContextを作成（ボタンクリック音用）
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const initializeAudio = async () => {
+        try {
+          // AudioContextを作成（ボタンクリック音用）
+          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+          
+          // ノーマルモード用の独立したAudioContextを作成（同時通訳モードと分離）
+          normalModeAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+          
+          // AudioContextがsuspended状態の場合はresume（ユーザーインタラクションが必要な場合）
+          if (audioContextRef.current.state === 'suspended') {
+            await audioContextRef.current.resume();
+          }
+          if (normalModeAudioContextRef.current.state === 'suspended') {
+            await normalModeAudioContextRef.current.resume();
+          }
+          
+          // MP3ファイルを読み込み
+          try {
+            const response = await fetch('/button-click.mp3');
+            const arrayBuffer = await response.arrayBuffer();
+            const audioBuffer = await audioContextRef.current!.decodeAudioData(arrayBuffer);
+            audioBufferRef.current = audioBuffer;
+            console.log('✅ ボタンクリック音の読み込み完了');
+          } catch (e) {
+            console.warn('⚠️ ボタンクリック音の読み込み失敗（無視）:', e);
+          }
+          
+          // localStorageからクリック音の設定を読み込み
+          const savedClickSound = localStorage.getItem('clickSoundEnabled');
+          if (savedClickSound !== null) {
+            setIsClickSoundEnabled(savedClickSound === 'true');
+          }
+          
+          // AudioContextの初期化は完了したので、audio要素の確認は別のuseEffectで行う
+          console.log('✅ AudioContextの初期化完了');
+        } catch (error) {
+          console.error('❌ 音声初期化エラー:', error);
+          // エラーが発生しても初期化完了として扱う（フォールバック）
+          setIsPageInitialized(true);
+        }
+      };
       
-      // ノーマルモード用の独立したAudioContextを作成（同時通訳モードと分離）
-      normalModeAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
-      // MP3ファイルを読み込み
-      fetch('/button-click.mp3')
-        .then(response => response.arrayBuffer())
-        .then(arrayBuffer => audioContextRef.current!.decodeAudioData(arrayBuffer))
-        .then(audioBuffer => {
-          audioBufferRef.current = audioBuffer;
-        })
-        .catch(e => console.log('Audio loading failed:', e));
-      
-      // localStorageからクリック音の設定を読み込み
-      const savedClickSound = localStorage.getItem('clickSoundEnabled');
-      if (savedClickSound !== null) {
-        setIsClickSoundEnabled(savedClickSound === 'true');
+      initializeAudio();
+    } else {
+      // SSR環境では初期化完了として扱う
+      setIsPageInitialized(true);
+    }
+  }, []);
+  
+  // audio要素の初期化確認（DOMがレンダリングされた後）
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    
+    const checkAudioElements = () => {
+      // audio要素とAudioContextの両方が存在することを確認
+      if (normalModeAudioRef.current && audioContextRef.current && normalModeAudioContextRef.current) {
+        console.log('✅ 音声システムの初期化完了（audio要素確認済み）');
+        setIsPageInitialized(true);
+        return true;
       }
+      return false;
+    };
+    
+    // 即座にチェック
+    if (checkAudioElements()) {
+      return;
+    }
+    
+    // DOMがレンダリングされるまで待機（最大3秒）
+    let attempts = 0;
+    const maxAttempts = 30; // 3秒（100ms × 30）
+    const checkInterval = setInterval(() => {
+      attempts++;
+      if (checkAudioElements() || attempts >= maxAttempts) {
+        clearInterval(checkInterval);
+        if (attempts >= maxAttempts && !isPageInitialized) {
+          console.warn('⚠️ audio要素の初期化確認がタイムアウトしましたが、続行します');
+          setIsPageInitialized(true); // タイムアウトしても続行
+        }
+      }
+    }, 100);
+    
+    return () => {
+      clearInterval(checkInterval);
+    };
+  }, [isPageInitialized]);
+        } catch (error) {
+          console.error('❌ 音声初期化エラー:', error);
+          // エラーが発生しても初期化完了として扱う（フォールバック）
+          setIsPageInitialized(true);
+        }
+      };
+      
+      initializeAudio();
+    } else {
+      // SSR環境では初期化完了として扱う
+      setIsPageInitialized(true);
     }
   }, []);
 
@@ -3139,6 +3221,49 @@ export default function Home() {
   };
 
   const handleWordClick = async (word: Word) => {
+    // 初期化が完了していない場合は待機（最大2秒）
+    if (!isPageInitialized) {
+      console.warn('⚠️ ページ初期化が完了していません。初期化を待機中...');
+      
+      let waitAttempts = 0;
+      const maxWaitAttempts = 20; // 2秒（100ms × 20）
+      
+      while (!isPageInitialized && waitAttempts < maxWaitAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        waitAttempts++;
+      }
+      
+      if (!isPageInitialized) {
+        console.error('❌ ページ初期化の待機がタイムアウトしました。続行しますが、音声生成が失敗する可能性があります。');
+        // タイムアウトしても続行（フォールバック）
+      } else {
+        console.log('✅ ページ初期化完了を確認');
+      }
+    }
+    
+    // audio要素とAudioContextの最終確認
+    if (!normalModeAudioRef.current) {
+      console.error('❌ normalModeAudioRefが初期化されていません');
+      alert('音声システムが初期化されていません。ページを再読み込みしてください。');
+      return;
+    }
+    
+    if (!normalModeAudioContextRef.current) {
+      console.error('❌ normalModeAudioContextRefが初期化されていません');
+      // AudioContextを再作成
+      try {
+        normalModeAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        if (normalModeAudioContextRef.current.state === 'suspended') {
+          await normalModeAudioContextRef.current.resume();
+        }
+        console.log('✅ AudioContextを再作成しました');
+      } catch (e) {
+        console.error('❌ AudioContextの再作成に失敗:', e);
+        alert('音声システムの初期化に失敗しました。ページを再読み込みしてください。');
+        return;
+      }
+    }
+    
     // 即座にフィードバック（最優先）
     playHapticAndSound(); // 振動と音を再生
     
