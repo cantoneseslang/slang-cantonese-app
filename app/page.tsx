@@ -4436,14 +4436,10 @@ export default function Home() {
           </div>
 
           {/* 日本語音声認識エリア（中央、浮き上がるアニメーション、新しいテキストが上に表示、モバイルではロゴとの重なり防止） */}
-          {/* 画面が小さい時は、タイトルの上に配置して重ならないようにする */}
-          {/* 入力欄はタイトルの上に配置（タイトルは円形ボタンの下） */}
           <div style={{
             position: 'fixed',
             top: isMobile ? 'calc(2rem + 250px + 0.5rem)' : '50%', // 広東語エリアの直下: top(2rem) + maxHeight(250px) + 最小余白(0.5rem)
-            // モバイル: タイトル（calc(3rem + 120px + 96px + 1.5rem)）の上に配置
-            // タイトルの高さ（約3rem）と余白（1rem）を考慮して、タイトルの上端より上に配置
-            bottom: isMobile ? 'unset' : 'auto', // モバイルではbottomを削除してtopのみで配置（入力欄はタイトルの上に）
+            bottom: isMobile ? 'calc(3rem + 120px + 96px + 2rem)' : 'auto', // ロゴの上端 + 余白（モバイルのみ）
             left: '50%',
             transform: isMobile ? 'translate(-50%, 0)' : 'translate(-50%, -50%)',
             width: isMobile ? 'calc(100vw - 2rem)' : '90%',
@@ -4559,15 +4555,12 @@ export default function Home() {
           </button>
 
           {/* タイトル表示（ロゴマークの下、タイル回転アニメーション） */}
-          {/* 画面が小さい時は、ボタンの下に配置して重ならないようにする */}
           {showTitle && (
             <div 
               onClick={handleTitleClick}
               style={{
                 position: 'fixed',
-                // モバイル: ボタン（3rem + 120px）の下に配置、さらに余白を追加
-                // デスクトップ: ボタン（5rem + 140px）の下に配置、さらに余白を追加
-                bottom: isMobile ? 'calc(3rem + 120px + 96px + 1.5rem)' : 'calc(5rem + 140px + 120px + 2rem)',
+                bottom: isMobile ? '3rem' : '5rem',
                 left: '50%',
                 transform: 'translateX(-50%)',
                 textAlign: 'center',
@@ -4576,11 +4569,7 @@ export default function Home() {
                 cursor: 'pointer',
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
-                WebkitTouchCallout: 'none',
-                // 画面が小さい時は、さらに下に配置（安全マージン）
-                paddingBottom: isMobile ? '1rem' : '0',
-                maxWidth: '90vw',
-                wordBreak: 'break-word'
+                WebkitTouchCallout: 'none'
               }}
             >
               <div style={{
@@ -4588,8 +4577,7 @@ export default function Home() {
                 fontWeight: 800,
                 color: '#111827',
                 marginBottom: '0.5rem',
-                textShadow: 'none',
-                lineHeight: '1.2'
+                textShadow: 'none'
               }}>
                 {translationLanguage === 'cantonese' ? 'カントン語通訳' : '中国語通訳'}
               </div>
@@ -4598,11 +4586,9 @@ export default function Home() {
                 fontWeight: 700,
                 color: '#6b7280',
                 textShadow: 'none',
-                whiteSpace: 'normal',
-                overflow: 'visible',
-                textOverflow: 'clip',
-                lineHeight: '1.4',
-                padding: '0 1rem'
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
               }}>
                 ボタンを押すだけでスパッと通訳！
               </div>
