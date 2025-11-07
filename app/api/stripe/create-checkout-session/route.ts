@@ -29,28 +29,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // プランの価格設定（JPY）
-    const priceMap: Record<string, { amount: number; currency: string; name: string }> = {
-      subscription: {
-        amount: 980, // ¥980/月
-        currency: 'jpy',
-        name: 'シルバー会員（月額）'
-      },
-      lifetime: {
-        amount: 9800, // ¥9,800
-        currency: 'jpy',
-        name: 'ゴールド会員（買い切り）'
-      }
+    // プランの価格ID設定（Stripeで作成済みの価格IDを使用）
+    // 環境変数で設定するか、直接指定する
+    const priceIdMap: Record<string, string> = {
+      subscription: process.env.STRIPE_PRICE_ID_SUBSCRIPTION || '', // シルバー会員（月額）の価格ID
+      lifetime: process.env.STRIPE_PRICE_ID_LIFETIME || '', // ゴールド会員（買い切り）の価格ID
     };
 
-    const priceConfig = priceMap[plan];
-    if (!priceConfig) {
-      return NextResponse.json(
-        { error: 'Invalid plan' },
-        { status: 400 }
-      );
-    }
-
+    // 既存の価格IDが設定されている場合はそれを使用、なければ動的に作成
+    const priceId = priceIdMap[plan];
+    
     // 成功時のリダイレクトURLとキャンセル時のリダイレクトURL
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const successUrl = `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`;
@@ -59,26 +47,35 @@ export async function POST(request: NextRequest) {
     // Stripe Checkoutセッションを作成
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: priceConfig.currency,
-            product_data: {
-              name: priceConfig.name,
-              description: plan === 'subscription' 
-                ? '月額サブスクリプション（自動更新）' 
-                : '買い切りプラン（永久使用）',
+      line_items: priceId 
+        ? [
+            // 既存の価格IDを使用
+            {
+              price: priceId,
+              quantity: 1,
             },
-            unit_amount: priceConfig.amount,
-            ...(plan === 'subscription' && {
-              recurring: {
-                interval: 'month',
+          ]
+        : [
+            // 動的に価格を作成（フォールバック）
+            {
+              price_data: {
+                currency: plan === 'subscription' ? 'jpy' : 'jpy',
+                product_data: {
+                  name: plan === 'subscription' ? 'シルバー会員（月額）' : 'ゴールド会員（買い切り）',
+                  description: plan === 'subscription' 
+                    ? '月額サブスクリプション（自動更新）' 
+                    : '買い切りプラン（永久使用）',
+                },
+                unit_amount: plan === 'subscription' ? 980 : 9800,
+                ...(plan === 'subscription' && {
+                  recurring: {
+                    interval: 'month',
+                  },
+                }),
               },
-            }),
-          },
-          quantity: 1,
-        },
-      ],
+              quantity: 1,
+            },
+          ],
       mode: plan === 'subscription' ? 'subscription' : 'payment',
       success_url: successUrl,
       cancel_url: cancelUrl,
