@@ -2417,50 +2417,78 @@ export default function Home() {
 
   // デフォルトカテゴリー保存処理
   const handleDefaultCategoryChange = async (newCategoryId: string) => {
-    if (!user) return;
+    if (!user) {
+      console.error('❌ ユーザーがログインしていません');
+      alert('ログインが必要です。');
+      return;
+    }
+    
+    console.log('💾 デフォルトカテゴリー保存開始:', { newCategoryId, currentDefaultCategoryId: defaultCategoryId });
     
     setIsSavingDefaultCategory(true);
     try {
-      const { error } = await supabase.auth.updateUser({
+      const { data, error } = await supabase.auth.updateUser({
         data: {
           default_category_id: newCategoryId
         }
       });
 
       if (error) {
-        console.error('デフォルトカテゴリー保存エラー:', error);
-        alert('デフォルトカテゴリーの保存に失敗しました。');
+        console.error('❌ デフォルトカテゴリー保存エラー:', error);
+        alert(`デフォルトカテゴリーの保存に失敗しました: ${error.message}`);
+        setIsSavingDefaultCategory(false);
         return;
       }
 
+      console.log('✅ デフォルトカテゴリー保存成功:', { newCategoryId, updatedUser: data.user });
+      
       // 状態を更新
-      console.log('✅ デフォルトカテゴリーを保存:', newCategoryId);
       setDefaultCategoryId(newCategoryId);
       setShowCategoryPicker(false);
       
       // ユーザー情報を再取得して最新の状態を反映
-      const { data: { user: updatedUser } } = await supabase.auth.getUser();
-      if (updatedUser) {
+      const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
+      if (getUserError) {
+        console.error('❌ ユーザー情報再取得エラー:', getUserError);
+      } else if (updatedUser) {
         setUser(updatedUser);
-        console.log('✅ ユーザー情報を再取得完了');
+        console.log('✅ ユーザー情報を再取得完了:', {
+          default_category_id: updatedUser.user_metadata?.default_category_id,
+          newCategoryId
+        });
+        
+        // 保存された値が正しいか確認
+        if (updatedUser.user_metadata?.default_category_id !== newCategoryId) {
+          console.warn('⚠️ 保存された値が一致しません:', {
+            expected: newCategoryId,
+            actual: updatedUser.user_metadata?.default_category_id
+          });
+        }
       }
       
       // 現在選択中のカテゴリーがデフォルトカテゴリーでない場合、デフォルトカテゴリーに切り替え
       const regularCategories = categories.filter(c => !c.id.startsWith('note_'));
       const newDefaultCategory = regularCategories.find(c => c.id === newCategoryId);
       if (newDefaultCategory) {
-        console.log('🔄 カテゴリーをデフォルトカテゴリーに切り替え:', newCategoryId);
+        console.log('🔄 カテゴリーをデフォルトカテゴリーに切り替え:', {
+          categoryId: newCategoryId,
+          categoryName: newDefaultCategory.name,
+          wordsCount: newDefaultCategory.words?.length || 0
+        });
         setSelectedCategory(newCategoryId);
         setCurrentCategory(newDefaultCategory);
         setCurrentWords(newDefaultCategory.words || []);
         // デフォルトカテゴリーを適用済みとしてマーク
         hasAppliedDefaultCategory.current = true;
+      } else {
+        console.error('❌ カテゴリーが見つかりません:', newCategoryId);
+        alert(`カテゴリー「${newCategoryId}」が見つかりません。`);
       }
       
       alert('デフォルトカテゴリーを保存しました。');
     } catch (err) {
-      console.error('デフォルトカテゴリー保存失敗:', err);
-      alert('デフォルトカテゴリーの保存に失敗しました。');
+      console.error('❌ デフォルトカテゴリー保存失敗:', err);
+      alert(`デフォルトカテゴリーの保存に失敗しました: ${err instanceof Error ? err.message : '不明なエラー'}`);
     } finally {
       setIsSavingDefaultCategory(false);
     }
@@ -7539,7 +7567,7 @@ export default function Home() {
                 display: 'flex',
                 flexDirection: 'column',
                 pointerEvents: 'auto',
-                touchAction: 'pan-y',
+                touchAction: isMobile ? 'pan-y' : 'auto', // PCではautoにしてスクロールを有効化
                 transform: 'translateZ(0)',
                 willChange: 'transform'
               }}
@@ -7564,19 +7592,41 @@ export default function Home() {
                     if (categoryPickerScrollRef.current) {
                       const scrollTop = categoryPickerScrollRef.current.scrollTop;
                       const itemHeight = 60;
-                      const centerOffset = categoryPickerScrollRef.current.clientHeight / 2 - itemHeight / 2;
-                      const selectedIndex = Math.round((scrollTop + centerOffset) / itemHeight);
+                      const containerHeight = categoryPickerScrollRef.current.clientHeight;
+                      const centerOffset = containerHeight / 2 - itemHeight / 2;
+                      
+                      // paddingTopを考慮した実際のスクロール位置を計算
+                      const paddingTop = containerHeight / 2; // paddingTop: 50%
+                      const actualScrollTop = scrollTop - paddingTop;
+                      const selectedIndex = Math.round((actualScrollTop + centerOffset) / itemHeight);
                       
                       const allCategories = [
                         ...(categories.find(c => c.id === 'pronunciation') ? [{ id: 'pronunciation', name: '発音表記について' }] : []),
                         ...categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_'))
                       ];
                       
+                      console.log('📋 カテゴリー選択:', {
+                        scrollTop,
+                        paddingTop,
+                        actualScrollTop,
+                        centerOffset,
+                        selectedIndex,
+                        allCategoriesLength: allCategories.length,
+                        defaultCategoryId
+                      });
+                      
                       if (selectedIndex >= 0 && selectedIndex < allCategories.length) {
                         const selectedCategory = allCategories[selectedIndex];
+                        console.log('✅ 選択されたカテゴリー:', selectedCategory);
                         handleDefaultCategoryChange(selectedCategory.id);
                       } else {
-                        setShowCategoryPicker(false);
+                        // インデックスが範囲外の場合は、現在のdefaultCategoryIdを使用
+                        console.log('⚠️ インデックス範囲外、現在のdefaultCategoryIdを使用:', defaultCategoryId);
+                        if (defaultCategoryId) {
+                          handleDefaultCategoryChange(defaultCategoryId);
+                        } else {
+                          setShowCategoryPicker(false);
+                        }
                       }
                     } else {
                       setShowCategoryPicker(false);
@@ -7635,8 +7685,11 @@ export default function Home() {
                       if (selectedIndex >= 0) {
                         setTimeout(() => {
                           const itemHeight = 60;
-                          const centerOffset = el.clientHeight / 2 - itemHeight / 2;
-                          el.scrollTop = selectedIndex * itemHeight - centerOffset;
+                          const containerHeight = el.clientHeight;
+                          const centerOffset = containerHeight / 2 - itemHeight / 2;
+                          const paddingTop = containerHeight / 2; // paddingTop: 50%
+                          // paddingTopを考慮してスクロール位置を設定
+                          el.scrollTop = selectedIndex * itemHeight - centerOffset + paddingTop;
                         }, 100);
                       }
                     }
@@ -7645,8 +7698,13 @@ export default function Home() {
                     // デバウンス処理でガタガタを防ぐ
                     const scrollTop = e.currentTarget.scrollTop;
                     const itemHeight = 60;
-                    const centerOffset = e.currentTarget.clientHeight / 2 - itemHeight / 2;
-                    const selectedIndex = Math.round((scrollTop + centerOffset) / itemHeight);
+                    const containerHeight = e.currentTarget.clientHeight;
+                    const centerOffset = containerHeight / 2 - itemHeight / 2;
+                    
+                    // paddingTopを考慮した実際のスクロール位置を計算
+                    const paddingTop = containerHeight / 2; // paddingTop: 50%
+                    const actualScrollTop = scrollTop - paddingTop;
+                    const selectedIndex = Math.round((actualScrollTop + centerOffset) / itemHeight);
                     
                     const allCategories = [
                       ...(categories.find(c => c.id === 'pronunciation') ? [{ id: 'pronunciation', name: '発音表記について' }] : []),
@@ -7668,21 +7726,38 @@ export default function Home() {
                     width: '100%',
                     height: '100%',
                     overflowY: 'auto',
+                    overflowX: 'hidden',
                     scrollSnapType: 'y proximity',
                     WebkitOverflowScrolling: 'touch',
-                    scrollbarWidth: 'none',
+                    scrollbarWidth: isMobile ? 'none' : 'thin', // PCではスクロールバーを表示
                     msOverflowStyle: 'none',
                     paddingTop: '50%',
                     paddingBottom: '50%',
                     boxSizing: 'border-box',
                     overscrollBehavior: 'contain',
-                    scrollBehavior: 'smooth'
+                    scrollBehavior: 'smooth',
+                    cursor: isMobile ? 'default' : 'grab', // PCではカーソルを変更
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none'
                   }}
                 >
                   <style>{`
                     #category-picker-scroll::-webkit-scrollbar {
-                      display: none;
+                      ${isMobile ? 'display: none;' : 'width: 8px;'}
                     }
+                    ${!isMobile ? `
+                    #category-picker-scroll::-webkit-scrollbar-track {
+                      background: #f1f1f1;
+                      border-radius: 4px;
+                    }
+                    #category-picker-scroll::-webkit-scrollbar-thumb {
+                      background: #888;
+                      border-radius: 4px;
+                    }
+                    #category-picker-scroll::-webkit-scrollbar-thumb:hover {
+                      background: #555;
+                    }
+                    ` : ''}
                   `}</style>
                   
                   {/* 発音表記についてを最初に表示 */}
