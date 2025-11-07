@@ -1397,6 +1397,20 @@ export default function Home() {
         setMembershipType('free');
       }
       
+      // 学習モード使用回数の初期化（ブロンズ会員で存在しない場合）
+      if ((user.user_metadata?.membership_type === 'free' || !user.user_metadata?.membership_type) && user.user_metadata?.learning_mode_usage_count === undefined) {
+        try {
+          await supabase.auth.updateUser({
+            data: {
+              ...user.user_metadata,
+              learning_mode_usage_count: 0
+            }
+          });
+        } catch (err) {
+          console.error('学習モード使用回数の初期化エラー:', err);
+        }
+      }
+      
       // デフォルトカテゴリーの設定
       if (user.user_metadata?.default_category_id) {
         console.log('📋 デフォルトカテゴリーを読み込み:', user.user_metadata.default_category_id);
