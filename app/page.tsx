@@ -4257,7 +4257,7 @@ export default function Home() {
             top: isMobile ? 'calc(2rem + 250px + 0.5rem)' : '50%', // 広東語エリアの直下: top(2rem) + maxHeight(250px) + 最小余白(0.5rem)
             // モバイル: タイトル（calc(3rem + 120px + 96px + 1.5rem)）の上に配置
             // タイトルの高さ（約3rem）と余白（1rem）を考慮して、タイトルの上端より上に配置
-            bottom: isMobile ? 'calc(3rem + 120px + 96px + 1.5rem + 3rem + 1rem)' : 'auto', // タイトルの上端 + タイトルの高さ + 余白（モバイルのみ）
+            bottom: isMobile ? 'unset' : 'auto', // モバイルではbottomを削除してtopのみで配置（入力欄はタイトルの上に）
             left: '50%',
             transform: isMobile ? 'translate(-50%, 0)' : 'translate(-50%, -50%)',
             width: isMobile ? 'calc(100vw - 2rem)' : '90%',
