@@ -4251,12 +4251,13 @@ export default function Home() {
 
           {/* 日本語音声認識エリア（中央、浮き上がるアニメーション、新しいテキストが上に表示、モバイルではロゴとの重なり防止） */}
           {/* 画面が小さい時は、タイトルの上に配置して重ならないようにする */}
+          {/* 入力欄はタイトルの上に配置（タイトルは円形ボタンの下） */}
           <div style={{
             position: 'fixed',
             top: isMobile ? 'calc(2rem + 250px + 0.5rem)' : '50%', // 広東語エリアの直下: top(2rem) + maxHeight(250px) + 最小余白(0.5rem)
-            // モバイル: タイトル（calc(3rem + 120px + 96px + 1.5rem)）の上に配置、さらに余白を追加
-            // タイトルの高さ（約3rem）と余白（1rem）を考慮
-            bottom: isMobile ? 'calc(3rem + 120px + 96px + 1.5rem + 3rem + 1rem)' : 'auto', // タイトルの上端 + 余白（モバイルのみ）
+            // モバイル: タイトル（calc(3rem + 120px + 96px + 1.5rem)）の上に配置
+            // タイトルの高さ（約3rem）と余白（1rem）を考慮して、タイトルの上端より上に配置
+            bottom: isMobile ? 'calc(3rem + 120px + 96px + 1.5rem + 3rem + 1rem)' : 'auto', // タイトルの上端 + タイトルの高さ + 余白（モバイルのみ）
             left: '50%',
             transform: isMobile ? 'translate(-50%, 0)' : 'translate(-50%, -50%)',
             width: isMobile ? 'calc(100vw - 2rem)' : '90%',
