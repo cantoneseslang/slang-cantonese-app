@@ -71,6 +71,13 @@ function PaymentSuccessContent() {
             throw new Error('セッション確認は成功しましたが、会員種別の更新に失敗しました。');
           }
 
+          // セッションをリフレッシュして最新のuser_metadataを取得
+          const { data: { session }, error: refreshSessionError } = await supabase.auth.refreshSession();
+          
+          if (refreshSessionError) {
+            console.warn('⚠️ セッションリフレッシュエラー（無視）:', refreshSessionError);
+          }
+          
           // ユーザー情報を再取得
           const { data: { user: finalUser }, error: finalError } = await supabase.auth.getUser();
           
@@ -84,11 +91,29 @@ function PaymentSuccessContent() {
             subscriptionExpiresAt: finalUser.user_metadata?.subscription_expires_at,
           });
         } else {
-          console.log('✅ Webhookで既に更新済み:', {
-            userId: updatedUser.id,
-            membershipType: currentMembershipType,
-            subscriptionExpiresAt: updatedUser.user_metadata?.subscription_expires_at,
-          });
+          // Webhookで既に更新済みの場合も、セッションをリフレッシュ
+          const { data: { session }, error: refreshSessionError } = await supabase.auth.refreshSession();
+          
+          if (refreshSessionError) {
+            console.warn('⚠️ セッションリフレッシュエラー（無視）:', refreshSessionError);
+          }
+          
+          // 再度ユーザー情報を取得
+          const { data: { user: refreshedUser }, error: refreshError } = await supabase.auth.getUser();
+          
+          if (!refreshError && refreshedUser) {
+            console.log('✅ Webhookで既に更新済み（セッションリフレッシュ後）:', {
+              userId: refreshedUser.id,
+              membershipType: refreshedUser.user_metadata?.membership_type,
+              subscriptionExpiresAt: refreshedUser.user_metadata?.subscription_expires_at,
+            });
+          } else {
+            console.log('✅ Webhookで既に更新済み:', {
+              userId: updatedUser.id,
+              membershipType: currentMembershipType,
+              subscriptionExpiresAt: updatedUser.user_metadata?.subscription_expires_at,
+            });
+          }
         }
 
         setLoading(false);
@@ -211,7 +236,12 @@ function PaymentSuccessContent() {
         ご利用ありがとうございます。プランが有効になりました。
       </div>
       <button
-        onClick={() => router.push('/')}
+        onClick={async () => {
+          // ホームに戻る前にセッションをリフレッシュ
+          const supabase = createClient();
+          await supabase.auth.refreshSession();
+          router.push('/?refresh=true');
+        }}
         style={{
           padding: '0.75rem 1.5rem',
           fontSize: '1rem',

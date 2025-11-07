@@ -2420,6 +2420,21 @@ export default function Home() {
   useEffect(() => {
     // ユーザー情報の取得
     const getUser = async () => {
+      // URLにrefresh=trueがある場合はセッションをリフレッシュ
+      const urlParams = new URLSearchParams(window.location.search);
+      const shouldRefresh = urlParams.get('refresh') === 'true';
+      
+      if (shouldRefresh) {
+        console.log('🔄 セッションをリフレッシュしてユーザー情報を再取得します');
+        // セッションをリフレッシュ
+        const { error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          console.warn('⚠️ セッションリフレッシュエラー:', refreshError);
+        }
+        // URLからクエリパラメータを削除
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+      
       const { data: { user }, error } = await supabase.auth.getUser();
       if (error) {
         console.error('ユーザー取得エラー:', error);
