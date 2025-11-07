@@ -3425,6 +3425,7 @@ export default function Home() {
       const maxRetries = 3;
       const retryDelay = 500; // 500ms待機してからリトライ
       
+      try {
       while (retryCount < maxRetries && !audioBase64) {
         try {
           console.log(`ノーマルモード: API呼び出し開始 (試行 ${retryCount + 1}/${maxRetries})`, { text: word.chinese });
