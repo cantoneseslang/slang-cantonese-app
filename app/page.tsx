@@ -3273,6 +3273,7 @@ export default function Home() {
                     artist: 'スラング式カントン語音れん',
                     album: categoryName,
                     artwork: [
+                      { src: '/volume-logo-circle.svg', sizes: '512x512', type: 'image/svg+xml' },
                       { src: '/volume-logo.png', sizes: '512x512', type: 'image/png' },
                       { src: '/line-logo.png', sizes: '512x512', type: 'image/png' },
                     ],
