@@ -2279,9 +2279,9 @@ export default function Home() {
       
       await worker.terminate();
       
-      // OCR結果をそのまま返す（正規化処理を削除）
-      // 正規化処理は不要。OCR結果をそのまま使用することで、正確なテキストが入力欄に表示され、
-      // 青いボタンを押した時にAPIに送信されるテキストも正確になる
+      // OCR結果をそのまま返す（APIで処理されるため、正規化は不要）
+      // APIが返すtranslatedText（音声生成に使われるテキスト）を入力欄に設定するため、
+      // OCR結果はそのままAPIに送信される
       let text = String(result?.data?.text || '').trim();
       
       // 長すぎる場合は切り詰める（4000文字制限）
@@ -5977,19 +5977,18 @@ export default function Home() {
                   // 画像ファイルの場合（自動OCR実行）
                   if (fileType.startsWith('image/')) {
                     setImportMessage('OCR実行中（中国語・広東語）...');
-                    const text = await runOcr(file, (p) => setImportProgress(p));
-                    if (!text || text.trim().length === 0) {
+                    const ocrText = await runOcr(file, (p) => setImportProgress(p));
+                    if (!ocrText || ocrText.trim().length === 0) {
                       alert('画像からテキストを読み取れませんでした。');
                     } else {
-                      // 文字数制限チェック（最大1000文字）
-                      if (text.length > 1000) {
-                        const confirmMsg = `OCRで読み取ったテキストが1,000文字を超えています（${text.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
-                        if (confirm(confirmMsg)) {
-                          setSearchQuery(text.substring(0, 1000));
-                          alert(`最初の1,000文字を入力欄に設定しました。`);
-                        }
-                      } else {
-                        setSearchQuery(text);
+                      // OCR結果をそのまま音声生成に使用（入力欄には表示しない）
+                      // 音声生成が正しく動作しているため、OCR結果をそのまま使用する
+                      setImportMessage('音声生成中...');
+                      try {
+                        await handleSearch(ocrText);
+                      } catch (err: any) {
+                        console.error('音声生成エラー:', err);
+                        alert('音声生成中にエラーが発生しました: ' + (err?.message || String(err)));
                       }
                     }
                   }
@@ -6046,15 +6045,14 @@ export default function Home() {
                         if (!text || text.length === 0) {
                           alert('PDFからテキストを読み取れませんでした。');
                         } else {
-                          // 文字数制限チェック（最大1000文字）
-                          if (text.length > 1000) {
-                            const confirmMsg = `PDFから読み取ったテキストが1,000文字を超えています（${text.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
-                            if (confirm(confirmMsg)) {
-                              setSearchQuery(text.substring(0, 1000));
-                              alert(`最初の1,000文字を入力欄に設定しました。`);
-                            }
-                          } else {
-                            setSearchQuery(text);
+                          // OCR結果をそのまま音声生成に使用（入力欄には表示しない）
+                          // 音声生成が正しく動作しているため、OCR結果をそのまま使用する
+                          setImportMessage('音声生成中...');
+                          try {
+                            await handleSearch(text);
+                          } catch (err: any) {
+                            console.error('音声生成エラー:', err);
+                            alert('音声生成中にエラーが発生しました: ' + (err?.message || String(err)));
                           }
                         }
                       } catch (ocrErr: any) {
@@ -6062,15 +6060,14 @@ export default function Home() {
                         alert('PDFのOCR処理中にエラーが発生しました: ' + (ocrErr?.message || String(ocrErr)));
                       }
                     } else {
-                      // 文字数制限チェック（最大1000文字）
-                      if (text.length > 1000) {
-                        const confirmMsg = `PDFから抽出したテキストが1,000文字を超えています（${text.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
-                        if (confirm(confirmMsg)) {
-                          setSearchQuery(text.substring(0, 1000));
-                          alert(`最初の1,000文字を入力欄に設定しました。`);
-                        }
-                      } else {
-                        setSearchQuery(text);
+                      // 抽出したテキストをそのまま音声生成に使用（入力欄には表示しない）
+                      // 音声生成が正しく動作しているため、抽出したテキストをそのまま使用する
+                      setImportMessage('音声生成中...');
+                      try {
+                        await handleSearch(text);
+                      } catch (err: any) {
+                        console.error('音声生成エラー:', err);
+                        alert('音声生成中にエラーが発生しました: ' + (err?.message || String(err)));
                       }
                     }
                   } else {
