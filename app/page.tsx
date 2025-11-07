@@ -74,11 +74,35 @@ export default function Home() {
   
   // Safari検出
   const [isSafari, setIsSafari] = useState(false);
+  
+  // モバイルブラウザのビューポート高さ対応（Safari/Chromeの違いを解決）
   useEffect(() => {
     const userAgent = navigator.userAgent.toLowerCase();
     const isSafariBrowser = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || 
                            (userAgent.includes('safari') && !userAgent.includes('chrome'));
     setIsSafari(isSafariBrowser);
+    
+    // 実際のビューポート高さをCSS変数に設定
+    const setViewportHeight = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    
+    // 初期設定
+    setViewportHeight();
+    
+    // リサイズ時に再計算（ツールバーの表示/非表示に対応）
+    window.addEventListener('resize', setViewportHeight);
+    
+    // オリエンテーション変更時にも再計算
+    window.addEventListener('orientationchange', () => {
+      setTimeout(setViewportHeight, 100);
+    });
+    
+    return () => {
+      window.removeEventListener('resize', setViewportHeight);
+      window.removeEventListener('orientationchange', setViewportHeight);
+    };
   }, []);
   const supabase = createClient();
   const [user, setUser] = useState<any>(null);
@@ -3863,7 +3887,7 @@ export default function Home() {
         margin: 0, 
         padding: isHiddenMode ? 0 : (isMobile ? '1rem' : '3rem'), 
         backgroundColor: isHiddenMode ? '#f3f4f6' : '#f3f4f6', 
-        minHeight: '100vh',
+        minHeight: 'calc(var(--vh, 1vh) * 100)',
         position: 'relative',
         transition: 'background-color 0.5s ease-out',
         overflow: isHiddenMode ? 'hidden' : 'visible'
@@ -4738,7 +4762,7 @@ export default function Home() {
             <div style={{ 
               marginBottom: '0.25rem',
               transition: 'transform 0.5s ease-out',
-              transform: isHiddenMode ? `translateY(calc(100vh - ${isMobile ? '3rem' : '5rem'} - ${isMobile ? '48px' : '56px'} - 0.25rem))` : 'translateY(0)'
+              transform: isHiddenMode ? `translateY(calc(var(--vh, 1vh) * 100 - ${isMobile ? '3rem' : '5rem'} - ${isMobile ? '48px' : '56px'} - 0.25rem))` : 'translateY(0)'
             }}>
               <img 
                 ref={volumeLogoRef}
