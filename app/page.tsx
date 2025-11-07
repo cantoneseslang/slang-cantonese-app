@@ -3860,7 +3860,7 @@ export default function Home() {
             ESCで終了
           </button>
 
-          {/* タイトル表示（ロゴマークの下、タイル回転アニメーション） */}
+          {/* タイトル表示（画面最下部、タイル回転アニメーション） */}
           {showTitle && (
             <div 
               onClick={handleTitleClick}
@@ -7724,6 +7724,16 @@ export default function Home() {
                       }
                     }
                   }}
+                  onWheel={(e) => {
+                    // PCでのマウスホイールスクロールを有効化
+                    if (!isMobile && categoryPickerScrollRef.current) {
+                      e.preventDefault();
+                      const delta = e.deltaY;
+                      const currentScrollTop = categoryPickerScrollRef.current.scrollTop;
+                      const newScrollTop = currentScrollTop + delta;
+                      categoryPickerScrollRef.current.scrollTop = newScrollTop;
+                    }
+                  }}
                   style={{
                     width: '100%',
                     height: '100%',
@@ -7740,7 +7750,8 @@ export default function Home() {
                     scrollBehavior: 'smooth',
                     cursor: isMobile ? 'default' : 'grab', // PCではカーソルを変更
                     userSelect: 'none',
-                    WebkitUserSelect: 'none'
+                    WebkitUserSelect: 'none',
+                    touchAction: isMobile ? 'pan-y' : 'auto' // PCではautoにしてスクロールを有効化
                   }}
                 >
                   <style>{`
