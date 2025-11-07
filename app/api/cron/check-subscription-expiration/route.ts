@@ -27,7 +27,53 @@ export async function GET(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-    // 期限切れのサブスクリプション会員をブロンズに戻す
+    // テスト期間終了日のチェック
+    const testPeriodEndDate = process.env.TEST_PERIOD_END_DATE;
+    const now = new Date();
+    let testPeriodEnded = false;
+    let testPeriodDowngradeCount = 0;
+
+    if (testPeriodEndDate) {
+      const endDate = new Date(testPeriodEndDate);
+      if (now >= endDate) {
+        // テスト期間が終了している場合、すべての有料会員をブロンズに戻す
+        testPeriodEnded = true;
+        console.log('テスト期間が終了しました。すべての有料会員をブロンズに戻します。');
+
+        const { data: paidUsers, error: paidUsersError } = await supabase
+          .from('users')
+          .update({
+            membership_type: 'free',
+            subscription_expires_at: null,
+            updated_at: new Date().toISOString()
+          })
+          .in('membership_type', ['subscription', 'lifetime'])
+          .select('id');
+
+        if (paidUsersError) {
+          console.error('Error downgrading paid users after test period:', paidUsersError);
+        } else {
+          testPeriodDowngradeCount = paidUsers?.length || 0;
+
+          // user_metadataも更新（Supabase Authのuser_metadataと同期）
+          if (testPeriodDowngradeCount > 0) {
+            for (const user of paidUsers) {
+              try {
+                await supabase.auth.admin.updateUserById(user.id, {
+                  user_metadata: {
+                    membership_type: 'free'
+                  }
+                });
+              } catch (err) {
+                console.error(`Failed to update user_metadata for user ${user.id}:`, err);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 通常の期限切れサブスクリプション会員をブロンズに戻す（テスト期間終了後も実行）
     const { data, error } = await supabase
       .from('users')
       .update({
@@ -65,11 +111,19 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    const response: any = {
       success: true,
       message: `Downgraded ${updatedCount} expired subscriptions to free tier`,
       updatedCount
-    });
+    };
+
+    if (testPeriodEnded) {
+      response.testPeriodEnded = true;
+      response.testPeriodDowngradeCount = testPeriodDowngradeCount;
+      response.message = `テスト期間終了により${testPeriodDowngradeCount}人の有料会員をブロンズに戻しました。また、${updatedCount}人の期限切れサブスクリプション会員をブロンズに戻しました。`;
+    }
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Cron job error:', error);
     return NextResponse.json(
