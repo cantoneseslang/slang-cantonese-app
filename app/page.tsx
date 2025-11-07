@@ -872,12 +872,13 @@ export default function Home() {
 
   // タイトルクリックハンドラー（3回クリックで言語切り替え）
   const handleTitleClick = () => {
-    if (!isHiddenMode || !showTitle) {
+    // タイトルが表示されていない場合は何もしない
+    if (!showTitle) {
       return;
     }
     
-    // 音声認識中はタイトル音声を再生しない（マイク入力の精度を保つため）
-    if (isRecording) {
+    // 通訳モードで音声認識中はタイトル音声を再生しない（マイク入力の精度を保つため）
+    if (isHiddenMode && isRecording) {
       console.log('音声認識中のため、タイトル音声の再生をスキップします');
       return;
     }
@@ -889,36 +890,47 @@ export default function Home() {
       clearTimeout(titleClickTimeoutRef.current);
     }
     
-    // 3秒以内に3回クリックされたら言語切り替え
+    // 3秒以内に3回クリックされたら言語切り替え（通訳モードの場合）または音声再生（通常モードの場合）
     if (titleClickCountRef.current >= 3) {
-      // ボタン回転アニメーション開始
-      setIsButtonRotating(true);
-      
-      // 言語を切り替え
-      setTranslationLanguage(prev => {
-        const newLanguage = prev === 'cantonese' ? 'mandarin' : 'cantonese';
+      if (isHiddenMode) {
+        // 通訳モード: 言語切り替え
+        // ボタン回転アニメーション開始
+        setIsButtonRotating(true);
         
-        // タイトル音声を再生（同じアニメーションで再表示）
-        setShowTitle(false);
-        setTimeout(() => {
-          setShowTitle(true);
+        // 言語を切り替え
+        setTranslationLanguage(prev => {
+          const newLanguage = prev === 'cantonese' ? 'mandarin' : 'cantonese';
           
-          // タイトル音声を再生（音声認識中でない場合のみ）
-          if (titleAudioRef.current && !isRecording) {
-            titleAudioRef.current.currentTime = 0;
-            titleAudioRef.current.play().catch((e) => {
-              console.error('タイトル音声再生エラー:', e);
-            });
-          }
-        }, 50);
+          // タイトル音声を再生（同じアニメーションで再表示）
+          setShowTitle(false);
+          setTimeout(() => {
+            setShowTitle(true);
+            
+            // タイトル音声を再生（音声認識中でない場合のみ）
+            if (titleAudioRef.current && !isRecording) {
+              titleAudioRef.current.currentTime = 0;
+              titleAudioRef.current.play().catch((e) => {
+                console.error('タイトル音声再生エラー:', e);
+              });
+            }
+          }, 50);
+          
+          return newLanguage;
+        });
         
-        return newLanguage;
-      });
-      
-      // 回転アニメーション終了後にstateをリセット
-      setTimeout(() => {
-        setIsButtonRotating(false);
-      }, 600); // アニメーション時間（0.6秒）
+        // 回転アニメーション終了後にstateをリセット
+        setTimeout(() => {
+          setIsButtonRotating(false);
+        }, 600); // アニメーション時間（0.6秒）
+      } else {
+        // 通常モード（ホームページ）: タイトル音声を再生
+        if (titleAudioRef.current) {
+          titleAudioRef.current.currentTime = 0;
+          titleAudioRef.current.play().catch((e) => {
+            console.error('タイトル音声再生エラー:', e);
+          });
+        }
+      }
       
       // カウントをリセット
       titleClickCountRef.current = 0;
