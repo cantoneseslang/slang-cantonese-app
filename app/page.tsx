@@ -4312,12 +4312,20 @@ export default function Home() {
               overflow: 'visible'
             }}
             onMouseDown={(e) => {
+              // モバイルでは無効（タッチイベントと競合するため）
+              if (isMobile) {
+                return;
+              }
               e.preventDefault();
               e.stopPropagation();
               console.log('ロゴ長押し開始 - 音声認識開始');
               handleMicPress();
             }}
             onMouseUp={(e) => {
+              // モバイルでは無効（タッチイベントと競合するため）
+              if (isMobile) {
+                return;
+              }
               e.preventDefault();
               e.stopPropagation();
               console.log('ロゴ離す - 音声認識停止');
