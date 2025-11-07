@@ -852,14 +852,6 @@ export default function Home() {
       const timer = setTimeout(() => {
         setShowTitle(true);
         
-        // タイトル表示と同時に音声を再生（PCのみ、モバイルではマイク入力の精度を保つため再生しない）
-        if (titleAudioRef.current && !isMobile) {
-          titleAudioRef.current.currentTime = 0;
-          titleAudioRef.current.play().catch((e) => {
-            console.error('タイトル音声再生エラー:', e);
-          });
-        }
-        
         // タイトル表示後にボタンを表示（最初は小さい）
         setShowButtons(true);
         // 少し遅延させてアニメーション開始
