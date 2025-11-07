@@ -324,14 +324,6 @@ export default function Home() {
       clearInterval(checkInterval);
     };
   }, [isPageInitialized]);
-      };
-      
-      initializeAudio();
-    } else {
-      // SSR環境では初期化完了として扱う
-      setIsPageInitialized(true);
-    }
-  }, []);
 
   // 音声認識の初期化（Web Speech API）
   useEffect(() => {
