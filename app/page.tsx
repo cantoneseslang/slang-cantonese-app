@@ -3208,12 +3208,42 @@ export default function Home() {
   };
 
   const handleWordClick = async (word: Word) => {
-    // 初期化が完了していない場合は待機（最大2秒）
+    // 即座にフィードバック（最優先）
+    playHapticAndSound(); // 振動と音を再生
+    
+    // audio要素とAudioContextの確認と作成（初期化を待たずに即座に処理）
+    if (!normalModeAudioRef.current) {
+      console.warn('⚠️ normalModeAudioRefが初期化されていません。即座に作成します。');
+      // audio要素を即座に作成
+      const audio = document.createElement('audio');
+      audio.preload = 'auto';
+      audio.style.display = 'none';
+      document.body.appendChild(audio);
+      normalModeAudioRef.current = audio;
+      console.log('✅ audio要素を即座に作成しました');
+    }
+    
+    if (!normalModeAudioContextRef.current) {
+      console.warn('⚠️ normalModeAudioContextRefが初期化されていません。即座に作成します。');
+      // AudioContextを即座に作成
+      try {
+        normalModeAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        if (normalModeAudioContextRef.current.state === 'suspended') {
+          await normalModeAudioContextRef.current.resume();
+        }
+        console.log('✅ AudioContextを即座に作成しました');
+      } catch (e) {
+        console.error('❌ AudioContextの作成に失敗:', e);
+        // エラーでも続行（audio要素のみで再生を試みる）
+      }
+    }
+    
+    // 初期化が完了していない場合は短時間待機（最大0.5秒）
     if (!isPageInitialized) {
-      console.warn('⚠️ ページ初期化が完了していません。初期化を待機中...');
+      console.warn('⚠️ ページ初期化が完了していません。短時間待機中...');
       
       let waitAttempts = 0;
-      const maxWaitAttempts = 20; // 2秒（100ms × 20）
+      const maxWaitAttempts = 5; // 0.5秒（100ms × 5）
       
       while (!isPageInitialized && waitAttempts < maxWaitAttempts) {
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -3221,38 +3251,9 @@ export default function Home() {
       }
       
       if (!isPageInitialized) {
-        console.error('❌ ページ初期化の待機がタイムアウトしました。続行しますが、音声生成が失敗する可能性があります。');
-        // タイムアウトしても続行（フォールバック）
-      } else {
-        console.log('✅ ページ初期化完了を確認');
+        console.warn('⚠️ ページ初期化の待機がタイムアウトしましたが、続行します。');
       }
     }
-    
-    // audio要素とAudioContextの最終確認
-    if (!normalModeAudioRef.current) {
-      console.error('❌ normalModeAudioRefが初期化されていません');
-      alert('音声システムが初期化されていません。ページを再読み込みしてください。');
-      return;
-    }
-    
-    if (!normalModeAudioContextRef.current) {
-      console.error('❌ normalModeAudioContextRefが初期化されていません');
-      // AudioContextを再作成
-      try {
-        normalModeAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-        if (normalModeAudioContextRef.current.state === 'suspended') {
-          await normalModeAudioContextRef.current.resume();
-        }
-        console.log('✅ AudioContextを再作成しました');
-      } catch (e) {
-        console.error('❌ AudioContextの再作成に失敗:', e);
-        alert('音声システムの初期化に失敗しました。ページを再読み込みしてください。');
-        return;
-      }
-    }
-    
-    // 即座にフィードバック（最優先）
-    playHapticAndSound(); // 振動と音を再生
     
     // ボタンを即座に緑色にする（ノーマルモードの場合）
     if (!isLearningMode) {
@@ -3752,6 +3753,7 @@ export default function Home() {
     const text = button.getAttribute('data-text');
     if (!text) return;
 
+    // 即座にフィードバック（最優先）
     // ハプティックフィードバック
     if ('vibrate' in navigator) {
       navigator.vibrate(10);
@@ -3770,18 +3772,16 @@ export default function Home() {
       setActiveWordId(text);
     }
 
-    // ボタン押下をトラッキング（pronunciationカテゴリー）
-    try {
-      await fetch('/api/track-button', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wordChinese: text, categoryId: 'pronunciation' })
-      });
-    } catch (err) {
+    // ボタン押下をトラッキング（pronunciationカテゴリー）- 非同期で実行（ブロックしない）
+    fetch('/api/track-button', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wordChinese: text, categoryId: 'pronunciation' })
+    }).catch(err => {
       console.error('Failed to track tone audio click:', err);
-    }
+    });
 
-    // 音声再生
+    // 音声再生を即座に開始（トラッキングを待たない）
     try {
       const audioResponse = await fetch('/api/generate-speech', {
         method: 'POST',
