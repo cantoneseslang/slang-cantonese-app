@@ -210,6 +210,7 @@ export default function Home() {
   const [translatedTextLines, setTranslatedTextLines] = useState<TextLine[]>([]); // タイムスタンプ付き広東語翻訳行
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const isTouchEventRef = useRef<boolean>(false); // タッチイベントが発生したかどうかを追跡
   const translateDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const translateAbortControllerRef = useRef<AbortController | null>(null);
   
@@ -4056,8 +4057,8 @@ export default function Home() {
             onMouseEnter={() => setHoveredButton('mic')}
             onMouseLeave={(e) => {
               setHoveredButton(null);
-              // マウスがボタンの外に出た場合も停止（マウスイベントのみ、タッチイベントでは発火しない）
-              if (isRecording && e.type === 'mouseleave') {
+              // マウスがボタンの外に出た場合も停止（タッチイベントの場合は無視）
+              if (isRecording && !isTouchEventRef.current) {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('ロゴからマウス離脱 - 音声認識停止');
@@ -4113,12 +4114,11 @@ export default function Home() {
             onTouchStart={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              // マウスイベントの発火を防ぐ（モバイルでタッチ後にマウスイベントが発火しないように）
-              const target = e.currentTarget;
-              target.style.pointerEvents = 'none';
+              // タッチイベントが発生したことを記録（マウスイベントを無視するため）
+              isTouchEventRef.current = true;
               setTimeout(() => {
-                target.style.pointerEvents = 'auto';
-              }, 100);
+                isTouchEventRef.current = false;
+              }, 300);
               console.log('ロゴ長押し開始（タッチ） - 音声認識開始');
               handleMicPress();
             }}
