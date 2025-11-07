@@ -3399,9 +3399,7 @@ export default function Home() {
       // 前のボタンの緑を消して、新しいボタンだけを緑にする
       setActiveWordId(wordId);
       
-      // 単語の音声のみを生成して再生（他のページと同じシンプルな処理）
-      let audioBase64: string | undefined = undefined;
-      
+      // 音声再生（handleToneAudioClickと全く同じ処理）
       try {
         const audioResponse = await fetch('/api/generate-speech', {
           method: 'POST',
@@ -3410,43 +3408,14 @@ export default function Home() {
           },
           body: JSON.stringify({ text: word.chinese }),
         });
-        
+
         if (audioResponse.ok) {
           const audioData = await audioResponse.json();
-          audioBase64 = audioData.audioContent;
-          console.log('✅ ノーマルモード: 音声データ取得成功', { 
-            hasAudioContent: !!audioBase64,
-            audioLength: audioBase64?.length
-          });
-        } else {
-          const errorText = await audioResponse.text();
-          console.error('❌ ノーマルモード: API呼び出し失敗', { status: audioResponse.status, error: errorText });
-        }
-      } catch (error: any) {
-        console.error('❌ ノーマルモード: エラー発生', error);
-      }
-      
-      // 音声データが取得できた場合のみ再生処理を実行
-      try {
-        if (audioBase64) {
-          
-          // 音声を自動再生（ノーマルモード専用audio要素を使用）
-          if (!normalModeAudioRef.current) {
-            console.error('❌ ノーマルモード: audio要素が存在しません！', { wordId });
-            alert('音声再生エラー: audio要素が初期化されていません。ページを再読み込みしてください。');
-            return;
-          }
-          
+          const audioBase64 = audioData.audioContent;
+
           if (normalModeAudioRef.current && audioBase64) {
-            console.log('ノーマルモード: 音声再生開始', { wordId, audioBase64Length: audioBase64.length });
-            
-            // 既存の音声を停止
-            try {
-              normalModeAudioRef.current.pause();
-              normalModeAudioRef.current.currentTime = 0;
-            } catch (e) {
-              console.error('❌ 音声停止エラー:', e);
-            }
+            normalModeAudioRef.current.pause();
+            normalModeAudioRef.current.currentTime = 0;
             
             // 古いBlob URLをクリア
             if (normalModeAudioBlobUrlRef.current) {
@@ -3464,22 +3433,13 @@ export default function Home() {
             const blobUrl = URL.createObjectURL(blob);
             normalModeAudioBlobUrlRef.current = blobUrl;
             
-            // 新しい音声をセット（先にsrcを設定）
-            normalModeAudioRef.current.src = blobUrl;
-            normalModeAudioRef.current.playbackRate = 1.0; // ノーマルモードでは速度固定
-            
-            // Web Audio APIの接続を確立（src設定後に接続、PCブラウザ対応）
+            // Web Audio APIの接続を確立（srcを設定する前に接続を確立）
             let useWebAudioAPI = false;
             if (normalModeAudioContextRef.current) {
               try {
-                // AudioContextがsuspended状態の場合はresume（PCブラウザ対応）
-                if (normalModeAudioContextRef.current.state === 'suspended') {
-                  await normalModeAudioContextRef.current.resume();
-                }
-                
                 // MediaElementAudioSourceNodeが既に存在する場合は再利用
                 if (!normalModeAudioSourceNodeRef.current) {
-                  // srcを設定した後に接続を確立（PCブラウザ対応）
+                  // srcを設定する前に接続を確立（空のsrcでも接続可能）
                   const source = normalModeAudioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
                   normalModeAudioSourceNodeRef.current = source;
                   
@@ -3492,26 +3452,26 @@ export default function Home() {
                   
                   normalModeAudioGainNodeRef.current = gainNode;
                   useWebAudioAPI = true;
-                  console.log('ノーマルモード: Web Audio API接続成功');
                 } else {
                   // 既存のGainNodeのボリュームを更新
                   if (normalModeAudioGainNodeRef.current) {
                     normalModeAudioGainNodeRef.current.gain.value = normalModeAudioVolume;
                   }
                   useWebAudioAPI = true;
-                  console.log('ノーマルモード: Web Audio API接続再利用');
                 }
               } catch (error) {
-                console.error('ノーマルモード: Web Audio API接続エラー:', error);
+                console.error('Web Audio API接続エラー:', error);
                 // エラーが発生した場合は、Web Audio APIなしで再生を試みる
                 useWebAudioAPI = false;
               }
             }
             
+            // 新しい音声をセット
+            normalModeAudioRef.current.src = blobUrl;
+            
             // Web Audio APIを使用しない場合は、HTMLAudioElementのvolumeを使用
             if (!useWebAudioAPI) {
               normalModeAudioRef.current.volume = normalModeAudioVolume;
-              console.log('ノーマルモード: HTMLAudioElementのvolumeを使用', { volume: normalModeAudioVolume });
             } else {
               normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に（Web Audio APIで制御）
             }
@@ -3526,54 +3486,27 @@ export default function Home() {
               }
             }
             
-            // メディアセッションAPIでメタデータを設定（ロック画面のアイコン変更）
-            if ('mediaSession' in navigator) {
-              const categoryName = currentCategory?.name || 'カントン語音れん';
-              const wordJapanese = word.japanese || word.chinese;
-              
-              try {
-                navigator.mediaSession.metadata = new MediaMetadata({
-                  title: wordJapanese,
-                  artist: 'スラング式カントン語音れん',
-                  album: categoryName,
-                  artwork: [
-                    { src: '/volume-logo-circle.svg', sizes: '512x512', type: 'image/svg+xml' },
-                    { src: '/volume-logo.png', sizes: '512x512', type: 'image/png' },
-                    { src: '/line-logo.png', sizes: '512x512', type: 'image/png' },
-                  ],
-                });
-              } catch (e) {
-                console.warn('メディアセッションAPI設定エラー（無視）:', e);
-              }
-            }
-            
             // 他の場所と同じように、シンプルに即座に再生
             normalModeAudioRef.current.currentTime = 0;
             normalModeAudioRef.current.play().catch((e) => {
               console.error('❌ ノーマルモード: 音声再生エラー', e);
             });
-          } else {
-            console.error('❌ ノーマルモード: audio要素またはaudioBase64が存在しない', {
-              hasAudioRef: !!normalModeAudioRef.current,
-              hasAudioBase64: !!audioBase64,
-              wordId
-            });
-            alert('音声データの取得に失敗しました。もう一度お試しください。');
+            
+            // 音声再生終了時にactiveWordIdをクリアして緑点灯を消す
+            normalModeAudioRef.current.addEventListener('ended', () => {
+              if (!isLearningMode) {
+                setActiveWordId(null);
+              }
+            }, { once: true });
           }
-      } else {
-        // 音声データが取得できなかった場合
-        console.error('❌ ノーマルモード: 音声データの取得に失敗しました（全試行失敗）', {
-          wordId,
-          retryCount,
-          maxRetries
-        });
-        alert('音声生成に失敗しました。ネットワーク接続を確認して、もう一度お試しください。');
+        }
+      } catch (err) {
+        console.error('音声再生エラー:', err);
+        // エラー時もactiveWordIdをクリア
+        if (!isLearningMode) {
+          setActiveWordId(null);
+        }
       }
-      } catch (err: any) {
-        console.error('❌ ノーマルモード: 致命的なエラー発生', err);
-        alert(`音声生成エラー: ${err.message || '不明なエラーが発生しました'}\nもう一度お試しください。`);
-      }
-    }
   };
 
   const handleTranslateAndConvert = async (query: string) => {
