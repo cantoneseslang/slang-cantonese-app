@@ -7549,7 +7549,7 @@ export default function Home() {
               alignItems: 'flex-end',
               justifyContent: 'center',
               pointerEvents: 'auto',
-              touchAction: 'none'
+              touchAction: isMobile ? 'none' : 'auto' // PCではautoにしてスクロールを有効化
             }}
           >
             <div
