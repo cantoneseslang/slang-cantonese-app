@@ -6102,7 +6102,7 @@ export default function Home() {
                 }
               }}
             />
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
               <button
                 type="button"
                 onClick={async () => {
