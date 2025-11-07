@@ -1999,40 +1999,79 @@ export default function Home() {
 
   // Stripe決済処理（アップグレード/ダウングレード）
   const handleStripeCheckout = async (plan: 'free' | 'subscription' | 'lifetime') => {
-    // TODO: Stripe統合（アップグレード時のみ）
-    // 現在はデモ用にSupabaseのuser_metadataを更新
-    try {
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          membership_type: plan
+    // 無料プランの場合は直接更新（支払い不要）
+    if (plan === 'free') {
+      try {
+        const { error } = await supabase.auth.updateUser({
+          data: {
+            membership_type: plan
+          }
+        });
+
+        if (error) throw error;
+
+        // ユーザー情報を再取得して最新の状態を反映
+        const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
+        
+        if (getUserError) {
+          console.error('ユーザー情報の再取得エラー:', getUserError);
+        } else if (updatedUser) {
+          setUser(updatedUser);
+          setMembershipType(plan);
+        } else {
+          setMembershipType(plan);
         }
+
+        setShowPricingModal(false);
+        setSelectedPlan(null);
+        setIsDowngrade(false);
+        
+        alert('ブロンズ会員に変更しました！');
+      } catch (err: any) {
+        alert('エラーが発生しました: ' + err.message);
+      }
+      return;
+    }
+
+    // 有料プランの場合はStripe Checkoutにリダイレクト
+    if (!user) {
+      alert('ログインが必要です。');
+      return;
+    }
+
+    try {
+      setShowPricingModal(false);
+      
+      // Stripe Checkoutセッションを作成
+      const response = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          plan: plan,
+          userId: user.id,
+          email: user.email,
+        }),
       });
 
-      if (error) throw error;
-
-      // ユーザー情報を再取得して最新の状態を反映
-      const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
-      
-      if (getUserError) {
-        console.error('ユーザー情報の再取得エラー:', getUserError);
-      } else if (updatedUser) {
-        // 最新のユーザー情報をセット（これによりuseEffectが再実行される）
-        setUser(updatedUser);
-        // ステートも直接更新（確実に反映させるため）
-        setMembershipType(plan);
-      } else {
-        // フォールバック: ステートのみ更新
-        setMembershipType(plan);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Checkout session creation failed');
       }
 
-      setShowPricingModal(false);
-      setSelectedPlan(null);
-      setIsDowngrade(false);
-      
-      const planName = plan === 'free' ? 'ブロンズ会員' : plan === 'subscription' ? 'シルバー会員' : 'ゴールド会員';
-      alert(`${planName}に変更しました！`);
+      const { url } = await response.json();
+
+      if (url) {
+        // Stripe Checkoutページにリダイレクト
+        window.location.href = url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
     } catch (err: any) {
-      alert('エラーが発生しました: ' + err.message);
+      console.error('Stripe Checkout error:', err);
+      alert('決済処理中にエラーが発生しました: ' + err.message);
+      setShowPricingModal(true);
     }
   };
 
