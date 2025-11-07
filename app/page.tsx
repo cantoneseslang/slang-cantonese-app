@@ -3399,95 +3399,31 @@ export default function Home() {
       // 前のボタンの緑を消して、新しいボタンだけを緑にする
       setActiveWordId(wordId);
       
-      // 単語の音声のみを生成して再生（リトライロジック付き）
+      // 単語の音声のみを生成して再生（他のページと同じシンプルな処理）
       let audioBase64: string | undefined = undefined;
-      let retryCount = 0;
-      const maxRetries = 3;
-      const retryDelay = 500; // 500ms待機してからリトライ
       
-      while (retryCount < maxRetries && !audioBase64) {
-        try {
-          console.log(`ノーマルモード: API呼び出し開始 (試行 ${retryCount + 1}/${maxRetries})`, { text: word.chinese });
-          
-          // タイムアウト付きfetch（10秒でタイムアウト）
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
-          
-          const audioResponse = await fetch('/api/generate-speech', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ text: word.chinese }),
-            signal: controller.signal,
+      try {
+        const audioResponse = await fetch('/api/generate-speech', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text: word.chinese }),
+        });
+        
+        if (audioResponse.ok) {
+          const audioData = await audioResponse.json();
+          audioBase64 = audioData.audioContent;
+          console.log('✅ ノーマルモード: 音声データ取得成功', { 
+            hasAudioContent: !!audioBase64,
+            audioLength: audioBase64?.length
           });
-          
-          clearTimeout(timeoutId);
-          
-          console.log('ノーマルモード: APIレスポンス受信', { 
-            ok: audioResponse.ok, 
-            status: audioResponse.status,
-            attempt: retryCount + 1
-          });
-          
-          if (audioResponse.ok) {
-            const audioData = await audioResponse.json();
-            audioBase64 = audioData.audioContent;
-            console.log('✅ ノーマルモード: 音声データ取得成功', { 
-              hasAudioContent: !!audioBase64,
-              audioLength: audioBase64?.length,
-              attempt: retryCount + 1
-            });
-            break; // 成功したらループを抜ける
-          } else {
-            const errorData = await audioResponse.json().catch(() => ({ error: 'Unknown error' }));
-            console.error(`❌ ノーマルモード: API呼び出し失敗 (試行 ${retryCount + 1}/${maxRetries})`, {
-              status: audioResponse.status,
-              error: errorData
-            });
-            
-            // 4xxエラー（クライアントエラー）の場合はリトライしない
-            if (audioResponse.status >= 400 && audioResponse.status < 500) {
-              console.error('❌ クライアントエラーのためリトライしません');
-              throw new Error(`API呼び出し失敗: ${errorData.error || 'Unknown error'}`);
-            }
-            
-            // 5xxエラー（サーバーエラー）の場合はリトライ
-            if (retryCount < maxRetries - 1) {
-              retryCount++;
-              console.log(`⏳ ${retryDelay}ms待機してからリトライします...`);
-              await new Promise(resolve => setTimeout(resolve, retryDelay));
-              continue;
-            } else {
-              throw new Error(`API呼び出し失敗（${maxRetries}回試行）: ${errorData.error || 'Unknown error'}`);
-            }
-          }
-        } catch (error: any) {
-          console.error(`❌ ノーマルモード: エラー発生 (試行 ${retryCount + 1}/${maxRetries})`, error);
-          
-          // AbortError（タイムアウト）の場合
-          if (error.name === 'AbortError') {
-            console.error('❌ タイムアウトエラー');
-            if (retryCount < maxRetries - 1) {
-              retryCount++;
-              console.log(`⏳ ${retryDelay}ms待機してからリトライします...`);
-              await new Promise(resolve => setTimeout(resolve, retryDelay));
-              continue;
-            } else {
-              throw new Error('音声生成がタイムアウトしました。ネットワーク接続を確認してください。');
-            }
-          }
-          
-          // その他のエラー
-          if (retryCount < maxRetries - 1) {
-            retryCount++;
-            console.log(`⏳ ${retryDelay}ms待機してからリトライします...`);
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
-            continue;
-          } else {
-            throw error;
-          }
+        } else {
+          const errorText = await audioResponse.text();
+          console.error('❌ ノーマルモード: API呼び出し失敗', { status: audioResponse.status, error: errorText });
         }
+      } catch (error: any) {
+        console.error('❌ ノーマルモード: エラー発生', error);
       }
       
       // 音声データが取得できた場合のみ再生処理を実行
