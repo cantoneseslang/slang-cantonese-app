@@ -4056,8 +4056,8 @@ export default function Home() {
             onMouseEnter={() => setHoveredButton('mic')}
             onMouseLeave={(e) => {
               setHoveredButton(null);
-              // マウスがボタンの外に出た場合も停止
-              if (isRecording) {
+              // マウスがボタンの外に出た場合も停止（マウスイベントのみ、タッチイベントでは発火しない）
+              if (isRecording && e.type === 'mouseleave') {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('ロゴからマウス離脱 - 音声認識停止');
@@ -4113,6 +4113,12 @@ export default function Home() {
             onTouchStart={(e) => {
               e.preventDefault();
               e.stopPropagation();
+              // マウスイベントの発火を防ぐ（モバイルでタッチ後にマウスイベントが発火しないように）
+              const target = e.currentTarget;
+              target.style.pointerEvents = 'none';
+              setTimeout(() => {
+                target.style.pointerEvents = 'auto';
+              }, 100);
               console.log('ロゴ長押し開始（タッチ） - 音声認識開始');
               handleMicPress();
             }}
