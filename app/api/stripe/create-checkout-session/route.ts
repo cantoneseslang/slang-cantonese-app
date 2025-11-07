@@ -32,8 +32,8 @@ export async function POST(request: NextRequest) {
     // プランの価格ID設定（Stripeで作成済みの価格IDを使用）
     // 環境変数で設定するか、直接指定する
     const priceIdMap: Record<string, string> = {
-      subscription: process.env.STRIPE_PRICE_ID_SUBSCRIPTION || '', // シルバー会員（月額）の価格ID
-      lifetime: process.env.STRIPE_PRICE_ID_LIFETIME || '', // ゴールド会員（買い切り）の価格ID
+      subscription: process.env.STRIPE_PRICE_ID_SUBSCRIPTION || 'price_1SQildLopXhymmb3EAPe789Q', // シルバー会員（月額）
+      lifetime: process.env.STRIPE_PRICE_ID_LIFETIME || 'price_1SQiVQLopXhymmb32pf7GnDc', // ゴールド会員（買い切り）- JPY価格
     };
 
     // 既存の価格IDが設定されている場合はそれを使用、なければ動的に作成
