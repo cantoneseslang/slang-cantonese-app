@@ -550,6 +550,25 @@ export default function Home() {
                         // 音声がロードされるまで待ってから再生
                         const playAudio = () => {
                           if (simultaneousModeAudioRef.current) {
+                            // メディアセッションAPIでメタデータを設定（ロック画面のアイコン変更）
+                            if ('mediaSession' in navigator) {
+                              const translatedText = lastTranslatedTextRef.current || '同時通訳';
+                              
+                              navigator.mediaSession.metadata = new MediaMetadata({
+                                title: translatedText,
+                                artist: 'スラング式カントン語音れん',
+                                album: '同時通訳モード',
+                                artwork: [
+                                  { src: '/volume-logo.png', sizes: '512x512', type: 'image/png' },
+                                  { src: '/line-logo.png', sizes: '512x512', type: 'image/png' },
+                                ],
+                              });
+                              
+                              console.log('メディアセッションAPI: 同時通訳モード メタデータ設定完了', {
+                                title: translatedText,
+                              });
+                            }
+                            
                             simultaneousModeAudioRef.current.play().catch((e) => {
                               console.error('音声再生エラー:', e);
                             });
@@ -952,6 +971,25 @@ export default function Home() {
               // 音声がロードされるまで待ってから再生
               const playAudio = () => {
                 if (simultaneousModeAudioRef.current) {
+                  // メディアセッションAPIでメタデータを設定（ロック画面のアイコン変更）
+                  if ('mediaSession' in navigator) {
+                    const translatedText = lastTranslatedTextRef.current || '同時通訳';
+                    
+                    navigator.mediaSession.metadata = new MediaMetadata({
+                      title: translatedText,
+                      artist: 'スラング式カントン語音れん',
+                      album: '同時通訳モード',
+                      artwork: [
+                        { src: '/volume-logo.png', sizes: '512x512', type: 'image/png' },
+                        { src: '/line-logo.png', sizes: '512x512', type: 'image/png' },
+                      ],
+                    });
+                    
+                    console.log('メディアセッションAPI: 同時通訳モード メタデータ設定完了', {
+                      title: translatedText,
+                    });
+                  }
+                  
                   simultaneousModeAudioRef.current.play().catch((e) => {
                     console.error('音声再生エラー:', e);
                   });
@@ -3225,6 +3263,28 @@ export default function Home() {
             // 音声がロードされるまで待ってから再生
             const playAudio = () => {
               if (normalModeAudioRef.current) {
+                // メディアセッションAPIでメタデータを設定（ロック画面のアイコン変更）
+                if ('mediaSession' in navigator) {
+                  const categoryName = currentCategory?.name || 'カントン語音れん';
+                  const wordJapanese = word.japanese || word.chinese;
+                  
+                  navigator.mediaSession.metadata = new MediaMetadata({
+                    title: wordJapanese,
+                    artist: 'スラング式カントン語音れん',
+                    album: categoryName,
+                    artwork: [
+                      { src: '/volume-logo.png', sizes: '512x512', type: 'image/png' },
+                      { src: '/line-logo.png', sizes: '512x512', type: 'image/png' },
+                    ],
+                  });
+                  
+                  console.log('メディアセッションAPI: メタデータ設定完了', {
+                    title: wordJapanese,
+                    artist: 'スラング式カントン語音れん',
+                    album: categoryName,
+                  });
+                }
+                
                 const playPromise = normalModeAudioRef.current.play();
                 if (playPromise !== undefined) {
                   playPromise
