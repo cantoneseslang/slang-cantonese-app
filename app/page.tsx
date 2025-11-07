@@ -862,7 +862,8 @@ export default function Home() {
 
       return () => clearTimeout(timer);
     } else {
-      setShowTitle(false);
+      // 通常モード（ホームページ）でもタイトルを表示（3回クリックで音声再生できるように）
+      setShowTitle(true);
       if (titleAudioRef.current) {
         titleAudioRef.current.pause();
         titleAudioRef.current.currentTime = 0;
