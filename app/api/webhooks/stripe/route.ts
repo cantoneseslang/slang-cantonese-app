@@ -267,25 +267,102 @@ export async function POST(request: NextRequest) {
     if (event.type === 'customer.subscription.updated') {
       const subscription = event.data.object as Stripe.Subscription;
       const userId = subscription.metadata?.user_id;
+      const subscriptionAny = subscription as any;
 
-      if (userId && subscription.status === 'active') {
+      console.log('🔔 customer.subscription.updated event received:', {
+        subscriptionId: subscription.id,
+        userId,
+        status: subscription.status,
+        canceledAt: subscriptionAny.canceled_at,
+        currentPeriodEnd: subscriptionAny.current_period_end,
+        metadata: subscription.metadata
+      });
+
+      if (userId) {
         const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
-        
-        // 次の請求日の1ヶ月後を有効期限として設定
-        // current_period_endはStripe.Subscription型に存在するが、型定義の問題でany型にキャスト
-        const subscriptionAny = subscription as any;
-        const currentPeriodEnd = subscriptionAny.current_period_end 
-          ? new Date(subscriptionAny.current_period_end * 1000)
-          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // フォールバック: 30日後
-        const expiresAt = new Date(currentPeriodEnd);
-        expiresAt.setMonth(expiresAt.getMonth() + 1);
 
-        await supabase.auth.admin.updateUserById(userId, {
-          user_metadata: {
-            membership_type: 'subscription',
-            subscription_expires_at: expiresAt.toISOString()
+        // キャンセルされた場合の処理
+        if (subscription.status === 'canceled' || subscription.status === 'unpaid' || subscription.status === 'past_due') {
+          console.log('⚠️ Subscription canceled/unpaid/past_due:', {
+            subscriptionId: subscription.id,
+            userId,
+            status: subscription.status
+          });
+
+          // 現在の期間終了日を有効期限として設定（その後はブロンズにダウングレード）
+          const expiresAt = subscriptionAny.current_period_end
+            ? new Date(subscriptionAny.current_period_end * 1000)
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // フォールバック: 30日後
+
+          console.log('📝 Setting subscription expiration date:', {
+            userId,
+            expiresAt: expiresAt.toISOString()
+          });
+
+          // 1. user_metadataを更新
+          const { data: userData, error: userError } = await supabase.auth.admin.updateUserById(userId, {
+            user_metadata: {
+              membership_type: 'subscription',
+              subscription_expires_at: expiresAt.toISOString()
+            }
+          });
+
+          if (userError) {
+            console.error('❌ Failed to update user metadata (subscription canceled):', userError);
+          } else {
+            console.log('✅ User metadata updated (subscription canceled):', {
+              userId: userData?.user?.id,
+              expiresAt: expiresAt.toISOString()
+            });
           }
-        });
+
+          // 2. usersテーブルも更新
+          const { data: dbData, error: dbError } = await supabase
+            .from('users')
+            .update({
+              membership_type: 'subscription',
+              subscription_expires_at: expiresAt.toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId)
+            .select();
+
+          if (dbError) {
+            if (dbError.code === 'PGRST116' || dbError.message.includes('relation') || dbError.message.includes('does not exist')) {
+              console.warn('⚠️ usersテーブルが存在しないため、user_metadataのみ更新しました（subscription canceled）');
+            } else {
+              console.error('❌ Failed to update users table (subscription canceled):', dbError);
+            }
+          } else {
+            console.log('✅ Users table updated (subscription canceled):', {
+              userId,
+              updatedRows: dbData?.length || 0
+            });
+          }
+        } else if (subscription.status === 'active') {
+          // アクティブな場合、次の請求日の1ヶ月後を有効期限として設定
+          const currentPeriodEnd = subscriptionAny.current_period_end 
+            ? new Date(subscriptionAny.current_period_end * 1000)
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // フォールバック: 30日後
+          const expiresAt = new Date(currentPeriodEnd);
+          expiresAt.setMonth(expiresAt.getMonth() + 1);
+
+          const { data: userData, error: userError } = await supabase.auth.admin.updateUserById(userId, {
+            user_metadata: {
+              membership_type: 'subscription',
+              subscription_expires_at: expiresAt.toISOString()
+            }
+          });
+
+          if (userError) {
+            console.error('❌ Failed to update user metadata (subscription active):', userError);
+          } else {
+            console.log('✅ User metadata updated (subscription active):', {
+              userId: userData?.user?.id,
+              expiresAt: expiresAt.toISOString()
+            });
+          }
+        }
       }
     }
 
@@ -293,23 +370,69 @@ export async function POST(request: NextRequest) {
     if (event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object as Stripe.Subscription;
       const userId = subscription.metadata?.user_id;
+      const subscriptionAny = subscription as any;
+
+      console.log('🔔 customer.subscription.deleted event received:', {
+        subscriptionId: subscription.id,
+        userId,
+        status: subscription.status,
+        currentPeriodEnd: subscriptionAny.current_period_end,
+        metadata: subscription.metadata
+      });
 
       if (userId) {
         const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
         
         // 現在の期間終了日を有効期限として設定（その後はブロンズにダウングレード）
-        // current_period_endはStripe.Subscription型に存在するが、型定義の問題でany型にキャスト
-        const subscriptionAny = subscription as any;
         const expiresAt = subscriptionAny.current_period_end
           ? new Date(subscriptionAny.current_period_end * 1000)
           : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // フォールバック: 30日後
 
-        await supabase.auth.admin.updateUserById(userId, {
+        console.log('📝 Setting subscription expiration date (deleted):', {
+          userId,
+          expiresAt: expiresAt.toISOString()
+        });
+
+        // 1. user_metadataを更新
+        const { data: userData, error: userError } = await supabase.auth.admin.updateUserById(userId, {
           user_metadata: {
             membership_type: 'subscription',
             subscription_expires_at: expiresAt.toISOString()
           }
         });
+
+        if (userError) {
+          console.error('❌ Failed to update user metadata (subscription deleted):', userError);
+        } else {
+          console.log('✅ User metadata updated (subscription deleted):', {
+            userId: userData?.user?.id,
+            expiresAt: expiresAt.toISOString()
+          });
+        }
+
+        // 2. usersテーブルも更新
+        const { data: dbData, error: dbError } = await supabase
+          .from('users')
+          .update({
+            membership_type: 'subscription',
+            subscription_expires_at: expiresAt.toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId)
+          .select();
+
+        if (dbError) {
+          if (dbError.code === 'PGRST116' || dbError.message.includes('relation') || dbError.message.includes('does not exist')) {
+            console.warn('⚠️ usersテーブルが存在しないため、user_metadataのみ更新しました（subscription deleted）');
+          } else {
+            console.error('❌ Failed to update users table (subscription deleted):', dbError);
+          }
+        } else {
+          console.log('✅ Users table updated (subscription deleted):', {
+            userId,
+            updatedRows: dbData?.length || 0
+          });
+        }
       }
     }
 
