@@ -2438,16 +2438,6 @@ export default function Home() {
       setDefaultCategoryId(newCategoryId);
       setShowCategoryPicker(false);
       
-      // 現在選択中のカテゴリーがデフォルトカテゴリーでない場合、デフォルトカテゴリーに切り替え
-      const regularCategories = categoriesData as Category[];
-      const newDefaultCategory = regularCategories.find(c => c.id === newCategoryId);
-      if (newDefaultCategory && selectedCategory !== newCategoryId) {
-        console.log('🔄 カテゴリーをデフォルトカテゴリーに切り替え:', newCategoryId);
-        setSelectedCategory(newCategoryId);
-        setCurrentCategory(newDefaultCategory);
-        setCurrentWords(newDefaultCategory.words || []);
-      }
-      
       // ユーザー情報を再取得して最新の状態を反映
       const { data: { user: updatedUser } } = await supabase.auth.getUser();
       if (updatedUser) {
@@ -2455,7 +2445,19 @@ export default function Home() {
         console.log('✅ ユーザー情報を再取得完了');
       }
       
-      alert('デフォルトカテゴリーを保存しました。次回のログイン時から適用されます。');
+      // 現在選択中のカテゴリーがデフォルトカテゴリーでない場合、デフォルトカテゴリーに切り替え
+      const regularCategories = categories.filter(c => !c.id.startsWith('note_'));
+      const newDefaultCategory = regularCategories.find(c => c.id === newCategoryId);
+      if (newDefaultCategory) {
+        console.log('🔄 カテゴリーをデフォルトカテゴリーに切り替え:', newCategoryId);
+        setSelectedCategory(newCategoryId);
+        setCurrentCategory(newDefaultCategory);
+        setCurrentWords(newDefaultCategory.words || []);
+        // デフォルトカテゴリーを適用済みとしてマーク
+        hasAppliedDefaultCategory.current = true;
+      }
+      
+      alert('デフォルトカテゴリーを保存しました。');
     } catch (err) {
       console.error('デフォルトカテゴリー保存失敗:', err);
       alert('デフォルトカテゴリーの保存に失敗しました。');
@@ -7654,11 +7656,11 @@ export default function Home() {
                     if (selectedIndex >= 0 && selectedIndex < allCategories.length) {
                       const selectedCategory = allCategories[selectedIndex];
                       if (selectedCategory.id !== defaultCategoryId) {
-                        // スクロールが停止した後に更新
+                        // スクロールが停止した後に表示を更新（保存は「完了」ボタンで行う）
                         clearTimeout((window as any).categoryPickerScrollTimeout);
                         (window as any).categoryPickerScrollTimeout = setTimeout(() => {
                           setDefaultCategoryId(selectedCategory.id);
-                        }, 100);
+                        }, 150);
                       }
                     }
                   }}
