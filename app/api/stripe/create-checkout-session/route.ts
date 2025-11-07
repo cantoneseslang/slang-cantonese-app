@@ -88,8 +88,8 @@ export async function POST(request: NextRequest) {
                     : '買い切りプラン（永久使用）',
                 },
                 unit_amount: plan === 'subscription' 
-                  ? (selectedCurrency === 'hkd' ? 50 : 980) // HKD: $50, JPY: ¥980
-                  : (selectedCurrency === 'hkd' ? 49800 : 9800), // HKD: $498, JPY: ¥9,800
+                  ? (selectedCurrency === 'hkd' ? 5000 : 980) // HKD: $50 (5000 cents), JPY: ¥980
+                  : (selectedCurrency === 'hkd' ? 4980000 : 9800), // HKD: $49,800 (4,980,000 cents), JPY: ¥9,800
                 ...(plan === 'subscription' && {
                   recurring: {
                     interval: 'month',
