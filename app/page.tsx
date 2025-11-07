@@ -69,6 +69,75 @@ interface TextLine {
   timestamp: string; // タイムスタンプ（例: "12:40 39s"）
 }
 
+// 改行を検知するコンポーネント
+function CantoneseText({ 
+  text, 
+  isMobile, 
+  isActive,
+  baseSize = 'practice' // 'practice' or 'normal'
+}: { 
+  text: string; 
+  isMobile: boolean; 
+  isActive: boolean;
+  baseSize?: 'practice' | 'normal';
+}) {
+  const textRef = useRef<HTMLElement>(null);
+  const [fontSize, setFontSize] = useState(() => {
+    if (baseSize === 'normal') {
+      return isMobile ? '1.5rem' : '1.875rem';
+    }
+    return isMobile ? '1.25rem' : '1.875rem';
+  });
+
+  useEffect(() => {
+    if (!textRef.current) return;
+    
+    const element = textRef.current;
+    const baseFontSize = baseSize === 'normal' 
+      ? (isMobile ? '1.5rem' : '1.875rem')
+      : (isMobile ? '1.25rem' : '1.875rem');
+    const smallFontSize = baseSize === 'normal'
+      ? (isMobile ? '1.25rem' : '1.5rem')
+      : (isMobile ? '1rem' : '1.5rem');
+    
+    // まず基本フォントサイズで測定
+    element.style.fontSize = baseFontSize;
+    
+    // レイアウトを再計算するために少し待つ
+    requestAnimationFrame(() => {
+      if (!textRef.current) return;
+      
+      // 要素の高さを測定
+      const lineHeight = parseFloat(getComputedStyle(element).lineHeight) || parseFloat(baseFontSize) * 1.5;
+      const scrollHeight = element.scrollHeight;
+      
+      // 改行が発生しているかチェック（高さが1行分を超えている場合）
+      const wrapped = scrollHeight > lineHeight * 1.2; // 20%のマージンを持たせる
+      
+      setFontSize(wrapped ? smallFontSize : baseFontSize);
+    });
+  }, [text, isMobile, baseSize]);
+
+  return (
+    <strong 
+      ref={textRef as React.RefObject<HTMLElement>}
+      style={{ 
+        fontSize,
+        fontWeight: baseSize === 'normal' ? '600' : 'normal',
+        color: isActive ? '#ffffff' : '#1d1d1f',
+        marginBottom: baseSize === 'normal' ? '0.25rem' : '0',
+        wordBreak: 'break-word',
+        overflowWrap: 'break-word',
+        maxWidth: '100%',
+        width: '100%',
+        boxSizing: 'border-box'
+      }}
+    >
+      {text}
+    </strong>
+  );
+}
+
 export default function Home() {
   const router = useRouter();
   
@@ -7069,17 +7138,12 @@ export default function Home() {
                                   {isFavorite ? '★' : '☆'}
                                 </div>
                               )}
-                              <strong style={{ 
-                                fontSize: isMobile ? '1.25rem' : '1.875rem',
-                                color: isActive ? '#ffffff' : '#1d1d1f',
-                                wordBreak: 'break-word',
-                                overflowWrap: 'break-word',
-                                maxWidth: '100%',
-                                width: '100%',
-                                boxSizing: 'border-box'
-                              }}>
-                                {word.chinese}
-                              </strong>
+                              <CantoneseText 
+                                text={word.chinese}
+                                isMobile={isMobile}
+                                isActive={isActive}
+                                baseSize="practice"
+                              />
                               <div style={{ 
                                 fontSize: isMobile ? '0.75rem' : '1rem',
                                 color: isActive ? '#f0f0f0' : '#6e6e73',
@@ -7196,17 +7260,12 @@ export default function Home() {
                                   {isFavorite ? '★' : '☆'}
                                 </div>
                               )}
-                              <strong style={{ 
-                                fontSize: isMobile ? '1.25rem' : '1.875rem',
-                                color: isActive ? '#ffffff' : '#1d1d1f',
-                                wordBreak: 'break-word',
-                                overflowWrap: 'break-word',
-                                maxWidth: '100%',
-                                width: '100%',
-                                boxSizing: 'border-box'
-                              }}>
-                                {word.chinese}
-                              </strong>
+                              <CantoneseText 
+                                text={word.chinese}
+                                isMobile={isMobile}
+                                isActive={isActive}
+                                baseSize="practice"
+                              />
                               <div style={{ 
                                 fontSize: isMobile ? '0.75rem' : '1rem',
                                 color: isActive ? '#f0f0f0' : '#6e6e73',
@@ -7320,17 +7379,12 @@ export default function Home() {
                                   {isFavorite ? '★' : '☆'}
                                 </div>
                               )}
-                              <strong style={{ 
-                                fontSize: isMobile ? '1.25rem' : '1.875rem',
-                                color: isActive ? '#ffffff' : '#1d1d1f',
-                                wordBreak: 'break-word',
-                                overflowWrap: 'break-word',
-                                maxWidth: '100%',
-                                width: '100%',
-                                boxSizing: 'border-box'
-                              }}>
-                                {word.chinese}
-                              </strong>
+                              <CantoneseText 
+                                text={word.chinese}
+                                isMobile={isMobile}
+                                isActive={isActive}
+                                baseSize="practice"
+                              />
                               <div style={{ 
                                 fontSize: isMobile ? '0.75rem' : '1rem',
                                 color: isActive ? '#f0f0f0' : '#6e6e73',
@@ -7444,17 +7498,12 @@ export default function Home() {
                                   {isFavorite ? '★' : '☆'}
                                 </div>
                               )}
-                              <strong style={{ 
-                                fontSize: isMobile ? '1.25rem' : '1.875rem',
-                                color: isActive ? '#ffffff' : '#1d1d1f',
-                                wordBreak: 'break-word',
-                                overflowWrap: 'break-word',
-                                maxWidth: '100%',
-                                width: '100%',
-                                boxSizing: 'border-box'
-                              }}>
-                                {word.chinese}
-                              </strong>
+                              <CantoneseText 
+                                text={word.chinese}
+                                isMobile={isMobile}
+                                isActive={isActive}
+                                baseSize="practice"
+                              />
                               <div style={{ 
                                 fontSize: isMobile ? '0.75rem' : '1rem',
                                 color: isActive ? '#f0f0f0' : '#6e6e73',
@@ -7593,19 +7642,12 @@ export default function Home() {
                       {isFavorite ? '★' : '☆'}
                     </div>
                   )}
-                  <strong style={{ 
-                    fontSize: isMobile ? '1.5rem' : '1.875rem',
-                    fontWeight: '600',
-                    color: isActive ? '#ffffff' : '#1d1d1f',
-                    marginBottom: '0.25rem',
-                    wordBreak: 'break-word',
-                    overflowWrap: 'break-word',
-                    maxWidth: '100%',
-                    width: '100%',
-                    boxSizing: 'border-box'
-                  }}>
-                    {word.chinese}
-                  </strong>
+                  <CantoneseText 
+                    text={word.chinese}
+                    isMobile={isMobile}
+                    isActive={isActive}
+                    baseSize="normal"
+                  />
                   <div style={{ 
                     fontSize: isMobile ? '0.875rem' : '1rem',
                     color: isActive ? '#f0f0f0' : '#6e6e73',
