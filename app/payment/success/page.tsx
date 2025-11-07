@@ -24,39 +24,59 @@ function PaymentSuccessContent() {
       try {
         const supabase = createClient();
         
-        // Webhookの処理を待つため、少し待機
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // まずWebhookの処理を待つ（3秒待機）
+        await new Promise(resolve => setTimeout(resolve, 3000));
         
-        // ユーザー情報を再取得（Webhookで更新されているはず）
+        // ユーザー情報を再取得（Webhookで更新されている可能性がある）
         const { data: { user: updatedUser }, error: refreshError } = await supabase.auth.getUser();
         
-        if (refreshError) {
-          console.error('ユーザー情報の再取得エラー:', refreshError);
+        if (refreshError || !updatedUser) {
           throw new Error('ユーザー情報の取得に失敗しました。');
         }
 
-        if (!updatedUser) {
-          throw new Error('ユーザー情報が見つかりません。');
-        }
+        // 会員種別が既に更新されているか確認
+        const currentMembershipType = updatedUser.user_metadata?.membership_type;
+        
+        // まだ更新されていない場合、Stripeセッションを直接確認して更新
+        if (currentMembershipType === 'free') {
+          console.log('⚠️ Webhookで更新されていないため、セッションを直接確認します');
+          
+          // Stripeセッションを確認して会員種別を更新
+          const verifyResponse = await fetch('/api/stripe/verify-session', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ sessionId }),
+          });
 
-        console.log('✅ 決済後のユーザー情報:', {
-          userId: updatedUser.id,
-          membershipType: updatedUser.user_metadata?.membership_type,
-          subscriptionExpiresAt: updatedUser.user_metadata?.subscription_expires_at,
-          fullMetadata: updatedUser.user_metadata
-        });
+          if (!verifyResponse.ok) {
+            const errorData = await verifyResponse.json();
+            console.error('セッション確認エラー:', errorData);
+            throw new Error('決済の確認に失敗しました。');
+          }
 
-        // usersテーブルからも確認
-        const { data: userData, error: dbError } = await supabase
-          .from('users')
-          .select('membership_type, subscription_expires_at')
-          .eq('id', updatedUser.id)
-          .maybeSingle();
+          const verifyData = await verifyResponse.json();
+          console.log('✅ セッション確認完了:', verifyData);
 
-        if (!dbError && userData) {
-          console.log('✅ usersテーブルの情報:', userData);
-        } else if (dbError) {
-          console.warn('⚠️ usersテーブルからの取得エラー（無視）:', dbError);
+          // ユーザー情報を再取得
+          const { data: { user: finalUser }, error: finalError } = await supabase.auth.getUser();
+          
+          if (finalError || !finalUser) {
+            throw new Error('ユーザー情報の再取得に失敗しました。');
+          }
+
+          console.log('✅ 最終的なユーザー情報:', {
+            userId: finalUser.id,
+            membershipType: finalUser.user_metadata?.membership_type,
+            subscriptionExpiresAt: finalUser.user_metadata?.subscription_expires_at,
+          });
+        } else {
+          console.log('✅ Webhookで既に更新済み:', {
+            userId: updatedUser.id,
+            membershipType: currentMembershipType,
+            subscriptionExpiresAt: updatedUser.user_metadata?.subscription_expires_at,
+          });
         }
 
         setLoading(false);
