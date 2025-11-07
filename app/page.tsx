@@ -5915,8 +5915,8 @@ export default function Home() {
               <div style={{
                 position: 'absolute',
                 right: isMobile ? '0.5rem' : '0.75rem',
-                top: 0,
-                bottom: 0,
+                top: '50%',
+                transform: 'translateY(-50%)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.25rem',
@@ -5925,7 +5925,8 @@ export default function Home() {
                 padding: 0,
                 boxShadow: 'none',
                 zIndex: 3,
-                pointerEvents: 'auto'
+                pointerEvents: 'auto',
+                height: 'auto'
               }}>
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -5951,8 +5952,15 @@ export default function Home() {
                 }}
                   onMouseEnter={(e) => { e.currentTarget.style.color = '#111827'; e.currentTarget.style.background = '#f3f4f6'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.background = 'transparent'; }}
-                  onFocus={(e) => { (e.currentTarget as HTMLButtonElement).style.outline = 'none'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(0,122,255,0.25)'; e.currentTarget.style.background = '#f3f4f6'; }}
-                  onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'transparent'; }}
+                  onFocus={(e) => { 
+                    (e.currentTarget as HTMLButtonElement).style.outline = '2px solid rgba(0,122,255,0.25)';
+                    (e.currentTarget as HTMLButtonElement).style.outlineOffset = '2px';
+                    e.currentTarget.style.background = '#f3f4f6';
+                  }}
+                  onBlur={(e) => { 
+                    (e.currentTarget as HTMLButtonElement).style.outline = 'none';
+                    e.currentTarget.style.background = 'transparent';
+                  }}
                 >
                   <FolderIcon size={isMobile ? 28 : 32} yOffset={0} />
                 </button>
