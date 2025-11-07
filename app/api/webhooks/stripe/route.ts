@@ -159,10 +159,10 @@ export async function POST(request: NextRequest) {
         metadata: session.metadata
       });
 
-      // lifetimeプラン（mode: 'payment'）の場合は、payment_intent.succeededで処理済みの可能性があるためスキップ
+      // lifetimeプラン（mode: 'payment'）の場合も確実に処理する
+      // payment_intent.succeededで処理されなかった場合に備えて、checkout.session.completedでも処理
       if (session.mode === 'payment' && plan === 'lifetime') {
-        console.log('⏭️ checkout.session.completed: lifetimeプラン（payment mode）はpayment_intent.succeededで処理済みの可能性があるためスキップ');
-        // 念のため、payment_intent.succeededで処理されなかった場合に備えて処理を続行
+        console.log('🔔 checkout.session.completed: lifetimeプラン（payment mode）を処理します');
       }
 
       if (!userId || !plan) {
