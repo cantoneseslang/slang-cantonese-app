@@ -10,14 +10,22 @@
 
 Vercelのダッシュボードで以下の環境変数を設定してください：
 
-```
-TEST_PERIOD_END_DATE=2025-12-31T23:59:59Z
-```
+**Key**: `TEST_PERIOD_END_DATE`  
+**Value**: `2025-12-31T23:59:59Z`（希望の日時に変更）
 
-**形式**: ISO 8601形式の日時文字列（UTC）
+**設定手順**:
+1. Vercelダッシュボード → プロジェクト → Settings → Environment Variables
+2. 「Add New」をクリック
+3. Keyに`TEST_PERIOD_END_DATE`を入力
+4. Valueに日時を入力（例: `2025-12-31T23:59:59Z`）
+5. Environment: Production, Preview, Development すべてに適用
+6. 「Save」をクリック
+
+**形式**: ISO 8601形式の日時文字列（UTC推奨）
 **例**:
 - `2025-12-31T23:59:59Z` - 2025年12月31日23時59分59秒（UTC）
 - `2025-12-31T23:59:59+09:00` - 日本時間（JST）で2025年12月31日23時59分59秒
+- `2026-01-15T00:00:00Z` - 2026年1月15日0時0分0秒（UTC）
 
 ### 2. Cron Jobの設定
 
