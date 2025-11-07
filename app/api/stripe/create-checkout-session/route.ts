@@ -59,14 +59,16 @@ export async function POST(request: NextRequest) {
             // 動的に価格を作成（フォールバック）
             {
               price_data: {
-                currency: plan === 'subscription' ? 'jpy' : 'jpy',
+                currency: selectedCurrency,
                 product_data: {
                   name: plan === 'subscription' ? 'シルバー会員（月額）' : 'ゴールド会員（買い切り）',
                   description: plan === 'subscription' 
                     ? '月額サブスクリプション（自動更新）' 
                     : '買い切りプラン（永久使用）',
                 },
-                unit_amount: plan === 'subscription' ? 980 : 9800,
+                unit_amount: plan === 'subscription' 
+                  ? (selectedCurrency === 'hkd' ? 50 : 980) // HKD: $50, JPY: ¥980
+                  : (selectedCurrency === 'hkd' ? 49800 : 9800), // HKD: $498, JPY: ¥9,800
                 ...(plan === 'subscription' && {
                   recurring: {
                     interval: 'month',
