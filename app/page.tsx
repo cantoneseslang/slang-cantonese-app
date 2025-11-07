@@ -5992,18 +5992,19 @@ export default function Home() {
                   // 画像ファイルの場合（自動OCR実行）
                   if (fileType.startsWith('image/')) {
                     setImportMessage('OCR実行中（中国語・広東語）...');
-                    const ocrText = await runOcr(file, (p) => setImportProgress(p));
-                    if (!ocrText || ocrText.trim().length === 0) {
+                    const text = await runOcr(file, (p) => setImportProgress(p));
+                    if (!text || text.trim().length === 0) {
                       alert('画像からテキストを読み取れませんでした。');
                     } else {
-                      // OCR結果をそのまま音声生成に使用（入力欄には表示しない）
-                      // 音声生成が正しく動作しているため、OCR結果をそのまま使用する
-                      setImportMessage('音声生成中...');
-                      try {
-                        await handleSearch(ocrText);
-                      } catch (err: any) {
-                        console.error('音声生成エラー:', err);
-                        alert('音声生成中にエラーが発生しました: ' + (err?.message || String(err)));
+                      // 文字数制限チェック（最大1000文字）
+                      if (text.length > 1000) {
+                        const confirmMsg = `OCRで読み取ったテキストが1,000文字を超えています（${text.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
+                        if (confirm(confirmMsg)) {
+                          setSearchQuery(text.substring(0, 1000));
+                          alert(`最初の1,000文字を入力欄に設定しました。`);
+                        }
+                      } else {
+                        setSearchQuery(text);
                       }
                     }
                   }
@@ -6060,14 +6061,15 @@ export default function Home() {
                         if (!text || text.length === 0) {
                           alert('PDFからテキストを読み取れませんでした。');
                         } else {
-                          // OCR結果をそのまま音声生成に使用（入力欄には表示しない）
-                          // 音声生成が正しく動作しているため、OCR結果をそのまま使用する
-                          setImportMessage('音声生成中...');
-                          try {
-                            await handleSearch(text);
-                          } catch (err: any) {
-                            console.error('音声生成エラー:', err);
-                            alert('音声生成中にエラーが発生しました: ' + (err?.message || String(err)));
+                          // 文字数制限チェック（最大1000文字）
+                          if (text.length > 1000) {
+                            const confirmMsg = `PDFから読み取ったテキストが1,000文字を超えています（${text.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
+                            if (confirm(confirmMsg)) {
+                              setSearchQuery(text.substring(0, 1000));
+                              alert(`最初の1,000文字を入力欄に設定しました。`);
+                            }
+                          } else {
+                            setSearchQuery(text);
                           }
                         }
                       } catch (ocrErr: any) {
@@ -6075,14 +6077,15 @@ export default function Home() {
                         alert('PDFのOCR処理中にエラーが発生しました: ' + (ocrErr?.message || String(ocrErr)));
                       }
                     } else {
-                      // 抽出したテキストをそのまま音声生成に使用（入力欄には表示しない）
-                      // 音声生成が正しく動作しているため、抽出したテキストをそのまま使用する
-                      setImportMessage('音声生成中...');
-                      try {
-                        await handleSearch(text);
-                      } catch (err: any) {
-                        console.error('音声生成エラー:', err);
-                        alert('音声生成中にエラーが発生しました: ' + (err?.message || String(err)));
+                      // 文字数制限チェック（最大1000文字）
+                      if (text.length > 1000) {
+                        const confirmMsg = `PDFから抽出したテキストが1,000文字を超えています（${text.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
+                        if (confirm(confirmMsg)) {
+                          setSearchQuery(text.substring(0, 1000));
+                          alert(`最初の1,000文字を入力欄に設定しました。`);
+                        }
+                      } else {
+                        setSearchQuery(text);
                       }
                     }
                   } else {
