@@ -6256,8 +6256,48 @@ export default function Home() {
                   
                   // 画像ファイルの場合（自動OCR実行）
                   if (fileType.startsWith('image/')) {
+                    // ブロンズ会員の場合、OCR使用回数をチェック
+                    if (membershipType === 'free') {
+                      const currentCount = user?.user_metadata?.ocr_usage_count || 0;
+                      if (currentCount >= 100) {
+                        alert('ブロンズ会員はOCR機能を100回まで使用できます。\nお試し期間が終了しました。シルバー会員またはゴールド会員にアップグレードすると、無制限でOCR機能をご利用いただけます。');
+                        setIsImporting(false);
+                        setImportProgress(null);
+                        setImportMessage(null);
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                        return;
+                      }
+                    }
+                    
                     setImportMessage('OCR実行中（中国語・広東語）...');
                     const text = await runOcr(file, (p) => setImportProgress(p));
+                    
+                    // ブロンズ会員の場合、OCR使用回数をカウント
+                    if (membershipType === 'free') {
+                      const currentCount = user?.user_metadata?.ocr_usage_count || 0;
+                      const newCount = currentCount + 1;
+                      try {
+                        const { data: updatedUser, error: updateError } = await supabase.auth.updateUser({
+                          data: {
+                            ...user?.user_metadata,
+                            ocr_usage_count: newCount
+                          }
+                        });
+                        
+                        if (updateError) {
+                          console.error('OCR使用回数の更新エラー:', updateError);
+                        } else {
+                          console.log(`✅ OCR使用回数更新: ${newCount}/100`);
+                          // ユーザー情報を再取得
+                          const { data: { user: refreshedUser } } = await supabase.auth.getUser();
+                          if (refreshedUser) {
+                            setUser(refreshedUser);
+                          }
+                        }
+                      } catch (err) {
+                        console.error('OCR使用回数の更新エラー:', err);
+                      }
+                    }
                     if (!text || text.trim().length === 0) {
                       alert('画像からテキストを読み取れませんでした。');
                     } else {
@@ -6280,6 +6320,19 @@ export default function Home() {
                     
                     // テキストが抽出できない場合（スキャンPDF）、OCRを試す
                     if (!text || text.trim().length === 0) {
+                      // ブロンズ会員の場合、OCR使用回数をチェック
+                      if (membershipType === 'free') {
+                        const currentCount = user?.user_metadata?.ocr_usage_count || 0;
+                        if (currentCount >= 100) {
+                          alert('ブロンズ会員はOCR機能を100回まで使用できます。\nお試し期間が終了しました。シルバー会員またはゴールド会員にアップグレードすると、無制限でOCR機能をご利用いただけます。');
+                          setIsImporting(false);
+                          setImportProgress(null);
+                          setImportMessage(null);
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                          return;
+                        }
+                      }
+                      
                       setImportMessage('PDFからテキストを抽出できませんでした。OCRで読み取り中...');
                       // PDFを画像としてOCR処理するため、Canvasに変換
                       try {
@@ -6322,6 +6375,33 @@ export default function Home() {
                         }
                         
                         text = ocrText.trim();
+                        
+                        // ブロンズ会員の場合、OCR使用回数をカウント（PDFのOCR処理）
+                        if (membershipType === 'free') {
+                          const currentCount = user?.user_metadata?.ocr_usage_count || 0;
+                          const newCount = currentCount + 1;
+                          try {
+                            const { data: updatedUser, error: updateError } = await supabase.auth.updateUser({
+                              data: {
+                                ...user?.user_metadata,
+                                ocr_usage_count: newCount
+                              }
+                            });
+                            
+                            if (updateError) {
+                              console.error('OCR使用回数の更新エラー:', updateError);
+                            } else {
+                              console.log(`✅ OCR使用回数更新（PDF）: ${newCount}/100`);
+                              // ユーザー情報を再取得
+                              const { data: { user: refreshedUser } } = await supabase.auth.getUser();
+                              if (refreshedUser) {
+                                setUser(refreshedUser);
+                              }
+                            }
+                          } catch (err) {
+                            console.error('OCR使用回数の更新エラー:', err);
+                          }
+                        }
                         
                         if (!text || text.length === 0) {
                           alert('PDFからテキストを読み取れませんでした。');
