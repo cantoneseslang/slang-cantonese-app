@@ -3139,22 +3139,25 @@ export default function Home() {
   };
 
   const handleWordClick = async (word: Word) => {
+    // 即座にフィードバック（最優先）
     playHapticAndSound(); // 振動と音を再生
-    // すべてのモードで押下ログを送信
-    // categoryIdの取得: noteカテゴリーが選択されている場合はselectedNoteCategoryを優先
-    const categoryId = selectedNoteCategory || currentCategory?.id || '';
-    try { 
-      const response = await fetch('/api/track-button', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ wordChinese: word.chinese, categoryId }) 
-      });
-      if (!response.ok) {
-        console.error('ボタン押下トラッキングエラー:', response.status);
-      }
-    } catch (err) {
-      console.error('ボタン押下トラッキング失敗:', err);
+    
+    // ボタンを即座に緑色にする（ノーマルモードの場合）
+    if (!isLearningMode) {
+      const wordId = word.chinese;
+      setActiveWordId(wordId);
+      console.log('✅ ボタンクリック検知: 即座にボタンを緑色に変更', { wordId });
     }
+    
+    // トラッキングAPIは非同期で実行（ブロッキングしない）
+    const categoryId = selectedNoteCategory || currentCategory?.id || '';
+    fetch('/api/track-button', { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify({ wordChinese: word.chinese, categoryId }) 
+    }).catch(err => {
+      console.error('ボタン押下トラッキング失敗（無視）:', err);
+    });
     
     // 学習モードの場合はページトップにスクロール
     if (isLearningMode) {
@@ -3304,30 +3307,99 @@ export default function Home() {
       // 前のボタンの緑を消して、新しいボタンだけを緑にする
       setActiveWordId(wordId);
       
-      // 単語の音声のみを生成して再生
-      try {
-        console.log('ノーマルモード: API呼び出し開始', { text: word.chinese });
-        
-        const audioResponse = await fetch('/api/generate-speech', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ text: word.chinese }),
-        });
-        
-        console.log('ノーマルモード: APIレスポンス受信', { 
-          ok: audioResponse.ok, 
-          status: audioResponse.status 
-        });
-        
-        if (audioResponse.ok) {
-          const audioData = await audioResponse.json();
-          const audioBase64 = audioData.audioContent;
-          console.log('ノーマルモード: 音声データ取得', { 
-            hasAudioContent: !!audioBase64,
-            audioLength: audioBase64?.length 
+      // 単語の音声のみを生成して再生（リトライロジック付き）
+      let audioBase64: string | undefined = undefined;
+      let retryCount = 0;
+      const maxRetries = 3;
+      const retryDelay = 500; // 500ms待機してからリトライ
+      
+      while (retryCount < maxRetries && !audioBase64) {
+        try {
+          console.log(`ノーマルモード: API呼び出し開始 (試行 ${retryCount + 1}/${maxRetries})`, { text: word.chinese });
+          
+          // タイムアウト付きfetch（10秒でタイムアウト）
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          
+          const audioResponse = await fetch('/api/generate-speech', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ text: word.chinese }),
+            signal: controller.signal,
           });
+          
+          clearTimeout(timeoutId);
+          
+          console.log('ノーマルモード: APIレスポンス受信', { 
+            ok: audioResponse.ok, 
+            status: audioResponse.status,
+            attempt: retryCount + 1
+          });
+          
+          if (audioResponse.ok) {
+            const audioData = await audioResponse.json();
+            audioBase64 = audioData.audioContent;
+            console.log('✅ ノーマルモード: 音声データ取得成功', { 
+              hasAudioContent: !!audioBase64,
+              audioLength: audioBase64?.length,
+              attempt: retryCount + 1
+            });
+            break; // 成功したらループを抜ける
+          } else {
+            const errorData = await audioResponse.json().catch(() => ({ error: 'Unknown error' }));
+            console.error(`❌ ノーマルモード: API呼び出し失敗 (試行 ${retryCount + 1}/${maxRetries})`, {
+              status: audioResponse.status,
+              error: errorData
+            });
+            
+            // 4xxエラー（クライアントエラー）の場合はリトライしない
+            if (audioResponse.status >= 400 && audioResponse.status < 500) {
+              console.error('❌ クライアントエラーのためリトライしません');
+              throw new Error(`API呼び出し失敗: ${errorData.error || 'Unknown error'}`);
+            }
+            
+            // 5xxエラー（サーバーエラー）の場合はリトライ
+            if (retryCount < maxRetries - 1) {
+              retryCount++;
+              console.log(`⏳ ${retryDelay}ms待機してからリトライします...`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+              continue;
+            } else {
+              throw new Error(`API呼び出し失敗（${maxRetries}回試行）: ${errorData.error || 'Unknown error'}`);
+            }
+          }
+        } catch (error: any) {
+          console.error(`❌ ノーマルモード: エラー発生 (試行 ${retryCount + 1}/${maxRetries})`, error);
+          
+          // AbortError（タイムアウト）の場合
+          if (error.name === 'AbortError') {
+            console.error('❌ タイムアウトエラー');
+            if (retryCount < maxRetries - 1) {
+              retryCount++;
+              console.log(`⏳ ${retryDelay}ms待機してからリトライします...`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+              continue;
+            } else {
+              throw new Error('音声生成がタイムアウトしました。ネットワーク接続を確認してください。');
+            }
+          }
+          
+          // その他のエラー
+          if (retryCount < maxRetries - 1) {
+            retryCount++;
+            console.log(`⏳ ${retryDelay}ms待機してからリトライします...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            continue;
+          } else {
+            throw error;
+          }
+        }
+      }
+      
+      // 音声データが取得できた場合のみ再生処理を実行
+      if (audioBase64) {
           
           // 音声を自動再生（ノーマルモード専用audio要素を使用）
           if (!normalModeAudioRef.current) {
@@ -3415,14 +3487,19 @@ export default function Home() {
               normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に（Web Audio APIで制御）
             }
             
-            // 音声がロードされるまで待ってから再生
-            const playAudio = () => {
-              if (normalModeAudioRef.current) {
-                // メディアセッションAPIでメタデータを設定（ロック画面のアイコン変更）
-                if ('mediaSession' in navigator) {
-                  const categoryName = currentCategory?.name || 'カントン語音れん';
-                  const wordJapanese = word.japanese || word.chinese;
-                  
+            // 音声がロードされるまで待ってから再生（確実に再生するための強化版）
+            const playAudio = async () => {
+              if (!normalModeAudioRef.current) {
+                console.error('❌ playAudio: audio要素が存在しません');
+                return;
+              }
+              
+              // メディアセッションAPIでメタデータを設定（ロック画面のアイコン変更）
+              if ('mediaSession' in navigator) {
+                const categoryName = currentCategory?.name || 'カントン語音れん';
+                const wordJapanese = word.japanese || word.chinese;
+                
+                try {
                   navigator.mediaSession.metadata = new MediaMetadata({
                     title: wordJapanese,
                     artist: 'スラング式カントン語音れん',
@@ -3439,40 +3516,87 @@ export default function Home() {
                     artist: 'スラング式カントン語音れん',
                     album: categoryName,
                   });
+                } catch (e) {
+                  console.warn('メディアセッションAPI設定エラー（無視）:', e);
                 }
-                
-                const playPromise = normalModeAudioRef.current.play();
-                if (playPromise !== undefined) {
-                  playPromise
-                    .then(() => {
-                      console.log('ノーマルモード: 音声再生成功', { useWebAudioAPI });
-                    })
-                    .catch(e => {
-                      console.error('ノーマルモード: 音声再生失敗', e);
-                    });
+              }
+              
+              // 確実に再生するための複数の試行
+              let playAttempts = 0;
+              const maxPlayAttempts = 3;
+              
+              while (playAttempts < maxPlayAttempts) {
+                try {
+                  // 現在の再生位置をリセット
+                  normalModeAudioRef.current.currentTime = 0;
+                  
+                  // 再生を試みる
+                  const playPromise = normalModeAudioRef.current.play();
+                  
+                  if (playPromise !== undefined) {
+                    await playPromise;
+                    console.log(`✅ ノーマルモード: 音声再生成功 (試行 ${playAttempts + 1}/${maxPlayAttempts})`, { useWebAudioAPI });
+                    return; // 成功したら終了
+                  } else {
+                    console.log(`✅ ノーマルモード: 音声再生成功（同期） (試行 ${playAttempts + 1}/${maxPlayAttempts})`);
+                    return; // 成功したら終了
+                  }
+                } catch (e: any) {
+                  playAttempts++;
+                  console.error(`❌ ノーマルモード: 音声再生失敗 (試行 ${playAttempts}/${maxPlayAttempts})`, e);
+                  
+                  if (playAttempts < maxPlayAttempts) {
+                    // 少し待ってから再試行
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    // srcを再設定してから再試行
+                    if (normalModeAudioRef.current && normalModeAudioBlobUrlRef.current) {
+                      normalModeAudioRef.current.src = normalModeAudioBlobUrlRef.current;
+                    }
+                  } else {
+                    console.error('❌ ノーマルモード: 音声再生に全試行失敗', e);
+                    alert('音声の再生に失敗しました。もう一度お試しください。');
+                  }
                 }
               }
             };
             
             // 既にロード済みの場合は即座に再生
             if (normalModeAudioRef.current.readyState >= 2) {
+              console.log('✅ ノーマルモード: 音声は既にロード済み、即座に再生');
               playAudio();
             } else {
+              console.log('⏳ ノーマルモード: 音声のロードを待機中...', {
+                readyState: normalModeAudioRef.current.readyState
+              });
+              
               // loadeddataイベントを待つ（タイムアウトも設定）
-              const timeoutId = setTimeout(() => {
+              let timeoutId: NodeJS.Timeout | null = null;
+              let hasPlayed = false;
+              
+              const tryPlay = () => {
+                if (!hasPlayed && normalModeAudioRef.current) {
+                  hasPlayed = true;
+                  if (timeoutId) clearTimeout(timeoutId);
+                  playAudio();
+                }
+              };
+              
+              // タイムアウト設定（2秒でタイムアウト）
+              timeoutId = setTimeout(() => {
                 console.warn('⚠️ ノーマルモード: loadeddataイベントがタイムアウトしました。強制的に再生を試みます。');
-                playAudio();
-              }, 3000); // 3秒でタイムアウト
+                tryPlay();
+              }, 2000);
               
-              normalModeAudioRef.current.addEventListener('loadeddata', () => {
-                clearTimeout(timeoutId);
-                playAudio();
-              }, { once: true });
+              // 複数のイベントリスナーを設定（確実に再生するため）
+              normalModeAudioRef.current.addEventListener('loadeddata', tryPlay, { once: true });
+              normalModeAudioRef.current.addEventListener('canplay', tryPlay, { once: true });
+              normalModeAudioRef.current.addEventListener('canplaythrough', tryPlay, { once: true });
               
-              // canplayイベントも試す（フォールバック）
-              normalModeAudioRef.current.addEventListener('canplay', () => {
-                clearTimeout(timeoutId);
-                playAudio();
+              // エラー時の処理
+              normalModeAudioRef.current.addEventListener('error', (e) => {
+                console.error('❌ ノーマルモード: audio要素のエラー', e);
+                if (timeoutId) clearTimeout(timeoutId);
+                alert('音声ファイルの読み込みに失敗しました。もう一度お試しください。');
               }, { once: true });
             }
           } else {
@@ -3483,14 +3607,18 @@ export default function Home() {
             });
             alert('音声データの取得に失敗しました。もう一度お試しください。');
           }
-        } else {
-          console.error('ノーマルモード: API呼び出し失敗', { 
-            status: audioResponse.status,
-            statusText: audioResponse.statusText
-          });
-        }
-      } catch (err) {
-        console.error('ノーマルモード: エラー発生', err);
+      } else {
+        // 音声データが取得できなかった場合
+        console.error('❌ ノーマルモード: 音声データの取得に失敗しました（全試行失敗）', {
+          wordId,
+          retryCount,
+          maxRetries
+        });
+        alert('音声生成に失敗しました。ネットワーク接続を確認して、もう一度お試しください。');
+      }
+      } catch (err: any) {
+        console.error('❌ ノーマルモード: 致命的なエラー発生', err);
+        alert(`音声生成エラー: ${err.message || '不明なエラーが発生しました'}\nもう一度お試しください。`);
       }
     }
   };

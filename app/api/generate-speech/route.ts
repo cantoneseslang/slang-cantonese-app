@@ -21,36 +21,63 @@ export async function POST(request: NextRequest) {
       audioConfig: { audioEncoding: 'MP3' }
     };
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+    console.log('🔊 音声生成API呼び出し開始:', { text: text.substring(0, 50), languageCode });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Google TTS API error:', response.status, errorText);
-      return NextResponse.json(
-        { error: 'Failed to generate speech', details: errorText },
-        { status: response.status }
-      );
+    // タイムアウト付きfetch（8秒でタイムアウト）
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 8000);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Google TTS API error:', response.status, errorText);
+        return NextResponse.json(
+          { error: 'Failed to generate speech', details: errorText },
+          { status: response.status }
+        );
+      }
+
+      const json = await response.json();
+      if (!json.audioContent) {
+        console.error('❌ No audio content in response');
+        return NextResponse.json(
+          { error: 'No audio content in response' },
+          { status: 500 }
+        );
+      }
+
+      console.log('✅ 音声生成API成功:', { audioContentLength: json.audioContent?.length || 0 });
+      return NextResponse.json({
+        audioContent: json.audioContent
+      });
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      
+      if (fetchError.name === 'AbortError') {
+        console.error('❌ 音声生成API: タイムアウトエラー');
+        return NextResponse.json(
+          { error: 'Request timeout', details: '音声生成がタイムアウトしました' },
+          { status: 504 }
+        );
+      }
+      
+      throw fetchError;
     }
-
-    const json = await response.json();
-    if (!json.audioContent) {
-      return NextResponse.json(
-        { error: 'No audio content in response' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      audioContent: json.audioContent
-    });
   } catch (error) {
-    console.error('Error generating speech:', error);
+    console.error('❌ Error generating speech:', error);
     return NextResponse.json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
