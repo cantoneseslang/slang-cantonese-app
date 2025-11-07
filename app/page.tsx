@@ -3480,16 +3480,16 @@ export default function Home() {
             if (normalModeAudioContextRef.current && normalModeAudioContextRef.current.state === 'suspended') {
               try {
                 await normalModeAudioContextRef.current.resume();
-                console.log('✅ ノーマルモード: AudioContextをresumeしました');
+                console.log('✅ トーン音声: AudioContextをresumeしました');
               } catch (e) {
-                console.error('❌ ノーマルモード: AudioContextのresumeに失敗', e);
+                console.error('❌ トーン音声: AudioContextのresumeに失敗', e);
               }
             }
             
             // 他の場所と同じように、シンプルに即座に再生
             normalModeAudioRef.current.currentTime = 0;
             normalModeAudioRef.current.play().catch((e) => {
-              console.error('❌ ノーマルモード: 音声再生エラー', e);
+              console.error('❌ トーン音声: 音声再生エラー', e);
             });
             
             // 音声再生終了時にactiveWordIdをクリアして緑点灯を消す
