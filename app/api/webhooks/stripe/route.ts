@@ -83,73 +83,94 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // payment_intentのmetadataにuser_idとplanがある場合は直接処理
-      if (userId && plan) {
-        const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
-        const updateData: any = { membership_type: plan };
-        let expiresAt: string | null = null;
+          // payment_intentのmetadataにuser_idとplanがある場合は直接処理
+          if (userId && plan) {
+            const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+            
+            // 現在の会員種別を取得（lifetime会員のダウングレードを防止するため）
+            const { data: { user: currentUser } } = await supabase.auth.admin.getUserById(userId);
+            const currentMembershipType = currentUser?.user_metadata?.membership_type || currentUser?.app_metadata?.membership_type;
+            
+            // ゴールド会員（lifetime）は永久会員のため、ダウングレードを防止
+            if (currentMembershipType === 'lifetime' && plan !== 'lifetime') {
+              console.log('⚠️ ゴールド会員のダウングレードを防止（payment_intent）:', {
+                userId,
+                currentMembershipType,
+                attemptedPlan: plan
+              });
+              return NextResponse.json({ 
+                received: true, 
+                message: 'Lifetime member downgrade prevented',
+                timestamp: new Date().toISOString() 
+              });
+            }
+            
+            const updateData: any = { membership_type: plan };
+            let expiresAt: string | null = null;
 
-        if (plan === 'subscription') {
-          const expiresDate = new Date();
-          expiresDate.setMonth(expiresDate.getMonth() + 1);
-          expiresAt = expiresDate.toISOString();
-          updateData.subscription_expires_at = expiresAt;
-        } else if (plan === 'lifetime') {
-          expiresAt = null;
-          updateData.subscription_expires_at = null;
-        }
+            if (plan === 'subscription') {
+              const expiresDate = new Date();
+              expiresDate.setMonth(expiresDate.getMonth() + 1);
+              expiresAt = expiresDate.toISOString();
+              updateData.subscription_expires_at = expiresAt;
+            } else if (plan === 'lifetime') {
+              expiresAt = null;
+              updateData.subscription_expires_at = null;
+            }
 
-        console.log('📝 Updating user membership from payment_intent:', {
-          userId,
-          plan,
-          expiresAt,
-          updateData,
-          isLifetime: plan === 'lifetime'
-        });
-
-        // 1. user_metadataを更新
-        const { data: userData, error: userError } = await supabase.auth.admin.updateUserById(
-          userId,
-          { user_metadata: updateData }
-        );
-
-        if (userError) {
-          console.error('❌ Failed to update user metadata from payment_intent:', userError);
-        } else {
-          console.log('✅ User metadata updated successfully from payment_intent:', {
-            userId: userData?.user?.id,
-            membershipType: userData?.user?.user_metadata?.membership_type
-          });
-        }
-
-        // 2. usersテーブルも確実に更新
-        const { data: dbData, error: dbError } = await supabase
-          .from('users')
-          .update({
-            membership_type: plan,
-            subscription_expires_at: expiresAt,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', userId)
-          .select();
-
-        if (dbError) {
-          if (dbError.code === 'PGRST116' || dbError.message.includes('relation') || dbError.message.includes('does not exist')) {
-            console.warn('⚠️ usersテーブルが存在しないため、user_metadataのみ更新しました（payment_intent）:', {
+            console.log('📝 Updating user membership from payment_intent:', {
               userId,
               plan,
-              error: dbError.message
+              expiresAt,
+              updateData,
+              isLifetime: plan === 'lifetime',
+              currentMembershipType
             });
-          } else {
-            console.error('❌ Failed to update users table from payment_intent:', dbError);
+
+            // 1. user_metadataを更新
+            const { data: userData, error: userError } = await supabase.auth.admin.updateUserById(
+              userId,
+              { user_metadata: updateData }
+            );
+
+            if (userError) {
+              console.error('❌ Failed to update user metadata from payment_intent:', userError);
+            } else {
+              console.log('✅ User metadata updated successfully from payment_intent:', {
+                userId: userData?.user?.id,
+                membershipType: userData?.user?.user_metadata?.membership_type
+              });
+            }
+
+            // 2. usersテーブルも確実に更新
+            const { data: dbData, error: dbError } = await supabase
+              .from('users')
+              .update({
+                membership_type: plan,
+                subscription_expires_at: expiresAt,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', userId)
+              .select();
+
+            if (dbError) {
+              if (dbError.code === 'PGRST116' || dbError.message.includes('relation') || dbError.message.includes('does not exist')) {
+                console.warn('⚠️ usersテーブルが存在しないため、user_metadataのみ更新しました（payment_intent）:', {
+                  userId,
+                  plan,
+                  error: dbError.message
+                });
+              } else {
+                console.error('❌ Failed to update users table from payment_intent:', dbError);
+              }
+            } else {
+              console.log('✅ Users table updated successfully from payment_intent:', {
+                userId,
+                updatedRows: dbData?.length || 0,
+                data: dbData
+              });
+            }
           }
-        } else {
-          console.log('✅ Users table updated successfully from payment_intent:', {
-            userId,
-            updatedRows: dbData?.length || 0,
-            data: dbData
-          });
-        }
       } else {
         console.log('⚠️ payment_intent.succeeded: metadataにuser_idまたはplanが含まれていません:', {
           userId,
@@ -190,6 +211,25 @@ export async function POST(request: NextRequest) {
               // 見つかった場合は処理を続行
               if (userId && plan) {
                 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+                
+                // 現在の会員種別を取得（lifetime会員のダウングレードを防止するため）
+                const { data: { user: currentUser } } = await supabase.auth.admin.getUserById(userId);
+                const currentMembershipType = currentUser?.user_metadata?.membership_type || currentUser?.app_metadata?.membership_type;
+                
+                // ゴールド会員（lifetime）は永久会員のため、ダウングレードを防止
+                if (currentMembershipType === 'lifetime' && plan !== 'lifetime') {
+                  console.log('⚠️ ゴールド会員のダウングレードを防止（payment_intent session search）:', {
+                    userId,
+                    currentMembershipType,
+                    attemptedPlan: plan
+                  });
+                  return NextResponse.json({ 
+                    received: true, 
+                    message: 'Lifetime member downgrade prevented',
+                    timestamp: new Date().toISOString() 
+                  });
+                }
+                
                 const updateData: any = { membership_type: plan };
                 let expiresAt: string | null = null;
 
@@ -207,7 +247,8 @@ export async function POST(request: NextRequest) {
                   userId,
                   plan,
                   expiresAt,
-                  updateData
+                  updateData,
+                  currentMembershipType
                 });
 
                 const { data: userData, error: userError } = await supabase.auth.admin.updateUserById(
@@ -291,6 +332,25 @@ export async function POST(request: NextRequest) {
       }
 
       const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+      // 現在の会員種別を取得（lifetime会員のダウングレードを防止するため）
+      const { data: { user: currentUser } } = await supabase.auth.admin.getUserById(userId);
+      const currentMembershipType = currentUser?.user_metadata?.membership_type || currentUser?.app_metadata?.membership_type;
+      
+      // ゴールド会員（lifetime）は永久会員のため、ダウングレードを防止
+      if (currentMembershipType === 'lifetime' && plan !== 'lifetime') {
+        console.log('⚠️ ゴールド会員のダウングレードを防止（checkout.session.completed）:', {
+          userId,
+          currentMembershipType,
+          attemptedPlan: plan,
+          sessionId: session.id
+        });
+        return NextResponse.json({ 
+          received: true, 
+          message: 'Lifetime member downgrade prevented',
+          timestamp: new Date().toISOString() 
+        });
+      }
 
       // ユーザーの会員種別を更新
       const updateData: any = {

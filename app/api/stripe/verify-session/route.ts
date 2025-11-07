@@ -60,6 +60,24 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
+    // 現在の会員種別を取得（lifetime会員のダウングレードを防止するため）
+    const { data: { user: currentUser } } = await supabase.auth.admin.getUserById(userId);
+    const currentMembershipType = currentUser?.user_metadata?.membership_type || currentUser?.app_metadata?.membership_type;
+    
+    // ゴールド会員（lifetime）は永久会員のため、ダウングレードを防止
+    if (currentMembershipType === 'lifetime' && plan !== 'lifetime') {
+      console.log('⚠️ ゴールド会員のダウングレードを防止（verify-session）:', {
+        userId,
+        currentMembershipType,
+        attemptedPlan: plan,
+        sessionId: session.id
+      });
+      return NextResponse.json(
+        { error: 'Lifetime member downgrade prevented', currentMembershipType, attemptedPlan: plan },
+        { status: 400 }
+      );
+    }
+
     // ユーザーの会員種別を更新
     const updateData: any = {
       membership_type: plan,

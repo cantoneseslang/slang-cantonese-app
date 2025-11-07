@@ -2070,9 +2070,15 @@ export default function Home() {
       return;
     }
 
+    // ゴールド会員（lifetime）は永久会員のため、ダウングレードを防止
+    if (membershipType === 'lifetime' && (newType === 'subscription' || newType === 'free')) {
+      alert('ゴールド会員は永久会員のため、ダウングレードできません。\nゴールド会員の特典を引き続きご利用いただけます。');
+      console.log('⚠️ ゴールド会員のダウングレードを防止');
+      return;
+    }
+
     // ダウングレードかどうかを判定
     const isDowngrading = (
-      (membershipType === 'lifetime' && (newType === 'subscription' || newType === 'free')) ||
       (membershipType === 'subscription' && newType === 'free')
     );
     
@@ -2093,6 +2099,15 @@ export default function Home() {
 
   // Stripe決済処理（アップグレード/ダウングレード）
   const handleStripeCheckout = async (plan: 'free' | 'subscription' | 'lifetime') => {
+    // ゴールド会員（lifetime）は永久会員のため、ダウングレードを防止
+    if (membershipType === 'lifetime' && (plan === 'subscription' || plan === 'free')) {
+      alert('ゴールド会員は永久会員のため、ダウングレードできません。\nゴールド会員の特典を引き続きご利用いただけます。');
+      setShowPricingModal(false);
+      setSelectedPlan(null);
+      setIsDowngrade(false);
+      return;
+    }
+
     // 無料プランの場合は直接更新（支払い不要）
     if (plan === 'free') {
       try {
