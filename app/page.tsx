@@ -3399,114 +3399,8 @@ export default function Home() {
       // 前のボタンの緑を消して、新しいボタンだけを緑にする
       setActiveWordId(wordId);
       
-      // 音声再生（handleToneAudioClickと全く同じ処理）
-      try {
-        const audioResponse = await fetch('/api/generate-speech', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ text: word.chinese }),
-        });
-
-        if (audioResponse.ok) {
-          const audioData = await audioResponse.json();
-          const audioBase64 = audioData.audioContent;
-
-          if (normalModeAudioRef.current && audioBase64) {
-            normalModeAudioRef.current.pause();
-            normalModeAudioRef.current.currentTime = 0;
-            
-            // 古いBlob URLをクリア
-            if (normalModeAudioBlobUrlRef.current) {
-              URL.revokeObjectURL(normalModeAudioBlobUrlRef.current);
-              normalModeAudioBlobUrlRef.current = null;
-            }
-            
-            // Base64をBlobに変換してBlob URLを作成（モバイルでボリューム調整可能にするため）
-            const binaryString = atob(audioBase64);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-              bytes[i] = binaryString.charCodeAt(i);
-            }
-            const blob = new Blob([bytes], { type: 'audio/mp3' });
-            const blobUrl = URL.createObjectURL(blob);
-            normalModeAudioBlobUrlRef.current = blobUrl;
-            
-            // Web Audio APIの接続を確立（srcを設定する前に接続を確立）
-            let useWebAudioAPI = false;
-            if (normalModeAudioContextRef.current) {
-              try {
-                // MediaElementAudioSourceNodeが既に存在する場合は再利用
-                if (!normalModeAudioSourceNodeRef.current) {
-                  // srcを設定する前に接続を確立（空のsrcでも接続可能）
-                  const source = normalModeAudioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
-                  normalModeAudioSourceNodeRef.current = source;
-                  
-                  // GainNodeを作成
-                  const gainNode = normalModeAudioContextRef.current.createGain();
-                  gainNode.gain.value = normalModeAudioVolume;
-                  
-                  source.connect(gainNode);
-                  gainNode.connect(normalModeAudioContextRef.current.destination);
-                  
-                  normalModeAudioGainNodeRef.current = gainNode;
-                  useWebAudioAPI = true;
-                } else {
-                  // 既存のGainNodeのボリュームを更新
-                  if (normalModeAudioGainNodeRef.current) {
-                    normalModeAudioGainNodeRef.current.gain.value = normalModeAudioVolume;
-                  }
-                  useWebAudioAPI = true;
-                }
-              } catch (error) {
-                console.error('Web Audio API接続エラー:', error);
-                // エラーが発生した場合は、Web Audio APIなしで再生を試みる
-                useWebAudioAPI = false;
-              }
-            }
-            
-            // 新しい音声をセット
-            normalModeAudioRef.current.src = blobUrl;
-            
-            // Web Audio APIを使用しない場合は、HTMLAudioElementのvolumeを使用
-            if (!useWebAudioAPI) {
-              normalModeAudioRef.current.volume = normalModeAudioVolume;
-            } else {
-              normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に（Web Audio APIで制御）
-            }
-            
-            // AudioContextを確実にresume（モバイル対応）
-            if (normalModeAudioContextRef.current && normalModeAudioContextRef.current.state === 'suspended') {
-              try {
-                await normalModeAudioContextRef.current.resume();
-                console.log('✅ トーン音声: AudioContextをresumeしました');
-              } catch (e) {
-                console.error('❌ トーン音声: AudioContextのresumeに失敗', e);
-              }
-            }
-            
-            // 他の場所と同じように、シンプルに即座に再生
-            normalModeAudioRef.current.currentTime = 0;
-            normalModeAudioRef.current.play().catch((e) => {
-              console.error('❌ トーン音声: 音声再生エラー', e);
-            });
-            
-            // 音声再生終了時にactiveWordIdをクリアして緑点灯を消す
-            normalModeAudioRef.current.addEventListener('ended', () => {
-              if (!isLearningMode) {
-                setActiveWordId(null);
-              }
-            }, { once: true });
-          }
-        }
-      } catch (err) {
-        console.error('音声再生エラー:', err);
-        // エラー時もactiveWordIdをクリア
-        if (!isLearningMode) {
-          setActiveWordId(null);
-        }
-      }
+      // 音声再生（共通関数を使用）
+      await playAudioFromText(word.chinese);
   };
 
   const handleTranslateAndConvert = async (query: string) => {
@@ -3519,42 +3413,8 @@ export default function Home() {
     await handleSearch(query);
   };
 
-  // 音声ボタンのクリックハンドラー
-  const handleToneAudioClick = async (e: Event) => {
-    const button = e.target as HTMLButtonElement;
-    const text = button.getAttribute('data-text');
-    if (!text) return;
-
-    // ハプティックフィードバック
-    if ('vibrate' in navigator) {
-      navigator.vibrate(10);
-    }
-
-    // クリック音
-    if (isClickSoundEnabled && audioContextRef.current && audioBufferRef.current) {
-      const source = audioContextRef.current.createBufferSource();
-      source.buffer = audioBufferRef.current;
-      source.connect(audioContextRef.current.destination);
-      source.start(0);
-    }
-
-    // ノーマルモードの場合、緑色に変える
-    if (!isLearningMode) {
-      setActiveWordId(text);
-    }
-
-    // ボタン押下をトラッキング（pronunciationカテゴリー）
-    try {
-      await fetch('/api/track-button', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wordChinese: text, categoryId: 'pronunciation' })
-      });
-    } catch (err) {
-      console.error('Failed to track tone audio click:', err);
-    }
-
-    // 音声再生
+  // 音声再生の共通処理（handleWordClickとhandleToneAudioClickで使用）
+  const playAudioFromText = async (text: string) => {
     try {
       const audioResponse = await fetch('/api/generate-speech', {
         method: 'POST',
@@ -3662,6 +3522,45 @@ export default function Home() {
         setActiveWordId(null);
       }
     }
+  };
+
+  // 音声ボタンのクリックハンドラー
+  const handleToneAudioClick = async (e: Event) => {
+    const button = e.target as HTMLButtonElement;
+    const text = button.getAttribute('data-text');
+    if (!text) return;
+
+    // ハプティックフィードバック
+    if ('vibrate' in navigator) {
+      navigator.vibrate(10);
+    }
+
+    // クリック音
+    if (isClickSoundEnabled && audioContextRef.current && audioBufferRef.current) {
+      const source = audioContextRef.current.createBufferSource();
+      source.buffer = audioBufferRef.current;
+      source.connect(audioContextRef.current.destination);
+      source.start(0);
+    }
+
+    // ノーマルモードの場合、緑色に変える
+    if (!isLearningMode) {
+      setActiveWordId(text);
+    }
+
+    // ボタン押下をトラッキング（pronunciationカテゴリー）
+    try {
+      await fetch('/api/track-button', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wordChinese: text, categoryId: 'pronunciation' })
+      });
+    } catch (err) {
+      console.error('Failed to track tone audio click:', err);
+    }
+
+    // 音声再生（共通関数を使用）
+    await playAudioFromText(text);
     // categoryIdの取得: noteカテゴリーが選択されている場合はselectedNoteCategoryを優先
     const categoryId = selectedNoteCategory || currentCategory?.id || 'pronunciation';
     try { 
@@ -9547,3 +9446,4 @@ export default function Home() {
     </div>
   );
 }
+
