@@ -9,6 +9,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
+// Stripeがテストモードかどうかを判定（APIキーがsk_test_で始まる場合はテストモード）
+const isTestMode = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_') || false;
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
