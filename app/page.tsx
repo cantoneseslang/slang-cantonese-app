@@ -6885,7 +6885,10 @@ export default function Home() {
               padding: isMobile ? '1rem' : '1.5rem', 
               borderRadius: '8px', 
               boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              marginBottom: '1.5rem'
+              marginBottom: '1.5rem',
+              width: '100%',
+              boxSizing: 'border-box',
+              overflow: 'hidden'
             }}>
               <div 
                 dangerouslySetInnerHTML={{ __html: currentCategory.introContent }} 
@@ -6983,7 +6986,9 @@ export default function Home() {
                         display: 'grid', 
                         gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
                         gap: '0.5rem',
-                        marginBottom: '0.5rem'
+                        marginBottom: '0.5rem',
+                        width: '100%',
+                        boxSizing: 'border-box'
                       }}>
                         {group.words.map((word, wIdx) => {
                           const isActive = !isLearningMode && activeWordId === word.chinese;
@@ -7039,6 +7044,7 @@ export default function Home() {
                                 position: 'relative',
                                 zIndex: 2,
                                 width: '100%',
+                                minWidth: 0,
                                 boxSizing: 'border-box',
                                 overflow: 'hidden',
                                 minHeight: 0
@@ -7107,7 +7113,9 @@ export default function Home() {
                         display: 'grid', 
                         gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
                         gap: '0.5rem',
-                        marginBottom: '0.5rem'
+                        marginBottom: '0.5rem',
+                        width: '100%',
+                        boxSizing: 'border-box'
                       }}>
                         {group.words.slice(0, 6).map((word, wIdx) => {
                           const isActive = !isLearningMode && activeWordId === word.chinese;
@@ -7163,6 +7171,7 @@ export default function Home() {
                                 position: 'relative',
                                 zIndex: 2,
                                 width: '100%',
+                                minWidth: 0,
                                 boxSizing: 'border-box',
                                 overflow: 'hidden',
                                 minHeight: 0
@@ -7228,7 +7237,9 @@ export default function Home() {
                         display: 'grid', 
                         gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
                         gap: '0.5rem',
-                        marginBottom: '0.5rem'
+                        marginBottom: '0.5rem',
+                        width: '100%',
+                        boxSizing: 'border-box'
                       }}>
                         {group.words.slice(6, 9).map((word, wIdx) => {
                           const isActive = !isLearningMode && activeWordId === word.chinese;
@@ -7284,6 +7295,7 @@ export default function Home() {
                                 position: 'relative',
                                 zIndex: 2,
                                 width: '100%',
+                                minWidth: 0,
                                 boxSizing: 'border-box',
                                 overflow: 'hidden',
                                 minHeight: 0
@@ -7349,7 +7361,9 @@ export default function Home() {
                         display: 'grid', 
                         gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
                         gap: '0.5rem',
-                        marginBottom: '0.5rem'
+                        marginBottom: '0.5rem',
+                        width: '100%',
+                        boxSizing: 'border-box'
                       }}>
                         {group.words.slice(9).map((word, wIdx) => {
                           const isActive = !isLearningMode && activeWordId === word.chinese;
@@ -7405,6 +7419,7 @@ export default function Home() {
                                 position: 'relative',
                                 zIndex: 2,
                                 width: '100%',
+                                minWidth: 0,
                                 boxSizing: 'border-box',
                                 overflow: 'hidden',
                                 minHeight: 0
@@ -7469,7 +7484,9 @@ export default function Home() {
               display: 'grid', 
               gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', 
               gap: '0.5rem',
-              marginBottom: '1.5rem'
+              marginBottom: '1.5rem',
+              width: '100%',
+              boxSizing: 'border-box'
             }}>
               {currentWords.map((word, idx) => {
                 const isActive = !isLearningMode && activeWordId === word.chinese;
@@ -7527,7 +7544,11 @@ export default function Home() {
                     position: 'relative',
                     zIndex: 2,
                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    transform: 'scale(1)'
+                    transform: 'scale(1)',
+                    width: '100%',
+                    minWidth: 0,
+                    boxSizing: 'border-box',
+                    overflow: 'hidden'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'scale(1.03) translateY(-2px)';
@@ -7576,14 +7597,24 @@ export default function Home() {
                     fontSize: isMobile ? '1.5rem' : '1.875rem',
                     fontWeight: '600',
                     color: isActive ? '#ffffff' : '#1d1d1f',
-                    marginBottom: '0.25rem'
+                    marginBottom: '0.25rem',
+                    wordBreak: 'break-word',
+                    overflowWrap: 'break-word',
+                    maxWidth: '100%',
+                    width: '100%',
+                    boxSizing: 'border-box'
                   }}>
                     {word.chinese}
                   </strong>
                   <div style={{ 
                     fontSize: isMobile ? '0.875rem' : '1rem',
                     color: isActive ? '#f0f0f0' : '#6e6e73',
-                    fontWeight: '400'
+                    fontWeight: '400',
+                    wordBreak: 'break-word',
+                    overflowWrap: 'break-word',
+                    maxWidth: '100%',
+                    width: '100%',
+                    boxSizing: 'border-box'
                   }}>
                     {word.japanese}
                   </div>
