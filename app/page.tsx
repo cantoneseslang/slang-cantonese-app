@@ -7037,7 +7037,11 @@ export default function Home() {
                                 pointerEvents: 'auto',
                                 touchAction: 'manipulation',
                                 position: 'relative',
-                                zIndex: 2
+                                zIndex: 2,
+                                width: '100%',
+                                boxSizing: 'border-box',
+                                overflow: 'hidden',
+                                minHeight: 0
                               }}
                             >
                               {/* 星マーク（右上） */}
@@ -7061,13 +7065,23 @@ export default function Home() {
                               )}
                               <strong style={{ 
                                 fontSize: isMobile ? '1.25rem' : '1.875rem',
-                                color: isActive ? '#ffffff' : '#1d1d1f'
+                                color: isActive ? '#ffffff' : '#1d1d1f',
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word',
+                                maxWidth: '100%',
+                                width: '100%',
+                                boxSizing: 'border-box'
                               }}>
                                 {word.chinese}
                               </strong>
                               <div style={{ 
                                 fontSize: isMobile ? '0.75rem' : '1rem',
-                                color: isActive ? '#f0f0f0' : '#6e6e73'
+                                color: isActive ? '#f0f0f0' : '#6e6e73',
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word',
+                                maxWidth: '100%',
+                                width: '100%',
+                                boxSizing: 'border-box'
                               }}>
                                 {word.japanese}
                               </div>
@@ -7147,7 +7161,11 @@ export default function Home() {
                                 pointerEvents: 'auto',
                                 touchAction: 'manipulation',
                                 position: 'relative',
-                                zIndex: 2
+                                zIndex: 2,
+                                width: '100%',
+                                boxSizing: 'border-box',
+                                overflow: 'hidden',
+                                minHeight: 0
                               }}
                             >
                               {/* 星マーク（右上） */}
@@ -7171,13 +7189,23 @@ export default function Home() {
                               )}
                               <strong style={{ 
                                 fontSize: isMobile ? '1.25rem' : '1.875rem',
-                                color: isActive ? '#ffffff' : '#1d1d1f'
+                                color: isActive ? '#ffffff' : '#1d1d1f',
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word',
+                                maxWidth: '100%',
+                                width: '100%',
+                                boxSizing: 'border-box'
                               }}>
                                 {word.chinese}
                               </strong>
                               <div style={{ 
                                 fontSize: isMobile ? '0.75rem' : '1rem',
-                                color: isActive ? '#f0f0f0' : '#6e6e73'
+                                color: isActive ? '#f0f0f0' : '#6e6e73',
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word',
+                                maxWidth: '100%',
+                                width: '100%',
+                                boxSizing: 'border-box'
                               }}>
                                 {word.japanese}
                               </div>
@@ -7254,7 +7282,11 @@ export default function Home() {
                                 pointerEvents: 'auto',
                                 touchAction: 'manipulation',
                                 position: 'relative',
-                                zIndex: 2
+                                zIndex: 2,
+                                width: '100%',
+                                boxSizing: 'border-box',
+                                overflow: 'hidden',
+                                minHeight: 0
                               }}
                             >
                               {/* 星マーク（右上） */}
@@ -7278,13 +7310,23 @@ export default function Home() {
                               )}
                               <strong style={{ 
                                 fontSize: isMobile ? '1.25rem' : '1.875rem',
-                                color: isActive ? '#ffffff' : '#1d1d1f'
+                                color: isActive ? '#ffffff' : '#1d1d1f',
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word',
+                                maxWidth: '100%',
+                                width: '100%',
+                                boxSizing: 'border-box'
                               }}>
                                 {word.chinese}
                               </strong>
                               <div style={{ 
                                 fontSize: isMobile ? '0.75rem' : '1rem',
-                                color: isActive ? '#f0f0f0' : '#6e6e73'
+                                color: isActive ? '#f0f0f0' : '#6e6e73',
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word',
+                                maxWidth: '100%',
+                                width: '100%',
+                                boxSizing: 'border-box'
                               }}>
                                 {word.japanese}
                               </div>
@@ -7361,7 +7403,11 @@ export default function Home() {
                                 pointerEvents: 'auto',
                                 touchAction: 'manipulation',
                                 position: 'relative',
-                                zIndex: 2
+                                zIndex: 2,
+                                width: '100%',
+                                boxSizing: 'border-box',
+                                overflow: 'hidden',
+                                minHeight: 0
                               }}
                             >
                               {/* 星マーク（右上） */}
@@ -7385,13 +7431,23 @@ export default function Home() {
                               )}
                               <strong style={{ 
                                 fontSize: isMobile ? '1.25rem' : '1.875rem',
-                                color: isActive ? '#ffffff' : '#1d1d1f'
+                                color: isActive ? '#ffffff' : '#1d1d1f',
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word',
+                                maxWidth: '100%',
+                                width: '100%',
+                                boxSizing: 'border-box'
                               }}>
                                 {word.chinese}
                               </strong>
                               <div style={{ 
                                 fontSize: isMobile ? '0.75rem' : '1rem',
-                                color: isActive ? '#f0f0f0' : '#6e6e73'
+                                color: isActive ? '#f0f0f0' : '#6e6e73',
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word',
+                                maxWidth: '100%',
+                                width: '100%',
+                                boxSizing: 'border-box'
                               }}>
                                 {word.japanese}
                               </div>
