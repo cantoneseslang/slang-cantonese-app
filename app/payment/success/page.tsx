@@ -24,8 +24,31 @@ function PaymentSuccessContent() {
       try {
         const supabase = createClient();
         
-        // まずWebhookの処理を待つ（3秒待機）
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // 即座にverify-sessionを実行（Webhookを待たない）
+        console.log('🔄 即座にverify-sessionを実行します...');
+        let verifyData: any = null;
+        try {
+          const verifyResponse = await fetch('/api/stripe/verify-session', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ sessionId }),
+          });
+
+          if (verifyResponse.ok) {
+            verifyData = await verifyResponse.json();
+            console.log('✅ verify-session完了:', verifyData);
+          } else {
+            const errorData = await verifyResponse.json();
+            console.error('❌ verify-sessionエラー:', errorData);
+          }
+        } catch (error: any) {
+          console.error('❌ verify-sessionエラー:', error);
+        }
+
+        // Webhookの処理を待つ（1秒待機）
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // ユーザー情報を再取得（Webhookで更新されている可能性がある）
         const { data: { user: updatedUser }, error: refreshError } = await supabase.auth.getUser();
@@ -37,9 +60,8 @@ function PaymentSuccessContent() {
         // 会員種別が既に更新されているか確認
         const currentMembershipType = updatedUser.user_metadata?.membership_type;
         
-        // まだ更新されていない場合、Stripeセッションを直接確認して更新
-        // subscriptionからlifetimeへのアップグレードの場合もチェック
-        if (currentMembershipType === 'free' || (currentMembershipType === 'subscription' && sessionId)) {
+        // まだ更新されていない場合、またはverify-sessionが失敗した場合、再度処理を試みる
+        if (!verifyData || !verifyData.success || currentMembershipType === 'free' || (currentMembershipType === 'subscription' && sessionId)) {
             console.log('⚠️ Webhookで更新されていないため、セッションを直接確認します', {
               sessionId,
               currentMembershipType,
