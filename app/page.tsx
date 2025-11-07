@@ -7362,6 +7362,17 @@ export default function Home() {
                   }}>
                     {selectedPlan === 'free' ? '無料' : selectedPlan === 'subscription' ? '¥980' : '¥9,800'}
                   </div>
+                  {/* HKD価格を追加 */}
+                  {selectedPlan !== 'free' && (
+                    <div style={{
+                      fontSize: '1.5rem',
+                      fontWeight: '600',
+                      color: '#6b7280',
+                      marginTop: '0.5rem'
+                    }}>
+                      {selectedPlan === 'subscription' ? '$50' : '$498'}
+                    </div>
+                  )}
                   <div style={{
                     fontSize: '1rem',
                     color: '#6b7280',
