@@ -1,0 +1,7 @@
+# Prettier ignore file
+# This file prevents Prettier from formatting certain files or patterns
+
+# Ignore the plan comparison table section in page.tsx to prevent auto-rewriting
+# The plan comparison table (lines ~8670-9080) should not be auto-formatted
+# to preserve the exact structure and currency settings
+

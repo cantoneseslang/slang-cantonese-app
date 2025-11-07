@@ -152,9 +152,13 @@ export default function Home() {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'subscription' | 'lifetime' | null>(null);
   const [isDowngrade, setIsDowngrade] = useState(false); // ダウングレードかどうか
+  const [selectedCurrency, setSelectedCurrency] = useState<'jpy' | 'hkd'>('jpy'); // 通貨選択（デフォルト: JPY）
   const pricingModalScrollRef = useRef<HTMLDivElement>(null);
   const [showPricingModalTopArrow, setShowPricingModalTopArrow] = useState(false);
   const [showPricingModalBottomArrow, setShowPricingModalBottomArrow] = useState(false);
+  
+  // ページ初期化完了フラグ（音声生成を確実にするため）
+  const [isPageInitialized, setIsPageInitialized] = useState(false);
   
   // デフォルトカテゴリー設定の状態
   const [defaultCategoryId, setDefaultCategoryId] = useState<string>('pronunciation'); // デフォルトは「発音表記について」
@@ -232,28 +236,94 @@ export default function Home() {
   // 音声の初期化（Web Audio APIで100%音量）
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // AudioContextを作成（ボタンクリック音用）
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const initializeAudio = async () => {
+        try {
+          // AudioContextを作成（ボタンクリック音用）
+          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+          
+          // ノーマルモード用の独立したAudioContextを作成（同時通訳モードと分離）
+          normalModeAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+          
+          // AudioContextがsuspended状態の場合はresume（ユーザーインタラクションが必要な場合）
+          if (audioContextRef.current.state === 'suspended') {
+            await audioContextRef.current.resume();
+          }
+          if (normalModeAudioContextRef.current.state === 'suspended') {
+            await normalModeAudioContextRef.current.resume();
+          }
+          
+          // MP3ファイルを読み込み
+          try {
+            const response = await fetch('/button-click.mp3');
+            const arrayBuffer = await response.arrayBuffer();
+            const audioBuffer = await audioContextRef.current!.decodeAudioData(arrayBuffer);
+            audioBufferRef.current = audioBuffer;
+            console.log('✅ ボタンクリック音の読み込み完了');
+          } catch (e) {
+            console.warn('⚠️ ボタンクリック音の読み込み失敗（無視）:', e);
+          }
+          
+          // localStorageからクリック音の設定を読み込み
+          const savedClickSound = localStorage.getItem('clickSoundEnabled');
+          if (savedClickSound !== null) {
+            setIsClickSoundEnabled(savedClickSound === 'true');
+          }
+          
+          // AudioContextの初期化は完了したので、audio要素の確認は別のuseEffectで行う
+          console.log('✅ AudioContextの初期化完了');
+        } catch (error) {
+          console.error('❌ 音声初期化エラー:', error);
+          // エラーが発生しても初期化完了として扱う（フォールバック）
+          setIsPageInitialized(true);
+        }
+      };
       
-      // ノーマルモード用の独立したAudioContextを作成（同時通訳モードと分離）
-      normalModeAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
-      // MP3ファイルを読み込み
-      fetch('/button-click.mp3')
-        .then(response => response.arrayBuffer())
-        .then(arrayBuffer => audioContextRef.current!.decodeAudioData(arrayBuffer))
-        .then(audioBuffer => {
-          audioBufferRef.current = audioBuffer;
-        })
-        .catch(e => console.log('Audio loading failed:', e));
-      
-      // localStorageからクリック音の設定を読み込み
-      const savedClickSound = localStorage.getItem('clickSoundEnabled');
-      if (savedClickSound !== null) {
-        setIsClickSoundEnabled(savedClickSound === 'true');
-      }
+      initializeAudio();
+    } else {
+      // SSR環境では初期化完了として扱う
+      setIsPageInitialized(true);
     }
   }, []);
+  
+  // audio要素の初期化確認（DOMがレンダリングされた後）
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    
+    const checkAudioElements = () => {
+      // audio要素とAudioContextの両方が存在することを確認
+      if (normalModeAudioRef.current && audioContextRef.current && normalModeAudioContextRef.current) {
+        console.log('✅ 音声システムの初期化完了（audio要素確認済み）');
+        setIsPageInitialized(true);
+        return true;
+      }
+      return false;
+    };
+    
+    // 即座にチェック
+    if (checkAudioElements()) {
+      return;
+    }
+    
+    // DOMがレンダリングされるまで待機（最大3秒）
+    let attempts = 0;
+    const maxAttempts = 30; // 3秒（100ms × 30）
+    const checkInterval = setInterval(() => {
+      attempts++;
+      if (checkAudioElements() || attempts >= maxAttempts) {
+        clearInterval(checkInterval);
+        if (attempts >= maxAttempts && !isPageInitialized) {
+          console.warn('⚠️ audio要素の初期化確認がタイムアウトしましたが、続行します');
+          setIsPageInitialized(true); // タイムアウトしても続行
+        }
+      }
+    }, 100);
+    
+    return () => {
+      clearInterval(checkInterval);
+    };
+  }, [isPageInitialized]);
 
   // 音声認識の初期化（Web Speech API）
   useEffect(() => {
@@ -549,6 +619,29 @@ export default function Home() {
                         // 音声がロードされるまで待ってから再生
                         const playAudio = () => {
                           if (simultaneousModeAudioRef.current) {
+                            // メディアセッションAPIでメタデータを設定（ロック画面のアイコン変更）
+                            if ('mediaSession' in navigator) {
+                              const translatedText = lastTranslatedTextRef.current || '同時通訳';
+                              const logoPath = translationLanguage === 'cantonese' 
+                                ? '/volume-logo-circle.svg' 
+                                : '/volume-logo-mandarin-circle.svg';
+                              
+                              navigator.mediaSession.metadata = new MediaMetadata({
+                                title: translatedText,
+                                artist: 'スラング式カントン語音れん',
+                                album: translationLanguage === 'cantonese' ? 'カントン語通訳' : '中国語通訳',
+                                artwork: [
+                                  { src: logoPath, sizes: '512x512', type: 'image/svg+xml' },
+                                  { src: '/volume-logo.png', sizes: '512x512', type: 'image/png' },
+                                  { src: '/line-logo.png', sizes: '512x512', type: 'image/png' },
+                                ],
+                              });
+                              
+                              console.log('メディアセッションAPI: 同時通訳モード メタデータ設定完了', {
+                                title: translatedText,
+                              });
+                            }
+                            
                             simultaneousModeAudioRef.current.play().catch((e) => {
                               console.error('音声再生エラー:', e);
                             });
@@ -951,6 +1044,29 @@ export default function Home() {
               // 音声がロードされるまで待ってから再生
               const playAudio = () => {
                 if (simultaneousModeAudioRef.current) {
+                  // メディアセッションAPIでメタデータを設定（ロック画面のアイコン変更）
+                  if ('mediaSession' in navigator) {
+                    const translatedText = lastTranslatedTextRef.current || '同時通訳';
+                    const logoPath = translationLanguage === 'cantonese' 
+                      ? '/volume-logo-circle.svg' 
+                      : '/volume-logo-mandarin-circle.svg';
+                    
+                    navigator.mediaSession.metadata = new MediaMetadata({
+                      title: translatedText,
+                      artist: 'スラング式カントン語音れん',
+                      album: translationLanguage === 'cantonese' ? 'カントン語通訳' : '中国語通訳',
+                      artwork: [
+                        { src: logoPath, sizes: '512x512', type: 'image/svg+xml' },
+                        { src: '/volume-logo.png', sizes: '512x512', type: 'image/png' },
+                        { src: '/line-logo.png', sizes: '512x512', type: 'image/png' },
+                      ],
+                    });
+                    
+                    console.log('メディアセッションAPI: 同時通訳モード メタデータ設定完了', {
+                      title: translatedText,
+                    });
+                  }
+                  
                   simultaneousModeAudioRef.current.play().catch((e) => {
                     console.error('音声再生エラー:', e);
                   });
@@ -1312,7 +1428,26 @@ export default function Home() {
   };
 
   // 学習モードのオン/オフを切り替える
-  const toggleLearningMode = () => {
+  const toggleLearningMode = async () => {
+    // ブロンズ会員の場合、使用回数をチェック
+    if (membershipType === 'free') {
+      const usageCount = user?.user_metadata?.learning_mode_usage_count || 0;
+      if (usageCount >= 100) {
+        alert('ブロンズ会員は学習モードを100回まで使用できます。\nお試し期間が終了しました。シルバー会員またはゴールド会員にアップグレードすると、無制限で学習モードをご利用いただけます。');
+        return;
+      }
+      
+      // 使用可能回数を表示
+      const remainingCount = 100 - usageCount;
+      if (!isLearningMode) {
+        // 学習モードをONにする場合のみ確認
+        const confirmMsg = `学習モードを使用しますか？\n残り使用可能回数: ${remainingCount}回`;
+        if (!confirm(confirmMsg)) {
+          return;
+        }
+      }
+    }
+    
     setIsLearningMode(!isLearningMode);
     // モードを切り替えたらアクティブな単語をクリア
     setActiveWordId(null);
@@ -1329,6 +1464,34 @@ export default function Home() {
       } else {
         // 会員種別がない場合、デフォルト値を設定
         setMembershipType('free');
+      }
+      
+      // 学習モード使用回数の初期化（ブロンズ会員で存在しない場合）
+      if ((user.user_metadata?.membership_type === 'free' || !user.user_metadata?.membership_type) && user.user_metadata?.learning_mode_usage_count === undefined) {
+        try {
+          await supabase.auth.updateUser({
+            data: {
+              ...user.user_metadata,
+              learning_mode_usage_count: 0
+            }
+          });
+        } catch (err) {
+          console.error('学習モード使用回数の初期化エラー:', err);
+        }
+      }
+      
+      // OCR使用回数の初期化（ブロンズ会員で存在しない場合）
+      if ((user.user_metadata?.membership_type === 'free' || !user.user_metadata?.membership_type) && user.user_metadata?.ocr_usage_count === undefined) {
+        try {
+          await supabase.auth.updateUser({
+            data: {
+              ...user.user_metadata,
+              ocr_usage_count: 0
+            }
+          });
+        } catch (err) {
+          console.error('OCR使用回数の初期化エラー:', err);
+        }
       }
       
       // デフォルトカテゴリーの設定
@@ -1968,15 +2131,23 @@ export default function Home() {
       isMobile 
     });
     
-    // 現在の会員種別と同じ場合は何もしない
+    // 現在の会員種別と同じ場合でも、変更を許可する（UIの変更を反映するため）
+    // ただし、実際の変更処理は行わない（同じプランなので）
     if (membershipType === newType) {
-      console.log('⚠️ 同じプランなのでスキップ');
+      console.log('⚠️ 同じプランですが、UIの変更を反映します');
+      // UIの変更を反映するため、モーダルを表示しないが、変更は許可する
+      return;
+    }
+
+    // ゴールド会員（lifetime）は永久会員のため、ダウングレードを防止
+    if (membershipType === 'lifetime' && (newType === 'subscription' || newType === 'free')) {
+      alert('ゴールド会員は永久会員のため、ダウングレードできません。\nゴールド会員の特典を引き続きご利用いただけます。');
+      console.log('⚠️ ゴールド会員のダウングレードを防止');
       return;
     }
 
     // ダウングレードかどうかを判定
     const isDowngrading = (
-      (membershipType === 'lifetime' && (newType === 'subscription' || newType === 'free')) ||
       (membershipType === 'subscription' && newType === 'free')
     );
     
@@ -1997,40 +2168,120 @@ export default function Home() {
 
   // Stripe決済処理（アップグレード/ダウングレード）
   const handleStripeCheckout = async (plan: 'free' | 'subscription' | 'lifetime') => {
-    // TODO: Stripe統合（アップグレード時のみ）
-    // 現在はデモ用にSupabaseのuser_metadataを更新
-    try {
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          membership_type: plan
-        }
-      });
-
-      if (error) throw error;
-
-      // ユーザー情報を再取得して最新の状態を反映
-      const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
-      
-      if (getUserError) {
-        console.error('ユーザー情報の再取得エラー:', getUserError);
-      } else if (updatedUser) {
-        // 最新のユーザー情報をセット（これによりuseEffectが再実行される）
-        setUser(updatedUser);
-        // ステートも直接更新（確実に反映させるため）
-        setMembershipType(plan);
-      } else {
-        // フォールバック: ステートのみ更新
-        setMembershipType(plan);
-      }
-
+    // ゴールド会員（lifetime）は永久会員のため、ダウングレードを防止
+    if (membershipType === 'lifetime' && (plan === 'subscription' || plan === 'free')) {
+      alert('ゴールド会員は永久会員のため、ダウングレードできません。\nゴールド会員の特典を引き続きご利用いただけます。');
       setShowPricingModal(false);
       setSelectedPlan(null);
       setIsDowngrade(false);
+      return;
+    }
+
+    // 無料プランの場合は直接更新（支払い不要）
+    if (plan === 'free') {
+      try {
+        const { error } = await supabase.auth.updateUser({
+          data: {
+            membership_type: plan
+          }
+        });
+
+        if (error) throw error;
+
+        // ユーザー情報を再取得して最新の状態を反映
+        const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
+        
+        if (getUserError) {
+          console.error('ユーザー情報の再取得エラー:', getUserError);
+        } else if (updatedUser) {
+          setUser(updatedUser);
+          setMembershipType(plan);
+        } else {
+          setMembershipType(plan);
+        }
+
+        setShowPricingModal(false);
+        setSelectedPlan(null);
+        setIsDowngrade(false);
+        
+        alert('ブロンズ会員に変更しました！');
+      } catch (err: any) {
+        alert('エラーが発生しました: ' + err.message);
+      }
+      return;
+    }
+
+    // 有料プランの場合はStripe Checkoutにリダイレクト
+    if (!user) {
+      alert('ログインが必要です。');
+      return;
+    }
+
+    try {
+      setShowPricingModal(false);
       
-      const planName = plan === 'free' ? 'ブロンズ会員' : plan === 'subscription' ? 'シルバー会員' : 'ゴールド会員';
-      alert(`${planName}に変更しました！`);
+      // Stripe Checkoutセッションを作成
+      const response = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          plan: plan,
+          userId: user.id,
+          email: user.email,
+          currency: selectedCurrency, // 選択された通貨を送信
+        }),
+      });
+
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          // JSONパースエラーの場合
+          const text = await response.text();
+          console.error('Stripe Checkout API error (non-JSON):', text);
+          throw new Error(`Checkout session creation failed: ${response.status} ${response.statusText}`);
+        }
+        
+        console.error('Stripe Checkout API error:', errorData);
+        console.error('Response status:', response.status);
+        console.error('Response headers:', Object.fromEntries(response.headers.entries()));
+        
+        // 詳細なエラー情報を構築
+        let errorMessage = errorData.error || 'Checkout session creation failed';
+        if (errorData.details) {
+          errorMessage += `\n詳細: ${errorData.details}`;
+        }
+        if (errorData.debug) {
+          console.error('Debug info:', errorData.debug);
+          errorMessage += `\nデバッグ情報: ${JSON.stringify(errorData.debug, null, 2)}`;
+        }
+        if (errorData.errorInfo) {
+          console.error('Error info:', errorData.errorInfo);
+          errorMessage += `\nエラー情報: ${JSON.stringify(errorData.errorInfo, null, 2)}`;
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const { url } = await response.json();
+
+      if (url) {
+        // Stripe Checkoutページにリダイレクト
+        window.location.href = url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
     } catch (err: any) {
-      alert('エラーが発生しました: ' + err.message);
+      console.error('Stripe Checkout error:', err);
+      console.error('Error details:', err.message);
+      
+      // エラーメッセージを表示（詳細情報を含む）
+      const errorMsg = err.message || '決済処理中にエラーが発生しました';
+      alert(errorMsg);
+      setShowPricingModal(true);
     }
   };
 
@@ -2101,7 +2352,6 @@ export default function Home() {
   const [importProgress, setImportProgress] = useState<number | null>(null);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
   // iOS風アウトラインアイコン
   const FolderIcon = ({ size = 20, yOffset = 0 }: { size?: number; yOffset?: number }) => (
@@ -2111,7 +2361,11 @@ export default function Home() {
       viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ display: 'block', transform: `translateY(${yOffset}px)` }}
+      style={{ 
+        display: 'block',
+        flexShrink: 0,
+        transform: `translateY(${yOffset}px)`
+      }}
     >
       <path
         d="M3.5 7.75C3.5 6.784 4.284 6 5.25 6H9l1.5 2h8.25c.966 0 1.75.784 1.75 1.75v7.5c0 .966-.784 1.75-1.75 1.75H5.25A1.75 1.75 0 0 1 3.5 17.25v-9.5Z"
@@ -2119,25 +2373,6 @@ export default function Home() {
         strokeWidth="1.75"
         strokeLinejoin="round"
       />
-    </svg>
-  );
-
-  const CameraIcon = ({ size = 20, yOffset = 0 }: { size?: number; yOffset?: number }) => (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ display: 'block', transform: `translateY(${yOffset}px)` }}
-    >
-      <path
-        d="M8.5 7.5 10 6h4l1.5 1.5H19A2 2 0 0 1 21 9.5v7A2 2 0 0 1 19 18.5H5A2 2 0 0 1 3 16.5v-7A2 2 0 0 1 5 7.5h3.5Z"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinejoin="round"
-      />
-      <circle cx="12" cy="13" r="3.25" stroke="currentColor" strokeWidth="1.75" />
     </svg>
   );
 
@@ -2295,36 +2530,12 @@ export default function Home() {
       
       await worker.terminate();
       
-      // テキストの正規化とエンコーディング処理
-      let text = String(result?.data?.text || '');
+      // OCR結果をそのまま返す（APIで処理されるため、正規化は不要）
+      // APIが返すtranslatedText（音声生成に使われるテキスト）を入力欄に設定するため、
+      // OCR結果はそのままAPIに送信される
+      let text = String(result?.data?.text || '').trim();
       
-      // 改行をスペースに統一
-      text = text.replace(/\r\n|\r|\n/g, ' ');
-      
-      // 句読点以外のスペースをすべて削除
-      // 中国語・日本語文章では文字間のスペースは不要
-      // 句読点（，。、．）の前後のスペースは保持（読みやすさのため）
-      // ただし、句読点の前後に複数のスペースがある場合は1つに
-      text = text
-        // 句読点の前後にスペースを1つ追加（後で削除する前に統一）
-        .replace(/([，。、．])\s*/g, '$1 ') // 句読点の後にスペースを追加
-        .replace(/\s*([，。、．])/g, ' $1') // 句読点の前にスペースを追加
-        // すべてのスペースを削除
-        .replace(/\s+/g, '')
-        // 句読点の前後にスペースを1つ追加（読みやすさのため）
-        .replace(/([，。、．])/g, '$1 ')
-        .trim();
-      // エンコーディングの正規化（UTF-8に統一）
-      try {
-        // テキストが正しくUTF-8として解釈できるか確認
-        const utf8Text = new TextDecoder('utf-8', { fatal: false }).decode(
-          new TextEncoder().encode(text)
-        );
-        text = utf8Text || text;
-      } catch (e) {
-        // エンコーディング変換に失敗した場合は元のテキストを使用
-        console.warn('エンコーディング変換エラー:', e);
-      }
+      // 長すぎる場合は切り詰める（4000文字制限）
       return text.length > 4000 ? text.slice(0, 4000) : text;
     } catch (error) {
       await worker.terminate();
@@ -2340,6 +2551,47 @@ export default function Home() {
   useEffect(() => {
     // ユーザー情報の取得
     const getUser = async () => {
+      // URLにrefresh=trueがある場合はセッションをリフレッシュ
+      const urlParams = new URLSearchParams(window.location.search);
+      const shouldRefresh = urlParams.get('refresh') === 'true';
+      
+      if (shouldRefresh) {
+        console.log('🔄 セッションをリフレッシュしてユーザー情報を再取得します');
+        
+        // セッションをリフレッシュ（最大3回リトライ）
+        let retryCount = 0;
+        while (retryCount < 3) {
+          const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+          
+          if (refreshError) {
+            console.warn(`⚠️ セッションリフレッシュエラー（試行 ${retryCount + 1}/3）:`, refreshError);
+          } else {
+            console.log(`✅ セッションリフレッシュ成功（試行 ${retryCount + 1}/3）`);
+          }
+          
+          // 少し待機してからユーザー情報を取得
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // ユーザー情報を取得して確認
+          const { data: { user: checkUser }, error: checkError } = await supabase.auth.getUser();
+          
+          if (!checkError && checkUser && checkUser.user_metadata?.membership_type) {
+            console.log('✅ ユーザー情報の更新を確認:', {
+              membershipType: checkUser.user_metadata.membership_type
+            });
+            break;
+          }
+          
+          retryCount++;
+          if (retryCount < 3) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+        
+        // URLからクエリパラメータを削除
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+      
       const { data: { user }, error } = await supabase.auth.getUser();
       if (error) {
         console.error('ユーザー取得エラー:', error);
@@ -2956,22 +3208,68 @@ export default function Home() {
   };
 
   const handleWordClick = async (word: Word) => {
-    playHapticAndSound(); // 振動と音を再生
-    // すべてのモードで押下ログを送信
-    // categoryIdの取得: noteカテゴリーが選択されている場合はselectedNoteCategoryを優先
-    const categoryId = selectedNoteCategory || currentCategory?.id || '';
-    try { 
-      const response = await fetch('/api/track-button', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ wordChinese: word.chinese, categoryId }) 
-      });
-      if (!response.ok) {
-        console.error('ボタン押下トラッキングエラー:', response.status);
+    // 初期化が完了していない場合は待機（最大2秒）
+    if (!isPageInitialized) {
+      console.warn('⚠️ ページ初期化が完了していません。初期化を待機中...');
+      
+      let waitAttempts = 0;
+      const maxWaitAttempts = 20; // 2秒（100ms × 20）
+      
+      while (!isPageInitialized && waitAttempts < maxWaitAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        waitAttempts++;
       }
-    } catch (err) {
-      console.error('ボタン押下トラッキング失敗:', err);
+      
+      if (!isPageInitialized) {
+        console.error('❌ ページ初期化の待機がタイムアウトしました。続行しますが、音声生成が失敗する可能性があります。');
+        // タイムアウトしても続行（フォールバック）
+      } else {
+        console.log('✅ ページ初期化完了を確認');
+      }
     }
+    
+    // audio要素とAudioContextの最終確認
+    if (!normalModeAudioRef.current) {
+      console.error('❌ normalModeAudioRefが初期化されていません');
+      alert('音声システムが初期化されていません。ページを再読み込みしてください。');
+      return;
+    }
+    
+    if (!normalModeAudioContextRef.current) {
+      console.error('❌ normalModeAudioContextRefが初期化されていません');
+      // AudioContextを再作成
+      try {
+        normalModeAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        if (normalModeAudioContextRef.current.state === 'suspended') {
+          await normalModeAudioContextRef.current.resume();
+        }
+        console.log('✅ AudioContextを再作成しました');
+      } catch (e) {
+        console.error('❌ AudioContextの再作成に失敗:', e);
+        alert('音声システムの初期化に失敗しました。ページを再読み込みしてください。');
+        return;
+      }
+    }
+    
+    // 即座にフィードバック（最優先）
+    playHapticAndSound(); // 振動と音を再生
+    
+    // ボタンを即座に緑色にする（ノーマルモードの場合）
+    if (!isLearningMode) {
+      const wordId = word.chinese;
+      setActiveWordId(wordId);
+      console.log('✅ ボタンクリック検知: 即座にボタンを緑色に変更', { wordId });
+    }
+    
+    // トラッキングAPIは非同期で実行（ブロッキングしない）
+    const categoryId = selectedNoteCategory || currentCategory?.id || '';
+    fetch('/api/track-button', { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify({ wordChinese: word.chinese, categoryId }) 
+    }).catch(err => {
+      console.error('ボタン押下トラッキング失敗（無視）:', err);
+    });
     
     // 学習モードの場合はページトップにスクロール
     if (isLearningMode) {
@@ -2979,6 +3277,40 @@ export default function Home() {
     }
     
     if (isLearningMode) {
+      // ブロンズ会員の場合、使用回数をカウント
+      if (membershipType === 'free') {
+        const currentCount = user?.user_metadata?.learning_mode_usage_count || 0;
+        if (currentCount >= 100) {
+          alert('ブロンズ会員は学習モードを100回まで使用できます。\nお試し期間が終了しました。シルバー会員またはゴールド会員にアップグレードすると、無制限で学習モードをご利用いただけます。');
+          setIsLearningMode(false);
+          return;
+        }
+        
+        // 使用回数を増やす
+        const newCount = currentCount + 1;
+        try {
+          const { data: updatedUser, error: updateError } = await supabase.auth.updateUser({
+            data: {
+              ...user?.user_metadata,
+              learning_mode_usage_count: newCount
+            }
+          });
+          
+          if (updateError) {
+            console.error('学習モード使用回数の更新エラー:', updateError);
+          } else {
+            console.log(`✅ 学習モード使用回数更新: ${newCount}/100`);
+            // ユーザー情報を再取得
+            const { data: { user: refreshedUser } } = await supabase.auth.getUser();
+            if (refreshedUser) {
+              setUser(refreshedUser);
+            }
+          }
+        } catch (err) {
+          console.error('学習モード使用回数の更新エラー:', err);
+        }
+      }
+      
       // 学習モード：例文も表示、音声プレイヤーを表示
       setForceShowResult(true); // 結果パネルを表示する
       setSearchQuery(word.chinese);
@@ -3087,38 +3419,117 @@ export default function Home() {
       // 前のボタンの緑を消して、新しいボタンだけを緑にする
       setActiveWordId(wordId);
       
-      // 単語の音声のみを生成して再生
-      try {
-        console.log('ノーマルモード: API呼び出し開始', { text: word.chinese });
-        
-        const audioResponse = await fetch('/api/generate-speech', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ text: word.chinese }),
-        });
-        
-        console.log('ノーマルモード: APIレスポンス受信', { 
-          ok: audioResponse.ok, 
-          status: audioResponse.status 
-        });
-        
-        if (audioResponse.ok) {
-          const audioData = await audioResponse.json();
-          const audioBase64 = audioData.audioContent;
-          console.log('ノーマルモード: 音声データ取得', { 
-            hasAudioContent: !!audioBase64,
-            audioLength: audioBase64?.length 
+      // 単語の音声のみを生成して再生（リトライロジック付き）
+      let audioBase64: string | undefined = undefined;
+      let retryCount = 0;
+      const maxRetries = 3;
+      const retryDelay = 500; // 500ms待機してからリトライ
+      
+      while (retryCount < maxRetries && !audioBase64) {
+        try {
+          console.log(`ノーマルモード: API呼び出し開始 (試行 ${retryCount + 1}/${maxRetries})`, { text: word.chinese });
+          
+          // タイムアウト付きfetch（10秒でタイムアウト）
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          
+          const audioResponse = await fetch('/api/generate-speech', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ text: word.chinese }),
+            signal: controller.signal,
           });
           
+          clearTimeout(timeoutId);
+          
+          console.log('ノーマルモード: APIレスポンス受信', { 
+            ok: audioResponse.ok, 
+            status: audioResponse.status,
+            attempt: retryCount + 1
+          });
+          
+          if (audioResponse.ok) {
+            const audioData = await audioResponse.json();
+            audioBase64 = audioData.audioContent;
+            console.log('✅ ノーマルモード: 音声データ取得成功', { 
+              hasAudioContent: !!audioBase64,
+              audioLength: audioBase64?.length,
+              attempt: retryCount + 1
+            });
+            break; // 成功したらループを抜ける
+          } else {
+            const errorData = await audioResponse.json().catch(() => ({ error: 'Unknown error' }));
+            console.error(`❌ ノーマルモード: API呼び出し失敗 (試行 ${retryCount + 1}/${maxRetries})`, {
+              status: audioResponse.status,
+              error: errorData
+            });
+            
+            // 4xxエラー（クライアントエラー）の場合はリトライしない
+            if (audioResponse.status >= 400 && audioResponse.status < 500) {
+              console.error('❌ クライアントエラーのためリトライしません');
+              throw new Error(`API呼び出し失敗: ${errorData.error || 'Unknown error'}`);
+            }
+            
+            // 5xxエラー（サーバーエラー）の場合はリトライ
+            if (retryCount < maxRetries - 1) {
+              retryCount++;
+              console.log(`⏳ ${retryDelay}ms待機してからリトライします...`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+              continue;
+            } else {
+              throw new Error(`API呼び出し失敗（${maxRetries}回試行）: ${errorData.error || 'Unknown error'}`);
+            }
+          }
+        } catch (error: any) {
+          console.error(`❌ ノーマルモード: エラー発生 (試行 ${retryCount + 1}/${maxRetries})`, error);
+          
+          // AbortError（タイムアウト）の場合
+          if (error.name === 'AbortError') {
+            console.error('❌ タイムアウトエラー');
+            if (retryCount < maxRetries - 1) {
+              retryCount++;
+              console.log(`⏳ ${retryDelay}ms待機してからリトライします...`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+              continue;
+            } else {
+              throw new Error('音声生成がタイムアウトしました。ネットワーク接続を確認してください。');
+            }
+          }
+          
+          // その他のエラー
+          if (retryCount < maxRetries - 1) {
+            retryCount++;
+            console.log(`⏳ ${retryDelay}ms待機してからリトライします...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            continue;
+          } else {
+            throw error;
+          }
+        }
+      }
+      
+      // 音声データが取得できた場合のみ再生処理を実行
+      if (audioBase64) {
+          
           // 音声を自動再生（ノーマルモード専用audio要素を使用）
+          if (!normalModeAudioRef.current) {
+            console.error('❌ ノーマルモード: audio要素が存在しません！', { wordId });
+            alert('音声再生エラー: audio要素が初期化されていません。ページを再読み込みしてください。');
+            return;
+          }
+          
           if (normalModeAudioRef.current && audioBase64) {
             console.log('ノーマルモード: 音声再生開始', { wordId, audioBase64Length: audioBase64.length });
             
             // 既存の音声を停止
-            normalModeAudioRef.current.pause();
-            normalModeAudioRef.current.currentTime = 0;
+            try {
+              normalModeAudioRef.current.pause();
+              normalModeAudioRef.current.currentTime = 0;
+            } catch (e) {
+              console.error('❌ 音声停止エラー:', e);
+            }
             
             // 古いBlob URLをクリア
             if (normalModeAudioBlobUrlRef.current) {
@@ -3188,42 +3599,138 @@ export default function Home() {
               normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に（Web Audio APIで制御）
             }
             
-            // 音声がロードされるまで待ってから再生
-            const playAudio = () => {
-              if (normalModeAudioRef.current) {
-                const playPromise = normalModeAudioRef.current.play();
-                if (playPromise !== undefined) {
-                  playPromise
-                    .then(() => {
-                      console.log('ノーマルモード: 音声再生成功', { useWebAudioAPI });
-                    })
-                    .catch(e => {
-                      console.error('ノーマルモード: 音声再生失敗', e);
-                    });
+            // 音声がロードされるまで待ってから再生（確実に再生するための強化版）
+            const playAudio = async () => {
+              if (!normalModeAudioRef.current) {
+                console.error('❌ playAudio: audio要素が存在しません');
+                return;
+              }
+              
+              // メディアセッションAPIでメタデータを設定（ロック画面のアイコン変更）
+              if ('mediaSession' in navigator) {
+                const categoryName = currentCategory?.name || 'カントン語音れん';
+                const wordJapanese = word.japanese || word.chinese;
+                
+                try {
+                  navigator.mediaSession.metadata = new MediaMetadata({
+                    title: wordJapanese,
+                    artist: 'スラング式カントン語音れん',
+                    album: categoryName,
+                    artwork: [
+                      { src: '/volume-logo-circle.svg', sizes: '512x512', type: 'image/svg+xml' },
+                      { src: '/volume-logo.png', sizes: '512x512', type: 'image/png' },
+                      { src: '/line-logo.png', sizes: '512x512', type: 'image/png' },
+                    ],
+                  });
+                  
+                  console.log('メディアセッションAPI: メタデータ設定完了', {
+                    title: wordJapanese,
+                    artist: 'スラング式カントン語音れん',
+                    album: categoryName,
+                  });
+                } catch (e) {
+                  console.warn('メディアセッションAPI設定エラー（無視）:', e);
+                }
+              }
+              
+              // 確実に再生するための複数の試行
+              let playAttempts = 0;
+              const maxPlayAttempts = 3;
+              
+              while (playAttempts < maxPlayAttempts) {
+                try {
+                  // 現在の再生位置をリセット
+                  normalModeAudioRef.current.currentTime = 0;
+                  
+                  // 再生を試みる
+                  const playPromise = normalModeAudioRef.current.play();
+                  
+                  if (playPromise !== undefined) {
+                    await playPromise;
+                    console.log(`✅ ノーマルモード: 音声再生成功 (試行 ${playAttempts + 1}/${maxPlayAttempts})`, { useWebAudioAPI });
+                    return; // 成功したら終了
+                  } else {
+                    console.log(`✅ ノーマルモード: 音声再生成功（同期） (試行 ${playAttempts + 1}/${maxPlayAttempts})`);
+                    return; // 成功したら終了
+                  }
+                } catch (e: any) {
+                  playAttempts++;
+                  console.error(`❌ ノーマルモード: 音声再生失敗 (試行 ${playAttempts}/${maxPlayAttempts})`, e);
+                  
+                  if (playAttempts < maxPlayAttempts) {
+                    // 少し待ってから再試行
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    // srcを再設定してから再試行
+                    if (normalModeAudioRef.current && normalModeAudioBlobUrlRef.current) {
+                      normalModeAudioRef.current.src = normalModeAudioBlobUrlRef.current;
+                    }
+                  } else {
+                    console.error('❌ ノーマルモード: 音声再生に全試行失敗', e);
+                    alert('音声の再生に失敗しました。もう一度お試しください。');
+                  }
                 }
               }
             };
             
             // 既にロード済みの場合は即座に再生
             if (normalModeAudioRef.current.readyState >= 2) {
+              console.log('✅ ノーマルモード: 音声は既にロード済み、即座に再生');
               playAudio();
             } else {
-              normalModeAudioRef.current.addEventListener('loadeddata', playAudio, { once: true });
+              console.log('⏳ ノーマルモード: 音声のロードを待機中...', {
+                readyState: normalModeAudioRef.current.readyState
+              });
+              
+              // loadeddataイベントを待つ（タイムアウトも設定）
+              let timeoutId: NodeJS.Timeout | null = null;
+              let hasPlayed = false;
+              
+              const tryPlay = () => {
+                if (!hasPlayed && normalModeAudioRef.current) {
+                  hasPlayed = true;
+                  if (timeoutId) clearTimeout(timeoutId);
+                  playAudio();
+                }
+              };
+              
+              // タイムアウト設定（2秒でタイムアウト）
+              timeoutId = setTimeout(() => {
+                console.warn('⚠️ ノーマルモード: loadeddataイベントがタイムアウトしました。強制的に再生を試みます。');
+                tryPlay();
+              }, 2000);
+              
+              // 複数のイベントリスナーを設定（確実に再生するため）
+              normalModeAudioRef.current.addEventListener('loadeddata', tryPlay, { once: true });
+              normalModeAudioRef.current.addEventListener('canplay', tryPlay, { once: true });
+              normalModeAudioRef.current.addEventListener('canplaythrough', tryPlay, { once: true });
+              
+              // エラー時の処理
+              normalModeAudioRef.current.addEventListener('error', (e) => {
+                console.error('❌ ノーマルモード: audio要素のエラー', e);
+                if (timeoutId) clearTimeout(timeoutId);
+                alert('音声ファイルの読み込みに失敗しました。もう一度お試しください。');
+              }, { once: true });
             }
           } else {
-            console.error('ノーマルモード: audio要素またはaudioBase64が存在しない', {
+            console.error('❌ ノーマルモード: audio要素またはaudioBase64が存在しない', {
               hasAudioRef: !!normalModeAudioRef.current,
-              hasAudioBase64: !!audioBase64
+              hasAudioBase64: !!audioBase64,
+              wordId
             });
+            alert('音声データの取得に失敗しました。もう一度お試しください。');
           }
-        } else {
-          console.error('ノーマルモード: API呼び出し失敗', { 
-            status: audioResponse.status,
-            statusText: audioResponse.statusText
-          });
-        }
-      } catch (err) {
-        console.error('ノーマルモード: エラー発生', err);
+      } else {
+        // 音声データが取得できなかった場合
+        console.error('❌ ノーマルモード: 音声データの取得に失敗しました（全試行失敗）', {
+          wordId,
+          retryCount,
+          maxRetries
+        });
+        alert('音声生成に失敗しました。ネットワーク接続を確認して、もう一度お試しください。');
+      }
+      } catch (err: any) {
+        console.error('❌ ノーマルモード: 致命的なエラー発生', err);
+        alert(`音声生成エラー: ${err.message || '不明なエラーが発生しました'}\nもう一度お試しください。`);
       }
     }
   };
@@ -3742,10 +4249,13 @@ export default function Home() {
           </div>
 
           {/* 日本語音声認識エリア（中央、浮き上がるアニメーション、新しいテキストが上に表示、モバイルではロゴとの重なり防止） */}
+          {/* 画面が小さい時は、タイトルの上に配置して重ならないようにする */}
           <div style={{
             position: 'fixed',
             top: isMobile ? 'calc(2rem + 250px + 0.5rem)' : '50%', // 広東語エリアの直下: top(2rem) + maxHeight(250px) + 最小余白(0.5rem)
-            bottom: isMobile ? 'calc(3rem + 120px + 96px + 2rem)' : 'auto', // ロゴの上端 + 余白（モバイルのみ）
+            // モバイル: タイトル（calc(3rem + 120px + 96px + 1.5rem)）の上に配置、さらに余白を追加
+            // タイトルの高さ（約3rem）と余白（1rem）を考慮
+            bottom: isMobile ? 'calc(3rem + 120px + 96px + 1.5rem + 3rem + 1rem)' : 'auto', // タイトルの上端 + 余白（モバイルのみ）
             left: '50%',
             transform: isMobile ? 'translate(-50%, 0)' : 'translate(-50%, -50%)',
             width: isMobile ? 'calc(100vw - 2rem)' : '90%',
@@ -3883,7 +4393,8 @@ export default function Home() {
                 fontWeight: 800,
                 color: '#111827',
                 marginBottom: '0.5rem',
-                textShadow: 'none'
+                textShadow: 'none',
+                lineHeight: '1.2'
               }}>
                 {translationLanguage === 'cantonese' ? 'カントン語通訳' : '中国語通訳'}
               </div>
@@ -3892,9 +4403,11 @@ export default function Home() {
                 fontWeight: 700,
                 color: '#6b7280',
                 textShadow: 'none',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
+                whiteSpace: 'normal',
+                overflow: 'visible',
+                textOverflow: 'clip',
+                lineHeight: '1.4',
+                padding: '0 1rem'
               }}>
                 ボタンを押すだけでスパッと通訳！
               </div>
@@ -3995,7 +4508,7 @@ export default function Home() {
           >
             <img
               ref={volumeLogoRef}
-              src={translationLanguage === 'cantonese' ? "/volume-logo.svg?v=2" : "/volume-logo-mandarin.svg?v=2"}
+              src={translationLanguage === 'cantonese' ? "/volume-logo-circle.svg?v=2" : "/volume-logo-mandarin-circle.svg?v=2"}
               alt="microphone"
               draggable="false"
               style={{
@@ -4518,7 +5031,7 @@ export default function Home() {
             }}>
               <img 
                 ref={volumeLogoRef}
-                src="/volume-logo.svg?v=2" 
+                src="/volume-logo-circle.svg?v=2" 
                 alt="logo" 
                 draggable="false"
                 style={{ 
@@ -5233,7 +5746,7 @@ export default function Home() {
                           background: membershipType === 'free' 
                             ? 'linear-gradient(145deg, #d4a574 0%, #cd7f32 50%, #a85f1f 100%)' 
                             : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
-                          cursor: membershipType === 'free' ? 'default' : 'pointer',
+                          cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
@@ -5282,7 +5795,7 @@ export default function Home() {
                           background: membershipType === 'subscription' 
                             ? 'linear-gradient(145deg, #e8e8e8 0%, #c0c0c0 50%, #a8a8a8 100%)' 
                             : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
-                          cursor: membershipType === 'subscription' ? 'default' : 'pointer',
+                          cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
@@ -5331,7 +5844,7 @@ export default function Home() {
                           background: membershipType === 'lifetime' 
                             ? 'linear-gradient(145deg, #ffe066 0%, #ffd700 50%, #ffb700 100%)' 
                             : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
-                          cursor: membershipType === 'lifetime' ? 'default' : 'pointer',
+                          cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
@@ -5898,8 +6411,20 @@ export default function Home() {
                 入力可能文字数: {searchQuery.length} / 1,000文字
               </div>
             </div>
+            {/* 
+              ⚠️ IMPORTANT: フォルダアイコンの中央配置設定
+              - ラッパーdivの高さは入力欄の高さと完全に一致させる必要がある
+              - アイコンラッパーdivも入力欄の高さと完全に一致させる必要がある
+              - フォーカス時はboxShadowではなくoutlineを使用する
+              - 入力欄のline-heightは高さと完全に一致させる必要がある
+              - これらの設定を変更すると、アイコンの位置がずれる可能性があります
+              - 変更する場合は、docs/FOLDER_ICON_CENTERING_SOLUTION.mdを参照してください
+            */}
             {/* 入力欄＋右端アイコン用のラッパ（入力の高さに合わせて相対配置） */}
-            <div style={{ position: 'relative' }}>
+            <div style={{ 
+              position: 'relative',
+              height: isMobile ? '3rem' : '3.5rem'  // ⚠️ 入力欄の高さと完全に一致
+            }}>
               <input
               type="text"
                 placeholder="こちらに広東語、日本語を入力する"
@@ -5938,7 +6463,8 @@ export default function Home() {
                 backgroundColor: '#ffffff',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                outline: 'none'
+                outline: 'none',
+                lineHeight: isMobile ? '3rem' : '3.5rem'
               }}
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = '#007AFF';
@@ -5949,21 +6475,30 @@ export default function Home() {
                 e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)';
               }}
             />
+              {/* 
+                ⚠️ IMPORTANT: アイコンラッパーdivの設定
+                - top: 0, bottom: 0で上下を固定
+                - heightは入力欄の高さと完全に一致させる必要がある
+                - alignItems: 'center'とjustifyContent: 'center'で中央配置
+                - これらの設定を変更すると、アイコンの位置がずれる可能性があります
+              */}
               {/* 右端アイコン（入力欄の内側右上、白枠内） */}
               <div style={{
                 position: 'absolute',
                 right: isMobile ? '0.5rem' : '0.75rem',
-                top: 0,
-                bottom: 0,
+                top: 0,  // ⚠️ 上端を固定
+                bottom: 0,  // ⚠️ 下端を固定
                 display: 'flex',
-                alignItems: 'center',
+                alignItems: 'center',  // ⚠️ 垂直方向の中央配置
+                justifyContent: 'center',  // ⚠️ 水平方向の中央配置
                 gap: '0.25rem',
                 background: 'transparent',
                 border: 'none',
                 padding: 0,
                 boxShadow: 'none',
                 zIndex: 3,
-                pointerEvents: 'auto'
+                pointerEvents: 'auto',
+                height: isMobile ? '3rem' : '3.5rem'  // ⚠️ 入力欄の高さと完全に一致
               }}>
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -5974,49 +6509,33 @@ export default function Home() {
                     border: 'none',
                     cursor: 'pointer',
                     padding: 0,
-                    lineHeight: 1,
+                    margin: 0,
+                    lineHeight: 0,
                     color: '#6b7280',
-                    width: isMobile ? 36 : 42,
-                    height: isMobile ? 36 : 42,
+                    width: isMobile ? 40 : 48,
+                    height: isMobile ? 40 : 48,
+                    minHeight: 0,
                     borderRadius: 9999,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    verticalAlign: 'middle'
                 }}
                   onMouseEnter={(e) => { e.currentTarget.style.color = '#111827'; e.currentTarget.style.background = '#f3f4f6'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.background = 'transparent'; }}
-                  onFocus={(e) => { (e.currentTarget as HTMLButtonElement).style.outline = 'none'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(0,122,255,0.25)'; e.currentTarget.style.background = '#f3f4f6'; }}
-                  onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'transparent'; }}
-                >
-                  <FolderIcon size={isMobile ? 22 : 24} yOffset={2} />
-                </button>
-                {isMobile && (
-                <button
-                  onClick={() => cameraInputRef.current?.click()}
-                  title="カメラ/OCRで読み取り"
-                    aria-label="カメラ/OCRで読み取り"
-                  style={{
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: 0,
-                      lineHeight: 1,
-                      color: '#6b7280',
-                      width: 36,
-                      height: 36,
-                      borderRadius: 9999,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
+                  onFocus={(e) => { 
+                    (e.currentTarget as HTMLButtonElement).style.outline = '2px solid rgba(0,122,255,0.25)';
+                    (e.currentTarget as HTMLButtonElement).style.outlineOffset = '2px';
+                    e.currentTarget.style.background = '#f3f4f6';
                   }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = '#111827'; e.currentTarget.style.background = '#f3f4f6'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.background = 'transparent'; }}
-                    onFocus={(e) => { (e.currentTarget as HTMLButtonElement).style.outline = 'none'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(0,122,255,0.25)'; e.currentTarget.style.background = '#f3f4f6'; }}
-                    onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'transparent'; }}
-                  >
-                    <CameraIcon size={isMobile ? 22 : 24} yOffset={2} />
-                  </button>
-                )}
+                  onBlur={(e) => { 
+                    (e.currentTarget as HTMLButtonElement).style.outline = 'none';
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  <FolderIcon size={isMobile ? 28 : 32} yOffset={0} />
+                </button>
               </div>
             </div>
 
@@ -6039,8 +6558,48 @@ export default function Home() {
                   
                   // 画像ファイルの場合（自動OCR実行）
                   if (fileType.startsWith('image/')) {
+                    // ブロンズ会員の場合、OCR使用回数をチェック
+                    if (membershipType === 'free') {
+                      const currentCount = user?.user_metadata?.ocr_usage_count || 0;
+                      if (currentCount >= 100) {
+                        alert('ブロンズ会員はOCR機能を100回まで使用できます。\nお試し期間が終了しました。シルバー会員またはゴールド会員にアップグレードすると、無制限でOCR機能をご利用いただけます。');
+                        setIsImporting(false);
+                        setImportProgress(null);
+                        setImportMessage(null);
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                        return;
+                      }
+                    }
+                    
                     setImportMessage('OCR実行中（中国語・広東語）...');
                     const text = await runOcr(file, (p) => setImportProgress(p));
+                    
+                    // ブロンズ会員の場合、OCR使用回数をカウント
+                    if (membershipType === 'free') {
+                      const currentCount = user?.user_metadata?.ocr_usage_count || 0;
+                      const newCount = currentCount + 1;
+                      try {
+                        const { data: updatedUser, error: updateError } = await supabase.auth.updateUser({
+                          data: {
+                            ...user?.user_metadata,
+                            ocr_usage_count: newCount
+                          }
+                        });
+                        
+                        if (updateError) {
+                          console.error('OCR使用回数の更新エラー:', updateError);
+                        } else {
+                          console.log(`✅ OCR使用回数更新: ${newCount}/100`);
+                          // ユーザー情報を再取得
+                          const { data: { user: refreshedUser } } = await supabase.auth.getUser();
+                          if (refreshedUser) {
+                            setUser(refreshedUser);
+                          }
+                        }
+                      } catch (err) {
+                        console.error('OCR使用回数の更新エラー:', err);
+                      }
+                    }
                     if (!text || text.trim().length === 0) {
                       alert('画像からテキストを読み取れませんでした。');
                     } else {
@@ -6063,6 +6622,19 @@ export default function Home() {
                     
                     // テキストが抽出できない場合（スキャンPDF）、OCRを試す
                     if (!text || text.trim().length === 0) {
+                      // ブロンズ会員の場合、OCR使用回数をチェック
+                      if (membershipType === 'free') {
+                        const currentCount = user?.user_metadata?.ocr_usage_count || 0;
+                        if (currentCount >= 100) {
+                          alert('ブロンズ会員はOCR機能を100回まで使用できます。\nお試し期間が終了しました。シルバー会員またはゴールド会員にアップグレードすると、無制限でOCR機能をご利用いただけます。');
+                          setIsImporting(false);
+                          setImportProgress(null);
+                          setImportMessage(null);
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                          return;
+                        }
+                      }
+                      
                       setImportMessage('PDFからテキストを抽出できませんでした。OCRで読み取り中...');
                       // PDFを画像としてOCR処理するため、Canvasに変換
                       try {
@@ -6105,6 +6677,33 @@ export default function Home() {
                         }
                         
                         text = ocrText.trim();
+                        
+                        // ブロンズ会員の場合、OCR使用回数をカウント（PDFのOCR処理）
+                        if (membershipType === 'free') {
+                          const currentCount = user?.user_metadata?.ocr_usage_count || 0;
+                          const newCount = currentCount + 1;
+                          try {
+                            const { data: updatedUser, error: updateError } = await supabase.auth.updateUser({
+                              data: {
+                                ...user?.user_metadata,
+                                ocr_usage_count: newCount
+                              }
+                            });
+                            
+                            if (updateError) {
+                              console.error('OCR使用回数の更新エラー:', updateError);
+                            } else {
+                              console.log(`✅ OCR使用回数更新（PDF）: ${newCount}/100`);
+                              // ユーザー情報を再取得
+                              const { data: { user: refreshedUser } } = await supabase.auth.getUser();
+                              if (refreshedUser) {
+                                setUser(refreshedUser);
+                              }
+                            }
+                          } catch (err) {
+                            console.error('OCR使用回数の更新エラー:', err);
+                          }
+                        }
                         
                         if (!text || text.length === 0) {
                           alert('PDFからテキストを読み取れませんでした。');
@@ -6150,43 +6749,7 @@ export default function Home() {
                 }
               }}
             />
-
-            {/* 非表示input: カメラ（モバイルOCR） */}
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              style={{ display: 'none' }}
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                try {
-                  setIsImporting(true);
-                  setImportMessage('OCR実行中...');
-                  const text = await runOcr(file, (p) => setImportProgress(p));
-                  // 文字数制限チェック（最大1000文字）
-                  if (text.length > 1000) {
-                    const confirmMsg = `OCRで読み取ったテキストが1,000文字を超えています（${text.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
-                    if (confirm(confirmMsg)) {
-                      setSearchQuery(text.substring(0, 1000));
-                      alert(`最初の1,000文字を入力欄に設定しました。`);
-                    }
-                  } else {
-                    setSearchQuery(text);
-                  }
-                } catch (err: any) {
-                  console.error(err);
-                  alert('OCR中にエラーが発生しました: ' + (err?.message || String(err)));
-                } finally {
-                  setIsImporting(false);
-                  setImportProgress(null);
-                  setImportMessage(null);
-                  if (cameraInputRef.current) cameraInputRef.current.value = '';
-                }
-              }}
-            />
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
               <button
                 type="button"
                 onClick={async () => {
@@ -7446,6 +8009,49 @@ export default function Home() {
                   textAlign: 'center',
                   marginBottom: '2rem'
                 }}>
+                  {/* 通貨選択 */}
+                  {selectedPlan !== 'free' && (
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      marginBottom: '1rem'
+                    }}>
+                      <button
+                        onClick={() => setSelectedCurrency('jpy')}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          fontSize: '0.875rem',
+                          fontWeight: selectedCurrency === 'jpy' ? '600' : '400',
+                          color: selectedCurrency === 'jpy' ? '#ffffff' : '#6b7280',
+                          backgroundColor: selectedCurrency === 'jpy' ? '#3b82f6' : '#f3f4f6',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        JPY
+                      </button>
+                      <button
+                        onClick={() => setSelectedCurrency('hkd')}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          fontSize: '0.875rem',
+                          fontWeight: selectedCurrency === 'hkd' ? '600' : '400',
+                          color: selectedCurrency === 'hkd' ? '#ffffff' : '#6b7280',
+                          backgroundColor: selectedCurrency === 'hkd' ? '#3b82f6' : '#f3f4f6',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        HKD
+                      </button>
+                    </div>
+                  )}
+                  
                   <div style={{
                     fontSize: '3rem',
                     fontWeight: 'bold',
@@ -7460,8 +8066,25 @@ export default function Home() {
                       ? '0 2px 4px rgba(0,0,0,0.1)' 
                       : '0 2px 4px rgba(255,215,0,0.3)'
                   }}>
-                    {selectedPlan === 'free' ? '無料' : selectedPlan === 'subscription' ? '¥980' : '¥9,800'}
+                    {selectedPlan === 'free' 
+                      ? '無料' 
+                      : selectedPlan === 'subscription' 
+                        ? (selectedCurrency === 'hkd' ? 'HKD$50' : '¥980')
+                        : (selectedCurrency === 'hkd' ? 'HKD$498' : '¥9,800')}
                   </div>
+                  {/* もう一方の通貨価格を表示 */}
+                  {selectedPlan !== 'free' && (
+                    <div style={{
+                      fontSize: '1.5rem',
+                      fontWeight: '600',
+                      color: '#6b7280',
+                      marginTop: '0.5rem'
+                    }}>
+                      {selectedPlan === 'subscription' 
+                        ? (selectedCurrency === 'hkd' ? '¥980' : 'HKD$50')
+                        : (selectedCurrency === 'hkd' ? '¥9,800' : 'HKD$498')}
+                    </div>
+                  )}
                   <div style={{
                     fontSize: '1rem',
                     color: '#6b7280',
@@ -8486,7 +9109,7 @@ export default function Home() {
                           background: membershipType === 'free' 
                             ? 'linear-gradient(145deg, #d4a574 0%, #cd7f32 50%, #a85f1f 100%)' 
                             : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
-                          cursor: membershipType === 'free' ? 'default' : 'pointer',
+                          cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
@@ -8547,7 +9170,7 @@ export default function Home() {
                           background: membershipType === 'subscription' 
                             ? 'linear-gradient(145deg, #e8e8e8 0%, #c0c0c0 50%, #a8a8a8 100%)' 
                             : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
-                          cursor: membershipType === 'subscription' ? 'default' : 'pointer',
+                          cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
@@ -8617,7 +9240,7 @@ export default function Home() {
                           background: membershipType === 'lifetime' 
                             ? 'linear-gradient(145deg, #ffe066 0%, #ffd700 50%, #ffb700 100%)' 
                             : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
-                          cursor: membershipType === 'lifetime' ? 'default' : 'pointer',
+                          cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
@@ -8669,6 +9292,11 @@ export default function Home() {
                     </div>
 
                     {/* 会員種別比較表 */}
+                    {/* 
+                      ⚠️ IMPORTANT: This plan comparison table should NOT be auto-formatted
+                      The structure, currency settings (JPY/HKD), and all feature rows must be preserved exactly as written.
+                      Do not modify the table structure or currency values without explicit approval.
+                    */}
                     <div style={{
                       marginTop: '1.5rem',
                       padding: '1rem',
@@ -8729,13 +9357,14 @@ export default function Home() {
                             </tr>
                           </thead>
                           <tbody>
+                            {/* 価格(JPY) */}
                             <tr style={{ backgroundColor: '#ffffff' }}>
                               <td style={{
                                 padding: '0.75rem',
                                 borderBottom: '1px solid #e5e7eb',
                                 fontWeight: '500',
                                 color: '#1f2937'
-                              }}>価格</td>
+                              }}>価格(JPY)</td>
                               <td style={{
                                 padding: '0.75rem',
                                 textAlign: 'center',
@@ -8758,7 +9387,213 @@ export default function Home() {
                                 fontWeight: '600'
                               }}>¥9,800</td>
                             </tr>
+                            {/* 価格(HKD) */}
                             <tr style={{ backgroundColor: '#f9fafb' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>価格(HKD)</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#a85f1f',
+                                fontWeight: '600'
+                              }}>無料</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#6b7280',
+                                fontWeight: '600'
+                              }}>$50/月</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#d97706',
+                                fontWeight: '600'
+                              }}>$498</td>
+                            </tr>
+                            {/* お気に入り登録数 */}
+                            <tr style={{ backgroundColor: '#ffffff' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>お気に入り登録数</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#6b7280'
+                              }}>6個まで</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓ 無制限</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓ 無制限</td>
+                            </tr>
+                            {/* モード切り替え */}
+                            <tr style={{ backgroundColor: '#f9fafb' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>モード切り替え (ノーマルモード・学習)</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#ef4444'
+                              }}>✗</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                            </tr>
+                            {/* note 教科書自動更新 */}
+                            <tr style={{ backgroundColor: '#ffffff' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>note 教科書自動更新</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#ef4444'
+                              }}>✗</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                            </tr>
+                            {/* テキストOCR */}
+                            <tr style={{ backgroundColor: '#f9fafb' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>テキストOCR</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#ef4444'
+                              }}>✗</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                            </tr>
+                            {/* 発音チェック */}
+                            <tr style={{ backgroundColor: '#ffffff' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>発音チェック</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#ef4444'
+                              }}>✗</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                            </tr>
+                            {/* 発音チェックゲーム */}
+                            <tr style={{ backgroundColor: '#f9fafb' }}>
+                              <td style={{
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #e5e7eb',
+                                fontWeight: '500',
+                                color: '#1f2937'
+                              }}>発音チェックゲーム</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                              <td style={{
+                                padding: '0.75rem',
+                                textAlign: 'center',
+                                borderBottom: '1px solid #e5e7eb',
+                                color: '#10b981',
+                                fontWeight: '600'
+                              }}>✓</td>
+                            </tr>
+                            {/* カテゴリーアクセス */}
+                            <tr style={{ backgroundColor: '#ffffff' }}>
                               <td style={{
                                 padding: '0.75rem',
                                 borderBottom: '1px solid #e5e7eb',
@@ -8786,34 +9621,7 @@ export default function Home() {
                                 fontWeight: '600'
                               }}>✓ 全カテゴリー</td>
                             </tr>
-                            <tr style={{ backgroundColor: '#ffffff' }}>
-                              <td style={{
-                                padding: '0.75rem',
-                                borderBottom: '1px solid #e5e7eb',
-                                fontWeight: '500',
-                                color: '#1f2937'
-                              }}>お気に入り数</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#6b7280'
-                              }}>6個まで</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#10b981',
-                                fontWeight: '600'
-                              }}>✓ 無制限</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#10b981',
-                                fontWeight: '600'
-                              }}>✓ 無制限</td>
-                            </tr>
+                            {/* 音声速度調整 */}
                             <tr style={{ backgroundColor: '#f9fafb' }}>
                               <td style={{
                                 padding: '0.75rem',
@@ -8842,6 +9650,7 @@ export default function Home() {
                                 fontWeight: '600'
                               }}>✓</td>
                             </tr>
+                            {/* 広告 */}
                             <tr style={{ backgroundColor: '#ffffff' }}>
                               <td style={{
                                 padding: '0.75rem',
@@ -8870,35 +9679,8 @@ export default function Home() {
                                 fontWeight: '600'
                               }}>✓ なし</td>
                             </tr>
+                            {/* 支払い方法 */}
                             <tr style={{ backgroundColor: '#f9fafb' }}>
-                              <td style={{
-                                padding: '0.75rem',
-                                borderBottom: '1px solid #e5e7eb',
-                                fontWeight: '500',
-                                color: '#1f2937'
-                              }}>オフライン使用</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#ef4444'
-                              }}>✗</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#10b981',
-                                fontWeight: '600'
-                              }}>✓</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#10b981',
-                                fontWeight: '600'
-                              }}>✓</td>
-                            </tr>
-                            <tr style={{ backgroundColor: '#ffffff' }}>
                               <td style={{
                                 padding: '0.75rem',
                                 fontWeight: '500',
@@ -8924,6 +9706,7 @@ export default function Home() {
                         </table>
                       </div>
                     </div>
+                    {/* End of protected plan comparison table - Do not auto-format */}
                   </div>
                 </div>
 
