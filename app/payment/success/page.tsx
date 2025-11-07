@@ -23,17 +23,40 @@ function PaymentSuccessContent() {
     const updateUserMembership = async () => {
       try {
         const supabase = createClient();
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
         
-        if (userError || !user) {
-          throw new Error('ユーザー情報の取得に失敗しました。');
-        }
-
+        // Webhookの処理を待つため、少し待機
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
         // ユーザー情報を再取得（Webhookで更新されているはず）
         const { data: { user: updatedUser }, error: refreshError } = await supabase.auth.getUser();
         
         if (refreshError) {
           console.error('ユーザー情報の再取得エラー:', refreshError);
+          throw new Error('ユーザー情報の取得に失敗しました。');
+        }
+
+        if (!updatedUser) {
+          throw new Error('ユーザー情報が見つかりません。');
+        }
+
+        console.log('✅ 決済後のユーザー情報:', {
+          userId: updatedUser.id,
+          membershipType: updatedUser.user_metadata?.membership_type,
+          subscriptionExpiresAt: updatedUser.user_metadata?.subscription_expires_at,
+          fullMetadata: updatedUser.user_metadata
+        });
+
+        // usersテーブルからも確認
+        const { data: userData, error: dbError } = await supabase
+          .from('users')
+          .select('membership_type, subscription_expires_at')
+          .eq('id', updatedUser.id)
+          .maybeSingle();
+
+        if (!dbError && userData) {
+          console.log('✅ usersテーブルの情報:', userData);
+        } else if (dbError) {
+          console.warn('⚠️ usersテーブルからの取得エラー（無視）:', dbError);
         }
 
         setLoading(false);

@@ -15,10 +15,26 @@ export async function POST(request: NextRequest) {
   const body = await request.text();
   const signature = request.headers.get('stripe-signature')!;
 
+  console.log('🔔 Webhook received:', {
+    hasSignature: !!signature,
+    hasWebhookSecret: !!webhookSecret,
+    bodyLength: body.length,
+    timestamp: new Date().toISOString()
+  });
+
   if (!signature) {
+    console.error('❌ No signature provided');
     return NextResponse.json(
       { error: 'No signature provided' },
       { status: 400 }
+    );
+  }
+
+  if (!webhookSecret) {
+    console.error('❌ STRIPE_WEBHOOK_SECRET is not set');
+    return NextResponse.json(
+      { error: 'Webhook secret not configured' },
+      { status: 500 }
     );
   }
 
@@ -30,7 +46,11 @@ export async function POST(request: NextRequest) {
       webhookSecret
     );
 
-    console.log('Stripe Webhook event:', event.type);
+    console.log('✅ Webhook event verified:', {
+      type: event.type,
+      id: event.id,
+      timestamp: new Date().toISOString()
+    });
 
     // Checkoutセッション完了時の処理
     if (event.type === 'checkout.session.completed') {
@@ -38,10 +58,17 @@ export async function POST(request: NextRequest) {
       const userId = session.metadata?.user_id;
       const plan = session.metadata?.plan as 'subscription' | 'lifetime';
 
+      console.log('🔔 checkout.session.completed event received:', {
+        sessionId: session.id,
+        userId,
+        plan,
+        metadata: session.metadata
+      });
+
       if (!userId || !plan) {
-        console.error('Missing metadata:', { userId, plan });
+        console.error('❌ Missing metadata:', { userId, plan, sessionMetadata: session.metadata });
         return NextResponse.json(
-          { error: 'Missing metadata' },
+          { error: 'Missing metadata', details: { userId, plan } },
           { status: 400 }
         );
       }
@@ -54,13 +81,22 @@ export async function POST(request: NextRequest) {
       };
 
       // サブスクリプションの場合は有効期限を設定
+      let expiresAt: string | null = null;
       if (plan === 'subscription') {
-        const expiresAt = new Date();
-        expiresAt.setMonth(expiresAt.getMonth() + 1);
-        updateData.subscription_expires_at = expiresAt.toISOString();
+        const expiresDate = new Date();
+        expiresDate.setMonth(expiresDate.getMonth() + 1);
+        expiresAt = expiresDate.toISOString();
+        updateData.subscription_expires_at = expiresAt;
       }
 
-      // Supabaseのuser_metadataを更新
+      console.log('📝 Updating user membership:', {
+        userId,
+        plan,
+        expiresAt,
+        updateData
+      });
+
+      // 1. user_metadataを更新
       const { data: userData, error: userError } = await supabase.auth.admin.updateUserById(
         userId,
         {
@@ -69,22 +105,38 @@ export async function POST(request: NextRequest) {
       );
 
       if (userError) {
-        console.error('Failed to update user metadata:', userError);
-        // usersテーブルにも更新を試みる
-        const { error: dbError } = await supabase
-          .from('users')
-          .update({
-            membership_type: plan,
-            subscription_expires_at: plan === 'subscription' ? updateData.subscription_expires_at : null,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', userId);
-
-        if (dbError) {
-          console.error('Failed to update users table:', dbError);
-        }
+        console.error('❌ Failed to update user metadata:', userError);
       } else {
-        console.log('User metadata updated successfully:', userData);
+        console.log('✅ User metadata updated successfully:', {
+          userId: userData?.user?.id,
+          membershipType: userData?.user?.user_metadata?.membership_type
+        });
+      }
+
+      // 2. usersテーブルも確実に更新（user_metadataの更新が成功しても失敗しても実行）
+      const { data: dbData, error: dbError } = await supabase
+        .from('users')
+        .update({
+          membership_type: plan,
+          subscription_expires_at: expiresAt,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+        .select();
+
+      if (dbError) {
+        console.error('❌ Failed to update users table:', dbError);
+      } else {
+        console.log('✅ Users table updated successfully:', {
+          userId,
+          updatedRows: dbData?.length || 0,
+          data: dbData
+        });
+      }
+
+      // エラーが発生した場合はログに記録（ただし処理は続行）
+      if (userError && dbError) {
+        console.error('⚠️ Both user_metadata and users table updates failed');
       }
     }
 
@@ -138,11 +190,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ received: true });
+    return NextResponse.json({ 
+      received: true,
+      timestamp: new Date().toISOString()
+    });
   } catch (error: any) {
-    console.error('Webhook error:', error);
+    console.error('❌ Webhook error:', {
+      message: error.message,
+      type: error.type,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
+    
+    // シグネチャ検証エラーの場合は詳細をログに記録
+    if (error.type === 'StripeSignatureVerificationError') {
+      console.error('❌ Signature verification failed:', {
+        message: error.message,
+        header: signature?.substring(0, 20) + '...',
+        webhookSecretExists: !!webhookSecret,
+        webhookSecretLength: webhookSecret?.length || 0
+      });
+    }
+    
     return NextResponse.json(
-      { error: 'Webhook error', details: error.message },
+      { 
+        error: 'Webhook error', 
+        details: error.message,
+        type: error.type
+      },
       { status: 400 }
     );
   }
