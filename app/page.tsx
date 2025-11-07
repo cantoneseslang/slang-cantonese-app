@@ -3402,6 +3402,7 @@ export default function Home() {
       
       // 音声再生（共通関数を使用）
       await playAudioFromText(text);
+    }
   };
 
   const handleTranslateAndConvert = async (query: string) => {
