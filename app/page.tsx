@@ -3207,7 +3207,12 @@ export default function Home() {
     }
   };
 
-  const handleWordClick = async (word: Word) => {
+  const handleWordClick = async (wordOrText: Word | string) => {
+    // Wordオブジェクトか文字列かを判定
+    const isWordObject = typeof wordOrText === 'object';
+    const text = isWordObject ? wordOrText.chinese : wordOrText;
+    const word = isWordObject ? wordOrText : null;
+    
     // audio要素とAudioContextの最終確認
     if (!normalModeAudioRef.current) {
       console.error('❌ normalModeAudioRefが初期化されていません');
@@ -3236,27 +3241,26 @@ export default function Home() {
     
     // ボタンを即座に緑色にする（ノーマルモードの場合）
     if (!isLearningMode) {
-      const wordId = word.chinese;
-      setActiveWordId(wordId);
-      console.log('✅ ボタンクリック検知: 即座にボタンを緑色に変更', { wordId });
+      setActiveWordId(text);
+      console.log('✅ ボタンクリック検知: 即座にボタンを緑色に変更', { wordId: text });
     }
     
     // トラッキングAPIは非同期で実行（ブロッキングしない）
-    const categoryId = selectedNoteCategory || currentCategory?.id || '';
+    const categoryId = selectedNoteCategory || currentCategory?.id || (word ? '' : 'pronunciation');
     fetch('/api/track-button', { 
       method: 'POST', 
       headers: { 'Content-Type': 'application/json' }, 
-      body: JSON.stringify({ wordChinese: word.chinese, categoryId }) 
+      body: JSON.stringify({ wordChinese: text, categoryId }) 
     }).catch(err => {
       console.error('ボタン押下トラッキング失敗（無視）:', err);
     });
     
-    // 学習モードの場合はページトップにスクロール
-    if (isLearningMode) {
+    // 学習モードの場合はページトップにスクロール（Wordオブジェクトの場合のみ）
+    if (isLearningMode && word) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     
-    if (isLearningMode) {
+    if (isLearningMode && word) {
       // ブロンズ会員の場合、使用回数をカウント
       if (membershipType === 'free') {
         const currentCount = user?.user_metadata?.learning_mode_usage_count || 0;
@@ -3396,11 +3400,8 @@ export default function Home() {
       setForceShowResult(false);
       const wordId = word.chinese;
       
-      // 前のボタンの緑を消して、新しいボタンだけを緑にする
-      setActiveWordId(wordId);
-      
       // 音声再生（共通関数を使用）
-      await playAudioFromText(word.chinese);
+      await playAudioFromText(text);
   };
 
   const handleTranslateAndConvert = async (query: string) => {
@@ -3524,58 +3525,6 @@ export default function Home() {
     }
   };
 
-  // 音声ボタンのクリックハンドラー
-  const handleToneAudioClick = async (e: Event) => {
-    const button = e.target as HTMLButtonElement;
-    const text = button.getAttribute('data-text');
-    if (!text) return;
-
-    // ハプティックフィードバック
-    if ('vibrate' in navigator) {
-      navigator.vibrate(10);
-    }
-
-    // クリック音
-    if (isClickSoundEnabled && audioContextRef.current && audioBufferRef.current) {
-      const source = audioContextRef.current.createBufferSource();
-      source.buffer = audioBufferRef.current;
-      source.connect(audioContextRef.current.destination);
-      source.start(0);
-    }
-
-    // ノーマルモードの場合、緑色に変える
-    if (!isLearningMode) {
-      setActiveWordId(text);
-    }
-
-    // ボタン押下をトラッキング（pronunciationカテゴリー）
-    try {
-      await fetch('/api/track-button', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wordChinese: text, categoryId: 'pronunciation' })
-      });
-    } catch (err) {
-      console.error('Failed to track tone audio click:', err);
-    }
-
-    // 音声再生（共通関数を使用）
-    await playAudioFromText(text);
-    // categoryIdの取得: noteカテゴリーが選択されている場合はselectedNoteCategoryを優先
-    const categoryId = selectedNoteCategory || currentCategory?.id || 'pronunciation';
-    try { 
-      const response = await fetch('/api/track-button', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ wordChinese: text, categoryId }) 
-      });
-      if (!response.ok) {
-        console.error('ボタン押下トラッキングエラー:', response.status);
-      }
-    } catch (err) {
-      console.error('ボタン押下トラッキング失敗:', err);
-    }
-  };
 
   // 連続発音ボタンのクリックハンドラー
   const handleToneSequenceClick = async (e: Event) => {
@@ -6832,7 +6781,13 @@ export default function Home() {
                     
                     // 個別音声ボタン
                     toneButtons.forEach((btn) => {
-                      const handler = (e: Event) => handleToneAudioClick(e);
+                      const handler = (e: Event) => {
+                        const button = e.target as HTMLButtonElement;
+                        const text = button.getAttribute('data-text');
+                        if (text) {
+                          handleWordClick(text);
+                        }
+                      };
                       btn.removeEventListener('click', handler as EventListener);
                       btn.addEventListener('click', handler as EventListener);
                     });
