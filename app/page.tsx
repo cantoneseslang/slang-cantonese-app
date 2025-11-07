@@ -3208,26 +3208,6 @@ export default function Home() {
   };
 
   const handleWordClick = async (word: Word) => {
-    // 初期化が完了していない場合は待機（最大2秒）
-    if (!isPageInitialized) {
-      console.warn('⚠️ ページ初期化が完了していません。初期化を待機中...');
-      
-      let waitAttempts = 0;
-      const maxWaitAttempts = 20; // 2秒（100ms × 20）
-      
-      while (!isPageInitialized && waitAttempts < maxWaitAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        waitAttempts++;
-      }
-      
-      if (!isPageInitialized) {
-        console.error('❌ ページ初期化の待機がタイムアウトしました。続行しますが、音声生成が失敗する可能性があります。');
-        // タイムアウトしても続行（フォールバック）
-      } else {
-        console.log('✅ ページ初期化完了を確認');
-      }
-    }
-    
     // audio要素とAudioContextの最終確認
     if (!normalModeAudioRef.current) {
       console.error('❌ normalModeAudioRefが初期化されていません');
