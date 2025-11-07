@@ -18,6 +18,32 @@ export async function GET(request: NextRequest) {
       limit: 10,
     });
 
+    // 各セッションの詳細情報を取得（metadataを含む）
+    const sessionsWithDetails = await Promise.all(
+      sessions.data.map(async (session) => {
+        try {
+          const fullSession = await stripe.checkout.sessions.retrieve(session.id);
+          return {
+            id: fullSession.id,
+            payment_status: fullSession.payment_status,
+            status: fullSession.status,
+            metadata: fullSession.metadata,
+            customer: fullSession.customer,
+            customer_email: fullSession.customer_details?.email,
+            subscription: fullSession.subscription,
+            created: new Date(fullSession.created * 1000).toISOString(),
+            amount_total: fullSession.amount_total,
+            currency: fullSession.currency,
+          };
+        } catch (error: any) {
+          return {
+            id: session.id,
+            error: error.message,
+          };
+        }
+      })
+    );
+
     return NextResponse.json({
       success: true,
       recentEvents: events.data.map(event => ({
@@ -25,14 +51,13 @@ export async function GET(request: NextRequest) {
         type: event.type,
         created: new Date(event.created * 1000).toISOString(),
         livemode: event.livemode,
+        data: event.type === 'checkout.session.completed' ? {
+          sessionId: (event.data.object as any).id,
+          metadata: (event.data.object as any).metadata,
+        } : undefined,
       })),
-      recentSessions: sessions.data.map(session => ({
-        id: session.id,
-        payment_status: session.payment_status,
-        status: session.status,
-        metadata: session.metadata,
-        created: new Date(session.created * 1000).toISOString(),
-      })),
+      recentSessions: sessionsWithDetails,
+      webhookEndpoint: process.env.STRIPE_WEBHOOK_SECRET ? 'Configured' : 'Not configured',
     });
   } catch (error: any) {
     console.error('Webhook status error:', error);
@@ -42,4 +67,5 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
 
