@@ -2426,11 +2426,37 @@ export default function Home() {
       
       if (shouldRefresh) {
         console.log('🔄 セッションをリフレッシュしてユーザー情報を再取得します');
-        // セッションをリフレッシュ
-        const { error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError) {
-          console.warn('⚠️ セッションリフレッシュエラー:', refreshError);
+        
+        // セッションをリフレッシュ（最大3回リトライ）
+        let retryCount = 0;
+        while (retryCount < 3) {
+          const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+          
+          if (refreshError) {
+            console.warn(`⚠️ セッションリフレッシュエラー（試行 ${retryCount + 1}/3）:`, refreshError);
+          } else {
+            console.log(`✅ セッションリフレッシュ成功（試行 ${retryCount + 1}/3）`);
+          }
+          
+          // 少し待機してからユーザー情報を取得
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // ユーザー情報を取得して確認
+          const { data: { user: checkUser }, error: checkError } = await supabase.auth.getUser();
+          
+          if (!checkError && checkUser && checkUser.user_metadata?.membership_type) {
+            console.log('✅ ユーザー情報の更新を確認:', {
+              membershipType: checkUser.user_metadata.membership_type
+            });
+            break;
+          }
+          
+          retryCount++;
+          if (retryCount < 3) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
         }
+        
         // URLからクエリパラメータを削除
         window.history.replaceState({}, '', window.location.pathname);
       }

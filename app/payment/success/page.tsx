@@ -71,15 +71,42 @@ function PaymentSuccessContent() {
             throw new Error('セッション確認は成功しましたが、会員種別の更新に失敗しました。');
           }
 
-          // セッションをリフレッシュして最新のuser_metadataを取得
-          const { data: { session }, error: refreshSessionError } = await supabase.auth.refreshSession();
+          // user_metadataの更新が反映されるまで少し待機
+          await new Promise(resolve => setTimeout(resolve, 2000));
           
-          if (refreshSessionError) {
-            console.warn('⚠️ セッションリフレッシュエラー（無視）:', refreshSessionError);
+          // セッションをリフレッシュして最新のuser_metadataを取得
+          let retryCount = 0;
+          let finalUser = null;
+          
+          while (retryCount < 3 && !finalUser) {
+            const { data: { session }, error: refreshSessionError } = await supabase.auth.refreshSession();
+            
+            if (refreshSessionError) {
+              console.warn(`⚠️ セッションリフレッシュエラー（試行 ${retryCount + 1}/3）:`, refreshSessionError);
+            }
+            
+            // ユーザー情報を再取得
+            const { data: { user }, error: getUserError } = await supabase.auth.getUser();
+            
+            if (!getUserError && user) {
+              // user_metadataが更新されているか確認
+              if (user.user_metadata?.membership_type && user.user_metadata.membership_type !== 'free') {
+                finalUser = user;
+                console.log(`✅ ユーザー情報の更新を確認（試行 ${retryCount + 1}/3）:`, {
+                  membershipType: user.user_metadata.membership_type
+                });
+                break;
+              } else {
+                console.log(`⏳ ユーザー情報の更新を待機中（試行 ${retryCount + 1}/3）...`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              }
+            }
+            
+            retryCount++;
           }
           
-          // ユーザー情報を再取得
-          const { data: { user: finalUser }, error: finalError } = await supabase.auth.getUser();
+          const { data: { user: finalUserFallback }, error: finalError } = await supabase.auth.getUser();
+          finalUser = finalUser || finalUserFallback;
           
           if (finalError || !finalUser) {
             throw new Error('ユーザー情報の再取得に失敗しました。');
@@ -91,24 +118,40 @@ function PaymentSuccessContent() {
             subscriptionExpiresAt: finalUser.user_metadata?.subscription_expires_at,
           });
         } else {
-          // Webhookで既に更新済みの場合も、セッションをリフレッシュ
-          const { data: { session }, error: refreshSessionError } = await supabase.auth.refreshSession();
+          // Webhookで既に更新済みの場合も、セッションをリフレッシュして最新の情報を取得
+          await new Promise(resolve => setTimeout(resolve, 1000));
           
-          if (refreshSessionError) {
-            console.warn('⚠️ セッションリフレッシュエラー（無視）:', refreshSessionError);
+          let retryCount = 0;
+          let refreshedUser = null;
+          
+          while (retryCount < 3) {
+            const { data: { session }, error: refreshSessionError } = await supabase.auth.refreshSession();
+            
+            if (refreshSessionError) {
+              console.warn(`⚠️ セッションリフレッシュエラー（試行 ${retryCount + 1}/3）:`, refreshSessionError);
+            }
+            
+            // 再度ユーザー情報を取得
+            const { data: { user }, error: refreshError } = await supabase.auth.getUser();
+            
+            if (!refreshError && user) {
+              refreshedUser = user;
+              console.log('✅ Webhookで既に更新済み（セッションリフレッシュ後）:', {
+                userId: user.id,
+                membershipType: user.user_metadata?.membership_type,
+                subscriptionExpiresAt: user.user_metadata?.subscription_expires_at,
+              });
+              break;
+            } else {
+              console.log(`⏳ ユーザー情報の取得を再試行中（試行 ${retryCount + 1}/3）...`);
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            retryCount++;
           }
           
-          // 再度ユーザー情報を取得
-          const { data: { user: refreshedUser }, error: refreshError } = await supabase.auth.getUser();
-          
-          if (!refreshError && refreshedUser) {
-            console.log('✅ Webhookで既に更新済み（セッションリフレッシュ後）:', {
-              userId: refreshedUser.id,
-              membershipType: refreshedUser.user_metadata?.membership_type,
-              subscriptionExpiresAt: refreshedUser.user_metadata?.subscription_expires_at,
-            });
-          } else {
-            console.log('✅ Webhookで既に更新済み:', {
+          if (!refreshedUser) {
+            console.log('✅ Webhookで既に更新済み（フォールバック）:', {
               userId: updatedUser.id,
               membershipType: currentMembershipType,
               subscriptionExpiresAt: updatedUser.user_metadata?.subscription_expires_at,
@@ -240,7 +283,8 @@ function PaymentSuccessContent() {
           // ホームに戻る前にセッションをリフレッシュ
           const supabase = createClient();
           await supabase.auth.refreshSession();
-          router.push('/?refresh=true');
+          // ページをリロードして確実に最新のuser_metadataを取得
+          window.location.href = '/?refresh=true';
         }}
         style={{
           padding: '0.75rem 1.5rem',
