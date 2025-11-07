@@ -3754,17 +3754,33 @@ export default function Home() {
     if (!text) return;
 
     // 即座にフィードバック（最優先）
-    // ハプティックフィードバック
-    if ('vibrate' in navigator) {
-      navigator.vibrate(10);
-    }
+    playHapticAndSound(); // 振動と音を再生
 
-    // クリック音
-    if (isClickSoundEnabled && audioContextRef.current && audioBufferRef.current) {
-      const source = audioContextRef.current.createBufferSource();
-      source.buffer = audioBufferRef.current;
-      source.connect(audioContextRef.current.destination);
-      source.start(0);
+    // audio要素とAudioContextの確認と作成（初期化を待たずに即座に処理）
+    if (!normalModeAudioRef.current) {
+      console.warn('⚠️ normalModeAudioRefが初期化されていません。即座に作成します。');
+      // audio要素を即座に作成
+      const audio = document.createElement('audio');
+      audio.preload = 'auto';
+      audio.style.display = 'none';
+      document.body.appendChild(audio);
+      normalModeAudioRef.current = audio;
+      console.log('✅ audio要素を即座に作成しました');
+    }
+    
+    if (!normalModeAudioContextRef.current) {
+      console.warn('⚠️ normalModeAudioContextRefが初期化されていません。即座に作成します。');
+      // AudioContextを即座に作成
+      try {
+        normalModeAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        if (normalModeAudioContextRef.current.state === 'suspended') {
+          await normalModeAudioContextRef.current.resume();
+        }
+        console.log('✅ AudioContextを即座に作成しました');
+      } catch (e) {
+        console.error('❌ AudioContextの作成に失敗:', e);
+        // エラーでも続行（audio要素のみで再生を試みる）
+      }
     }
 
     // ノーマルモードの場合、緑色に変える
