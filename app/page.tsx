@@ -210,7 +210,6 @@ export default function Home() {
   const [translatedTextLines, setTranslatedTextLines] = useState<TextLine[]>([]); // タイムスタンプ付き広東語翻訳行
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<any>(null);
-  const isTouchEventRef = useRef<boolean>(false); // タッチイベントが発生したかどうかを追跡
   const translateDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const translateAbortControllerRef = useRef<AbortController | null>(null);
   
@@ -4069,8 +4068,8 @@ export default function Home() {
             onMouseEnter={() => setHoveredButton('mic')}
             onMouseLeave={(e) => {
               setHoveredButton(null);
-              // マウスがボタンの外に出た場合も停止（タッチイベントの場合は無視）
-              if (isRecording && !isTouchEventRef.current) {
+              // マウスがボタンの外に出た場合も停止
+              if (isRecording) {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('ロゴからマウス離脱 - 音声認識停止');
@@ -4126,11 +4125,6 @@ export default function Home() {
             onTouchStart={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              // タッチイベントが発生したことを記録（マウスイベントを無視するため）
-              isTouchEventRef.current = true;
-              setTimeout(() => {
-                isTouchEventRef.current = false;
-              }, 300);
               console.log('ロゴ長押し開始（タッチ） - 音声認識開始');
               handleMicPress();
             }}
