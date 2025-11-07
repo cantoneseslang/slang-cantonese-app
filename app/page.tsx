@@ -2110,7 +2110,11 @@ export default function Home() {
       viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ display: 'block', margin: 'auto', transform: `translateY(${yOffset}px)` }}
+      style={{ 
+        display: 'block',
+        flexShrink: 0,
+        transform: `translateY(${yOffset}px)`
+      }}
     >
       <path
         d="M3.5 7.75C3.5 6.784 4.284 6 5.25 6H9l1.5 2h8.25c.966 0 1.75.784 1.75 1.75v7.5c0 .966-.784 1.75-1.75 1.75H5.25A1.75 1.75 0 0 1 3.5 17.25v-9.5Z"
@@ -5931,15 +5935,17 @@ export default function Home() {
                     cursor: 'pointer',
                     padding: 0,
                     margin: 0,
-                    lineHeight: 'normal',
+                    lineHeight: 0,
                     color: '#6b7280',
                     width: isMobile ? 40 : 48,
                     height: '100%',
+                    minHeight: 0,
                     borderRadius: 9999,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    flexShrink: 0
+                    flexShrink: 0,
+                    verticalAlign: 'middle'
                 }}
                   onMouseEnter={(e) => { e.currentTarget.style.color = '#111827'; e.currentTarget.style.background = '#f3f4f6'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.background = 'transparent'; }}
