@@ -79,6 +79,30 @@ function PaymentSuccessContent() {
             if (!verifyData || !verifyData.success) {
               console.log('🔄 手動更新を試みます...');
               try {
+                // verify-sessionからplanを取得できた場合はそれを使用
+                let planToUse = verifyData?.membershipType;
+                
+                // planが取得できなかった場合、sessionIdから直接セッションを取得
+                if (!planToUse) {
+                  console.log('📋 セッションからplanを取得します...');
+                  // verify-sessionエンドポイントを直接呼び出してplanを取得
+                  // ただし、更新処理はスキップするため、別の方法で取得
+                  try {
+                    // Stripe APIを直接呼び出す代わりに、verify-sessionのレスポンスから取得
+                    // verify-sessionが失敗した場合でも、エラーレスポンスにplanが含まれている可能性がある
+                    if (verifyData && verifyData.error) {
+                      console.log('⚠️ verify-sessionエラー:', verifyData.error);
+                    }
+                  } catch (e) {
+                    console.error('セッション取得エラー:', e);
+                  }
+                  
+                  // フォールバック: セッションIDから推測（amount_totalから）
+                  // 9800円または49800 HKD = lifetime, 980円 = subscription
+                  // ただし、これは確実ではないため、手動更新APIでsessionIdから取得する
+                }
+
+                // sessionIdを渡せば、manual-update-membershipが自動的にplanを検出する
                 const manualResponse = await fetch('/api/stripe/manual-update-membership', {
                   method: 'POST',
                   headers: {
@@ -87,16 +111,21 @@ function PaymentSuccessContent() {
                   body: JSON.stringify({ 
                     sessionId,
                     userId: updatedUser.id,
-                    // セッションからplanを取得する必要があるが、ここでは推測できないため、
-                    // verify-sessionから取得したplanを使用するか、セッションを再取得する
+                    plan: planToUse // 取得できた場合は使用、なければundefined（API側で検出）
                   }),
                 });
 
                 if (manualResponse.ok) {
                   const manualData = await manualResponse.json();
                   console.log('✅ 手動更新完了:', manualData);
+                  // 手動更新が成功した場合、verifyDataを更新
+                  verifyData = { 
+                    success: true, 
+                    membershipType: manualData.plan || planToUse 
+                  };
                 } else {
-                  console.error('❌ 手動更新エラー:', await manualResponse.json());
+                  const errorData = await manualResponse.json();
+                  console.error('❌ 手動更新エラー:', errorData);
                 }
               } catch (error: any) {
                 console.error('❌ 手動更新エラー:', error);
