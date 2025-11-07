@@ -97,10 +97,9 @@ export async function POST(request: NextRequest) {
         const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
         
         // 次の請求日の1ヶ月後を有効期限として設定
-        // current_period_endはStripe.Subscription型に存在するが、型定義の問題で型アサーションを使用
-        const subscriptionData = subscription as any;
-        const currentPeriodEnd = subscriptionData.current_period_end 
-          ? new Date(subscriptionData.current_period_end * 1000)
+        // @ts-ignore - current_period_endはStripe.Subscription型に存在するが、型定義の問題で無視
+        const currentPeriodEnd = subscription.current_period_end 
+          ? new Date(subscription.current_period_end * 1000)
           : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // フォールバック: 30日後
         const expiresAt = new Date(currentPeriodEnd);
         expiresAt.setMonth(expiresAt.getMonth() + 1);
@@ -123,10 +122,9 @@ export async function POST(request: NextRequest) {
         const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
         
         // 現在の期間終了日を有効期限として設定（その後はブロンズにダウングレード）
-        // current_period_endはStripe.Subscription型に存在するが、型定義の問題で型アサーションを使用
-        const subscriptionData = subscription as any;
-        const expiresAt = subscriptionData.current_period_end
-          ? new Date(subscriptionData.current_period_end * 1000)
+        // @ts-ignore - current_period_endはStripe.Subscription型に存在するが、型定義の問題で無視
+        const expiresAt = subscription.current_period_end
+          ? new Date(subscription.current_period_end * 1000)
           : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // フォールバック: 30日後
 
         await supabase.auth.admin.updateUserById(userId, {
