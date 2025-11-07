@@ -2101,7 +2101,6 @@ export default function Home() {
   const [importProgress, setImportProgress] = useState<number | null>(null);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
   // iOS風アウトラインアイコン
   const FolderIcon = ({ size = 20, yOffset = 0 }: { size?: number; yOffset?: number }) => (
@@ -2111,7 +2110,7 @@ export default function Home() {
       viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ display: 'block', transform: `translateY(${yOffset}px)` }}
+      style={{ display: 'block', margin: 'auto', transform: `translateY(${yOffset}px)` }}
     >
       <path
         d="M3.5 7.75C3.5 6.784 4.284 6 5.25 6H9l1.5 2h8.25c.966 0 1.75.784 1.75 1.75v7.5c0 .966-.784 1.75-1.75 1.75H5.25A1.75 1.75 0 0 1 3.5 17.25v-9.5Z"
@@ -2119,25 +2118,6 @@ export default function Home() {
         strokeWidth="1.75"
         strokeLinejoin="round"
       />
-    </svg>
-  );
-
-  const CameraIcon = ({ size = 20, yOffset = 0 }: { size?: number; yOffset?: number }) => (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ display: 'block', transform: `translateY(${yOffset}px)` }}
-    >
-      <path
-        d="M8.5 7.5 10 6h4l1.5 1.5H19A2 2 0 0 1 21 9.5v7A2 2 0 0 1 19 18.5H5A2 2 0 0 1 3 16.5v-7A2 2 0 0 1 5 7.5h3.5Z"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinejoin="round"
-      />
-      <circle cx="12" cy="13" r="3.25" stroke="currentColor" strokeWidth="1.75" />
     </svg>
   );
 
@@ -2295,36 +2275,12 @@ export default function Home() {
       
       await worker.terminate();
       
-      // テキストの正規化とエンコーディング処理
-      let text = String(result?.data?.text || '');
+      // OCR結果をそのまま返す（正規化処理を削除）
+      // 正規化処理は不要。OCR結果をそのまま使用することで、正確なテキストが入力欄に表示され、
+      // 青いボタンを押した時にAPIに送信されるテキストも正確になる
+      let text = String(result?.data?.text || '').trim();
       
-      // 改行をスペースに統一
-      text = text.replace(/\r\n|\r|\n/g, ' ');
-      
-      // 句読点以外のスペースをすべて削除
-      // 中国語・日本語文章では文字間のスペースは不要
-      // 句読点（，。、．）の前後のスペースは保持（読みやすさのため）
-      // ただし、句読点の前後に複数のスペースがある場合は1つに
-      text = text
-        // 句読点の前後にスペースを1つ追加（後で削除する前に統一）
-        .replace(/([，。、．])\s*/g, '$1 ') // 句読点の後にスペースを追加
-        .replace(/\s*([，。、．])/g, ' $1') // 句読点の前にスペースを追加
-        // すべてのスペースを削除
-        .replace(/\s+/g, '')
-        // 句読点の前後にスペースを1つ追加（読みやすさのため）
-        .replace(/([，。、．])/g, '$1 ')
-        .trim();
-      // エンコーディングの正規化（UTF-8に統一）
-      try {
-        // テキストが正しくUTF-8として解釈できるか確認
-        const utf8Text = new TextDecoder('utf-8', { fatal: false }).decode(
-          new TextEncoder().encode(text)
-        );
-        text = utf8Text || text;
-      } catch (e) {
-        // エンコーディング変換に失敗した場合は元のテキストを使用
-        console.warn('エンコーディング変換エラー:', e);
-      }
+      // 長すぎる場合は切り詰める（4000文字制限）
       return text.length > 4000 ? text.slice(0, 4000) : text;
     } catch (error) {
       await worker.terminate();
@@ -5974,49 +5930,24 @@ export default function Home() {
                     border: 'none',
                     cursor: 'pointer',
                     padding: 0,
-                    lineHeight: 1,
+                    margin: 0,
+                    lineHeight: 'normal',
                     color: '#6b7280',
-                    width: isMobile ? 36 : 42,
-                    height: isMobile ? 36 : 42,
+                    width: isMobile ? 40 : 48,
+                    height: '100%',
                     borderRadius: 9999,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    flexShrink: 0
                 }}
                   onMouseEnter={(e) => { e.currentTarget.style.color = '#111827'; e.currentTarget.style.background = '#f3f4f6'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.background = 'transparent'; }}
                   onFocus={(e) => { (e.currentTarget as HTMLButtonElement).style.outline = 'none'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(0,122,255,0.25)'; e.currentTarget.style.background = '#f3f4f6'; }}
                   onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <FolderIcon size={isMobile ? 22 : 24} yOffset={2} />
+                  <FolderIcon size={isMobile ? 28 : 32} yOffset={0} />
                 </button>
-                {isMobile && (
-                <button
-                  onClick={() => cameraInputRef.current?.click()}
-                  title="カメラ/OCRで読み取り"
-                    aria-label="カメラ/OCRで読み取り"
-                  style={{
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: 0,
-                      lineHeight: 1,
-                      color: '#6b7280',
-                      width: 36,
-                      height: 36,
-                      borderRadius: 9999,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                  }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = '#111827'; e.currentTarget.style.background = '#f3f4f6'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.background = 'transparent'; }}
-                    onFocus={(e) => { (e.currentTarget as HTMLButtonElement).style.outline = 'none'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(0,122,255,0.25)'; e.currentTarget.style.background = '#f3f4f6'; }}
-                    onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'transparent'; }}
-                  >
-                    <CameraIcon size={isMobile ? 22 : 24} yOffset={2} />
-                  </button>
-                )}
               </div>
             </div>
 
@@ -6147,42 +6078,6 @@ export default function Home() {
                   setImportProgress(null);
                   setImportMessage(null);
                   if (fileInputRef.current) fileInputRef.current.value = '';
-                }
-              }}
-            />
-
-            {/* 非表示input: カメラ（モバイルOCR） */}
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              style={{ display: 'none' }}
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                try {
-                  setIsImporting(true);
-                  setImportMessage('OCR実行中...');
-                  const text = await runOcr(file, (p) => setImportProgress(p));
-                  // 文字数制限チェック（最大1000文字）
-                  if (text.length > 1000) {
-                    const confirmMsg = `OCRで読み取ったテキストが1,000文字を超えています（${text.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
-                    if (confirm(confirmMsg)) {
-                      setSearchQuery(text.substring(0, 1000));
-                      alert(`最初の1,000文字を入力欄に設定しました。`);
-                    }
-                  } else {
-                    setSearchQuery(text);
-                  }
-                } catch (err: any) {
-                  console.error(err);
-                  alert('OCR中にエラーが発生しました: ' + (err?.message || String(err)));
-                } finally {
-                  setIsImporting(false);
-                  setImportProgress(null);
-                  setImportMessage(null);
-                  if (cameraInputRef.current) cameraInputRef.current.value = '';
                 }
               }}
             />

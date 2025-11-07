@@ -23,13 +23,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* 入力欄右端のアイコン（クリップ/カメラ）を2pxだけ上に揃える */
-button[aria-label="ファイルから読み取り (PDF/TXT)"] svg,
-button[title="ファイルから読み取り (PDF/TXT)"] svg,
-button[aria-label="カメラ/OCRで読み取り"] svg,
-button[title="カメラ/OCRで読み取り"] svg {
-  transform: translateY(-2px);
-}
+/* 入力欄右端のアイコン（クリップ/カメラ）は中央配置のため、transformは不要 */
 
 /* 隠しモード用アニメーション */
 @keyframes fadeInUp {
