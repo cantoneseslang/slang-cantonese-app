@@ -4137,8 +4137,8 @@ export default function Home() {
             onMouseEnter={() => setHoveredButton('mic')}
             onMouseLeave={(e) => {
               setHoveredButton(null);
-              // マウスがボタンの外に出た場合も停止
-              if (isRecording) {
+              // マウスがボタンの外に出た場合も停止（モバイルでは無効、タッチイベントの後にマウスイベントが発火するため）
+              if (isRecording && !isMobile) {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('ロゴからマウス離脱 - 音声認識停止');
