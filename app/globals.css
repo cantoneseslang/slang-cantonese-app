@@ -110,3 +110,16 @@ button[title="カメラ/OCRで読み取り"] svg {
     transform: translateX(-50%) translateY(0) scale(1);
   }
 }
+
+/* ヘルプポップアップのピコっと動くアニメーション（ホバー時） */
+@keyframes helpPopUpBounce {
+  0%, 100% {
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  25% {
+    transform: translateX(-50%) translateY(-3px) scale(1.02);
+  }
+  75% {
+    transform: translateX(-50%) translateY(1px) scale(0.98);
+  }
+}

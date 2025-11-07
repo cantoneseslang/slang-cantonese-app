@@ -3683,8 +3683,9 @@ export default function Home() {
             bottom: isMobile ? 'calc(3rem + 120px + 96px + 2rem)' : 'auto', // ロゴの上端 + 余白（モバイルのみ）
             left: '50%',
             transform: isMobile ? 'translate(-50%, 0)' : 'translate(-50%, -50%)',
-            width: isMobile ? '90%' : '90%',
-            maxWidth: isMobile ? 'min(90%, 800px)' : '800px',
+            width: isMobile ? 'calc(100vw - 2rem)' : '90%',
+            maxWidth: isMobile ? 'calc(100vw - 2rem)' : '800px',
+            minHeight: isMobile ? '150px' : 'auto', // 最小高さを確保（テキストが確実に表示されるように、2行分のテキストに対応）
             maxHeight: isMobile ? 'none' : '400px', // bottom指定時はmaxHeight不要
             padding: isMobile ? '1.5rem' : '2rem',
             backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -3703,14 +3704,19 @@ export default function Home() {
             overflowX: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'flex-start'
+            justifyContent: 'center', // 中央配置でテキストが確実に表示されるように
+            alignItems: 'center',
+            boxSizing: 'border-box'
           }}>
             <div style={{
               display: 'flex',
               flexDirection: 'column',
               gap: '0.75rem',
               width: '100%',
-              paddingBottom: '1rem'
+              paddingBottom: '1rem',
+              justifyContent: 'center',
+              alignItems: 'center',
+              minHeight: '100%'
             }}>
               {recognizedTextLines.length > 0 ? (
                 <>
@@ -3965,7 +3971,9 @@ export default function Home() {
                   whiteSpace: 'nowrap',
                   zIndex: 1003,
                   pointerEvents: 'none',
-                  animation: 'cloudPopUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  animation: isMobile 
+                    ? 'cloudPopUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), helpPopUpBounce 0.5s ease-in-out 0.3s infinite'
+                    : 'cloudPopUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), helpPopUpBounce 0.5s ease-in-out 0.3s infinite',
                   border: '1px solid rgba(0, 0, 0, 0.1)',
                   fontWeight: 500
                 }}
@@ -4071,7 +4079,9 @@ export default function Home() {
                     whiteSpace: 'nowrap',
                     zIndex: 1003,
                     pointerEvents: 'none',
-                    animation: 'cloudPopUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    animation: isMobile 
+                      ? 'cloudPopUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), helpPopUpBounce 0.5s ease-in-out 0.3s infinite'
+                      : 'cloudPopUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), helpPopUpBounce 0.5s ease-in-out 0.3s infinite',
                     border: '1px solid rgba(0, 0, 0, 0.1)',
                     fontWeight: 500
                   }}
@@ -4180,7 +4190,9 @@ export default function Home() {
                     whiteSpace: 'nowrap',
                     zIndex: 1003,
                     pointerEvents: 'none',
-                    animation: 'cloudPopUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    animation: isMobile 
+                      ? 'cloudPopUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), helpPopUpBounce 0.5s ease-in-out 0.3s infinite'
+                      : 'cloudPopUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), helpPopUpBounce 0.5s ease-in-out 0.3s infinite',
                     border: '1px solid rgba(0, 0, 0, 0.1)',
                     fontWeight: 500
                   }}
@@ -7505,11 +7517,15 @@ export default function Home() {
               backgroundColor: 'rgba(0,0,0,0.5)',
               display: 'flex',
               alignItems: 'flex-end',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              pointerEvents: 'auto',
+              touchAction: 'none'
             }}
           >
             <div
               onClick={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
               style={{
                 width: '100%',
                 maxWidth: '500px',
@@ -7519,7 +7535,11 @@ export default function Home() {
                 paddingBottom: 'env(safe-area-inset-bottom)',
                 maxHeight: '80vh',
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
+                pointerEvents: 'auto',
+                touchAction: 'pan-y',
+                transform: 'translateZ(0)',
+                willChange: 'transform'
               }}
             >
               {/* ヘッダー */}
@@ -7620,6 +7640,7 @@ export default function Home() {
                     }
                   }}
                   onScroll={(e) => {
+                    // デバウンス処理でガタガタを防ぐ
                     const scrollTop = e.currentTarget.scrollTop;
                     const itemHeight = 60;
                     const centerOffset = e.currentTarget.clientHeight / 2 - itemHeight / 2;
@@ -7633,7 +7654,11 @@ export default function Home() {
                     if (selectedIndex >= 0 && selectedIndex < allCategories.length) {
                       const selectedCategory = allCategories[selectedIndex];
                       if (selectedCategory.id !== defaultCategoryId) {
-                        setDefaultCategoryId(selectedCategory.id);
+                        // スクロールが停止した後に更新
+                        clearTimeout((window as any).categoryPickerScrollTimeout);
+                        (window as any).categoryPickerScrollTimeout = setTimeout(() => {
+                          setDefaultCategoryId(selectedCategory.id);
+                        }, 100);
                       }
                     }
                   }}
@@ -7641,13 +7666,15 @@ export default function Home() {
                     width: '100%',
                     height: '100%',
                     overflowY: 'auto',
-                    scrollSnapType: 'y mandatory',
+                    scrollSnapType: 'y proximity',
                     WebkitOverflowScrolling: 'touch',
                     scrollbarWidth: 'none',
                     msOverflowStyle: 'none',
                     paddingTop: '50%',
                     paddingBottom: '50%',
-                    boxSizing: 'border-box'
+                    boxSizing: 'border-box',
+                    overscrollBehavior: 'contain',
+                    scrollBehavior: 'smooth'
                   }}
                 >
                   <style>{`
