@@ -152,6 +152,7 @@ export default function Home() {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'subscription' | 'lifetime' | null>(null);
   const [isDowngrade, setIsDowngrade] = useState(false); // ダウングレードかどうか
+  const [selectedCurrency, setSelectedCurrency] = useState<'jpy' | 'hkd'>('jpy'); // 通貨選択（デフォルト: JPY）
   const pricingModalScrollRef = useRef<HTMLDivElement>(null);
   const [showPricingModalTopArrow, setShowPricingModalTopArrow] = useState(false);
   const [showPricingModalBottomArrow, setShowPricingModalBottomArrow] = useState(false);
@@ -2052,6 +2053,7 @@ export default function Home() {
           plan: plan,
           userId: user.id,
           email: user.email,
+          currency: selectedCurrency, // 選択された通貨を送信
         }),
       });
 
@@ -7417,6 +7419,49 @@ export default function Home() {
                   textAlign: 'center',
                   marginBottom: '2rem'
                 }}>
+                  {/* 通貨選択 */}
+                  {selectedPlan !== 'free' && (
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      marginBottom: '1rem'
+                    }}>
+                      <button
+                        onClick={() => setSelectedCurrency('jpy')}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          fontSize: '0.875rem',
+                          fontWeight: selectedCurrency === 'jpy' ? '600' : '400',
+                          color: selectedCurrency === 'jpy' ? '#ffffff' : '#6b7280',
+                          backgroundColor: selectedCurrency === 'jpy' ? '#3b82f6' : '#f3f4f6',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        JPY
+                      </button>
+                      <button
+                        onClick={() => setSelectedCurrency('hkd')}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          fontSize: '0.875rem',
+                          fontWeight: selectedCurrency === 'hkd' ? '600' : '400',
+                          color: selectedCurrency === 'hkd' ? '#ffffff' : '#6b7280',
+                          backgroundColor: selectedCurrency === 'hkd' ? '#3b82f6' : '#f3f4f6',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        HKD
+                      </button>
+                    </div>
+                  )}
+                  
                   <div style={{
                     fontSize: '3rem',
                     fontWeight: 'bold',
@@ -7431,9 +7476,13 @@ export default function Home() {
                       ? '0 2px 4px rgba(0,0,0,0.1)' 
                       : '0 2px 4px rgba(255,215,0,0.3)'
                   }}>
-                    {selectedPlan === 'free' ? '無料' : selectedPlan === 'subscription' ? '¥980' : '¥9,800'}
+                    {selectedPlan === 'free' 
+                      ? '無料' 
+                      : selectedPlan === 'subscription' 
+                        ? (selectedCurrency === 'hkd' ? 'HKD$50' : '¥980')
+                        : (selectedCurrency === 'hkd' ? 'HKD$498' : '¥9,800')}
                   </div>
-                  {/* HKD価格を追加 */}
+                  {/* もう一方の通貨価格を表示 */}
                   {selectedPlan !== 'free' && (
                     <div style={{
                       fontSize: '1.5rem',
@@ -7441,7 +7490,9 @@ export default function Home() {
                       color: '#6b7280',
                       marginTop: '0.5rem'
                     }}>
-                      {selectedPlan === 'subscription' ? 'HKD$50' : 'HKD$498'}
+                      {selectedPlan === 'subscription' 
+                        ? (selectedCurrency === 'hkd' ? '¥980' : 'HKD$50')
+                        : (selectedCurrency === 'hkd' ? '¥9,800' : 'HKD$498')}
                     </div>
                   )}
                   <div style={{
