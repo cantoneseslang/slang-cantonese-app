@@ -1438,306 +1438,37 @@ export default function Home() {
     setIsMuted(prev => !prev);
   };
   
-  // マイクボタンのハンドラー（長押し方式）
+  // マイクボタンのハンドラー（長押し方式）- 最初の安定していたシンプルな実装に戻す
   const handleMicPress = () => {
-    if (!isHiddenMode) {
-      console.log('隠しモードではないため、マイク機能は無効です');
-      return;
-    }
+    if (!isHiddenMode) return;
     
-    // モバイルでヘルプを消す
+    // モバイルでヘルプを消す（デザイン関連なので残す）
     if (isMobile) {
       setShowHelpPopups(false);
     }
     
-    // 既に録音中の場合は何もしない
-    if (isRecording) {
-      console.log('既に録音中です');
-      return;
-    }
-    
-    // 音声認識が初期化されていない場合は再初期化
-    if (!recognitionRef.current) {
-      console.log('音声認識を再初期化します');
-      if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
-        const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-        if (SpeechRecognition) {
-          recognitionRef.current = new SpeechRecognition();
-          recognitionRef.current.lang = 'ja-JP';
-          recognitionRef.current.continuous = true;
-          recognitionRef.current.interimResults = true;
-
-              recognitionRef.current.onresult = (event: any) => {
-                let interimTranscript = '';
-                let finalTranscript = '';
-                
-                // 全ての結果を処理（resultIndexから最後まで）
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                  const transcript = event.results[i][0].transcript;
-                  if (event.results[i].isFinal) {
-                    // final結果を追加（空白で区切る）
-                    finalTranscript += (finalTranscript ? ' ' : '') + transcript;
-                  } else {
-                    // interim結果は最新のものを保持（上書き）
-                    interimTranscript = transcript;
-                  }
-                }
-                
-                // interim結果を表示
-                setInterimText(interimTranscript);
-                
-                // final結果がある場合
-                if (finalTranscript) {
-                  const trimmedFinal = finalTranscript.trim();
-                  
-                  // 直前のfinalテキストと完全一致する場合はスキップ（重複防止）
-                  if (trimmedFinal === lastProcessedFinalTextRef.current) {
-                    setInterimText('');
-                    return;
-                  }
-                  
-              lastProcessedFinalTextRef.current = trimmedFinal;
-              
-              // finalTextに追加
-              setFinalText(prev => prev + trimmedFinal + ' ');
-              
-              // 新しいテキストを配列の先頭に追加（上に表示、タイムスタンプ付き）
-              setRecognizedTextLines(prev => {
-                // 配列全体をチェックして重複を防ぐ（完全一致）
-                const isDuplicate = prev.some(line => line.text === trimmedFinal);
-                if (isDuplicate) {
-                  return prev; // 重複している場合は追加しない
-                }
-                const newLine: TextLine = {
-                  text: trimmedFinal,
-                  timestamp: getTimestamp()
-                };
-                return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
-              });
-              
-              // recognizedTextも更新（下位互換のため）
-              setRecognizedText(prev => {
-                // 現在のrecognizedTextからinterim部分を除去
-                let cleanText = prev;
-                if (interimTranscript && cleanText.includes(interimTranscript)) {
-                  const lastInterimIndex = cleanText.lastIndexOf(interimTranscript);
-                  if (lastInterimIndex !== -1) {
-                    cleanText = cleanText.substring(0, lastInterimIndex) + 
-                               cleanText.substring(lastInterimIndex + interimTranscript.length);
-                  }
-                }
-                cleanText = cleanText.trim();
-                
-                // finalテキストを追加（下位互換のため）
-                return cleanText + (cleanText ? ' ' : '') + trimmedFinal;
-              });
-              
-              setInterimText('');
-            } else if (interimTranscript) {
-              // interimのみの場合
-              setRecognizedText(prev => {
-                // 既存のfinalTextを保持し、interim部分を更新
-                const finalPart = prev.trim();
-                // interim部分を追加（既存のinterim部分は上書き）
-                return finalPart + (finalPart ? ' ' : '') + interimTranscript;
-              });
-            }
-              };
-
-          recognitionRef.current.onerror = (event: any) => {
-            if (event.error !== 'aborted') {
-              console.error('音声認識エラー:', event.error);
-              setIsRecording(false);
-            }
-          };
-
-          recognitionRef.current.onend = () => {
-            // 長押し方式なので、onendで自動再開しない
-            // ユーザーがボタンを離したら停止する
-            console.log('音声認識終了（ボタン離された）');
-          };
-        }
-      }
-    }
-    
-    console.log('音声認識を開始します（長押し）');
-    setIsRecording(true);
-    
-    // 少し待ってから開始（状態更新を確実にするため）
-    setTimeout(() => {
-      // recognitionRef.currentを直接チェック（isRecordingの状態に依存しない）
+    if (!isRecording) {
+      setIsRecording(true);
       if (recognitionRef.current) {
         try {
           recognitionRef.current.start();
-          console.log('音声認識開始成功');
-        } catch (e: any) {
+        } catch (e) {
           console.error('音声認識開始エラー:', e);
-          // エラーメッセージを確認
-          if (e.message && e.message.includes('already')) {
-            console.log('音声認識は既に開始されています');
-          } else {
-            console.error('音声認識開始に失敗:', e.message || e);
-            setIsRecording(false);
-          }
-        }
-      } else {
-        console.error('音声認識が初期化できませんでした - recognitionRef.current:', recognitionRef.current);
-        setIsRecording(false);
-        // 再初期化を試みる
-        if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
-          const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-          if (SpeechRecognition) {
-            try {
-              recognitionRef.current = new SpeechRecognition();
-              recognitionRef.current.lang = 'ja-JP';
-              recognitionRef.current.continuous = true;
-              recognitionRef.current.interimResults = true;
-              
-              recognitionRef.current.onresult = (event: any) => {
-                let interim = '';
-                let newFinal = '';
-                
-                // resultIndexから新しい結果のみを処理（重複を防ぐ）
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                  const transcript = event.results[i][0].transcript;
-                  if (event.results[i].isFinal) {
-                    // finalの結果は新しいもののみ追加
-                    newFinal += transcript;
-                  } else {
-                    // interimは常に最新のものを表示
-                    interim = transcript;
-                  }
-                }
-                
-                // interimのテキストを更新
-                setInterimText(interim);
-                
-                if (newFinal) {
-                  const trimmed = newFinal.trim();
-                  
-                  // 直前のfinalテキストと比較（重複チェック）
-                  if (trimmed === lastProcessedFinalTextRef.current && trimmed.length > 0) {
-                    setInterimText('');
-                    return;
-                  }
-                  
-                  lastProcessedFinalTextRef.current = trimmed;
-                  
-                  // finalのテキストを追加
-                  setFinalText(prev => prev + trimmed + ' ');
-                  
-                  setRecognizedText(prev => {
-                    // interimテキストを除去してから追加
-                    const baseText = prev.replace(interim, '').trim();
-                    if (baseText.endsWith(trimmed)) {
-                      return baseText;
-                    }
-                    return baseText + (baseText ? ' ' : '') + trimmed;
-                  });
-                  
-                  // recognizedTextLinesに追加（重複チェック付き）
-                  setRecognizedTextLines(prev => {
-                    // 配列全体をチェックして重複を防ぐ（完全一致）
-                    const isDuplicate = prev.some(line => line.text === trimmed);
-                    if (isDuplicate) {
-                      return prev;
-                    }
-                    const newLine: TextLine = {
-                      text: trimmed,
-                      timestamp: getTimestamp()
-                    };
-                    return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
-                  });
-                  
-                  setInterimText('');
-                } else if (interim) {
-                  // interimのみの場合
-                  setRecognizedText(prev => {
-                    // 既存のfinalTextを保持し、interimを追加
-                    const baseText = prev.trim();
-                    return baseText + (baseText ? ' ' : '') + interim;
-                  });
-                }
-              };
-              
-              recognitionRef.current.onerror = (event: any) => {
-                if (event.error !== 'aborted') {
-                  console.error('音声認識エラー:', event.error);
-                  setIsRecording(false);
-                }
-              };
-              
-              recognitionRef.current.onend = () => {
-                console.log('音声認識終了');
-              };
-              
-              // 再初期化後、再度開始を試みる
-              setTimeout(() => {
-                if (recognitionRef.current) {
-                  try {
-                    recognitionRef.current.start();
-                    console.log('音声認識再初期化後に開始成功');
-                  } catch (e: any) {
-                    console.error('再初期化後の音声認識開始エラー:', e);
-                    setIsRecording(false);
-                  }
-                }
-              }, 100);
-            } catch (e) {
-              console.error('音声認識再初期化エラー:', e);
-              setIsRecording(false);
-            }
-          }
+          setIsRecording(false);
         }
       }
-    }, 200);
+    }
   };
 
   const handleMicRelease = () => {
-    if (!isHiddenMode) {
-      console.log('隠しモードではないため、マイク機能は無効です');
-      return;
-    }
+    if (!isHiddenMode) return;
     
-    // 録音中でない場合は何もしない
-    if (!isRecording) {
-      console.log('録音中ではないため、停止処理をスキップします');
-      return;
-    }
-    
-    console.log('音声認識を停止します（ボタン離された）');
     setIsRecording(false);
-    
-    // 最後のinterimテキストがあれば、確定して新しい行に追加
-    if (interimText.trim()) {
-      const finalInterim = interimText.trim();
-      setRecognizedTextLines(prev => {
-        // 配列全体をチェックして重複を防ぐ（完全一致）
-        const isDuplicate = prev.some(line => line.text === finalInterim);
-        if (isDuplicate) {
-          return prev; // 重複している場合は追加しない
-        }
-        // マイクを離した時に確定して新しい行に追加（タイムスタンプ付き）
-        const newLine: TextLine = {
-          text: finalInterim,
-          timestamp: getTimestamp()
-        };
-        return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
-      });
-      setInterimText('');
-    }
-    
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
-        console.log('音声認識停止成功');
-      } catch (e: any) {
-        // 停止エラーは無視（既に停止されている場合）
-        if (e.message && !e.message.includes('not started')) {
-          console.error('音声認識停止エラー:', e);
-        } else {
-          console.log('音声認識は既に停止されています');
-        }
+      } catch (e) {
+        console.error('音声認識停止エラー:', e);
       }
     }
   };
