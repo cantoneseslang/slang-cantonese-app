@@ -357,6 +357,7 @@ export default function Home() {
   const [translatedTextLines, setTranslatedTextLines] = useState<TextLine[]>([]); // タイムスタンプ付き広東語翻訳行
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null); // タッチ開始位置を保存
   const translateDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const translateAbortControllerRef = useRef<AbortController | null>(null);
   
@@ -4150,7 +4151,8 @@ export default function Home() {
               userSelect: 'none',
               WebkitUserSelect: 'none',
               WebkitTouchCallout: 'none',
-              overflow: 'visible'
+              overflow: 'visible',
+              touchAction: 'none' // モバイルでスクロールとの競合を防ぐ
             }}
             onMouseDown={(e) => {
               // モバイルでは無効（タッチイベントと競合するため）
@@ -4182,22 +4184,67 @@ export default function Home() {
               return false;
             }}
             onTouchStart={(e) => {
+              // モバイルでの長押し開始 - preventDefaultでスクロールを防ぐ
               e.preventDefault();
               e.stopPropagation();
+              
+              // タッチ開始位置を保存
+              const touch = e.touches[0];
+              touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+              
               console.log('ロゴ長押し開始（タッチ） - 音声認識開始');
               handleMicPress();
             }}
             onTouchEnd={(e) => {
+              // モバイルでの長押し終了
               e.preventDefault();
               e.stopPropagation();
+              
+              // タッチ開始位置をクリア
+              touchStartPosRef.current = null;
+              
               console.log('ロゴ離す（タッチ） - 音声認識停止');
               handleMicRelease();
             }}
             onTouchCancel={(e) => {
+              // モバイルでのタッチキャンセル（スクロールなど） - 録音中の場合のみ停止
               e.preventDefault();
               e.stopPropagation();
-              console.log('ロゴタッチキャンセル - 音声認識停止');
-              handleMicRelease();
+              
+              // タッチ開始位置をクリア
+              touchStartPosRef.current = null;
+              
+              // 確実に録音中の場合のみ停止（onTouchCancelはスクロールなどで発火するため）
+              if (isRecording) {
+                console.log('ロゴタッチキャンセル - 音声認識停止');
+                handleMicRelease();
+              } else {
+                console.log('ロゴタッチキャンセル - 録音中ではないためスキップ');
+              }
+            }}
+            onTouchMove={(e) => {
+              // モバイルでタッチ中に移動した場合 - 大きく移動した場合はスクロールと判断
+              if (!touchStartPosRef.current) {
+                return;
+              }
+              
+              const touch = e.touches[0];
+              const moveX = Math.abs(touch.clientX - touchStartPosRef.current.x);
+              const moveY = Math.abs(touch.clientY - touchStartPosRef.current.y);
+              
+              // 大きく移動した場合（30px以上）はスクロールと判断してキャンセル
+              if (moveX > 30 || moveY > 30) {
+                console.log('ロゴタッチ移動 - スクロールと判断してキャンセル');
+                touchStartPosRef.current = null;
+                if (isRecording) {
+                  handleMicRelease();
+                }
+                return;
+              }
+              
+              // 小さな移動の場合は長押しを維持（スクロールを防ぐ）
+              e.preventDefault();
+              e.stopPropagation();
             }}
           >
             <img
