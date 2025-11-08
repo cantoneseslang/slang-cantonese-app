@@ -277,6 +277,8 @@ export default function Home() {
   
   // ノーマルモードでアクティブな単語のID（緑色のボタン）- 1つだけアクティブ
   const [activeWordId, setActiveWordId] = useState<string | null>(null);
+  // アクティブなボタンの要素参照（同じテキストのボタンが複数ある場合に、実際にクリックされたボタンだけをハイライトするため）
+  const activeButtonRef = useRef<HTMLElement | null>(null);
 
   // 設定画面の状態
   const [showSettings, setShowSettings] = useState(false);
@@ -3297,6 +3299,14 @@ export default function Home() {
     
     // ボタンを即座に緑色にする（ノーマルモードの場合）
     if (!isLearningMode) {
+      // 前のアクティブなボタンのスタイルをリセット
+      if (activeButtonRef.current) {
+        activeButtonRef.current.style.background = '';
+        activeButtonRef.current.style.color = '';
+      }
+      
+      // クリックされたボタンの要素参照は、introContent内のボタンのクリックハンドラーで設定される
+      // practiceGroups内のボタンの場合は、useEffectで検索される
       setActiveWordId(text);
       console.log('✅ ボタンクリック検知: 即座にボタンを緑色に変更', { wordId: text });
     }
@@ -3793,24 +3803,64 @@ export default function Home() {
 
   // 音声ボタンのスタイル更新（activeWordIdが変わった時）
   useEffect(() => {
-    if (currentCategory?.id === 'pronunciation') {
-      // introContent内のボタンを探す（すべての.tone-audio-btn）
-      const toneButtons = document.querySelectorAll('.tone-audio-btn');
-      toneButtons.forEach((btn) => {
-        const text = btn.getAttribute('data-text');
-        if (!text) return;
+    if (currentCategory?.id === 'pronunciation' && !isLearningMode) {
+      // requestAnimationFrameを使用してパフォーマンスを最適化
+      requestAnimationFrame(() => {
+        // 前のアクティブなボタンのスタイルをリセット
+        if (activeButtonRef.current) {
+          activeButtonRef.current.style.background = '';
+          activeButtonRef.current.style.color = '';
+        }
         
-        const isActive = !isLearningMode && activeWordId === text;
-        if (isActive) {
-          (btn as HTMLElement).style.background = 'linear-gradient(145deg, #10b981, #059669)';
-          (btn as HTMLElement).style.color = 'white';
+        if (activeWordId) {
+          // activeButtonRefが既に設定されている場合はそれを使用
+          if (activeButtonRef.current) {
+            const text = activeButtonRef.current.getAttribute('data-text');
+            if (text === activeWordId) {
+              // 既に正しいボタンが設定されている場合は、そのまま使用
+              activeButtonRef.current.style.background = 'linear-gradient(145deg, #10b981, #059669)';
+              activeButtonRef.current.style.color = 'white';
+              return;
+            }
+          }
+          
+          // introContent内のボタンを探す（すべての.tone-audio-btn）
+          // activeButtonRefが設定されていない場合、またはテキストが一致しない場合のみ検索
+          const toneButtons = document.querySelectorAll('.tone-audio-btn');
+          let foundActiveButton = false;
+          
+          toneButtons.forEach((btn) => {
+            const text = btn.getAttribute('data-text');
+            if (!text || text !== activeWordId) {
+              // アクティブでないボタンはリセット
+              (btn as HTMLElement).style.background = '';
+              (btn as HTMLElement).style.color = '';
+              return;
+            }
+            
+            // 同じテキストのボタンが複数ある場合、最初の1つだけをハイライト
+            if (!foundActiveButton) {
+              (btn as HTMLElement).style.background = 'linear-gradient(145deg, #10b981, #059669)';
+              (btn as HTMLElement).style.color = 'white';
+              activeButtonRef.current = btn as HTMLElement;
+              foundActiveButton = true;
+            } else {
+              // 2つ目以降の同じテキストのボタンはリセット
+              (btn as HTMLElement).style.background = '';
+              (btn as HTMLElement).style.color = '';
+            }
+          });
         } else {
-          (btn as HTMLElement).style.background = '#ffffff';
-          (btn as HTMLElement).style.color = '#111827';
+          // activeWordIdがnullの場合は、すべてのボタンのスタイルをリセット
+          activeButtonRef.current = null;
+          
+          const toneButtons = document.querySelectorAll('.tone-audio-btn');
+          toneButtons.forEach((btn) => {
+            (btn as HTMLElement).style.background = '';
+            (btn as HTMLElement).style.color = '';
+          });
         }
       });
-      
-      // 連続発音ボタンのスタイル更新は削除（handleToneSequenceClick内で直接制御）
     }
   }, [activeWordId, isLearningMode, currentCategory]);
 
@@ -6888,22 +6938,30 @@ export default function Home() {
                   }
                   
                   if (el && currentCategory.id === 'pronunciation') {
-                    // 音声ボタンのイベントリスナーを設定
-                    const toneButtons = el.querySelectorAll('.tone-audio-btn');
-                    const sequenceButton = el.querySelector('.tone-sequence-btn');
+                    // イベントデリゲーションを使用してパフォーマンスを改善
+                    // 個別のイベントリスナーを削除して、親要素に1つのリスナーを設定
+                    const existingHandler = (el as any).__toneButtonHandler;
+                    if (existingHandler) {
+                      el.removeEventListener('click', existingHandler);
+                    }
                     
-                    // 個別音声ボタン
-                    toneButtons.forEach((btn) => {
-                      const handler = (e: Event) => {
-                        const button = e.target as HTMLButtonElement;
+                    const toneButtonHandler = (e: Event) => {
+                      const target = e.target as HTMLElement;
+                      const button = target.closest('.tone-audio-btn') as HTMLButtonElement;
+                      if (button) {
+                        e.preventDefault();
+                        e.stopPropagation();
                         const text = button.getAttribute('data-text');
                         if (text) {
+                          // クリックされたボタンの要素参照を保存
+                          activeButtonRef.current = button;
                           handleWordClick(text);
                         }
-                      };
-                      btn.removeEventListener('click', handler as EventListener);
-                      btn.addEventListener('click', handler as EventListener);
-                    });
+                      }
+                    };
+                    
+                    el.addEventListener('click', toneButtonHandler);
+                    (el as any).__toneButtonHandler = toneButtonHandler;
                     
                     // 連続発音ボタン（複数ある可能性があるためquerySelectorAllを使用）
                     const sequenceButtons = el.querySelectorAll('.tone-sequence-btn');
@@ -6994,6 +7052,8 @@ export default function Home() {
                                 // 通常クリックの場合は音声を再生
                                 e.preventDefault();
                                 e.stopPropagation();
+                                // クリックされたボタンの要素参照を保存
+                                activeButtonRef.current = e.currentTarget;
                                 handleWordClick(word);
                               }}
                               onTouchStart={(e) => {
@@ -7116,6 +7176,8 @@ export default function Home() {
                                 // 通常クリックの場合は音声を再生
                                 e.preventDefault();
                                 e.stopPropagation();
+                                // クリックされたボタンの要素参照を保存
+                                activeButtonRef.current = e.currentTarget;
                                 handleWordClick(word);
                               }}
                               onTouchStart={(e) => {
@@ -7235,6 +7297,8 @@ export default function Home() {
                                 // 通常クリックの場合は音声を再生
                                 e.preventDefault();
                                 e.stopPropagation();
+                                // クリックされたボタンの要素参照を保存
+                                activeButtonRef.current = e.currentTarget;
                                 handleWordClick(word);
                               }}
                               onTouchStart={(e) => {
@@ -7354,6 +7418,8 @@ export default function Home() {
                                 // 通常クリックの場合は音声を再生
                                 e.preventDefault();
                                 e.stopPropagation();
+                                // クリックされたボタンの要素参照を保存
+                                activeButtonRef.current = e.currentTarget;
                                 handleWordClick(word);
                               }}
                               onTouchStart={(e) => {
@@ -7476,6 +7542,8 @@ export default function Home() {
                     // 通常クリックの場合は音声を再生
                     e.preventDefault();
                     e.stopPropagation();
+                    // クリックされたボタンの要素参照を保存
+                    activeButtonRef.current = e.currentTarget;
                     handleWordClick(word);
                   }}
                   onTouchStart={(e) => {
