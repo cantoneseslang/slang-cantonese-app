@@ -766,16 +766,6 @@ export default function Home() {
                         // 音声がロードされるまで待ってから再生
                         const playAudio = async () => {
                           if (simultaneousModeAudioRef.current) {
-                            // モバイル対応: AudioContextをresume（ユーザーインタラクション後に必要）
-                            if (isMobile && audioContextRef.current && audioContextRef.current.state === 'suspended') {
-                              try {
-                                await audioContextRef.current.resume();
-                                console.log('✅ 通訳モード: AudioContextをresumeしました');
-                              } catch (e) {
-                                console.error('❌ 通訳モード: AudioContextのresumeに失敗', e);
-                              }
-                            }
-                            
                             // メディアセッションAPIでメタデータを設定（ロック画面のアイコン変更）
                             if ('mediaSession' in navigator) {
                               const translatedText = lastTranslatedTextRef.current || '同時通訳';
@@ -799,19 +789,25 @@ export default function Home() {
                               });
                             }
                             
-                            // モバイル対応: 確実に再生するため、少し待ってから再生
-                            if (isMobile) {
-                              setTimeout(() => {
-                                if (simultaneousModeAudioRef.current) {
-                                  simultaneousModeAudioRef.current.play().catch((e) => {
-                                    console.error('音声再生エラー:', e);
-                                  });
-                                }
-                              }, 100);
-                            } else {
-                              simultaneousModeAudioRef.current.play().catch((e) => {
-                                console.error('音声再生エラー:', e);
-                              });
+                            // モバイル対応: HTMLAudioElementのplay()はユーザーインタラクション後に動作する必要がある
+                            // 確実に再生するため、少し待ってから再生
+                            try {
+                              if (isMobile) {
+                                // モバイルでは、loadeddataイベントを待ってから再生
+                                setTimeout(() => {
+                                  if (simultaneousModeAudioRef.current) {
+                                    simultaneousModeAudioRef.current.play().catch((e) => {
+                                      console.error('❌ モバイル音声再生エラー:', e);
+                                    });
+                                  }
+                                }, 200);
+                              } else {
+                                simultaneousModeAudioRef.current.play().catch((e) => {
+                                  console.error('音声再生エラー:', e);
+                                });
+                              }
+                            } catch (e) {
+                              console.error('音声再生エラー:', e);
                             }
                           }
                         };
@@ -821,13 +817,18 @@ export default function Home() {
                           playAudio();
                         } else {
                           simultaneousModeAudioRef.current.addEventListener('loadeddata', playAudio, { once: true });
-                          // モバイル対応: loadeddataが発火しない場合に備えてタイムアウトを設定
+                          simultaneousModeAudioRef.current.addEventListener('canplay', playAudio, { once: true });
+                          // モバイル対応: loadeddataが発火しない場合に備えてタイムアウトを設定（長めに設定）
                           if (isMobile) {
                             setTimeout(() => {
                               if (simultaneousModeAudioRef.current && simultaneousModeAudioRef.current.readyState >= 2) {
                                 playAudio();
+                              } else if (simultaneousModeAudioRef.current) {
+                                // readyStateが2未満でも再生を試みる
+                                console.log('⚠️ モバイル: readyStateが2未満ですが再生を試みます', simultaneousModeAudioRef.current.readyState);
+                                playAudio();
                               }
-                            }, 500);
+                            }, 1000); // タイムアウトを500msから1000msに延長
                           }
                         }
                         
@@ -1333,16 +1334,6 @@ export default function Home() {
               // 音声がロードされるまで待ってから再生
               const playAudio = async () => {
                 if (simultaneousModeAudioRef.current) {
-                  // モバイル対応: AudioContextをresume（ユーザーインタラクション後に必要）
-                  if (isMobile && audioContextRef.current && audioContextRef.current.state === 'suspended') {
-                    try {
-                      await audioContextRef.current.resume();
-                      console.log('✅ 通訳モード（手のボタン）: AudioContextをresumeしました');
-                    } catch (e) {
-                      console.error('❌ 通訳モード（手のボタン）: AudioContextのresumeに失敗', e);
-                    }
-                  }
-                  
                   // メディアセッションAPIでメタデータを設定（ロック画面のアイコン変更）
                   if ('mediaSession' in navigator) {
                     const translatedText = lastTranslatedTextRef.current || '同時通訳';
@@ -1366,19 +1357,25 @@ export default function Home() {
                     });
                   }
                   
-                  // モバイル対応: 確実に再生するため、少し待ってから再生
-                  if (isMobile) {
-                    setTimeout(() => {
-                      if (simultaneousModeAudioRef.current) {
-                        simultaneousModeAudioRef.current.play().catch((e) => {
-                          console.error('音声再生エラー:', e);
-                        });
-                      }
-                    }, 100);
-                  } else {
-                    simultaneousModeAudioRef.current.play().catch((e) => {
-                      console.error('音声再生エラー:', e);
-                    });
+                  // モバイル対応: HTMLAudioElementのplay()はユーザーインタラクション後に動作する必要がある
+                  // 確実に再生するため、少し待ってから再生
+                  try {
+                    if (isMobile) {
+                      // モバイルでは、loadeddataイベントを待ってから再生
+                      setTimeout(() => {
+                        if (simultaneousModeAudioRef.current) {
+                          simultaneousModeAudioRef.current.play().catch((e) => {
+                            console.error('❌ モバイル音声再生エラー（手のボタン）:', e);
+                          });
+                        }
+                      }, 200);
+                    } else {
+                      simultaneousModeAudioRef.current.play().catch((e) => {
+                        console.error('音声再生エラー:', e);
+                      });
+                    }
+                  } catch (e) {
+                    console.error('音声再生エラー:', e);
                   }
                 }
               };
@@ -1388,13 +1385,18 @@ export default function Home() {
                 playAudio();
               } else {
                 simultaneousModeAudioRef.current.addEventListener('loadeddata', playAudio, { once: true });
-                // モバイル対応: loadeddataが発火しない場合に備えてタイムアウトを設定
+                simultaneousModeAudioRef.current.addEventListener('canplay', playAudio, { once: true });
+                // モバイル対応: loadeddataが発火しない場合に備えてタイムアウトを設定（長めに設定）
                 if (isMobile) {
                   setTimeout(() => {
                     if (simultaneousModeAudioRef.current && simultaneousModeAudioRef.current.readyState >= 2) {
                       playAudio();
+                    } else if (simultaneousModeAudioRef.current) {
+                      // readyStateが2未満でも再生を試みる
+                      console.log('⚠️ モバイル（手のボタン）: readyStateが2未満ですが再生を試みます', simultaneousModeAudioRef.current.readyState);
+                      playAudio();
                     }
-                  }, 500);
+                  }, 1000); // タイムアウトを500msから1000msに延長
                 }
               }
               
