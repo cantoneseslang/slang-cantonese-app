@@ -1325,24 +1325,37 @@ export default function Home() {
       });
       setTranslatedText(handPhrase);
       
-      // 音声生成（ミュートされていない場合、かつ音声認識中でない場合）
-      // モバイルでは音声認識中に音声再生すると、マイクがその音を拾ってしまうためスキップ
-      if (!isMuted && handPhrase && !isRecording) {
-        (async () => {
-          try {
-            const audioResponse = await fetch('/api/generate-speech', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ text: handPhrase, language: currentLang }),
-            });
+      // translationLanguageを変更しない（現在の値を返す）
+      return currentLang;
+    });
+    
+    // 音声生成をsetTranslationLanguageのコールバックから分離（状態更新と音声生成のタイミングを分離）
+    // 最新のtranslationLanguageを取得して音声生成
+    const currentLang = translationLanguage;
+    const handPhrase = currentLang === 'cantonese' 
+      ? '我唔識講廣東話，所以我需要用翻譯機同你溝通'
+      : '我不会讲中文，所以我需要使用翻译机跟你沟通。';
+    
+    // 音声生成（ミュートされていない場合、かつ音声認識中でない場合）
+    // モバイルでは音声認識中に音声再生すると、マイクがその音を拾ってしまうためスキップ
+    if (!isMuted && handPhrase && !isRecordingRef.current) {
+      (async () => {
+        try {
+          console.log('手のボタン: 音声生成開始', { text: handPhrase, language: currentLang });
+          const audioResponse = await fetch('/api/generate-speech', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ text: handPhrase, language: currentLang }),
+          });
 
           if (audioResponse.ok) {
             const audioData = await audioResponse.json();
             const audioBase64 = audioData.audioContent;
 
             if (simultaneousModeAudioRef.current && audioBase64) {
+              console.log('手のボタン: 音声データ取得成功、再生開始');
               simultaneousModeAudioRef.current.pause();
               simultaneousModeAudioRef.current.currentTime = 0;
               
@@ -1368,17 +1381,27 @@ export default function Home() {
               // 音声がロードされるまで待ってから再生
               const playAudio = async () => {
                 if (simultaneousModeAudioRef.current) {
+                  // 音声再生開始時に音声認識を停止（長押しの期間だけ音声入力するため、音声再生中は不要）
+                  if (isRecordingRef.current && recognitionRef.current) {
+                    try {
+                      recognitionRef.current.stop();
+                      setIsRecordingState(false);
+                      console.log('音声再生開始: 音声認識を停止しました');
+                    } catch (e) {
+                      console.error('音声認識停止エラー:', e);
+                    }
+                  }
                   // メディアセッションAPIでメタデータを設定（ロック画面のアイコン変更）
                   if ('mediaSession' in navigator) {
                     const translatedText = lastTranslatedTextRef.current || '同時通訳';
-                    const logoPath = translationLanguage === 'cantonese' 
+                    const logoPath = currentLang === 'cantonese' 
                       ? '/volume-logo-circle.svg' 
                       : '/volume-logo-mandarin-circle.svg';
                     
                     navigator.mediaSession.metadata = new MediaMetadata({
                       title: translatedText,
                       artist: 'スラング式カントン語音れん',
-                      album: translationLanguage === 'cantonese' ? 'カントン語通訳' : '中国語通訳',
+                      album: currentLang === 'cantonese' ? 'カントン語通訳' : '中国語通訳',
                       artwork: [
                         { src: logoPath, sizes: '512x512', type: 'image/svg+xml' },
                         { src: '/volume-logo.png', sizes: '512x512', type: 'image/png' },
@@ -1398,13 +1421,17 @@ export default function Home() {
                       // モバイルでは、loadeddataイベントを待ってから再生
                       setTimeout(() => {
                         if (simultaneousModeAudioRef.current) {
-                          simultaneousModeAudioRef.current.play().catch((e) => {
+                          simultaneousModeAudioRef.current.play().then(() => {
+                            console.log('✅ 手のボタン: 音声再生成功（モバイル）');
+                          }).catch((e) => {
                             console.error('❌ モバイル音声再生エラー（手のボタン）:', e);
                           });
                         }
                       }, 200);
                     } else {
-                      simultaneousModeAudioRef.current.play().catch((e) => {
+                      simultaneousModeAudioRef.current.play().then(() => {
+                        console.log('✅ 手のボタン: 音声再生成功');
+                      }).catch((e) => {
                         console.error('音声再生エラー:', e);
                       });
                     }
@@ -1436,31 +1463,32 @@ export default function Home() {
               
               // エラー処理
               simultaneousModeAudioRef.current.addEventListener('error', (e) => {
-                console.error('音声ロードエラー:', e);
+                console.error('❌ 手のボタン: 音声ロードエラー', e);
               }, { once: true });
               
               // モバイル軽量化: 再生後にBlob URLをクリア（メモリリーク防止）
               simultaneousModeAudioRef.current.addEventListener('ended', () => {
+                console.log('✅ 手のボタン: 音声再生完了');
                 if (simultaneousModeAudioRef.current && simultaneousModeAudioBlobUrlRef.current) {
                   simultaneousModeAudioRef.current.src = '';
                   URL.revokeObjectURL(simultaneousModeAudioBlobUrlRef.current);
                   simultaneousModeAudioBlobUrlRef.current = null;
                 }
               }, { once: true });
+            } else {
+              console.error('❌ 手のボタン: simultaneousModeAudioRef.currentがnullまたはaudioBase64が空');
             }
           } else {
             const errorText = await audioResponse.text();
-            console.error('音声生成APIエラー:', audioResponse.status, errorText);
+            console.error('❌ 手のボタン: 音声生成APIエラー', audioResponse.status, errorText);
           }
         } catch (err) {
-          console.error('音声生成エラー:', err);
+          console.error('❌ 手のボタン: 音声生成エラー', err);
         }
       })();
-      }
-      
-      // translationLanguageを変更しない（現在の値を返す）
-      return currentLang;
-    });
+    } else {
+      console.log('手のボタン: 音声生成をスキップ', { isMuted, handPhrase, isRecording: isRecordingRef.current });
+    }
   };
   
   // 消音ボタンのハンドラー
@@ -1614,7 +1642,13 @@ export default function Home() {
     
     console.log('音声認識を開始します（長押し）');
     
-    // 音声認識開始時に既存の音声再生を停止（モバイルでマイクが音声を拾うのを防ぐため）
+    // 音声再生中は音声認識を開始しない（長押しの期間だけ音声入力するため、音声再生中は不要）
+    if (simultaneousModeAudioRef.current && !simultaneousModeAudioRef.current.paused) {
+      console.log('音声再生中のため、音声認識を開始しません');
+      return;
+    }
+    
+    // 音声認識開始時に既存の音声再生を停止（念のため）
     if (simultaneousModeAudioRef.current) {
       simultaneousModeAudioRef.current.pause();
       simultaneousModeAudioRef.current.currentTime = 0;
