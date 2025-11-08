@@ -358,6 +358,7 @@ export default function Home() {
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<any>(null);
   const translateDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const touchCancelTimeoutRef = useRef<NodeJS.Timeout | null>(null); // onTouchCancel後の安全な停止用タイマー
   const translateAbortControllerRef = useRef<AbortController | null>(null);
   
   // 同時通訳モード用の音声再生とミュート状態
@@ -4186,6 +4187,13 @@ export default function Home() {
               // モバイルでの長押し開始 - preventDefaultでスクロールを防ぐ
               e.preventDefault();
               e.stopPropagation();
+              
+              // onTouchCancel後のタイマーをクリア（再開された場合）
+              if (touchCancelTimeoutRef.current) {
+                clearTimeout(touchCancelTimeoutRef.current);
+                touchCancelTimeoutRef.current = null;
+              }
+              
               console.log('ロゴ長押し開始（タッチ） - 音声認識開始');
               handleMicPress();
             }}
@@ -4193,19 +4201,33 @@ export default function Home() {
               // モバイルでの長押し終了
               e.preventDefault();
               e.stopPropagation();
+              
+              // onTouchCancel後のタイマーをクリア
+              if (touchCancelTimeoutRef.current) {
+                clearTimeout(touchCancelTimeoutRef.current);
+                touchCancelTimeoutRef.current = null;
+              }
+              
               console.log('ロゴ離す（タッチ） - 音声認識停止');
               handleMicRelease();
             }}
             onTouchCancel={(e) => {
-              // モバイルでのタッチキャンセル - 録音中の場合のみ停止
+              // モバイルでのタッチキャンセル - ブラウザのオーバーレイ表示時にも発火するため録音は継続
+              // ユーザーがボタンを離す（onTouchEnd）まで録音を継続する
               e.preventDefault();
               e.stopPropagation();
-              // 確実に録音中の場合のみ停止
-              if (isRecording) {
-                console.log('ロゴタッチキャンセル - 音声認識停止');
-                handleMicRelease();
-              } else {
-                console.log('ロゴタッチキャンセル - 録音中ではないためスキップ');
+              console.log('ロゴタッチキャンセル - オーバーレイ表示の可能性があるため録音は継続');
+              
+              // 安全策: onTouchEndが発火しない場合に備えて、一定時間後に録音を停止
+              // ただし、onTouchStartが再度発火した場合はタイマーがクリアされる
+              if (isRecording && !touchCancelTimeoutRef.current) {
+                touchCancelTimeoutRef.current = setTimeout(() => {
+                  console.log('ロゴタッチキャンセル - タイマー経過により安全に停止');
+                  if (isRecording) {
+                    handleMicRelease();
+                  }
+                  touchCancelTimeoutRef.current = null;
+                }, 5000); // 5秒後に安全に停止
               }
             }}
             onTouchMove={(e) => {
