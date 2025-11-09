@@ -1690,7 +1690,6 @@ export default function Home() {
           }
         }
       }, 200);
-    }
   };
 
   const handleMicRelease = () => {
