@@ -1651,43 +1651,26 @@ export default function Home() {
         }
       }
       
-      // iOSではユーザー操作のコンテキスト内で直接start()を呼ぶ必要がある
-      // setTimeoutで遅延させるとコンテキストが失われて音声認識が開始できない
+      console.log('音声認識を開始します（長押し）');
       setIsRecording(true);
       // 新しいセッションIDを生成
       sessionIdRef.current = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      // モバイル版では同期的にstart()を呼ぶ（ユーザー操作のコンテキストを保持）
-      if (isMobile) {
+      // 少し待ってから開始（状態更新を確実にするため、PC版とモバイル版で同じ処理）
+      setTimeout(() => {
+        // recognitionRef.currentを直接チェック（isRecordingの状態に依存しない）
         if (recognitionRef.current) {
           try {
             recognitionRef.current.start();
-            console.log('[モバイル] 音声認識開始成功（同期的）');
-            // 開始ログを送信（非同期で）
+            console.log('音声認識開始成功');
             sendSpeechRecognitionLog('start');
-          } catch (e) {
-            console.error('[モバイル] 音声認識開始エラー:', e);
-            setIsRecording(false);
-            sendSpeechRecognitionLog('error', {
-              error: e instanceof Error ? e.message : String(e),
-              errorCode: 'start_failed',
-              message: '音声認識開始に失敗しました'
-            });
-          }
-        } else {
-          console.error('[モバイル] recognitionRef.currentがnullです');
-          setIsRecording(false);
-        }
-      } else {
-        // PC版ではsetTimeoutで少し待ってから開始（従来通り）
-        setTimeout(() => {
-          if (recognitionRef.current) {
-            try {
-              recognitionRef.current.start();
-              console.log('音声認識開始成功');
-              sendSpeechRecognitionLog('start');
-            } catch (e) {
-              console.error('音声認識開始エラー:', e);
+          } catch (e: any) {
+            console.error('音声認識開始エラー:', e);
+            // エラーメッセージを確認
+            if (e.message && e.message.includes('already')) {
+              console.log('音声認識は既に開始されています');
+            } else {
+              console.error('音声認識開始に失敗:', e.message || e);
               setIsRecording(false);
               sendSpeechRecognitionLog('error', {
                 error: e instanceof Error ? e.message : String(e),
@@ -1695,12 +1678,12 @@ export default function Home() {
                 message: '音声認識開始に失敗しました'
               });
             }
-          } else {
-            console.error('recognitionRef.currentがnullです');
-            setIsRecording(false);
           }
-        }, 200);
-      }
+        } else {
+          console.error('音声認識が初期化できませんでした - recognitionRef.current:', recognitionRef.current);
+          setIsRecording(false);
+        }
+      }, 200);
     }
   };
 
@@ -4562,23 +4545,11 @@ export default function Home() {
               handleMicRelease();
             }}
             onTouchCancel={(e) => {
-              // モバイルでのタッチキャンセル - ブラウザのオーバーレイ表示時にも発火するため録音は継続
-              // ユーザーがボタンを離す（onTouchEnd）まで録音を継続する
+              // モバイルでのタッチキャンセル - 以前の実装と同じく停止する
               e.preventDefault();
               e.stopPropagation();
-              console.log('ロゴタッチキャンセル - オーバーレイ表示の可能性があるため録音は継続');
-              
-              // 安全策: onTouchEndが発火しない場合に備えて、一定時間後に録音を停止
-              // ただし、onTouchStartが再度発火した場合はタイマーがクリアされる
-              if (isRecording && !touchCancelTimeoutRef.current) {
-                touchCancelTimeoutRef.current = setTimeout(() => {
-                  console.log('ロゴタッチキャンセル - タイマー経過により安全に停止');
-                  if (isRecording) {
-                    handleMicRelease();
-                  }
-                  touchCancelTimeoutRef.current = null;
-                }, 5000); // 5秒後に安全に停止
-              }
+              console.log('ロゴタッチキャンセル - 音声認識停止');
+              handleMicRelease();
             }}
             onTouchMove={(e) => {
               // モバイルでタッチ中に移動した場合も長押しを維持（スクロールコンテンツがないため）
