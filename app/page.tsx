@@ -2397,6 +2397,12 @@ export default function Home() {
   const normalModeAudioGainNodeRef = useRef<GainNode | null>(null);
   const normalModeAudioSourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
   
+  // 音声キャッシュ：テキストをキーにBase64音声データを保存
+  const audioCacheRef = useRef<Map<string, string>>(new Map());
+  
+  // プリロード中の音声リクエストを追跡（重複リクエストを防ぐ）
+  const audioLoadingRef = useRef<Map<string, Promise<string>>>(new Map());
+  
   // ボリューム状態（0.0-1.0）
   const [normalModeAudioVolume, setNormalModeAudioVolume] = useState(1.0);
   const [playbackSpeed, setPlaybackSpeed] = useState('1');
@@ -3483,17 +3489,57 @@ export default function Home() {
   // 音声再生の共通処理（handleWordClickとhandleToneAudioClickで使用）
   const playAudioFromText = async (text: string) => {
     try {
-      const audioResponse = await fetch('/api/generate-speech', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text }),
-      });
+      let audioBase64: string | undefined;
+      
+      // キャッシュをチェック
+      if (audioCacheRef.current.has(text)) {
+        audioBase64 = audioCacheRef.current.get(text);
+        console.log('✅ 音声キャッシュヒット:', text);
+      } else {
+        // 既に同じテキストのロードが進行中かチェック
+        if (audioLoadingRef.current.has(text)) {
+          console.log('⏳ 音声ロード待機中:', text);
+          audioBase64 = await audioLoadingRef.current.get(text);
+        } else {
+          // 新規ロード
+          const loadPromise = (async () => {
+            const audioResponse = await fetch('/api/generate-speech', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ text }),
+            });
 
-      if (audioResponse.ok) {
-        const audioData = await audioResponse.json();
-        const audioBase64 = audioData.audioContent;
+            if (audioResponse.ok) {
+              const audioData = await audioResponse.json();
+              const audio = audioData.audioContent;
+              
+              // キャッシュに保存
+              if (audio) {
+                audioCacheRef.current.set(text, audio);
+                console.log('✅ 音声キャッシュに保存:', text);
+              }
+              
+              return audio;
+            } else {
+              throw new Error('音声生成に失敗しました');
+            }
+          })();
+          
+          audioLoadingRef.current.set(text, loadPromise);
+          
+          try {
+            audioBase64 = await loadPromise;
+          } finally {
+            // ロード完了後、進行中リストから削除
+            audioLoadingRef.current.delete(text);
+          }
+        }
+      }
+
+      if (audioBase64) {
+        const audioData = { audioContent: audioBase64 };
 
         if (normalModeAudioRef.current && audioBase64) {
           normalModeAudioRef.current.pause();
@@ -3863,6 +3909,77 @@ export default function Home() {
       });
     }
   }, [activeWordId, isLearningMode, currentCategory]);
+
+  // 音声プリロード：カテゴリーまたは単語が変更された時に音声を事前ロード
+  useEffect(() => {
+    // ノーマルモード時のみプリロード
+    if (isLearningMode || !currentWords || currentWords.length === 0) {
+      return;
+    }
+    
+    // プリロードする単語数を制限（最初の20単語のみ）
+    const wordsToPreload = currentWords.slice(0, 20);
+    
+    // 非同期でプリロードを実行（UIをブロックしない）
+    const preloadAudio = async () => {
+      console.log(`🔊 音声プリロード開始: ${wordsToPreload.length}単語`);
+      
+      for (const word of wordsToPreload) {
+        const text = word.chinese;
+        
+        // 既にキャッシュまたはロード中の場合はスキップ
+        if (audioCacheRef.current.has(text) || audioLoadingRef.current.has(text)) {
+          continue;
+        }
+        
+        // バックグラウンドでロード
+        const loadPromise = (async () => {
+          try {
+            const audioResponse = await fetch('/api/generate-speech', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ text }),
+            });
+
+            if (audioResponse.ok) {
+              const audioData = await audioResponse.json();
+              const audio = audioData.audioContent;
+              
+              if (audio) {
+                audioCacheRef.current.set(text, audio);
+                console.log(`✅ プリロード完了: ${text}`);
+              }
+              
+              return audio;
+            }
+          } catch (error) {
+            console.error(`❌ プリロード失敗: ${text}`, error);
+          } finally {
+            audioLoadingRef.current.delete(text);
+          }
+          return '';
+        })();
+        
+        audioLoadingRef.current.set(text, loadPromise);
+        
+        // 少し遅延を入れて、サーバーへの負荷を軽減
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      console.log('✅ 音声プリロード完了');
+    };
+    
+    // 少し遅延してからプリロード開始（カテゴリー切り替えのアニメーション後）
+    const timeoutId = setTimeout(() => {
+      preloadAudio();
+    }, 500);
+    
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [currentWords, isLearningMode]);
 
   // 単語音声再生速度変更
   useEffect(() => {
