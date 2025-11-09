@@ -524,6 +524,13 @@ export default function Home() {
               }
             }
             
+            // ログを送信（結果イベント）
+            sendSpeechRecognitionLog('result', {
+              transcript: { interim, final: newFinal },
+              resultIndex: event.resultIndex,
+              resultsLength: event.results.length
+            });
+            
             // interimのテキストを更新
             setInterimText(interim);
             
@@ -606,10 +613,22 @@ export default function Home() {
           };
 
           recognitionRef.current.onend = () => {
-            // 長押し方式なので、onendで自動再開しない
-            console.log('音声認識終了');
+            // モバイル版では、onendが早く発火することがあるため、録音中なら自動再開
+            console.log('音声認識終了', { isRecording });
             // 終了ログを送信
             sendSpeechRecognitionLog('end');
+            
+            // モバイル版で録音中なら自動再開（iOS Safariの制約に対応）
+            if (isMobile && isRecording && recognitionRef.current) {
+              try {
+                console.log('[モバイル] 音声認識を自動再開します');
+                recognitionRef.current.start();
+              } catch (e) {
+                console.error('[モバイル] 音声認識自動再開エラー:', e);
+                // エラーが発生した場合は停止
+                setIsRecording(false);
+              }
+            }
           };
           
           console.log('音声認識を初期化しました');
@@ -1497,11 +1516,17 @@ export default function Home() {
                   console.log('[モバイル] onresult発火:', {
                     resultIndex: event.resultIndex,
                     resultsLength: event.results.length,
-                    isRecording
+                    isRecording,
+                    allResults: Array.from({ length: event.results.length }, (_, i) => ({
+                      index: i,
+                      transcript: event.results[i][0].transcript,
+                      isFinal: event.results[i].isFinal
+                    }))
                   });
                 }
                 
                 // resultIndexから新しい結果のみを処理
+                // モバイル版では、resultIndexが0でない場合があるため、全ての結果を確認
                 for (let i = event.resultIndex; i < event.results.length; i++) {
                   const transcript = event.results[i][0].transcript;
                   if (event.results[i].isFinal) {
@@ -1613,10 +1638,22 @@ export default function Home() {
               };
 
               recognitionRef.current.onend = () => {
-                // 長押し方式なので、onendで自動再開しない
-                console.log('[モバイル] 音声認識終了');
+                // モバイル版では、onendが早く発火することがあるため、録音中なら自動再開
+                console.log('[モバイル] 音声認識終了', { isRecording });
                 // 終了ログを送信
                 sendSpeechRecognitionLog('end');
+                
+                // 録音中なら自動再開（モバイル版の制約に対応）
+                if (isRecording && recognitionRef.current) {
+                  try {
+                    console.log('[モバイル] 音声認識を自動再開します');
+                    recognitionRef.current.start();
+                  } catch (e) {
+                    console.error('[モバイル] 音声認識自動再開エラー:', e);
+                    // エラーが発生した場合は停止
+                    setIsRecording(false);
+                  }
+                }
               };
               
               console.log('[モバイル] 音声認識を再初期化しました');
