@@ -3681,8 +3681,8 @@ export default function Home() {
     }
     
     // テキスト全体を一度に送信（例: "3,9,4,0,5,2" または "7,8,6"）
-    // カンマを読点に変換して自然な読み上げにする
-    const textToSpeak = sequence.split(',').map(t => t.trim()).join('、');
+    // カンマをスペースに変換して自然な読み上げにする
+    const textToSpeak = sequence.split(',').map(t => t.trim()).join(' ');
     console.log('連続発音テキスト:', textToSpeak);
     
     try {
