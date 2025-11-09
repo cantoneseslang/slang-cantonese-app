@@ -613,21 +613,31 @@ export default function Home() {
           };
 
           recognitionRef.current.onend = () => {
-            // モバイル版では、onendが早く発火することがあるため、録音中なら自動再開
-            console.log('音声認識終了', { isRecording });
+            // 長押し方式なので、onendで自動再開しない
+            // モバイル版では、onendが早く発火することがあるが、ユーザーがボタンを離すまで継続する必要がある
+            console.log('音声認識終了', { isRecording, isMobile });
             // 終了ログを送信
             sendSpeechRecognitionLog('end');
             
             // モバイル版で録音中なら自動再開（iOS Safariの制約に対応）
-            if (isMobile && isRecording && recognitionRef.current) {
-              try {
-                console.log('[モバイル] 音声認識を自動再開します');
-                recognitionRef.current.start();
-              } catch (e) {
-                console.error('[モバイル] 音声認識自動再開エラー:', e);
-                // エラーが発生した場合は停止
-                setIsRecording(false);
-              }
+            if (isMobile && isRecording) {
+              // 少し待ってから再開（エラーを避けるため）
+              setTimeout(() => {
+                if (isRecording && recognitionRef.current) {
+                  try {
+                    console.log('[モバイル] 音声認識を自動再開します');
+                    recognitionRef.current.start();
+                  } catch (e: any) {
+                    // already started エラーは無視
+                    if (e.message && e.message.includes('already')) {
+                      console.log('[モバイル] 音声認識は既に開始されています');
+                    } else {
+                      console.error('[モバイル] 音声認識自動再開エラー:', e);
+                      setIsRecording(false);
+                    }
+                  }
+                }
+              }, 100);
             }
           };
           
@@ -1638,21 +1648,32 @@ export default function Home() {
               };
 
               recognitionRef.current.onend = () => {
-                // モバイル版では、onendが早く発火することがあるため、録音中なら自動再開
+                // 長押し方式なので、onendで自動再開しない
+                // モバイル版では、onendが早く発火することがあるが、ユーザーがボタンを離すまで継続する必要がある
                 console.log('[モバイル] 音声認識終了', { isRecording });
                 // 終了ログを送信
                 sendSpeechRecognitionLog('end');
                 
                 // 録音中なら自動再開（モバイル版の制約に対応）
-                if (isRecording && recognitionRef.current) {
-                  try {
-                    console.log('[モバイル] 音声認識を自動再開します');
-                    recognitionRef.current.start();
-                  } catch (e) {
-                    console.error('[モバイル] 音声認識自動再開エラー:', e);
-                    // エラーが発生した場合は停止
-                    setIsRecording(false);
-                  }
+                // ただし、recognitionRef.currentが存在し、isRecordingがtrueの場合のみ
+                if (isRecording) {
+                  // 少し待ってから再開（エラーを避けるため）
+                  setTimeout(() => {
+                    if (isRecording && recognitionRef.current) {
+                      try {
+                        console.log('[モバイル] 音声認識を自動再開します');
+                        recognitionRef.current.start();
+                      } catch (e: any) {
+                        // already started エラーは無視
+                        if (e.message && e.message.includes('already')) {
+                          console.log('[モバイル] 音声認識は既に開始されています');
+                        } else {
+                          console.error('[モバイル] 音声認識自動再開エラー:', e);
+                          setIsRecording(false);
+                        }
+                      }
+                    }
+                  }, 100);
                 }
               };
               
