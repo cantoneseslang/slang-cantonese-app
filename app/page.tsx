@@ -1462,9 +1462,9 @@ export default function Home() {
         const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
         if (SpeechRecognition) {
           recognitionRef.current = new SpeechRecognition();
-              recognitionRef.current.lang = 'ja-JP';
-              recognitionRef.current.continuous = true;
-              recognitionRef.current.interimResults = true;
+          recognitionRef.current.lang = 'ja-JP';
+          recognitionRef.current.continuous = true;
+          recognitionRef.current.interimResults = true;
 
               recognitionRef.current.onresult = (event: any) => {
                 let interimTranscript = '';
@@ -1495,72 +1495,72 @@ export default function Home() {
                     return;
                   }
                   
-                  lastProcessedFinalTextRef.current = trimmedFinal;
-                  
-                  // finalTextに追加
-                  setFinalText(prev => prev + trimmedFinal + ' ');
-                  
-                  // 新しいテキストを配列の先頭に追加（上に表示、タイムスタンプ付き）
-                  setRecognizedTextLines(prev => {
-                    // 配列全体をチェックして重複を防ぐ（完全一致）
-                    const isDuplicate = prev.some(line => line.text === trimmedFinal);
-                    if (isDuplicate) {
-                      return prev; // 重複している場合は追加しない
-                    }
-                    const newLine: TextLine = {
-                      text: trimmedFinal,
-                      timestamp: getTimestamp()
-                    };
-                    return [newLine, ...prev].slice(0, 50);
-                  });
-                  
-                  // recognizedTextも更新（下位互換のため）
-                  setRecognizedText(prev => {
-                    // 現在のrecognizedTextからinterim部分を除去
-                    let cleanText = prev;
-                    if (interimTranscript && cleanText.includes(interimTranscript)) {
-                      const lastInterimIndex = cleanText.lastIndexOf(interimTranscript);
-                      if (lastInterimIndex !== -1) {
-                        cleanText = cleanText.substring(0, lastInterimIndex) + 
-                                   cleanText.substring(lastInterimIndex + interimTranscript.length);
-                      }
-                    }
-                    cleanText = cleanText.trim();
-                    
-                    // finalテキストを追加（下位互換のため）
-                    return cleanText + (cleanText ? ' ' : '') + trimmedFinal;
-                  });
-                  
-                  setInterimText('');
-                } else if (interimTranscript) {
-                  // interimのみの場合
-                  setRecognizedText(prev => {
-                    // 既存のfinalTextを保持し、interim部分を更新
-                    const finalPart = prev.trim();
-                    // interim部分を追加（既存のinterim部分は上書き）
-                    return finalPart + (finalPart ? ' ' : '') + interimTranscript;
-                  });
+              lastProcessedFinalTextRef.current = trimmedFinal;
+              
+              // finalTextに追加
+              setFinalText(prev => prev + trimmedFinal + ' ');
+              
+              // 新しいテキストを配列の先頭に追加（上に表示、タイムスタンプ付き）
+              setRecognizedTextLines(prev => {
+                // 配列全体をチェックして重複を防ぐ（完全一致）
+                const isDuplicate = prev.some(line => line.text === trimmedFinal);
+                if (isDuplicate) {
+                  return prev; // 重複している場合は追加しない
                 }
+                const newLine: TextLine = {
+                  text: trimmedFinal,
+                  timestamp: getTimestamp()
+                };
+                return [newLine, ...prev].slice(0, 50);
+              });
+              
+              // recognizedTextも更新（下位互換のため）
+              setRecognizedText(prev => {
+                // 現在のrecognizedTextからinterim部分を除去
+                let cleanText = prev;
+                if (interimTranscript && cleanText.includes(interimTranscript)) {
+                  const lastInterimIndex = cleanText.lastIndexOf(interimTranscript);
+                  if (lastInterimIndex !== -1) {
+                    cleanText = cleanText.substring(0, lastInterimIndex) + 
+                               cleanText.substring(lastInterimIndex + interimTranscript.length);
+                  }
+                }
+                cleanText = cleanText.trim();
+                
+                // finalテキストを追加（下位互換のため）
+                return cleanText + (cleanText ? ' ' : '') + trimmedFinal;
+              });
+              
+              setInterimText('');
+            } else if (interimTranscript) {
+              // interimのみの場合
+              setRecognizedText(prev => {
+                // 既存のfinalTextを保持し、interim部分を更新
+                const finalPart = prev.trim();
+                // interim部分を追加（既存のinterim部分は上書き）
+                return finalPart + (finalPart ? ' ' : '') + interimTranscript;
+              });
+            }
               };
 
-              recognitionRef.current.onerror = (event: any) => {
-                if (event.error !== 'aborted') {
-                  console.error('音声認識エラー:', event.error);
-                  setIsRecording(false);
-                }
-              };
+          recognitionRef.current.onerror = (event: any) => {
+            if (event.error !== 'aborted') {
+              console.error('音声認識エラー:', event.error);
+              setIsRecording(false);
+            }
+          };
 
-              recognitionRef.current.onend = () => {
-                // 長押し方式なので、onendで自動再開しない
-                // ユーザーがボタンを離したら停止する
-                console.log('音声認識終了（ボタン離された）');
-              };
+          recognitionRef.current.onend = () => {
+            // 長押し方式なので、onendで自動再開しない
+            // ユーザーがボタンを離したら停止する
+            console.log('音声認識終了（ボタン離された）');
+          };
         }
       }
     }
-      
-      console.log('音声認識を開始します（長押し）');
-      setIsRecording(true);
+    
+    console.log('音声認識を開始します（長押し）');
+    setIsRecording(true);
       
       // 少し待ってから開始（状態更新を確実にするため）
       setTimeout(() => {
