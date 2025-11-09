@@ -195,6 +195,7 @@ export default function Home() {
   const translateAbortControllerRef = useRef<AbortController | null>(null);
   const lastTranslatedTextRef = useRef<string>('');
   const lastProcessedFinalTextRef = useRef<string>('');
+  const sessionIdRef = useRef<string>(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   
   // タイムスタンプ生成関数（-12:40 39s形式）
   const getTimestamp = (): string => {
@@ -203,6 +204,70 @@ export default function Home() {
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
     return `-${hours}:${minutes} ${seconds}s`;
+  };
+
+  // 音声認識ログ送信関数
+  const sendSpeechRecognitionLog = async (
+    eventType: 'init' | 'start' | 'result' | 'error' | 'end' | 'release',
+    data?: {
+      transcript_data?: {
+        interim?: string;
+        final?: string;
+        result_index?: number;
+        results_length?: number;
+      };
+      error_details?: {
+        error?: string;
+        error_code?: string | number | null;
+        message?: string;
+      };
+    }
+  ) => {
+    try {
+      const deviceInfo = {
+        is_mobile: isMobile,
+        screen_width: typeof window !== 'undefined' ? window.screen.width : 0,
+        screen_height: typeof window !== 'undefined' ? window.screen.height : 0,
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : ''
+      };
+
+      const browserInfo = {
+        name: typeof navigator !== 'undefined' 
+          ? (navigator.userAgent.includes('Chrome') ? 'Chrome' 
+            : navigator.userAgent.includes('Safari') ? 'Safari'
+            : navigator.userAgent.includes('Firefox') ? 'Firefox'
+            : 'Unknown')
+          : 'Unknown',
+        platform: typeof navigator !== 'undefined' ? navigator.platform : 'Unknown',
+        language: typeof navigator !== 'undefined' ? navigator.language : 'Unknown'
+      };
+
+      const recognitionState = {
+        is_recording: isRecording,
+        continuous: recognitionRef.current?.continuous ?? true,
+        interim_results: recognitionRef.current?.interimResults ?? true,
+        lang: recognitionRef.current?.lang ?? 'ja-JP'
+      };
+
+      await fetch('/api/speech-recognition-logs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          event_type: eventType,
+          device_info: deviceInfo,
+          browser_info: browserInfo,
+          recognition_state: recognitionState,
+          transcript_data: data?.transcript_data || null,
+          error_details: data?.error_details || null,
+          session_id: sessionIdRef.current,
+          timestamp: new Date().toISOString()
+        })
+      });
+    } catch (error) {
+      console.error('ログ送信エラー:', error);
+    }
   };
 
   // 音声の初期化（Web Audio APIで100%音量）
@@ -246,6 +311,9 @@ export default function Home() {
           recognitionRef.current.continuous = true;
           recognitionRef.current.interimResults = true;
 
+          // 初期化ログを送信
+          sendSpeechRecognitionLog('init');
+
           recognitionRef.current.onresult = (event: any) => {
             let interim = '';
             let newFinal = '';
@@ -264,6 +332,16 @@ export default function Home() {
             
             // interimのテキストを更新
             setInterimText(interim);
+            
+            // 結果ログを送信
+            sendSpeechRecognitionLog('result', {
+              transcript_data: {
+                interim: interim || undefined,
+                final: newFinal || undefined,
+                result_index: event.resultIndex,
+                results_length: event.results.length
+              }
+            });
             
             if (newFinal) {
               const trimmed = newFinal.trim();
@@ -334,12 +412,22 @@ export default function Home() {
             if (event.error !== 'aborted') {
               console.error('音声認識エラー:', event.error);
               setIsRecording(false);
+              // エラーログを送信
+              sendSpeechRecognitionLog('error', {
+                error_details: {
+                  error: event.error,
+                  error_code: event.errorCode || null,
+                  message: `音声認識エラー: ${event.error}`
+                }
+              });
             }
           };
 
           recognitionRef.current.onend = () => {
             // 長押し方式なので、onendで自動再開しない
             console.log('音声認識終了');
+            // 終了ログを送信
+            sendSpeechRecognitionLog('end');
           };
           
           console.log('音声認識を初期化しました');
@@ -632,6 +720,16 @@ export default function Home() {
                 // interim結果を表示
                 setInterimText(interimTranscript);
                 
+                // 結果ログを送信
+                sendSpeechRecognitionLog('result', {
+                  transcript_data: {
+                    interim: interimTranscript || undefined,
+                    final: finalTranscript || undefined,
+                    result_index: event.resultIndex,
+                    results_length: event.results.length
+                  }
+                });
+                
                 // final結果がある場合
                 if (finalTranscript) {
                   const trimmedFinal = finalTranscript.trim();
@@ -694,6 +792,14 @@ export default function Home() {
             if (event.error !== 'aborted') {
               console.error('音声認識エラー:', event.error);
               setIsRecording(false);
+              // エラーログを送信
+              sendSpeechRecognitionLog('error', {
+                error_details: {
+                  error: event.error,
+                  error_code: event.errorCode || null,
+                  message: `音声認識エラー: ${event.error}`
+                }
+              });
             }
           };
 
@@ -701,6 +807,8 @@ export default function Home() {
             // 長押し方式なので、onendで自動再開しない
             // ユーザーがボタンを離したら停止する
             console.log('音声認識終了（ボタン離された）');
+            // 終了ログを送信
+            sendSpeechRecognitionLog('end');
           };
         }
       }
@@ -708,6 +816,10 @@ export default function Home() {
     
     console.log('音声認識を開始します（長押し）');
     setIsRecording(true);
+    // 新しいセッションIDを生成
+    sessionIdRef.current = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // 開始ログを送信
+    sendSpeechRecognitionLog('start');
     
     // 少し待ってから開始（状態更新を確実にするため）
     setTimeout(() => {
@@ -757,6 +869,16 @@ export default function Home() {
                 
                 // interimのテキストを更新
                 setInterimText(interim);
+                
+                // 結果ログを送信
+                sendSpeechRecognitionLog('result', {
+                  transcript_data: {
+                    interim: interim || undefined,
+                    final: newFinal || undefined,
+                    result_index: event.resultIndex,
+                    results_length: event.results.length
+                  }
+                });
                 
                 if (newFinal) {
                   const trimmed = newFinal.trim();
@@ -810,11 +932,21 @@ export default function Home() {
                 if (event.error !== 'aborted') {
                   console.error('音声認識エラー:', event.error);
                   setIsRecording(false);
+                  // エラーログを送信
+                  sendSpeechRecognitionLog('error', {
+                    error_details: {
+                      error: event.error,
+                      error_code: event.errorCode || null,
+                      message: `音声認識エラー: ${event.error}`
+                    }
+                  });
                 }
               };
               
               recognitionRef.current.onend = () => {
                 console.log('音声認識終了');
+                // 終了ログを送信
+                sendSpeechRecognitionLog('end');
               };
               
               // 再初期化後、再度開始を試みる
@@ -853,6 +985,8 @@ export default function Home() {
     
     console.log('音声認識を停止します（ボタン離された）');
     setIsRecording(false);
+    // リリースログを送信
+    sendSpeechRecognitionLog('release');
     
     // 最後のinterimテキストがあれば、確定して新しい行に追加
     if (interimText.trim()) {
