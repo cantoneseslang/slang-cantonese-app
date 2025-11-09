@@ -1497,131 +1497,85 @@ export default function Home() {
               recognitionRef.current.interimResults = true;
 
               recognitionRef.current.onresult = (event: any) => {
-                let interim = '';
-                let newFinal = '';
+                let interimTranscript = '';
+                let finalTranscript = '';
                 
-                // モバイル版で詳細ログを出力
-                if (isMobile) {
-                  console.log('[モバイル] onresult発火:', {
-                    resultIndex: event.resultIndex,
-                    resultsLength: event.results.length,
-                    isRecording,
-                    allResults: Array.from({ length: event.results.length }, (_, i) => ({
-                      index: i,
-                      transcript: event.results[i][0].transcript,
-                      isFinal: event.results[i].isFinal
-                    }))
-                  });
-                }
-                
-                // resultIndexから新しい結果のみを処理
-                // モバイル版では、resultIndexが0でない場合があるため、全ての結果を確認
+                // 全ての結果を処理（resultIndexから最後まで）
                 for (let i = event.resultIndex; i < event.results.length; i++) {
                   const transcript = event.results[i][0].transcript;
                   if (event.results[i].isFinal) {
-                    // finalの結果を集約
-                    newFinal += transcript;
+                    // final結果を追加（空白で区切る）
+                    finalTranscript += (finalTranscript ? ' ' : '') + transcript;
                   } else {
-                    // interimは最新のもののみ（上書き）
-                    interim = transcript;
+                    // interim結果は最新のものを保持（上書き）
+                    interimTranscript = transcript;
                   }
                 }
                 
-                // ログを送信（結果イベント）
-                sendSpeechRecognitionLog('result', {
-                  transcript: { interim, final: newFinal },
-                  resultIndex: event.resultIndex,
-                  resultsLength: event.results.length
-                });
+                // interim結果を表示
+                setInterimText(interimTranscript);
                 
-                // デバッグ用: モバイル版で詳細ログを出力
-                if (isMobile) {
-                  console.log('[モバイル] 音声認識結果:', {
-                    resultIndex: event.resultIndex,
-                    resultsLength: event.results.length,
-                    interim,
-                    newFinal,
-                    isRecording
-                  });
-                }
-                
-                // interimのテキストを更新
-                setInterimText(interim);
-                
-                if (newFinal) {
-                  const trimmed = newFinal.trim();
+                // final結果がある場合
+                if (finalTranscript) {
+                  const trimmedFinal = finalTranscript.trim();
                   
-                  // 直前のfinalテキストと比較（重複チェック - 完全一致のみ）
-                  if (trimmed === lastProcessedFinalTextRef.current && trimmed.length > 0) {
-                    // 完全に同じテキストの場合のみスキップ
+                  // 直前のfinalテキストと完全一致する場合はスキップ（重複防止）
+                  if (trimmedFinal === lastProcessedFinalTextRef.current) {
                     setInterimText('');
                     return;
                   }
                   
-                  lastProcessedFinalTextRef.current = trimmed;
+                  lastProcessedFinalTextRef.current = trimmedFinal;
                   
-                  // finalのテキストを追加
-                  setFinalText(prev => {
-                    const result = prev + trimmed + ' ';
-                    return result;
-                  });
+                  // finalTextに追加
+                  setFinalText(prev => prev + trimmedFinal + ' ');
                   
-                  setRecognizedText(prev => {
-                    // 既存のテキストからinterim部分を除去してから追加
-                    let baseText = prev;
-                    if (interim && baseText.includes(interim)) {
-                      // interim部分を除去（最後の出現のみ）
-                      const lastIndex = baseText.lastIndexOf(interim);
-                      if (lastIndex !== -1) {
-                        baseText = baseText.substring(0, lastIndex) + baseText.substring(lastIndex + interim.length);
-                      }
-                    }
-                    baseText = baseText.trim();
-                    
-                    // finalテキストを追加
-                    return baseText + (baseText ? ' ' : '') + trimmed;
-                  });
-                  
-                  // finalが確定したら必ず新しい行として追加（上に表示）
+                  // 新しいテキストを配列の先頭に追加（上に表示、タイムスタンプ付き）
                   setRecognizedTextLines(prev => {
                     // 配列全体をチェックして重複を防ぐ（完全一致）
-                    const isDuplicate = prev.some(line => line.text === trimmed);
+                    const isDuplicate = prev.some(line => line.text === trimmedFinal);
                     if (isDuplicate) {
                       return prev; // 重複している場合は追加しない
                     }
-                    // 新しい行を先頭に追加（タイムスタンプ付き）
                     const newLine: TextLine = {
-                      text: trimmed,
+                      text: trimmedFinal,
                       timestamp: getTimestamp()
                     };
-                    return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化: 保持行数を削減
+                    return [newLine, ...prev].slice(0, 50);
+                  });
+                  
+                  // recognizedTextも更新（下位互換のため）
+                  setRecognizedText(prev => {
+                    // 現在のrecognizedTextからinterim部分を除去
+                    let cleanText = prev;
+                    if (interimTranscript && cleanText.includes(interimTranscript)) {
+                      const lastInterimIndex = cleanText.lastIndexOf(interimTranscript);
+                      if (lastInterimIndex !== -1) {
+                        cleanText = cleanText.substring(0, lastInterimIndex) + 
+                                   cleanText.substring(lastInterimIndex + interimTranscript.length);
+                      }
+                    }
+                    cleanText = cleanText.trim();
+                    
+                    // finalテキストを追加（下位互換のため）
+                    return cleanText + (cleanText ? ' ' : '') + trimmedFinal;
                   });
                   
                   setInterimText('');
-                } else if (interim) {
-                  // interimのみの場合 - 最新のinterimを表示（確定するまで更新）
+                } else if (interimTranscript) {
+                  // interimのみの場合
                   setRecognizedText(prev => {
-                    // 既存のfinalText部分を保持し、interim部分を更新
-                    const baseText = prev.trim();
-                    // interimの最後の部分を上書き（最新のinterimを表示）
-                    return baseText + (baseText ? ' ' : '') + interim;
+                    // 既存のfinalTextを保持し、interim部分を更新
+                    const finalPart = prev.trim();
+                    // interim部分を追加（既存のinterim部分は上書き）
+                    return finalPart + (finalPart ? ' ' : '') + interimTranscript;
                   });
-                  
-                  // interimは配列に追加しない（確定後に追加される）
-                  // 表示はinterimTextステートで行う
                 }
               };
 
               recognitionRef.current.onerror = (event: any) => {
-                // abortedエラーは無視（意図的な停止の場合）
                 if (event.error !== 'aborted') {
-                  console.error('[モバイル] 音声認識エラー:', event.error, event.errorCode);
-                  // エラーログを送信
-                  sendSpeechRecognitionLog('error', {
-                    error: event.error,
-                    errorCode: event.errorCode || null,
-                    message: `音声認識エラー: ${event.error}`
-                  });
+                  console.error('音声認識エラー:', event.error);
                   setIsRecording(false);
                 }
               };
@@ -1629,12 +1583,10 @@ export default function Home() {
               recognitionRef.current.onend = () => {
                 // 長押し方式なので、onendで自動再開しない
                 // ユーザーがボタンを離したら停止する
-                console.log('[モバイル] 音声認識終了');
-                // 終了ログを送信
-                sendSpeechRecognitionLog('end');
+                console.log('音声認識終了（ボタン離された）');
               };
               
-              console.log('[モバイル] 音声認識を再初期化しました');
+              console.log('音声認識を再初期化しました');
             } catch (e) {
               console.error('音声認識再初期化エラー:', e);
               setIsRecording(false);
@@ -1653,17 +1605,14 @@ export default function Home() {
       
       console.log('音声認識を開始します（長押し）');
       setIsRecording(true);
-      // 新しいセッションIDを生成
-      sessionIdRef.current = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      // 少し待ってから開始（状態更新を確実にするため、PC版とモバイル版で同じ処理）
+      // 少し待ってから開始（状態更新を確実にするため）
       setTimeout(() => {
         // recognitionRef.currentを直接チェック（isRecordingの状態に依存しない）
         if (recognitionRef.current) {
           try {
             recognitionRef.current.start();
             console.log('音声認識開始成功');
-            sendSpeechRecognitionLog('start');
           } catch (e: any) {
             console.error('音声認識開始エラー:', e);
             // エラーメッセージを確認
@@ -1672,16 +1621,117 @@ export default function Home() {
             } else {
               console.error('音声認識開始に失敗:', e.message || e);
               setIsRecording(false);
-              sendSpeechRecognitionLog('error', {
-                error: e instanceof Error ? e.message : String(e),
-                errorCode: 'start_failed',
-                message: '音声認識開始に失敗しました'
-              });
             }
           }
         } else {
           console.error('音声認識が初期化できませんでした - recognitionRef.current:', recognitionRef.current);
           setIsRecording(false);
+          // 再初期化を試みる
+          if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
+            const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+            if (SpeechRecognition) {
+              try {
+                recognitionRef.current = new SpeechRecognition();
+                recognitionRef.current.lang = 'ja-JP';
+                recognitionRef.current.continuous = true;
+                recognitionRef.current.interimResults = true;
+                
+                recognitionRef.current.onresult = (event: any) => {
+                  let interim = '';
+                  let newFinal = '';
+                  
+                  // resultIndexから新しい結果のみを処理（重複を防ぐ）
+                  for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                      // finalの結果は新しいもののみ追加
+                      newFinal += transcript;
+                    } else {
+                      // interimは常に最新のものを表示
+                      interim = transcript;
+                    }
+                  }
+                  
+                  // interimのテキストを更新
+                  setInterimText(interim);
+                  
+                  if (newFinal) {
+                    const trimmed = newFinal.trim();
+                    
+                    // 直前のfinalテキストと比較（重複チェック）
+                    if (trimmed === lastProcessedFinalTextRef.current && trimmed.length > 0) {
+                      setInterimText('');
+                      return;
+                    }
+                    
+                    lastProcessedFinalTextRef.current = trimmed;
+                    
+                    // finalのテキストを追加
+                    setFinalText(prev => prev + trimmed + ' ');
+                    
+                    setRecognizedText(prev => {
+                      // interimテキストを除去してから追加
+                      const baseText = prev.replace(interim, '').trim();
+                      if (baseText.endsWith(trimmed)) {
+                        return baseText;
+                      }
+                      return baseText + (baseText ? ' ' : '') + trimmed;
+                    });
+                    
+                    // recognizedTextLinesに追加（重複チェック付き）
+                    setRecognizedTextLines(prev => {
+                      // 配列全体をチェックして重複を防ぐ（完全一致）
+                      const isDuplicate = prev.some(line => line.text === trimmed);
+                      if (isDuplicate) {
+                        return prev;
+                      }
+                      const newLine: TextLine = {
+                        text: trimmed,
+                        timestamp: getTimestamp()
+                      };
+                      return [newLine, ...prev].slice(0, 50);
+                    });
+                    
+                    setInterimText('');
+                  } else if (interim) {
+                    // interimのみの場合
+                    setRecognizedText(prev => {
+                      // 既存のfinalTextを保持し、interimを追加
+                      const baseText = prev.trim();
+                      return baseText + (baseText ? ' ' : '') + interim;
+                    });
+                  }
+                };
+                
+                recognitionRef.current.onerror = (event: any) => {
+                  if (event.error !== 'aborted') {
+                    console.error('音声認識エラー:', event.error);
+                    setIsRecording(false);
+                  }
+                };
+                
+                recognitionRef.current.onend = () => {
+                  console.log('音声認識終了');
+                };
+                
+                // 再初期化後、再度開始を試みる
+                setTimeout(() => {
+                  if (recognitionRef.current) {
+                    try {
+                      recognitionRef.current.start();
+                      console.log('音声認識再初期化後に開始成功');
+                    } catch (e: any) {
+                      console.error('再初期化後の音声認識開始エラー:', e);
+                      setIsRecording(false);
+                    }
+                  }
+                }, 100);
+              } catch (e) {
+                console.error('音声認識再初期化エラー:', e);
+                setIsRecording(false);
+              }
+            }
+          }
         }
       }, 200);
     }
