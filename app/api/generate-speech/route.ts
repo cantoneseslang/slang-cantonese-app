@@ -21,7 +21,14 @@ export async function POST(request: NextRequest) {
       audioConfig: { audioEncoding: 'MP3' }
     };
 
-    console.log('🔊 音声生成API呼び出し開始:', { text: text.substring(0, 50), languageCode });
+    // 受信したテキストを詳細にログ出力（文字コードレベルで確認）
+    const textCharCodes = Array.from(text).map(c => `${c}(U+${c.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0')})`).join(' ');
+    console.log('🔊 音声生成API呼び出し開始:', { 
+      text: text.substring(0, 50), 
+      textLength: text.length,
+      textCharCodes: textCharCodes.substring(0, 200),
+      languageCode 
+    });
 
     // タイムアウト付きfetch（8秒でタイムアウト）
     const controller = new AbortController();
