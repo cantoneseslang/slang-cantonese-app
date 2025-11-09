@@ -524,13 +524,6 @@ export default function Home() {
               }
             }
             
-            // ログを送信（結果イベント）
-            sendSpeechRecognitionLog('result', {
-              transcript: { interim, final: newFinal },
-              resultIndex: event.resultIndex,
-              resultsLength: event.results.length
-            });
-            
             // interimのテキストを更新
             setInterimText(interim);
             
@@ -599,15 +592,8 @@ export default function Home() {
           };
 
           recognitionRef.current.onerror = (event: any) => {
-            // abortedエラーは無視（意図的な停止の場合）
             if (event.error !== 'aborted') {
               console.error('音声認識エラー:', event.error);
-              // エラーログを送信
-              sendSpeechRecognitionLog('error', {
-                error: event.error,
-                errorCode: event.errorCode || null,
-                message: `音声認識エラー: ${event.error}`
-              });
               setIsRecording(false);
             }
           };
@@ -615,14 +601,10 @@ export default function Home() {
           recognitionRef.current.onend = () => {
             // 長押し方式なので、onendで自動再開しない
             // ユーザーがボタンを離したら停止する
-            console.log('音声認識終了');
-            // 終了ログを送信
-            sendSpeechRecognitionLog('end');
+            console.log('音声認識終了（ボタン離された）');
           };
           
           console.log('音声認識を初期化しました');
-          // 初期化ログを送信
-          sendSpeechRecognitionLog('init');
         } catch (e) {
           console.error('音声認識初期化エラー:', e);
         }
@@ -1474,22 +1456,30 @@ export default function Home() {
     setIsMuted(prev => !prev);
   };
   
-  // マイクボタンのハンドラー（長押し方式）- 最初の安定していたシンプルな実装に戻す
+  // マイクボタンのハンドラー（長押し方式）
   const handleMicPress = () => {
-    if (!isHiddenMode) return;
+    if (!isHiddenMode) {
+      console.log('隠しモードではないため、マイク機能は無効です');
+      return;
+    }
     
     // モバイルでヘルプを消す（デザイン関連なので残す）
     if (isMobile) {
       setShowHelpPopups(false);
     }
     
-    if (!isRecording) {
-      // 音声認識が初期化されていない場合は再初期化
-      if (!recognitionRef.current) {
-        console.log('音声認識を再初期化します');
-        if (typeof window !== 'undefined') {
-          const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-          if (SpeechRecognition) {
+    // 既に録音中の場合は何もしない
+    if (isRecording) {
+      console.log('既に録音中です');
+      return;
+    }
+    
+    // 音声認識が初期化されていない場合は再初期化
+    if (!recognitionRef.current) {
+      console.log('音声認識を再初期化します');
+      if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
+        const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+        if (SpeechRecognition) {
             try {
               recognitionRef.current = new SpeechRecognition();
               recognitionRef.current.lang = 'ja-JP';
