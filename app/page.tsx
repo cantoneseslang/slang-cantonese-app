@@ -1449,11 +1449,6 @@ export default function Home() {
       return;
     }
     
-    // モバイルでヘルプを消す（デザイン関連なので残す）
-    if (isMobile) {
-      setShowHelpPopups(false);
-    }
-    
     // 既に録音中の場合は何もしない
     if (isRecording) {
       console.log('既に録音中です');
@@ -1466,8 +1461,7 @@ export default function Home() {
       if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
         const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
         if (SpeechRecognition) {
-            try {
-              recognitionRef.current = new SpeechRecognition();
+          recognitionRef.current = new SpeechRecognition();
               recognitionRef.current.lang = 'ja-JP';
               recognitionRef.current.continuous = true;
               recognitionRef.current.interimResults = true;
@@ -1561,23 +1555,9 @@ export default function Home() {
                 // ユーザーがボタンを離したら停止する
                 console.log('音声認識終了（ボタン離された）');
               };
-              
-              console.log('音声認識を再初期化しました');
-            } catch (e) {
-              console.error('音声認識再初期化エラー:', e);
-              setIsRecording(false);
-              return;
-            }
-          } else {
-            console.warn('音声認識APIが利用できません');
-            setIsRecording(false);
-            return;
-          }
-        } else {
-          setIsRecording(false);
-          return;
         }
       }
+    }
       
       console.log('音声認識を開始します（長押し）');
       setIsRecording(true);
