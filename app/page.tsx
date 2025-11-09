@@ -362,6 +362,7 @@ export default function Home() {
   const translateDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const touchCancelTimeoutRef = useRef<NodeJS.Timeout | null>(null); // onTouchCancel後の安全な停止用タイマー
   const translateAbortControllerRef = useRef<AbortController | null>(null);
+  const sessionIdRef = useRef<string>(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`); // セッションID
   
   // 同時通訳モード用の音声再生とミュート状態
   const simultaneousModeAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -481,9 +482,20 @@ export default function Home() {
       // 音声認識APIが利用可能かチェック
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
       
+      // モバイルブラウザでのサポートを確認
+      const isMobileBrowser = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const hasSpeechRecognition = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+      
+      console.log('[音声認識初期化]', {
+        isMobileBrowser,
+        hasSpeechRecognition,
+        userAgent: navigator.userAgent.substring(0, 50)
+      });
+      
       if (SpeechRecognition) {
         // 既に初期化されている場合はスキップ
         if (recognitionRef.current) {
+          console.log('[音声認識初期化] 既に初期化済み');
           return;
         }
         
@@ -492,6 +504,9 @@ export default function Home() {
           recognitionRef.current.lang = 'ja-JP';
           recognitionRef.current.continuous = true;
           recognitionRef.current.interimResults = true;
+          
+          // モバイルブラウザでは、ユーザー操作から直接開始する必要がある場合があるため、
+          // 初期化時にはstart()を呼ばない（handleMicPressで呼ぶ）
 
           recognitionRef.current.onresult = (event: any) => {
             let interim = '';
@@ -580,6 +595,12 @@ export default function Home() {
             // abortedエラーは無視（意図的な停止の場合）
             if (event.error !== 'aborted') {
               console.error('音声認識エラー:', event.error);
+              // エラーログを送信
+              sendSpeechRecognitionLog('error', {
+                error: event.error,
+                errorCode: event.errorCode || null,
+                message: `音声認識エラー: ${event.error}`
+              });
               setIsRecording(false);
             }
           };
@@ -587,9 +608,13 @@ export default function Home() {
           recognitionRef.current.onend = () => {
             // 長押し方式なので、onendで自動再開しない
             console.log('音声認識終了');
+            // 終了ログを送信
+            sendSpeechRecognitionLog('end');
           };
           
           console.log('音声認識を初期化しました');
+          // 初期化ログを送信
+          sendSpeechRecognitionLog('init');
         } catch (e) {
           console.error('音声認識初期化エラー:', e);
         }
@@ -1467,6 +1492,15 @@ export default function Home() {
                 let interim = '';
                 let newFinal = '';
                 
+                // モバイル版で詳細ログを出力
+                if (isMobile) {
+                  console.log('[モバイル] onresult発火:', {
+                    resultIndex: event.resultIndex,
+                    resultsLength: event.results.length,
+                    isRecording
+                  });
+                }
+                
                 // resultIndexから新しい結果のみを処理
                 for (let i = event.resultIndex; i < event.results.length; i++) {
                   const transcript = event.results[i][0].transcript;
@@ -1477,6 +1511,24 @@ export default function Home() {
                     // interimは最新のもののみ（上書き）
                     interim = transcript;
                   }
+                }
+                
+                // ログを送信（結果イベント）
+                sendSpeechRecognitionLog('result', {
+                  transcript: { interim, final: newFinal },
+                  resultIndex: event.resultIndex,
+                  resultsLength: event.results.length
+                });
+                
+                // デバッグ用: モバイル版で詳細ログを出力
+                if (isMobile) {
+                  console.log('[モバイル] 音声認識結果:', {
+                    resultIndex: event.resultIndex,
+                    resultsLength: event.results.length,
+                    interim,
+                    newFinal,
+                    isRecording
+                  });
                 }
                 
                 // interimのテキストを更新
@@ -1549,17 +1601,25 @@ export default function Home() {
               recognitionRef.current.onerror = (event: any) => {
                 // abortedエラーは無視（意図的な停止の場合）
                 if (event.error !== 'aborted') {
-                  console.error('音声認識エラー:', event.error);
+                  console.error('[モバイル] 音声認識エラー:', event.error, event.errorCode);
+                  // エラーログを送信
+                  sendSpeechRecognitionLog('error', {
+                    error: event.error,
+                    errorCode: event.errorCode || null,
+                    message: `音声認識エラー: ${event.error}`
+                  });
                   setIsRecording(false);
                 }
               };
 
               recognitionRef.current.onend = () => {
                 // 長押し方式なので、onendで自動再開しない
-                console.log('音声認識終了');
+                console.log('[モバイル] 音声認識終了');
+                // 終了ログを送信
+                sendSpeechRecognitionLog('end');
               };
               
-              console.log('音声認識を再初期化しました');
+              console.log('[モバイル] 音声認識を再初期化しました');
             } catch (e) {
               console.error('音声認識再初期化エラー:', e);
               setIsRecording(false);
@@ -1576,14 +1636,55 @@ export default function Home() {
         }
       }
       
+      // iOSではユーザー操作のコンテキスト内で直接start()を呼ぶ必要がある
+      // setTimeoutで遅延させるとコンテキストが失われて音声認識が開始できない
       setIsRecording(true);
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.start();
-        } catch (e) {
-          console.error('音声認識開始エラー:', e);
+      // 新しいセッションIDを生成
+      sessionIdRef.current = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // モバイル版では同期的にstart()を呼ぶ（ユーザー操作のコンテキストを保持）
+      if (isMobile) {
+        if (recognitionRef.current) {
+          try {
+            recognitionRef.current.start();
+            console.log('[モバイル] 音声認識開始成功（同期的）');
+            // 開始ログを送信（非同期で）
+            sendSpeechRecognitionLog('start');
+          } catch (e) {
+            console.error('[モバイル] 音声認識開始エラー:', e);
+            setIsRecording(false);
+            sendSpeechRecognitionLog('error', {
+              error: e instanceof Error ? e.message : String(e),
+              errorCode: 'start_failed',
+              message: '音声認識開始に失敗しました'
+            });
+          }
+        } else {
+          console.error('[モバイル] recognitionRef.currentがnullです');
           setIsRecording(false);
         }
+      } else {
+        // PC版ではsetTimeoutで少し待ってから開始（従来通り）
+        setTimeout(() => {
+          if (recognitionRef.current) {
+            try {
+              recognitionRef.current.start();
+              console.log('音声認識開始成功');
+              sendSpeechRecognitionLog('start');
+            } catch (e) {
+              console.error('音声認識開始エラー:', e);
+              setIsRecording(false);
+              sendSpeechRecognitionLog('error', {
+                error: e instanceof Error ? e.message : String(e),
+                errorCode: 'start_failed',
+                message: '音声認識開始に失敗しました'
+              });
+            }
+          } else {
+            console.error('recognitionRef.currentがnullです');
+            setIsRecording(false);
+          }
+        }, 200);
       }
     }
   };
@@ -1592,11 +1693,20 @@ export default function Home() {
     if (!isHiddenMode) return;
     
     setIsRecording(false);
+    // リリースログを送信
+    sendSpeechRecognitionLog('release');
+    
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch (e) {
         console.error('音声認識停止エラー:', e);
+        // エラーログを送信
+        sendSpeechRecognitionLog('error', {
+          error: e instanceof Error ? e.message : String(e),
+          errorCode: 'stop_failed',
+          message: '音声認識停止に失敗しました'
+        });
       }
     }
   };
@@ -2797,6 +2907,52 @@ export default function Home() {
     };
     getUser();
   }, []);
+
+  // 音声認識ログを送信する関数
+  const sendSpeechRecognitionLog = async (eventType: string, data: any = {}) => {
+    try {
+      const deviceInfo = {
+        is_mobile: isMobile,
+        screen_width: typeof window !== 'undefined' ? window.innerWidth : 0,
+        screen_height: typeof window !== 'undefined' ? window.innerHeight : 0,
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : ''
+      };
+
+      const browserInfo = {
+        name: typeof navigator !== 'undefined' ? (navigator.userAgent.includes('Chrome') ? 'Chrome' : navigator.userAgent.includes('Safari') ? 'Safari' : navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Unknown') : 'Unknown',
+        platform: typeof navigator !== 'undefined' ? navigator.platform : 'Unknown',
+        language: typeof navigator !== 'undefined' ? navigator.language : 'Unknown'
+      };
+
+      await fetch('/api/speech-recognition-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_type: eventType,
+          device_info: deviceInfo,
+          browser_info: browserInfo,
+          recognition_state: {
+            is_recording: isRecording,
+            continuous: recognitionRef.current?.continuous,
+            interim_results: recognitionRef.current?.interimResults,
+            lang: recognitionRef.current?.lang
+          },
+          error_details: data.error ? { error: data.error, error_code: data.errorCode, message: data.message } : null,
+          transcript_data: data.transcript ? {
+            interim: data.interim || '',
+            final: data.final || '',
+            result_index: data.resultIndex,
+            results_length: data.resultsLength
+          } : null,
+          session_id: sessionIdRef.current,
+          timestamp: new Date().toISOString()
+        })
+      });
+    } catch (error) {
+      // ログ送信エラーは静かに処理（機能に影響を与えない）
+      console.error('[speech-recognition-logs] ログ送信エラー:', error);
+    }
+  };
 
   useEffect(() => {
     // モバイル判定
@@ -4369,7 +4525,11 @@ export default function Home() {
                 touchCancelTimeoutRef.current = null;
               }
               
-              console.log('ロゴ長押し開始（タッチ） - 音声認識開始');
+              console.log('[モバイル] ロゴ長押し開始（タッチ） - 音声認識開始', {
+                isHiddenMode,
+                isRecording,
+                recognitionExists: !!recognitionRef.current
+              });
               handleMicPress();
             }}
             onTouchEnd={(e) => {
