@@ -1,0 +1,54 @@
+# プロジェクトルール
+
+## ⚠️ 最重要：絶対に禁止されているコードパターン
+
+### 1. `touchAction: 'none'` または `touch-action: none` は絶対に使用禁止
+
+**理由**: タッチイベントが完全に無効化され、モバイルでの音声入力が動作しなくなる
+
+**禁止パターン**:
+- `touchAction: 'none'`
+- `touchAction: isMobile ? 'none' : 'auto'`
+- `touch-action: none`
+- その他`touchAction`や`touch-action`に`'none'`を設定する全てのパターン
+
+**正しい実装**: `touchAction`プロパティを削除する
+
+**過去の失敗例**:
+- 2025年11月9日: `touchAction: 'none'`を追加してモバイル音声入力が無効化
+- 2025年11月9日: 再度`touchAction: 'none'`を追加して同じ問題が発生
+
+### 2. `handleMobileMicPress`のようなモバイル専用ハンドラーは禁止
+
+**理由**: 以前失敗したアプローチで、問題を解決しない
+
+**禁止パターン**:
+- `handleMobileMicPress`関数の作成
+- タッチイベントから直接音声認識を初期化・開始する処理
+
+**正しい実装**: 既存の`handleMicPress`を使用する
+
+## コード変更時の必須チェック
+
+コードを変更する際は、必ず以下を確認：
+
+1. `touchAction: 'none'`が含まれていないか
+2. `handleMobileMicPress`のような失敗したアプローチが含まれていないか
+3. `TODAY_FAILED_FIXES.md`に記載されている失敗アプローチが含まれていないか
+4. `docs/BLACKLIST.md`に記載されている禁止パターンが含まれていないか
+
+## コミット前のチェック
+
+コミット前に必ず以下を実行：
+
+```bash
+# touchAction: 'none'を検索
+grep -r "touchAction.*none" app/
+grep -r "touch-action.*none" app/
+
+# handleMobileMicPressを検索
+grep -r "handleMobileMicPress" app/
+```
+
+禁止パターンが見つかった場合は、コミットを中止し、該当コードを削除してください。
+
