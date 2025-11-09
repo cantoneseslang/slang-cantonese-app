@@ -482,20 +482,9 @@ export default function Home() {
       // 音声認識APIが利用可能かチェック
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
       
-      // モバイルブラウザでのサポートを確認
-      const isMobileBrowser = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const hasSpeechRecognition = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
-      
-      console.log('[音声認識初期化]', {
-        isMobileBrowser,
-        hasSpeechRecognition,
-        userAgent: navigator.userAgent.substring(0, 50)
-      });
-      
       if (SpeechRecognition) {
         // 既に初期化されている場合はスキップ
         if (recognitionRef.current) {
-          console.log('[音声認識初期化] 既に初期化済み');
           return;
         }
         
@@ -504,9 +493,6 @@ export default function Home() {
           recognitionRef.current.lang = 'ja-JP';
           recognitionRef.current.continuous = true;
           recognitionRef.current.interimResults = true;
-          
-          // モバイルブラウザでは、ユーザー操作から直接開始する必要がある場合があるため、
-          // 初期化時にはstart()を呼ばない（handleMicPressで呼ぶ）
 
           recognitionRef.current.onresult = (event: any) => {
             let interim = '';
@@ -573,7 +559,7 @@ export default function Home() {
                   text: trimmed,
                   timestamp: getTimestamp()
                 };
-                return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化: 保持行数を削減
+                return [newLine, ...prev].slice(0, 50); // 最大50行まで保持
               });
               
               setInterimText('');
@@ -592,6 +578,7 @@ export default function Home() {
           };
 
           recognitionRef.current.onerror = (event: any) => {
+            // abortedエラーは無視（意図的な停止の場合）
             if (event.error !== 'aborted') {
               console.error('音声認識エラー:', event.error);
               setIsRecording(false);
@@ -600,8 +587,7 @@ export default function Home() {
 
           recognitionRef.current.onend = () => {
             // 長押し方式なので、onendで自動再開しない
-            // ユーザーがボタンを離したら停止する
-            console.log('音声認識終了（ボタン離された）');
+            console.log('音声認識終了');
           };
           
           console.log('音声認識を初期化しました');
