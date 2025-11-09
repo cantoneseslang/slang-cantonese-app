@@ -8004,7 +8004,6 @@ export default function Home() {
             zIndex: 10001,
             padding: '1rem',
             overflow: 'hidden',
-            touchAction: 'none'
           }}>
             <div 
               onClick={(e) => e.stopPropagation()}
