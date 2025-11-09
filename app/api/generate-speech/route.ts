@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     };
 
     // 受信したテキストを詳細にログ出力（文字コードレベルで確認）
-    const textCharCodes = Array.from(text).map(c => `${c}(U+${c.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0')})`).join(' ');
+    const textCharCodes = Array.from(text).map((c: string) => `${c}(U+${c.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0')})`).join(' ');
     console.log('🔊 音声生成API呼び出し開始:', { 
       text: text.substring(0, 50), 
       textLength: text.length,
