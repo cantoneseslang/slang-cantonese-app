@@ -1439,130 +1439,7 @@ export default function Home() {
     setIsMuted(prev => !prev);
   };
   
-  // モバイル専用の音声認識開始ハンドラー（タッチイベントから直接呼び出し）
-  const handleMobileMicPress = (event: React.TouchEvent) => {
-    if (!isHiddenMode) {
-      console.log('隠しモードではないため、マイク機能は無効です');
-      return;
-    }
-    
-    // 既に録音中の場合は何もしない
-    if (isRecording) {
-      console.log('既に録音中です');
-      return;
-    }
-    
-    // モバイルでヘルプを消す
-    if (isMobile) {
-      setShowHelpPopups(false);
-    }
-    
-    // タッチイベントのコンテキスト内で直接音声認識を初期化・開始
-    if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-      if (SpeechRecognition) {
-        try {
-          // 既存の認識インスタンスを停止
-          if (recognitionRef.current) {
-            try {
-              recognitionRef.current.stop();
-            } catch (e) {
-              // 無視
-            }
-          }
-          
-          // 新しい認識インスタンスを作成
-          recognitionRef.current = new SpeechRecognition();
-          recognitionRef.current.lang = 'ja-JP';
-          recognitionRef.current.continuous = true;
-          recognitionRef.current.interimResults = true;
-          
-          recognitionRef.current.onresult = (event: any) => {
-            let interimTranscript = '';
-            let finalTranscript = '';
-            
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-              const transcript = event.results[i][0].transcript;
-              if (event.results[i].isFinal) {
-                finalTranscript += (finalTranscript ? ' ' : '') + transcript;
-              } else {
-                interimTranscript = transcript;
-              }
-            }
-            
-            setInterimText(interimTranscript);
-            
-            if (finalTranscript) {
-              const trimmedFinal = finalTranscript.trim();
-              
-              if (trimmedFinal === lastProcessedFinalTextRef.current) {
-                setInterimText('');
-                return;
-              }
-              
-              lastProcessedFinalTextRef.current = trimmedFinal;
-              setFinalText(prev => prev + trimmedFinal + ' ');
-              
-              setRecognizedTextLines(prev => {
-                const isDuplicate = prev.some(line => line.text === trimmedFinal);
-                if (isDuplicate) {
-                  return prev;
-                }
-                const newLine: TextLine = {
-                  text: trimmedFinal,
-                  timestamp: getTimestamp()
-                };
-                return [newLine, ...prev].slice(0, 50);
-              });
-              
-              setRecognizedText(prev => {
-                let cleanText = prev;
-                if (interimTranscript && cleanText.includes(interimTranscript)) {
-                  const lastInterimIndex = cleanText.lastIndexOf(interimTranscript);
-                  if (lastInterimIndex !== -1) {
-                    cleanText = cleanText.substring(0, lastInterimIndex) + 
-                               cleanText.substring(lastInterimIndex + interimTranscript.length);
-                  }
-                }
-                cleanText = cleanText.trim();
-                return cleanText + (cleanText ? ' ' : '') + trimmedFinal;
-              });
-              
-              setInterimText('');
-            } else if (interimTranscript) {
-              setRecognizedText(prev => {
-                const finalPart = prev.trim();
-                return finalPart + (finalPart ? ' ' : '') + interimTranscript;
-              });
-            }
-          };
-          
-          recognitionRef.current.onerror = (event: any) => {
-            if (event.error !== 'aborted') {
-              console.error('音声認識エラー:', event.error);
-              setIsRecording(false);
-            }
-          };
-          
-          recognitionRef.current.onend = () => {
-            console.log('音声認識終了（ボタン離された）');
-          };
-          
-          // 状態を更新してから即座に開始（ユーザーインタラクションのコンテキスト内）
-          setIsRecording(true);
-          
-          // 即座に開始（setTimeoutを使わない）
-          recognitionRef.current.start();
-          console.log('モバイル音声認識開始成功（タッチイベントから直接）');
-        } catch (e: any) {
-          console.error('モバイル音声認識開始エラー:', e);
-          setIsRecording(false);
-        }
-      }
-    }
-  };
-
-  // マイクボタンのハンドラー（長押し方式）- PC用
+  // マイクボタンのハンドラー（長押し方式）- 最初の安定していたシンプルな実装に戻す
   const handleMicPress = () => {
     if (!isHiddenMode) return;
     
@@ -4274,8 +4151,7 @@ export default function Home() {
               userSelect: 'none',
               WebkitUserSelect: 'none',
               WebkitTouchCallout: 'none',
-              overflow: 'visible',
-              touchAction: 'none' // モバイルでスクロールとの競合を防ぐ
+              overflow: 'visible'
             }}
             onMouseDown={(e) => {
               // モバイルでは無効（タッチイベントと競合するため）
@@ -4317,8 +4193,8 @@ export default function Home() {
                 touchCancelTimeoutRef.current = null;
               }
               
-              console.log('ロゴ長押し開始（タッチ） - モバイル専用音声認識開始');
-              handleMobileMicPress(e);
+              console.log('ロゴ長押し開始（タッチ） - 音声認識開始');
+              handleMicPress();
             }}
             onTouchEnd={(e) => {
               // モバイルでの長押し終了
