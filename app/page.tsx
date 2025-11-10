@@ -621,6 +621,20 @@ export default function Home() {
       translateAbortControllerRef.current.abort();
       translateAbortControllerRef.current = null;
     }
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        console.warn('resetInterpreterSession: stop error', e);
+      }
+      try {
+        recognitionRef.current.abort?.();
+      } catch (e) {
+        console.warn('resetInterpreterSession: abort error', e);
+      }
+      recognitionRef.current = null;
+    }
   };
 
   // 隠しモード終了処理
@@ -1025,6 +1039,16 @@ export default function Home() {
           console.log('音声認識は既に停止されています');
         }
       }
+      try {
+        recognitionRef.current.abort?.();
+      } catch (abortError) {
+        console.warn('音声認識abortエラー:', abortError);
+      }
+
+      // モバイルSafariでは同じインスタンスを再利用すると再開できないため完全に破棄する
+      setTimeout(() => {
+        recognitionRef.current = null;
+      }, 150);
     }
   };
 
