@@ -23,9 +23,9 @@ interface HiddenModeOverlayProps {
   isTranslationAreaRotating: boolean;
   translationAreaRotationDirectionRef: React.MutableRefObject<'forward' | 'reverse'>;
   exitHiddenMode: () => void;
-  titleAudioRef: React.RefObject<HTMLAudioElement>;
-  simultaneousModeAudioRef: React.RefObject<HTMLAudioElement>;
-  volumeLogoRef: React.RefObject<HTMLImageElement>;
+  titleAudioRef: React.MutableRefObject<HTMLAudioElement | null>;
+  simultaneousModeAudioRef: React.MutableRefObject<HTMLAudioElement | null>;
+  volumeLogoRef: React.MutableRefObject<HTMLImageElement | null>;
   isRecording: boolean;
   handleMicPress: () => void;
   handleMicRelease: () => void;
