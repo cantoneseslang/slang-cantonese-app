@@ -3118,69 +3118,6 @@ export default function Home() {
       {/* 隠しモードUI */}
       {isHiddenMode && (
         <>
-          {/* 通訳言語切り替えボタン */}
-          <div
-            style={{
-              position: 'fixed',
-              top: isMobile ? '0.75rem' : '1.5rem',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              display: 'flex',
-              gap: isMobile ? '0.5rem' : '0.75rem',
-              zIndex: 1003,
-              backgroundColor: 'rgba(255, 255, 255, 0.85)',
-              padding: isMobile ? '0.4rem 0.5rem' : '0.5rem 0.75rem',
-              borderRadius: '999px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-              pointerEvents: 'auto'
-            }}
-          >
-            <button
-              onClick={() => handleInterpreterLanguageChange('cantonese')}
-              style={{
-                padding: isMobile ? '0.45rem 1.4rem' : '0.45rem 1.25rem',
-                borderRadius: '999px',
-                border: interpreterLanguage === 'cantonese' ? 'none' : '1px solid rgba(17, 24, 39, 0.15)',
-                background: interpreterLanguage === 'cantonese'
-                  ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
-                  : 'rgba(255, 255, 255, 0.95)',
-                color: interpreterLanguage === 'cantonese' ? '#ffffff' : '#111827',
-                fontWeight: 700,
-                fontSize: isMobile ? '0.9rem' : '0.95rem',
-                cursor: 'pointer',
-                boxShadow: interpreterLanguage === 'cantonese'
-                  ? '0 6px 14px rgba(37, 99, 235, 0.35)'
-                  : '0 2px 4px rgba(0, 0, 0, 0.08)',
-                transition: 'all 0.2s ease',
-                touchAction: 'manipulation'
-              }}
-            >
-              カントン語
-            </button>
-            <button
-              onClick={() => handleInterpreterLanguageChange('mandarin')}
-              style={{
-                padding: isMobile ? '0.45rem 1.4rem' : '0.45rem 1.25rem',
-                borderRadius: '999px',
-                border: interpreterLanguage === 'mandarin' ? 'none' : '1px solid rgba(17, 24, 39, 0.15)',
-                background: interpreterLanguage === 'mandarin'
-                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                  : 'rgba(255, 255, 255, 0.95)',
-                color: interpreterLanguage === 'mandarin' ? '#ffffff' : '#111827',
-                fontWeight: 700,
-                fontSize: isMobile ? '0.9rem' : '0.95rem',
-                cursor: 'pointer',
-                boxShadow: interpreterLanguage === 'mandarin'
-                  ? '0 6px 14px rgba(5, 150, 105, 0.35)'
-                  : '0 2px 4px rgba(0, 0, 0, 0.08)',
-                transition: 'all 0.2s ease',
-                touchAction: 'manipulation'
-              }}
-            >
-              中国語
-            </button>
-          </div>
-
           {/* 翻訳エリア（上部、左に180度回転、浮き上がるアニメーション、新しいテキストが上に表示） */}
           <div style={{
             position: 'fixed',
@@ -3382,6 +3319,72 @@ export default function Home() {
           >
             ESCで終了
           </button>
+
+          {/* 通訳言語切り替え（下部） */}
+          <div
+            style={{
+              position: 'fixed',
+              bottom: isMobile ? 'calc(3rem + 120px + 120px)' : 'calc(5rem + 140px + 140px)',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              display: 'flex',
+              gap: isMobile ? '0.5rem' : '0.75rem',
+              backgroundColor: 'rgba(255, 255, 255, 0.92)',
+              border: '1px solid rgba(17, 24, 39, 0.08)',
+              borderRadius: '999px',
+              padding: isMobile ? '0.35rem 0.5rem' : '0.4rem 0.75rem',
+              boxShadow: '0 4px 10px rgba(0, 0, 0, 0.08)',
+              zIndex: 1002,
+              pointerEvents: 'auto'
+            }}
+          >
+            <button
+              onClick={() => handleInterpreterLanguageChange('cantonese')}
+              style={{
+                padding: isMobile ? '0.45rem 1.15rem' : '0.5rem 1.25rem',
+                borderRadius: '999px',
+                border: interpreterLanguage === 'cantonese' ? 'none' : '1px solid rgba(17, 24, 39, 0.15)',
+                background: interpreterLanguage === 'cantonese'
+                  ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
+                  : 'rgba(255, 255, 255, 0.95)',
+                color: interpreterLanguage === 'cantonese' ? '#ffffff' : '#111827',
+                fontWeight: 700,
+                fontSize: isMobile ? '0.85rem' : '0.95rem',
+                cursor: 'pointer',
+                boxShadow: interpreterLanguage === 'cantonese'
+                  ? '0 4px 10px rgba(37, 99, 235, 0.35)'
+                  : 'none',
+                transition: 'all 0.2s ease',
+                touchAction: 'manipulation',
+                minWidth: isMobile ? '6.5rem' : '6.75rem'
+              }}
+            >
+              カントン語
+            </button>
+            <button
+              onClick={() => handleInterpreterLanguageChange('mandarin')}
+              style={{
+                padding: isMobile ? '0.45rem 1.15rem' : '0.5rem 1.25rem',
+                borderRadius: '999px',
+                border: interpreterLanguage === 'mandarin' ? 'none' : '1px solid rgba(17, 24, 39, 0.15)',
+                background: interpreterLanguage === 'mandarin'
+                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                  : 'rgba(255, 255, 255, 0.95)',
+                color: interpreterLanguage === 'mandarin' ? '#ffffff' : '#111827',
+                fontWeight: 700,
+                fontSize: isMobile ? '0.85rem' : '0.95rem',
+                cursor: 'pointer',
+                boxShadow: interpreterLanguage === 'mandarin'
+                  ? '0 4px 10px rgba(5, 150, 105, 0.35)'
+                  : 'none',
+                transition: 'all 0.2s ease',
+                touchAction: 'manipulation',
+                minWidth: isMobile ? '6.5rem' : '6.75rem'
+              }}
+            >
+              中国語
+            </button>
+          </div>
 
           {/* タイトル表示（ロゴマークの下、タイル回転アニメーション） */}
           {showTitle && (
