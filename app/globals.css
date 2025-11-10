@@ -15,54 +15,21 @@
 /* ダークモードを無効化 - 常にライトモードで表示 */
 html {
   color-scheme: light !important;
-  /* Safari対応: スムーズスクロール */
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-  /* Safari対応: フォントレンダリングの改善 */
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Safari対応: すべてのflexコンテナの互換性向上 */
-* {
-  -webkit-box-sizing: border-box;
-  -moz-box-sizing: border-box;
-  box-sizing: border-box;
+/* 入力欄右端のアイコン（クリップ/カメラ）を2pxだけ上に揃える */
+button[aria-label="ファイルから読み取り (PDF/TXT)"] svg,
+button[title="ファイルから読み取り (PDF/TXT)"] svg,
+button[aria-label="カメラ/OCRで読み取り"] svg,
+button[title="カメラ/OCRで読み取り"] svg {
+  transform: translateY(-2px);
 }
-
-/* Safari対応: position:fixedの要素を正しくレンダリング */
-[style*="position: fixed"],
-[style*="position:fixed"] {
-  -webkit-transform: translateZ(0);
-  -webkit-backface-visibility: hidden;
-  -webkit-perspective: 1000;
-}
-
-/* Safari対応: スクロール可能な要素のスムーズスクロール */
-[style*="overflow-y: auto"],
-[style*="overflow-y:auto"],
-[style*="overflowY: 'auto'"],
-[style*="overflow: auto"],
-[style*="overflow:auto"] {
-  -webkit-overflow-scrolling: touch;
-  -webkit-transform: translateZ(0);
-}
-
-/* Safari対応: transformを使用する要素のハードウェアアクセラレーション */
-[style*="transform"],
-[style*="Transform"] {
-  -webkit-transform: translateZ(0);
-  -webkit-backface-visibility: hidden;
-  will-change: transform;
-}
-
-/* 入力欄右端のアイコン（クリップ/カメラ）は中央配置のため、transformは不要 */
 
 /* 隠しモード用アニメーション */
 @keyframes fadeInUp {
