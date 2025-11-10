@@ -188,7 +188,8 @@ export default function Home() {
   const [interimText, setInterimText] = useState('');
   const [translatedText, setTranslatedText] = useState('');
   const [recognizedTextLines, setRecognizedTextLines] = useState<TextLine[]>([]); // タイムスタンプ付きテキスト行
-  const [translatedTextLines, setTranslatedTextLines] = useState<TextLine[]>([]); // タイムスタンプ付き広東語翻訳行
+  const [translatedTextLines, setTranslatedTextLines] = useState<TextLine[]>([]); // タイムスタンプ付き翻訳行
+  const [interpreterLanguage, setInterpreterLanguage] = useState<'cantonese' | 'mandarin'>('cantonese');
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<any>(null);
   const translateDebounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -447,7 +448,7 @@ export default function Home() {
   useEffect(() => {
     if (!isHiddenMode) {
       setTranslatedText('');
-      translatedTextSetRef.current.clear();
+      translatedTextSetRef.current = new Set<string>();
       return;
     }
 
@@ -474,7 +475,7 @@ export default function Home() {
               'Content-Type': 'application/json',
               'Priority': 'high'
             },
-            body: JSON.stringify({ text: interimTextToTranslate }),
+            body: JSON.stringify({ text: interimTextToTranslate, language: interpreterLanguage }),
             keepalive: true
           });
 
@@ -545,7 +546,7 @@ export default function Home() {
               'Content-Type': 'application/json',
               'Priority': 'high'
             },
-            body: JSON.stringify({ text: textToTranslate }),
+            body: JSON.stringify({ text: textToTranslate, language: interpreterLanguage }),
             signal: abortController.signal,
             keepalive: true
           });
@@ -597,11 +598,9 @@ export default function Home() {
         translateAbortControllerRef.current.abort();
       }
     };
-  }, [recognizedTextLines, recognizedText, interimText, isHiddenMode]);
+  }, [recognizedTextLines, recognizedText, interimText, isHiddenMode, interpreterLanguage]);
 
-  // 隠しモード終了処理
-  const exitHiddenMode = () => {
-    setIsHiddenMode(false);
+  const resetInterpreterSession = () => {
     setIsRecording(false);
     setRecognizedText('');
     setFinalText('');
@@ -609,10 +608,9 @@ export default function Home() {
     setTranslatedText('');
     setRecognizedTextLines([]);
     setTranslatedTextLines([]);
-    setShowTitle(false);
     lastTranslatedTextRef.current = '';
     lastProcessedFinalTextRef.current = '';
-    translatedTextSetRef.current.clear();
+    translatedTextSetRef.current = new Set<string>();
     
     // 翻訳リクエストをキャンセル
     if (translateDebounceRef.current) {
@@ -623,6 +621,13 @@ export default function Home() {
       translateAbortControllerRef.current.abort();
       translateAbortControllerRef.current = null;
     }
+  };
+
+  // 隠しモード終了処理
+  const exitHiddenMode = () => {
+    setIsHiddenMode(false);
+    resetInterpreterSession();
+    setShowTitle(false);
     
     if (recognitionRef.current) {
       try {
@@ -1021,6 +1026,19 @@ export default function Home() {
         }
       }
     }
+  };
+
+  const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') => {
+    if (interpreterLanguage === newLanguage) {
+      return;
+    }
+
+    if (isRecording) {
+      handleMicRelease();
+    }
+
+    resetInterpreterSession();
+    setInterpreterLanguage(newLanguage);
   };
 
   // クリック音のオン/オフを切り替える
@@ -3055,6 +3073,12 @@ export default function Home() {
     }
   }, [examplePlaybackSpeed]);
 
+  const isMandarinMode = interpreterLanguage === 'mandarin';
+  const interpreterTitle = isMandarinMode ? '中国語通訳' : 'カントン語通訳';
+  const translationPlaceholder = isMandarinMode
+    ? '中国語翻訳がここに表示されます...'
+    : '広東語翻訳がここに表示されます...';
+
   return (
     <div 
       style={{ 
@@ -3070,7 +3094,70 @@ export default function Home() {
       {/* 隠しモードUI */}
       {isHiddenMode && (
         <>
-          {/* 広東語翻訳エリア（上部、左に180度回転、浮き上がるアニメーション、新しいテキストが上に表示） */}
+          {/* 通訳言語切り替えボタン */}
+          <div
+            style={{
+              position: 'fixed',
+              top: isMobile ? '0.75rem' : '1.5rem',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              display: 'flex',
+              gap: isMobile ? '0.5rem' : '0.75rem',
+              zIndex: 1003,
+              backgroundColor: 'rgba(255, 255, 255, 0.85)',
+              padding: isMobile ? '0.4rem 0.5rem' : '0.5rem 0.75rem',
+              borderRadius: '999px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+              pointerEvents: 'auto'
+            }}
+          >
+            <button
+              onClick={() => handleInterpreterLanguageChange('cantonese')}
+              style={{
+                padding: isMobile ? '0.45rem 1.4rem' : '0.45rem 1.25rem',
+                borderRadius: '999px',
+                border: interpreterLanguage === 'cantonese' ? 'none' : '1px solid rgba(17, 24, 39, 0.15)',
+                background: interpreterLanguage === 'cantonese'
+                  ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
+                  : 'rgba(255, 255, 255, 0.95)',
+                color: interpreterLanguage === 'cantonese' ? '#ffffff' : '#111827',
+                fontWeight: 700,
+                fontSize: isMobile ? '0.9rem' : '0.95rem',
+                cursor: 'pointer',
+                boxShadow: interpreterLanguage === 'cantonese'
+                  ? '0 6px 14px rgba(37, 99, 235, 0.35)'
+                  : '0 2px 4px rgba(0, 0, 0, 0.08)',
+                transition: 'all 0.2s ease',
+                touchAction: 'manipulation'
+              }}
+            >
+              カントン語
+            </button>
+            <button
+              onClick={() => handleInterpreterLanguageChange('mandarin')}
+              style={{
+                padding: isMobile ? '0.45rem 1.4rem' : '0.45rem 1.25rem',
+                borderRadius: '999px',
+                border: interpreterLanguage === 'mandarin' ? 'none' : '1px solid rgba(17, 24, 39, 0.15)',
+                background: interpreterLanguage === 'mandarin'
+                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                  : 'rgba(255, 255, 255, 0.95)',
+                color: interpreterLanguage === 'mandarin' ? '#ffffff' : '#111827',
+                fontWeight: 700,
+                fontSize: isMobile ? '0.9rem' : '0.95rem',
+                cursor: 'pointer',
+                boxShadow: interpreterLanguage === 'mandarin'
+                  ? '0 6px 14px rgba(5, 150, 105, 0.35)'
+                  : '0 2px 4px rgba(0, 0, 0, 0.08)',
+                transition: 'all 0.2s ease',
+                touchAction: 'manipulation'
+              }}
+            >
+              中国語
+            </button>
+          </div>
+
+          {/* 翻訳エリア（上部、左に180度回転、浮き上がるアニメーション、新しいテキストが上に表示） */}
           <div style={{
             position: 'fixed',
             top: isMobile ? '2rem' : '4rem',
@@ -3146,7 +3233,7 @@ export default function Home() {
                 </div>
               ) : (
                 <div style={{ color: '#111827' }}>
-                  広東語翻訳がここに表示されます...
+                  {translationPlaceholder}
                 </div>
               )}
             </div>
@@ -3290,7 +3377,7 @@ export default function Home() {
                 marginBottom: '0.5rem',
                 textShadow: 'none'
               }}>
-                カントン語通訳
+                {interpreterTitle}
               </div>
               <div style={{
                 fontSize: isMobile ? '0.875rem' : '1rem',
