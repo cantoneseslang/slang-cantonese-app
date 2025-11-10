@@ -4486,7 +4486,7 @@ export default function Home() {
               WebkitUserSelect: 'none',
               WebkitTouchCallout: 'none',
               overflow: 'visible',
-              touchAction: 'none' // モバイルでスクロールとの競合を防ぐ
+              touchAction: 'manipulation' // モバイルでスクロールとの競合を防ぎつつクリックを許可
             }}
             onMouseDown={(e) => {
               // モバイルでは無効（タッチイベントと競合するため）
@@ -8350,7 +8350,7 @@ export default function Home() {
               alignItems: 'flex-end',
               justifyContent: 'center',
               pointerEvents: 'auto',
-              touchAction: isMobile ? 'none' : 'auto' // PCではautoにしてスクロールを有効化
+              touchAction: isMobile ? 'pan-y' : 'auto' // PCでは縦スクロールを許可、PCではauto
             }}
           >
             <div
