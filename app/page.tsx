@@ -23,10 +23,11 @@
 
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import HiddenModeOverlay from '../components/interpreter/HiddenModeOverlay';
+import SettingsPortal from '../components/settings/SettingsPortal';
 import categoriesData from '@/data/categories.json';
 import noteCategoriesData from '@/data/note-categories.json';
 
@@ -153,6 +154,7 @@ export default function Home() {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'subscription' | 'lifetime' | null>(null);
   const [isDowngrade, setIsDowngrade] = useState(false); // ダウングレードかどうか
+  const [selectedCurrency, setSelectedCurrency] = useState<'jpy' | 'hkd'>('jpy'); // 通貨選択（デフォルト: JPY）
   const pricingModalScrollRef = useRef<HTMLDivElement>(null);
   const [showPricingModalTopArrow, setShowPricingModalTopArrow] = useState(false);
   const [showPricingModalBottomArrow, setShowPricingModalBottomArrow] = useState(false);
@@ -220,6 +222,98 @@ export default function Home() {
   const [showHelpPopups, setShowHelpPopups] = useState(false); // モバイルでヘルプを表示するかどうか
   const lastTranslatedTextRef = useRef<string>('');
   const lastProcessedFinalTextRef = useRef<string>('');
+
+  const closeSettingsPanel = useCallback(() => {
+    setShowSettings(false);
+    setShowPasswordChange(false);
+    setPasswordError(null);
+    setPasswordSuccess(false);
+    setNewPassword('');
+    setConfirmPassword('');
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+  }, []);
+
+  const openCategoryPicker = useCallback(() => {
+    setShowCategoryPicker(true);
+  }, []);
+
+  const startEditingUsername = useCallback(() => {
+    setIsEditingUsername(true);
+    setNewUsername(user?.user_metadata?.username || '');
+    setUsernameError(null);
+  }, [user]);
+
+  const cancelUsernameEdit = useCallback(() => {
+    setIsEditingUsername(false);
+    setUsernameError(null);
+    setNewUsername('');
+  }, []);
+
+  const handleUsernameInputChange = useCallback((value: string) => {
+    setNewUsername(value);
+  }, []);
+
+  const togglePasswordForm = useCallback(() => {
+    setShowPasswordChange(prev => !prev);
+    setPasswordError(null);
+    setPasswordSuccess(false);
+  }, []);
+
+  const cancelPasswordChange = useCallback(() => {
+    setShowPasswordChange(false);
+    setPasswordError(null);
+    setPasswordSuccess(false);
+    setNewPassword('');
+    setConfirmPassword('');
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+  }, []);
+
+  const handlePasswordInputChange = useCallback((field: 'new' | 'confirm', value: string) => {
+    if (field === 'new') {
+      setNewPassword(value);
+    } else {
+      setConfirmPassword(value);
+    }
+  }, []);
+
+  const toggleNewPasswordVisibility = useCallback(() => {
+    setShowNewPassword(prev => !prev);
+  }, []);
+
+  const toggleConfirmPasswordVisibility = useCallback(() => {
+    setShowConfirmPassword(prev => !prev);
+  }, []);
+
+  const closePricingModal = useCallback(() => {
+    setShowPricingModal(false);
+    setSelectedPlan(null);
+    setIsDowngrade(false);
+  }, []);
+
+  const handleCurrencyChange = useCallback((currency: 'JPY' | 'HKD') => {
+    setSelectedCurrency(currency.toLowerCase() as 'jpy' | 'hkd');
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    try {
+      closeSettingsPanel();
+      setShowAccountMenu(false);
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('ログアウトエラー:', error);
+        alert('ログアウトに失敗しました: ' + error.message);
+      } else {
+        console.log('ログアウト成功');
+        router.refresh();
+        router.push('/login');
+      }
+    } catch (err) {
+      console.error('ログアウト例外:', err);
+      alert('ログアウトに失敗しました');
+    }
+  }, [closeSettingsPanel, router, supabase, setShowAccountMenu]);
   
   // タイムスタンプ生成関数（-12:40 39s形式）
   const getTimestamp = (): string => {
@@ -2088,40 +2182,75 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
 
   // Stripe決済処理（アップグレード/ダウングレード）
   const handleStripeCheckout = async (plan: 'free' | 'subscription' | 'lifetime') => {
-    // TODO: Stripe統合（アップグレード時のみ）
-    // 現在はデモ用にSupabaseのuser_metadataを更新
-    try {
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          membership_type: plan
+    if (plan === 'free') {
+      try {
+        const { error } = await supabase.auth.updateUser({
+          data: {
+            membership_type: plan
+          }
+        });
+
+        if (error) throw error;
+
+        const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
+        
+        if (getUserError) {
+          console.error('ユーザー情報の再取得エラー:', getUserError);
+        } else if (updatedUser) {
+          setUser(updatedUser);
+          setMembershipType(plan);
+        } else {
+          setMembershipType(plan);
         }
+
+        setShowPricingModal(false);
+        setSelectedPlan(null);
+        setIsDowngrade(false);
+        
+        alert('ブロンズ会員に変更しました！');
+      } catch (err: any) {
+        alert('エラーが発生しました: ' + err.message);
+      }
+      return;
+    }
+
+    if (!user) {
+      alert('ログインが必要です。');
+      return;
+    }
+
+    try {
+      setShowPricingModal(false);
+      
+      const response = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          plan,
+          userId: user.id,
+          email: user.email,
+          currency: selectedCurrency,
+        }),
       });
 
-      if (error) throw error;
-
-      // ユーザー情報を再取得して最新の状態を反映
-      const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
-      
-      if (getUserError) {
-        console.error('ユーザー情報の再取得エラー:', getUserError);
-      } else if (updatedUser) {
-        // 最新のユーザー情報をセット（これによりuseEffectが再実行される）
-        setUser(updatedUser);
-        // ステートも直接更新（確実に反映させるため）
-        setMembershipType(plan);
-      } else {
-        // フォールバック: ステートのみ更新
-        setMembershipType(plan);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Checkout session creation failed');
       }
 
-      setShowPricingModal(false);
-      setSelectedPlan(null);
-      setIsDowngrade(false);
-      
-      const planName = plan === 'free' ? 'ブロンズ会員' : plan === 'subscription' ? 'シルバー会員' : 'ゴールド会員';
-      alert(`${planName}に変更しました！`);
+      const { url } = await response.json();
+
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
     } catch (err: any) {
-      alert('エラーが発生しました: ' + err.message);
+      console.error('Stripe Checkout error:', err);
+      alert('決済処理中にエラーが発生しました: ' + err.message);
+      setShowPricingModal(true);
     }
   };
 
@@ -2498,12 +2627,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       // チェックを外したらlocalStorageから削除
       localStorage.removeItem('dontShowHelpAgain');
     }
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/login');
-    router.refresh();
   };
 
   // デフォルトカテゴリー保存処理
@@ -4024,14 +4147,15 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 alt="logo" 
                 draggable="false"
                 style={{ 
-                  width: isMobile ? 48 : 56, 
-                  height: isMobile ? 48 : 56,
+                  width: isMobile ? 56 : 64, 
+                  height: isMobile ? 56 : 64,
                   cursor: 'pointer',
                   transition: 'transform 0.5s ease-out',
                   transform: isHiddenMode ? 'scale(1.5)' : 'scale(1)',
                   userSelect: 'none',
                   WebkitUserSelect: 'none',
-                  WebkitTouchCallout: 'none'
+                  WebkitTouchCallout: 'none',
+                  borderRadius: '50%'
                 }}
                 onContextMenu={(e) => {
                   e.preventDefault();
@@ -7361,1119 +7485,356 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           </div>
         )}
 
-        {/* 設定画面モーダル（右側スライドイン） */}
-        {showSettings && user && (
+        <SettingsPortal
+          isMobile={isMobile}
+          showSettings={showSettings}
+          user={user}
+          onCloseSettings={closeSettingsPanel}
+          onLogout={handleLogout}
+          membershipType={membershipType}
+          handleMembershipChange={handleMembershipChange}
+          getMembershipIcon={getMembershipIcon}
+          getMembershipLabel={getMembershipLabel}
+          isClickSoundEnabled={isClickSoundEnabled}
+          toggleClickSound={toggleClickSound}
+          isLearningMode={isLearningMode}
+          toggleLearningMode={toggleLearningMode}
+          categories={categories}
+          defaultCategoryId={defaultCategoryId}
+          isSavingDefaultCategory={isSavingDefaultCategory}
+          openCategoryPicker={openCategoryPicker}
+          isEditingUsername={isEditingUsername}
+          usernameError={usernameError}
+          newUsername={newUsername}
+          onEditUsernameStart={startEditingUsername}
+          onUsernameChange={handleUsernameInputChange}
+          onUsernameCancel={cancelUsernameEdit}
+          onUsernameSave={handleUsernameChange}
+          showPasswordChange={showPasswordChange}
+          onTogglePasswordForm={togglePasswordForm}
+          passwordError={passwordError}
+          passwordSuccess={passwordSuccess}
+          newPassword={newPassword}
+          confirmPassword={confirmPassword}
+          onPasswordInputChange={handlePasswordInputChange}
+          showNewPassword={showNewPassword}
+          toggleNewPasswordVisibility={toggleNewPasswordVisibility}
+          showConfirmPassword={showConfirmPassword}
+          toggleConfirmPasswordVisibility={toggleConfirmPasswordVisibility}
+          onPasswordSubmit={handlePasswordChange}
+          onPasswordCancel={cancelPasswordChange}
+          loadingDebugInfo={loadingDebugInfo}
+          debugInfo={debugInfo}
+          showPricingModal={showPricingModal}
+          selectedPlan={selectedPlan}
+          onClosePricingModal={closePricingModal}
+          isDowngrade={isDowngrade}
+          handleStripeCheckout={handleStripeCheckout}
+          pricingModalScrollRef={pricingModalScrollRef}
+          showPricingModalTopArrow={showPricingModalTopArrow}
+          showPricingModalBottomArrow={showPricingModalBottomArrow}
+          setShowPricingModalTopArrow={setShowPricingModalTopArrow}
+          setShowPricingModalBottomArrow={setShowPricingModalBottomArrow}
+          selectedCurrency={selectedCurrency}
+          onCurrencyChange={handleCurrencyChange}
+        />
+
+        {/* iOS風カテゴリーピッカーモーダル */}
+        {showCategoryPicker && (
           <div
             onClick={(e) => {
-              // 外側をクリックした場合は設定を閉じる
               if (e.target === e.currentTarget) {
-                setShowSettings(false);
-                setShowPasswordChange(false);
-                setPasswordError(null);
-                setPasswordSuccess(false);
-                setNewPassword('');
-                setConfirmPassword('');
+                setShowCategoryPicker(false);
               }
             }}
             style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 9999,
-            display: 'flex',
-            justifyContent: 'flex-end'
-          }}>
-            {/* 背景オーバーレイ（左側のスペース） */}
-            <div 
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowSettings(false);
-                setShowPasswordChange(false);
-                setPasswordError(null);
-                setPasswordSuccess(false);
-                setNewPassword('');
-                setConfirmPassword('');
-              }}
-              style={{
-              position: 'absolute',
+              position: 'fixed',
               top: 0,
               left: 0,
-              right: isMobile ? 0 : '400px',
+              right: 0,
               bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.3)',
-              transition: 'opacity 0.3s ease',
-              cursor: 'pointer'
-            }} />
-            {/* 設定パネル（右側） */}
-            <div 
-              data-settings-panel
+              zIndex: 10000,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'flex-end',
+              justifyContent: 'center',
+              pointerEvents: 'auto',
+              touchAction: isMobile ? 'manipulation' : 'auto' // PCではautoにしてスクロールを有効化
+            }}
+          >
+            <div
               onClick={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
               style={{
-              position: 'relative',
-              width: isMobile ? '100%' : '400px',
-              maxWidth: '90vw',
-              height: '100%',
-              backgroundColor: 'white',
-              boxShadow: '-4px 0 24px rgba(0,0,0,0.15)',
-              overflowY: 'auto',
-              transform: 'translateX(0)',
-              transition: 'transform 0.3s ease'
-            }}>
+                width: '100%',
+                maxWidth: '500px',
+                backgroundColor: 'white',
+                borderTopLeftRadius: '20px',
+                borderTopRightRadius: '20px',
+                paddingBottom: 'env(safe-area-inset-bottom)',
+                maxHeight: '80vh',
+                display: 'flex',
+                flexDirection: 'column',
+                pointerEvents: 'auto',
+                touchAction: isMobile ? 'pan-y' : 'auto', // PCではautoにしてスクロールを有効化
+                transform: 'translateZ(0)',
+                willChange: 'transform'
+              }}
+            >
               {/* ヘッダー */}
               <div style={{
-                padding: '1.5rem',
+                padding: '1rem',
                 borderBottom: '1px solid #e5e7eb',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center'
               }}>
-                <h2 style={{
-                  fontSize: '1.5rem',
-                  fontWeight: 'bold',
-                  margin: 0
-                }}>⚙️ 設定</h2>
+                <h3 style={{
+                  margin: 0,
+                  fontSize: '1.125rem',
+                  fontWeight: '600',
+                  color: '#111827'
+                }}>カテゴリーを選択</h3>
                 <button
-                  onClick={() => {
-                    setShowSettings(false);
-                    setShowPasswordChange(false);
-                    setPasswordError(null);
-                    setPasswordSuccess(false);
-                    setNewPassword('');
-                    setConfirmPassword('');
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('✅ 完了ボタンクリック:', { currentDefaultCategoryId: defaultCategoryId });
+                    // 現在選択中のdefaultCategoryIdを保存（スクロール位置の計算に頼らない）
+                    if (defaultCategoryId) {
+                      handleDefaultCategoryChange(defaultCategoryId);
+                    } else {
+                      console.warn('⚠️ defaultCategoryIdが設定されていません');
+                      setShowCategoryPicker(false);
+                    }
                   }}
                   style={{
                     background: 'none',
                     border: 'none',
-                    fontSize: '1.5rem',
+                    fontSize: '1.25rem',
                     cursor: 'pointer',
-                    color: '#6b7280'
+                    color: '#3b82f6',
+                    fontWeight: '600'
                   }}
                 >
-                  ×
+                  完了
                 </button>
               </div>
 
-              {/* コンテンツ */}
-              <div style={{ padding: '1.5rem' }}>
-                {/* ユーザー情報 */}
-                <div style={{ marginBottom: '2rem' }}>
-                  <h3 style={{
-                    fontSize: '1.125rem',
-                    fontWeight: '600',
-                    marginBottom: '1rem',
-                    color: '#374151'
-                  }}>アカウント情報</h3>
-
-                  {/* デフォルトカテゴリー設定 */}
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      color: '#6b7280',
-                      marginBottom: '0.5rem'
-                    }}>デフォルトで表示するカテゴリー</label>
-                    
-                    <div style={{
-                      display: 'flex',
-                      gap: '0.5rem',
-                      alignItems: 'center'
-                    }}>
-                      <div style={{
-                        flex: 1,
-                        padding: '0.75rem',
-                        backgroundColor: '#f9fafb',
-                        borderRadius: '8px',
-                        border: '1px solid #e5e7eb',
-                        fontSize: '1rem',
-                        color: '#1f2937'
-                      }}>
-                        {categories.find(c => c.id === defaultCategoryId)?.name || '発音表記について'}
-                      </div>
-                      {(membershipType === 'subscription' || membershipType === 'lifetime') ? (
-                        <button
-                          onClick={() => setShowCategoryPicker(true)}
-                          disabled={isSavingDefaultCategory}
-                          style={{
-                            padding: '0.75rem 1rem',
-                            backgroundColor: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '0.875rem',
-                            fontWeight: '600',
-                            cursor: isSavingDefaultCategory ? 'not-allowed' : 'pointer',
-                            opacity: isSavingDefaultCategory ? 0.6 : 1,
-                            whiteSpace: 'nowrap'
-                          }}
-                        >
-                          {isSavingDefaultCategory ? '保存中...' : '変更'}
-                        </button>
-                      ) : (
-                        <div style={{
-                          padding: '0.75rem 1rem',
-                          backgroundColor: '#f3f4f6',
-                          color: '#9ca3af',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '0.875rem',
-                          fontWeight: '600',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          ブロンズは変更不可
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* ユーザーネーム */}
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      color: '#6b7280',
-                      marginBottom: '0.5rem'
-                    }}>ユーザーネーム</label>
-                    
-                    {!isEditingUsername ? (
-                      <div style={{
-                        display: 'flex',
-                        gap: '0.5rem',
-                        alignItems: 'center'
-                      }}>
-                        <div style={{
-                          flex: 1,
-                          padding: '0.75rem',
-                          backgroundColor: '#f9fafb',
-                          borderRadius: '8px',
-                          border: '1px solid #e5e7eb',
-                          fontSize: '1rem',
-                          color: '#1f2937'
-                        }}>
-                          {user.user_metadata?.username || 'ユーザーネーム未設定'}
-                        </div>
-                        <button
-                          onClick={() => {
-                            setIsEditingUsername(true);
-                            setNewUsername(user.user_metadata?.username || '');
-                            setUsernameError(null);
-                          }}
-                          style={{
-                            padding: '0.75rem 1rem',
-                            backgroundColor: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '0.875rem',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap'
-                          }}
-                        >
-                          変更
-                        </button>
-                      </div>
-                    ) : (
-                      <div>
-                        {usernameError && (
-                          <div style={{
-                            padding: '0.75rem',
-                            backgroundColor: '#fee2e2',
-                            border: '1px solid #fecaca',
-                            borderRadius: '8px',
-                            color: '#dc2626',
-                            fontSize: '0.875rem',
-                            marginBottom: '0.75rem'
-                          }}>
-                            {usernameError}
-                          </div>
-                        )}
-                        
-                        <input
-                          type="text"
-                          value={newUsername}
-                          onChange={(e) => setNewUsername(e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '0.75rem',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '8px',
-                            fontSize: '1rem',
-                            marginBottom: '0.75rem',
-                            boxSizing: 'border-box'
-                          }}
-                          placeholder="新しいユーザーネーム"
-                        />
-                        
-                        <div style={{
-                          display: 'flex',
-                          gap: '0.5rem'
-                        }}>
-                          <button
-                            type="button"
-                            onClick={handleUsernameChange}
-                            style={{
-                              flex: 1,
-                              padding: '0.75rem',
-                              backgroundColor: '#10b981',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '8px',
-                              fontSize: '1rem',
-                              fontWeight: '600',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            保存
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsEditingUsername(false);
-                              setUsernameError(null);
-                              setNewUsername('');
-                            }}
-                            style={{
-                              flex: 1,
-                              padding: '0.75rem',
-                              backgroundColor: '#6b7280',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '8px',
-                              fontSize: '1rem',
-                              fontWeight: '600',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            キャンセル
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 登録メール */}
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      color: '#6b7280',
-                      marginBottom: '0.5rem'
-                    }}>登録メール</label>
-                    <div style={{
-                      padding: '0.75rem',
-                      backgroundColor: '#f9fafb',
-                      borderRadius: '8px',
-                      border: '1px solid #e5e7eb',
-                      fontSize: '1rem',
-                      color: '#1f2937'
-                    }}>
-                      {user.email}
-                    </div>
-                  </div>
-
-                  {/* パスワード */}
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      color: '#6b7280',
-                      marginBottom: '0.5rem'
-                    }}>パスワード</label>
-                    <div style={{
-                      display: 'flex',
-                      gap: '0.5rem',
-                      alignItems: 'center'
-                    }}>
-                      <div style={{
-                        flex: 1,
-                        padding: '0.75rem',
-                        backgroundColor: '#f9fafb',
-                        borderRadius: '8px',
-                        border: '1px solid #e5e7eb',
-                        fontSize: '1rem',
-                        color: '#1f2937'
-                      }}>
-                        ••••••••
-                      </div>
-                      <button
-                        onClick={() => setShowPasswordChange(!showPasswordChange)}
-                        style={{
-                          padding: '0.75rem 1rem',
-                          backgroundColor: '#3b82f6',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '0.875rem',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        変更
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* ご登録期日 */}
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      color: '#6b7280',
-                      marginBottom: '0.5rem'
-                    }}>ご登録期日</label>
-                    <div style={{
-                      padding: '0.75rem',
-                      backgroundColor: '#f9fafb',
-                      borderRadius: '8px',
-                      border: '1px solid #e5e7eb',
-                      fontSize: '1rem',
-                      color: '#1f2937'
-                    }}>
-                      {user.created_at ? (() => {
-                        const date = new Date(user.created_at);
-                        const year = date.getFullYear();
-                        const month = String(date.getMonth() + 1).padStart(2, '0');
-                        const day = String(date.getDate()).padStart(2, '0');
-                        return `${year}年${month}月${day}日`;
-                      })() : '登録日不明'}
-                    </div>
-                  </div>
-
-                  {/* パスワード変更フォーム */}
-                  {showPasswordChange && (
-                    <div style={{
-                      marginTop: '1rem',
-                      padding: '1rem',
-                      backgroundColor: '#f0f9ff',
-                      borderRadius: '8px',
-                      border: '1px solid #bfdbfe'
-                    }}>
-                      <h4 style={{
-                        fontSize: '1rem',
-                        fontWeight: '600',
-                        marginBottom: '1rem',
-                        color: '#1e40af'
-                      }}>パスワード変更</h4>
-
-                      {passwordError && (
-                        <div style={{
-                          padding: '0.75rem',
-                          backgroundColor: '#fee2e2',
-                          border: '1px solid #fecaca',
-                          borderRadius: '8px',
-                          color: '#dc2626',
-                          fontSize: '0.875rem',
-                          marginBottom: '1rem'
-                        }}>
-                          {passwordError}
-                        </div>
-                      )}
-
-                      {passwordSuccess && (
-                        <div style={{
-                          padding: '0.75rem',
-                          backgroundColor: '#dcfce7',
-                          border: '1px solid #bbf7d0',
-                          borderRadius: '8px',
-                          color: '#16a34a',
-                          fontSize: '0.875rem',
-                          marginBottom: '1rem'
-                        }}>
-                          パスワードが正常に変更されました
-                        </div>
-                      )}
-
-                      <div style={{ marginBottom: '1rem' }}>
-                        <label style={{
-                          display: 'block',
-                          fontSize: '0.875rem',
-                          fontWeight: '600',
-                          color: '#374151',
-                          marginBottom: '0.5rem'
-                        }}>新しいパスワード</label>
-                        <div style={{ position: 'relative' }}>
-                          <input
-                            type={showNewPassword ? 'text' : 'password'}
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            style={{
-                              width: '100%',
-                              padding: '0.75rem',
-                              paddingRight: '3rem',
-                              border: '1px solid #d1d5db',
-                              borderRadius: '8px',
-                              fontSize: '1rem',
-                              boxSizing: 'border-box'
-                            }}
-                            placeholder="6文字以上、英数字記号"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowNewPassword(!showNewPassword)}
-                            style={{
-                              position: 'absolute',
-                              right: '0.75rem',
-                              top: '50%',
-                              transform: 'translateY(-50%)',
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              fontSize: '1.25rem',
-                              color: '#6b7280',
-                              padding: '0.25rem'
-                            }}
-                          >
-                            {showNewPassword ? '🙈' : '👁️'}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div style={{ marginBottom: '1rem' }}>
-                        <label style={{
-                          display: 'block',
-                          fontSize: '0.875rem',
-                          fontWeight: '600',
-                          color: '#374151',
-                          marginBottom: '0.5rem'
-                        }}>新しいパスワード（確認）</label>
-                        <div style={{ position: 'relative' }}>
-                          <input
-                            type={showConfirmPassword ? 'text' : 'password'}
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            style={{
-                              width: '100%',
-                              padding: '0.75rem',
-                              paddingRight: '3rem',
-                              border: '1px solid #d1d5db',
-                              borderRadius: '8px',
-                              fontSize: '1rem',
-                              boxSizing: 'border-box'
-                            }}
-                            placeholder="もう一度入力"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            style={{
-                              position: 'absolute',
-                              right: '0.75rem',
-                              top: '50%',
-                              transform: 'translateY(-50%)',
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              fontSize: '1.25rem',
-                              color: '#6b7280',
-                              padding: '0.25rem'
-                            }}
-                          >
-                            {showConfirmPassword ? '🙈' : '👁️'}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div style={{
-                        display: 'flex',
-                        gap: '0.5rem'
-                      }}>
-                        <button
-                          type="button"
-                          onClick={async (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log('🔘 変更するボタンがクリックされました');
-                            console.log('現在の入力値:', { newPassword: newPassword ? 'あり' : 'なし', confirmPassword: confirmPassword ? 'あり' : 'なし' });
-                            await handlePasswordChange();
-                          }}
-                          style={{
-                            flex: 1,
-                            padding: '0.75rem',
-                            backgroundColor: '#10b981',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '1rem',
-                            fontWeight: '600',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          変更する
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log('🔘 キャンセルボタンがクリックされました');
-                            setShowPasswordChange(false);
-                            setPasswordError(null);
-                            setNewPassword('');
-                            setConfirmPassword('');
-                            setShowNewPassword(false);
-                            setShowConfirmPassword(false);
-                          }}
-                          style={{
-                            flex: 1,
-                            padding: '0.75rem',
-                            backgroundColor: '#6b7280',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '1rem',
-                            fontWeight: '600',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          キャンセル
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 会員種別 */}
-                  <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #e5e7eb' }}>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      color: '#6b7280',
-                      marginBottom: '0.75rem'
-                    }}>会員種別</label>
-                    
-                    {/* スライドトグル */}
-                    <div style={{
-                      display: 'flex',
-                      gap: '0.5rem',
-                      marginBottom: '1rem'
-                    }}>
-                      {/* ブロンズ会員 */}
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          console.log('ブロンズ会員ボタンクリック（設定画面）');
-                          handleMembershipChange('free');
-                        }}
-                        onTouchStart={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          console.log('ブロンズ会員ボタンタッチ（設定画面）');
-                          handleMembershipChange('free');
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: '1.25rem 0.75rem',
-                          borderRadius: '16px',
-                          border: 'none',
-                          background: membershipType === 'free' 
-                            ? 'linear-gradient(145deg, #d4a574 0%, #cd7f32 50%, #a85f1f 100%)' 
-                            : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
-                          cursor: membershipType === 'free' ? 'default' : 'pointer',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          transition: 'all 0.3s',
-                          boxShadow: membershipType === 'free' 
-                            ? '0 8px 20px rgba(205,127,50,0.4), inset 0 1px 0 rgba(255,255,255,0.3)' 
-                            : '0 2px 8px rgba(0,0,0,0.1)',
-                          transform: membershipType === 'free' ? 'scale(1.05)' : 'scale(1)',
-                          touchAction: 'manipulation',
-                          WebkitTapHighlightColor: 'transparent'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (membershipType !== 'free') {
-                            e.currentTarget.style.transform = 'scale(1.05)';
-                            e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (membershipType !== 'free') {
-                            e.currentTarget.style.transform = 'scale(1)';
-                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-                          }
-                        }}
-                      >
-                        <span style={{ fontSize: '2rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>
-                          {getMembershipIcon('free')}
-                        </span>
-                        <span style={{
-                          fontSize: '0.875rem',
-                          fontWeight: '700',
-                          color: membershipType === 'free' ? '#ffffff' : '#6b7280',
-                          textShadow: membershipType === 'free' ? '0 1px 2px rgba(0,0,0,0.3)' : 'none'
-                        }}>
-                          {getMembershipLabel('free')}
-                        </span>
-                      </button>
-
-                      {/* シルバー会員 */}
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          console.log('シルバー会員ボタンクリック（設定画面）');
-                          handleMembershipChange('subscription');
-                        }}
-                        onTouchStart={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          console.log('シルバー会員ボタンタッチ（設定画面）');
-                          handleMembershipChange('subscription');
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: '1.25rem 0.75rem',
-                          borderRadius: '16px',
-                          border: 'none',
-                          background: membershipType === 'subscription' 
-                            ? 'linear-gradient(145deg, #e8e8e8 0%, #c0c0c0 50%, #a8a8a8 100%)' 
-                            : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
-                          cursor: membershipType === 'subscription' ? 'default' : 'pointer',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          transition: 'all 0.3s',
-                          boxShadow: membershipType === 'subscription' 
-                            ? '0 8px 20px rgba(192,192,192,0.4), inset 0 1px 0 rgba(255,255,255,0.4)' 
-                            : '0 2px 8px rgba(0,0,0,0.1)',
-                          transform: membershipType === 'subscription' ? 'scale(1.05)' : 'scale(1)',
-                          touchAction: 'manipulation',
-                          WebkitTapHighlightColor: 'transparent'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (membershipType !== 'subscription') {
-                            e.currentTarget.style.transform = 'scale(1.05)';
-                            e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (membershipType !== 'subscription') {
-                            e.currentTarget.style.transform = 'scale(1)';
-                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-                          }
-                        }}
-                      >
-                        <span style={{ fontSize: '2rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>
-                          {getMembershipIcon('subscription')}
-                        </span>
-                        <span style={{
-                          fontSize: '0.875rem',
-                          fontWeight: '700',
-                          color: membershipType === 'subscription' ? '#1f2937' : '#6b7280',
-                          textShadow: membershipType === 'subscription' ? '0 1px 2px rgba(255,255,255,0.5)' : 'none'
-                        }}>
-                          {getMembershipLabel('subscription')}
-                        </span>
-                        {membershipType !== 'subscription' && membershipType !== 'lifetime' && (
-                          <span style={{
-                            fontSize: '0.8rem',
-                            color: '#6b7280',
-                            fontWeight: '700'
-                          }}>
-                            ¥980/月
-                          </span>
-                        )}
-                      </button>
-
-                      {/* ゴールド会員 */}
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          console.log('ゴールド会員ボタンクリック（設定画面）');
-                          handleMembershipChange('lifetime');
-                        }}
-                        onTouchStart={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          console.log('ゴールド会員ボタンタッチ（設定画面）');
-                          handleMembershipChange('lifetime');
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: '1.25rem 0.75rem',
-                          borderRadius: '16px',
-                          border: 'none',
-                          background: membershipType === 'lifetime' 
-                            ? 'linear-gradient(145deg, #ffe066 0%, #ffd700 50%, #ffb700 100%)' 
-                            : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
-                          cursor: membershipType === 'lifetime' ? 'default' : 'pointer',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          transition: 'all 0.3s',
-                          boxShadow: membershipType === 'lifetime' 
-                            ? '0 8px 20px rgba(255,215,0,0.5), inset 0 1px 0 rgba(255,255,255,0.4)' 
-                            : '0 2px 8px rgba(0,0,0,0.1)',
-                          transform: membershipType === 'lifetime' ? 'scale(1.05)' : 'scale(1)',
-                          position: 'relative',
-                          overflow: 'hidden',
-                          touchAction: 'manipulation',
-                          WebkitTapHighlightColor: 'transparent'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (membershipType !== 'lifetime') {
-                            e.currentTarget.style.transform = 'scale(1.05)';
-                            e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (membershipType !== 'lifetime') {
-                            e.currentTarget.style.transform = 'scale(1)';
-                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-                          }
-                        }}
-                      >
-                        <span style={{ fontSize: '2rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>
-                          {getMembershipIcon('lifetime')}
-                        </span>
-                        <span style={{
-                          fontSize: '0.875rem',
-                          fontWeight: '700',
-                          color: membershipType === 'lifetime' ? '#1f2937' : '#6b7280',
-                          textShadow: membershipType === 'lifetime' ? '0 1px 2px rgba(255,255,255,0.5)' : 'none'
-                        }}>
-                          {getMembershipLabel('lifetime')}
-                        </span>
-                        {membershipType !== 'lifetime' && (
-                          <span style={{
-                            fontSize: '0.8rem',
-                            color: '#6b7280',
-                            fontWeight: '700'
-                          }}>
-                            ¥9,800
-                          </span>
-                        )}
-                      </button>
-                    </div>
-
-                    {/* 会員種別比較表 */}
-                    <div style={{
-                      marginTop: '1.5rem',
-                      padding: '1rem',
-                      backgroundColor: '#f9fafb',
-                      borderRadius: '12px',
-                      border: '1px solid #e5e7eb'
-                    }}>
-                      <h3 style={{
-                        fontSize: '1rem',
-                        fontWeight: '700',
-                        marginBottom: '1rem',
-                        color: '#1f2937',
-                        textAlign: 'center'
-                      }}>📊 プラン比較</h3>
-                      
-                      <div style={{
-                        overflowX: 'auto'
-                      }}>
-                        <table style={{
-                          width: '100%',
-                          borderCollapse: 'collapse',
-                          fontSize: '0.875rem'
-                        }}>
-                          <thead>
-                            <tr>
-                              <th style={{
-                                padding: '0.75rem',
-                                textAlign: 'left',
-                                borderBottom: '2px solid #d1d5db',
-                                fontWeight: '600',
-                                color: '#374151',
-                                backgroundColor: '#ffffff'
-                              }}>機能・特典</th>
-                              <th style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '2px solid #d1d5db',
-                                fontWeight: '600',
-                                color: '#374151',
-                                backgroundColor: '#ffffff'
-                              }}>🥉 ブロンズ</th>
-                              <th style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '2px solid #d1d5db',
-                                fontWeight: '600',
-                                color: '#374151',
-                                backgroundColor: '#ffffff'
-                              }}>🥈 シルバー</th>
-                              <th style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '2px solid #d1d5db',
-                                fontWeight: '600',
-                                color: '#374151',
-                                backgroundColor: '#ffffff'
-                              }}>🏆 ゴールド</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr style={{ backgroundColor: '#ffffff' }}>
-                              <td style={{
-                                padding: '0.75rem',
-                                borderBottom: '1px solid #e5e7eb',
-                                fontWeight: '500',
-                                color: '#1f2937'
-                              }}>価格</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#a85f1f',
-                                fontWeight: '600'
-                              }}>無料</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#6b7280',
-                                fontWeight: '600'
-                              }}>¥980/月</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#d97706',
-                                fontWeight: '600'
-                              }}>¥9,800</td>
-                            </tr>
-                            <tr style={{ backgroundColor: '#f9fafb' }}>
-                              <td style={{
-                                padding: '0.75rem',
-                                borderBottom: '1px solid #e5e7eb',
-                                fontWeight: '500',
-                                color: '#1f2937'
-                              }}>カテゴリーアクセス</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#6b7280'
-                              }}>基本</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#10b981',
-                                fontWeight: '600'
-                              }}>✓ 全カテゴリー</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#10b981',
-                                fontWeight: '600'
-                              }}>✓ 全カテゴリー</td>
-                            </tr>
-                            <tr style={{ backgroundColor: '#ffffff' }}>
-                              <td style={{
-                                padding: '0.75rem',
-                                borderBottom: '1px solid #e5e7eb',
-                                fontWeight: '500',
-                                color: '#1f2937'
-                              }}>お気に入り数</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#6b7280'
-                              }}>6個まで</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#10b981',
-                                fontWeight: '600'
-                              }}>✓ 無制限</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#10b981',
-                                fontWeight: '600'
-                              }}>✓ 無制限</td>
-                            </tr>
-                            <tr style={{ backgroundColor: '#f9fafb' }}>
-                              <td style={{
-                                padding: '0.75rem',
-                                borderBottom: '1px solid #e5e7eb',
-                                fontWeight: '500',
-                                color: '#1f2937'
-                              }}>音声速度調整</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#ef4444'
-                              }}>✗</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#10b981',
-                                fontWeight: '600'
-                              }}>✓</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#10b981',
-                                fontWeight: '600'
-                              }}>✓</td>
-                            </tr>
-                            <tr style={{ backgroundColor: '#ffffff' }}>
-                              <td style={{
-                                padding: '0.75rem',
-                                borderBottom: '1px solid #e5e7eb',
-                                fontWeight: '500',
-                                color: '#1f2937'
-                              }}>広告</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#ef4444'
-                              }}>✗ あり</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#10b981',
-                                fontWeight: '600'
-                              }}>✓ なし</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#10b981',
-                                fontWeight: '600'
-                              }}>✓ なし</td>
-                            </tr>
-                            <tr style={{ backgroundColor: '#f9fafb' }}>
-                              <td style={{
-                                padding: '0.75rem',
-                                borderBottom: '1px solid #e5e7eb',
-                                fontWeight: '500',
-                                color: '#1f2937'
-                              }}>オフライン使用</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#ef4444'
-                              }}>✗</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#10b981',
-                                fontWeight: '600'
-                              }}>✓</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                borderBottom: '1px solid #e5e7eb',
-                                color: '#10b981',
-                                fontWeight: '600'
-                              }}>✓</td>
-                            </tr>
-                            <tr style={{ backgroundColor: '#ffffff' }}>
-                              <td style={{
-                                padding: '0.75rem',
-                                fontWeight: '500',
-                                color: '#1f2937'
-                              }}>支払い方法</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                color: '#6b7280'
-                              }}>-</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                color: '#6b7280'
-                              }}>月額自動更新</td>
-                              <td style={{
-                                padding: '0.75rem',
-                                textAlign: 'center',
-                                color: '#6b7280'
-                              }}>買い切り</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* デバッグ情報（自動表示） */}
+              {/* ロール型ピッカー */}
+              <div style={{
+                flex: 1,
+                overflow: 'hidden',
+                position: 'relative',
+                height: '300px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {/* 中央の選択エリアのハイライト */}
                 <div style={{
-                  marginTop: '2rem',
-                  padding: '1rem',
-                  backgroundColor: '#f0f9ff',
-                  borderRadius: '8px',
-                  border: '1px solid #bfdbfe'
-                }}>
-                  <h3 style={{
-                    fontSize: '1rem',
-                    fontWeight: '600',
-                    marginBottom: '0.75rem',
-                    color: '#1e40af'
-                  }}>🔍 Supabaseデータ確認結果</h3>
+                  position: 'absolute',
+                  top: '50%',
+                  left: 0,
+                  right: 0,
+                  height: '60px',
+                  marginTop: '-30px',
+                  borderTop: '1px solid #e5e7eb',
+                  borderBottom: '1px solid #e5e7eb',
+                  backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                  pointerEvents: 'none',
+                  zIndex: 1
+                }} />
+                
+                {/* ピッカーホイール */}
+                <div
+                  id="category-picker-scroll"
+                  ref={(el) => {
+                    categoryPickerScrollRef.current = el;
+                    if (el && showCategoryPicker) {
+                      // スクロール位置を選択中のカテゴリーに合わせる
+                      const allCategories = [
+                        ...(categories.find(c => c.id === 'pronunciation') ? [{ id: 'pronunciation', name: '発音表記について' }] : []),
+                        ...categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_'))
+                      ];
+                      const selectedIndex = allCategories.findIndex(c => c.id === defaultCategoryId);
+                      if (selectedIndex >= 0) {
+                        setTimeout(() => {
+                          const itemHeight = 60;
+                          const containerHeight = el.clientHeight;
+                          const centerOffset = containerHeight / 2 - itemHeight / 2;
+                          const paddingTop = containerHeight / 2; // paddingTop: 50%
+                          // paddingTopを考慮してスクロール位置を設定
+                          el.scrollTop = selectedIndex * itemHeight - centerOffset + paddingTop;
+                        }, 100);
+                      }
+                    }
+                  }}
+                  onScroll={(e) => {
+                    // デバウンス処理でガタガタを防ぐ
+                    const scrollTop = e.currentTarget.scrollTop;
+                    const itemHeight = 60;
+                    const containerHeight = e.currentTarget.clientHeight;
+                    const centerOffset = containerHeight / 2 - itemHeight / 2;
+                    
+                    // paddingTopを考慮した実際のスクロール位置を計算
+                    const paddingTop = containerHeight / 2; // paddingTop: 50%
+                    const actualScrollTop = scrollTop - paddingTop;
+                    const selectedIndex = Math.round((actualScrollTop + centerOffset) / itemHeight);
+                    
+                    const allCategories = [
+                      ...(categories.find(c => c.id === 'pronunciation') ? [{ id: 'pronunciation', name: '発音表記について' }] : []),
+                      ...categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_'))
+                    ];
+                    
+                    if (selectedIndex >= 0 && selectedIndex < allCategories.length) {
+                      const selectedCategory = allCategories[selectedIndex];
+                      if (selectedCategory.id !== defaultCategoryId) {
+                        // スクロールが停止した後に表示を更新（保存は「完了」ボタンで行う）
+                        clearTimeout((window as any).categoryPickerScrollTimeout);
+                        (window as any).categoryPickerScrollTimeout = setTimeout(() => {
+                          setDefaultCategoryId(selectedCategory.id);
+                        }, 150);
+                      }
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    scrollSnapType: 'y proximity',
+                    WebkitOverflowScrolling: 'touch',
+                    scrollbarWidth: isMobile ? 'none' : 'thin', // PCではスクロールバーを表示
+                    msOverflowStyle: 'none',
+                    paddingTop: '50%',
+                    paddingBottom: '50%',
+                    boxSizing: 'border-box',
+                    overscrollBehavior: 'contain',
+                    scrollBehavior: 'smooth',
+                    cursor: isMobile ? 'default' : 'grab', // PCではカーソルを変更
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none'
+                  }}
+                >
+                  <style>{`
+                    #category-picker-scroll::-webkit-scrollbar {
+                      ${isMobile ? 'display: none;' : 'width: 8px;'}
+                    }
+                    ${!isMobile ? `
+                    #category-picker-scroll::-webkit-scrollbar-track {
+                      background: #f1f1f1;
+                      border-radius: 4px;
+                    }
+                    #category-picker-scroll::-webkit-scrollbar-thumb {
+                      background: #888;
+                      border-radius: 4px;
+                    }
+                    #category-picker-scroll::-webkit-scrollbar-thumb:hover {
+                      background: #555;
+                    }
+                    ` : ''}
+                  `}</style>
                   
-                  {loadingDebugInfo ? (
-                    <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                      確認中...
-                    </div>
-                  ) : debugInfo ? (
-                    <div style={{ fontSize: '0.875rem', lineHeight: '1.6' }}>
-                      <div style={{ marginBottom: '0.5rem' }}>
-                        <strong>Email:</strong> {debugInfo.email}
-                      </div>
-                      <div style={{ marginBottom: '0.5rem' }}>
-                        <strong>Username:</strong> {debugInfo.username ? `✅ ${debugInfo.username}` : '❌ 未設定'}
-                      </div>
-                      <div style={{ marginBottom: '0.5rem' }}>
-                        <strong>Membership:</strong> {debugInfo.membership_type ? `✅ ${debugInfo.membership_type}` : '❌ 未設定'}
-                      </div>
-                      <div style={{ marginBottom: '0.5rem' }}>
-                        <strong>Password:</strong> {debugInfo.has_password ? '✅ 設定済み' : '❌ 未設定'}
-                      </div>
-                      <div style={{ marginBottom: '0.5rem' }}>
-                        <strong>Last Sign In:</strong> {debugInfo.last_sign_in_at ? new Date(debugInfo.last_sign_in_at).toLocaleString('ja-JP') : '❌ 未設定'}
-                      </div>
-                      <div style={{ marginBottom: '0.5rem' }}>
-                        <strong>Updated At:</strong> {debugInfo.updated_at ? new Date(debugInfo.updated_at).toLocaleString('ja-JP') : '❌ 未設定'}
-                      </div>
-                      <div style={{ marginTop: '0.75rem', padding: '0.5rem', backgroundColor: '#fff', borderRadius: '4px', fontSize: '0.75rem', fontFamily: 'monospace', overflow: 'auto' }}>
-                        <strong>Full Metadata:</strong>
-                        <pre style={{ margin: '0.5rem 0 0 0', whiteSpace: 'pre-wrap' }}>
-                          {JSON.stringify(debugInfo.full_metadata, null, 2)}
-                        </pre>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ color: '#dc2626', fontSize: '0.875rem' }}>
-                      ❌ データ取得に失敗しました
+                  {/* 発音表記についてを最初に表示 */}
+                  {categories.find(c => c.id === 'pronunciation') && (
+                    <div
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('🖱️ 発音表記についてクリック');
+                        // クリックしたカテゴリーを即座に選択・保存
+                        handleDefaultCategoryChange('pronunciation');
+                        // 視覚的なフィードバックのためにスクロール
+                        if (categoryPickerScrollRef.current) {
+                          const itemHeight = 60;
+                          const containerHeight = categoryPickerScrollRef.current.clientHeight;
+                          const centerOffset = containerHeight / 2 - itemHeight / 2;
+                          const paddingTop = containerHeight / 2;
+                          categoryPickerScrollRef.current.scrollTo({ 
+                            top: 0 - centerOffset + paddingTop, 
+                            behavior: 'smooth' 
+                          });
+                        }
+                      }}
+                      style={{
+                        height: '60px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        scrollSnapAlign: 'center',
+                        cursor: 'pointer',
+                        fontSize: '1.25rem',
+                        fontWeight: defaultCategoryId === 'pronunciation' ? '600' : '400',
+                        color: defaultCategoryId === 'pronunciation' ? '#1e40af' : '#6b7280',
+                        transition: 'all 0.2s',
+                        transform: defaultCategoryId === 'pronunciation' ? 'scale(1.1)' : 'scale(1)',
+                        opacity: defaultCategoryId === 'pronunciation' ? 1 : 0.6
+                      }}
+                    >
+                      発音表記について
                     </div>
                   )}
+                  {/* その他のカテゴリー */}
+                  {categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_')).map((category, index) => {
+                    const allCategories = [
+                      ...(categories.find(c => c.id === 'pronunciation') ? [{ id: 'pronunciation', name: '発音表記について' }] : []),
+                      ...categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_'))
+                    ];
+                    const categoryIndex = allCategories.findIndex(c => c.id === category.id);
+                    const isSelected = category.id === defaultCategoryId;
+                    const distanceFromCenter = Math.abs(categoryIndex - allCategories.findIndex(c => c.id === defaultCategoryId));
+                    const scale = Math.max(0.8, 1 - distanceFromCenter * 0.1);
+                    const opacity = Math.max(0.4, 1 - distanceFromCenter * 0.2);
+                    
+                    return (
+                      <div
+                        key={category.id}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('🖱️ カテゴリークリック:', { categoryId: category.id, categoryName: category.name });
+                          // クリックしたカテゴリーを即座に選択・保存
+                          handleDefaultCategoryChange(category.id);
+                          // 視覚的なフィードバックのためにスクロール
+                          if (categoryPickerScrollRef.current) {
+                            const itemHeight = 60;
+                            const containerHeight = categoryPickerScrollRef.current.clientHeight;
+                            const centerOffset = containerHeight / 2 - itemHeight / 2;
+                            const paddingTop = containerHeight / 2;
+                            categoryPickerScrollRef.current.scrollTo({ 
+                              top: categoryIndex * itemHeight - centerOffset + paddingTop, 
+                              behavior: 'smooth' 
+                            });
+                          }
+                        }}
+                        style={{
+                          height: '60px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          scrollSnapAlign: 'center',
+                          cursor: 'pointer',
+                          fontSize: isSelected ? '1.25rem' : '1rem',
+                          fontWeight: isSelected ? '600' : '400',
+                          color: isSelected ? '#1e40af' : '#6b7280',
+                          transition: 'all 0.2s',
+                          transform: `scale(${scale})`,
+                          opacity: opacity
+                        }}
+                      >
+                        {category.name}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
           </div>
         )}
+
+
 
       </div>
     </div>

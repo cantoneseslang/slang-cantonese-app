@@ -406,6 +406,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             WebkitTouchCallout: 'none',
             animation: isButtonRotating ? 'buttonRotate 0.6s ease-in-out' : 'none',
             transform: isButtonRotating ? 'rotateY(360deg)' : 'none',
+            borderRadius: '50%',
           }}
           onContextMenu={(event) => {
             event.preventDefault();
@@ -510,6 +511,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
               transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
               animation: isButtonRotating ? 'buttonRotate 0.6s ease-in-out' : 'none',
               transform: isButtonRotating ? 'rotateY(360deg)' : 'none',
+              borderRadius: buttonsAnimated ? '50%' : '0%',
             }}
             onContextMenu={(event) => {
               event.preventDefault();
@@ -615,6 +617,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
               transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
               animation: isButtonRotating ? 'buttonRotate 0.6s ease-in-out' : 'none',
               transform: isButtonRotating ? 'rotateY(360deg)' : 'none',
+              borderRadius: buttonsAnimated ? '50%' : '0%',
             }}
             onContextMenu={(event) => {
               event.preventDefault();
