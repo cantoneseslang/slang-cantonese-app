@@ -510,6 +510,36 @@ export default function Home() {
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const unlockAudioContexts = () => {
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume().catch((error) => {
+          console.error('クリック音AudioContext自動再開エラー:', error);
+        });
+      }
+      if (normalModeAudioContextRef.current && normalModeAudioContextRef.current.state === 'suspended') {
+        normalModeAudioContextRef.current.resume().catch((error) => {
+          console.error('ノーマルモードAudioContext自動再開エラー:', error);
+        });
+      }
+    };
+
+    const events: (keyof WindowEventMap)[] = ['pointerdown', 'touchstart', 'mousedown', 'keydown'];
+    events.forEach((event) => {
+      window.addEventListener(event, unlockAudioContexts, { passive: true });
+    });
+
+    return () => {
+      events.forEach((event) => {
+        window.removeEventListener(event, unlockAudioContexts);
+      });
+    };
+  }, []);
+
   // 音声認識の初期化（Web Speech API）
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -2289,6 +2319,66 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     }
   };
 
+  const playClickSound = useCallback((options?: { useGain?: boolean; onEnded?: () => void }) => {
+    if (!isClickSoundEnabled || !audioContextRef.current || !audioBufferRef.current) {
+      if (options?.onEnded) {
+        options.onEnded();
+      }
+      return;
+    }
+
+    const context = audioContextRef.current;
+    const { useGain = false, onEnded } = options || {};
+
+    const startPlayback = () => {
+      const buffer = audioBufferRef.current;
+      if (!buffer) {
+        if (onEnded) {
+          onEnded();
+        }
+        return;
+      }
+
+      try {
+        const source = context.createBufferSource();
+        source.buffer = buffer;
+
+        if (onEnded) {
+          source.onended = () => {
+            onEnded();
+          };
+        }
+
+        if (useGain) {
+          const gainNode = context.createGain();
+          gainNode.gain.value = 1.0;
+          source.connect(gainNode);
+          gainNode.connect(context.destination);
+        } else {
+          source.connect(context.destination);
+        }
+
+        source.start(0);
+      } catch (error) {
+        console.log('クリック音再生失敗:', error);
+        if (onEnded) {
+          onEnded();
+        }
+      }
+    };
+
+    if (context.state === 'suspended') {
+      context.resume().then(startPlayback).catch((error) => {
+        console.error('クリック音AudioContext resumeエラー:', error);
+        if (onEnded) {
+          onEnded();
+        }
+      });
+    } else {
+      startPlayback();
+    }
+  }, [isClickSoundEnabled]);
+
   // 振動とクリック音の関数
   const playHapticAndSound = () => {
     // 振動 (Android のみ対応。iOSは未対応)
@@ -2296,24 +2386,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       navigator.vibrate(10); // 10ミリ秒の短い振動
     }
     
-    // MP3クリック音を100%音量で再生（Web Audio API） - オン/オフ切り替え可能
-    if (isClickSoundEnabled && audioContextRef.current && audioBufferRef.current) {
-      try {
-        const source = audioContextRef.current.createBufferSource();
-        const gainNode = audioContextRef.current.createGain();
-        
-        source.buffer = audioBufferRef.current;
-        source.connect(gainNode);
-        gainNode.connect(audioContextRef.current.destination);
-        
-        // 音量を100%に設定（ゲイン1.0）
-        gainNode.gain.value = 1.0;
-        
-        source.start(0);
-      } catch (e) {
-        console.log('Audio playback failed:', e);
-      }
-    }
+    playClickSound({ useGain: true });
   };
   const [isMobile, setIsMobile] = useState(false);
   
@@ -3405,12 +3478,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     }
 
     // クリック音
-    if (isClickSoundEnabled && audioContextRef.current && audioBufferRef.current) {
-      const source = audioContextRef.current.createBufferSource();
-      source.buffer = audioBufferRef.current;
-      source.connect(audioContextRef.current.destination);
-      source.start(0);
-    }
+    playClickSound();
 
     // ノーマルモードの場合、緑色に変える
     if (!isLearningMode) {
@@ -3494,12 +3562,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     }
 
     // クリック音
-    if (isClickSoundEnabled && audioContextRef.current && audioBufferRef.current) {
-      const source = audioContextRef.current.createBufferSource();
-      source.buffer = audioBufferRef.current;
-      source.connect(audioContextRef.current.destination);
-      source.start(0);
-    }
+    playClickSound();
 
     // 連続発音ボタンを緑色に点灯
     if (button) {
@@ -3935,32 +3998,18 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     // 音を再生中フラグを立てる
                     isPlayingSoundRef.current = true;
                     
-                    // クリック音を再生
-                    if (audioContextRef.current && audioBufferRef.current) {
-                      const source = audioContextRef.current.createBufferSource();
-                      source.buffer = audioBufferRef.current;
-                      source.connect(audioContextRef.current.destination);
-                      
-                      // 音声の長さを取得（秒）
-                      const duration = audioBufferRef.current.duration;
-                      
-                      // 音声再生完了後に隠しモードを起動
-                      source.onended = () => {
-                        isPlayingSoundRef.current = false;
-                        setIsHiddenMode(true);
-                        clickCountRef.current = 0;
-                        if (clickTimerRef.current) {
-                          clearTimeout(clickTimerRef.current);
-                        }
-                      };
-                      
-                      source.start(0);
-                    } else {
-                      // 音声ファイルが読み込まれていない場合は即座に起動
+                    const handleHiddenModeStart = () => {
                       isPlayingSoundRef.current = false;
                       setIsHiddenMode(true);
                       clickCountRef.current = 0;
-                    }
+                      if (clickTimerRef.current) {
+                        clearTimeout(clickTimerRef.current);
+                      }
+                    };
+
+                    playClickSound({
+                      onEnded: handleHiddenModeStart,
+                    });
                   } else if (clickCountRef.current > 3) {
                     // 4回目以降は無視（音が再生中）
                     return;
