@@ -78,8 +78,14 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
   const handHelpRef = React.useRef<HTMLDivElement | null>(null);
   const muteHelpRef = React.useRef<HTMLDivElement | null>(null);
 
+  const DESKTOP_BUTTON_DIAMETER = 120;
+  const MOBILE_BUTTON_DIAMETER = 108;
+  const buttonDiameter = isMobile ? MOBILE_BUTTON_DIAMETER : DESKTOP_BUTTON_DIAMETER;
+  const buttonBottomOffsetRem = buttonDiameter / 16; // converts px -> rem (assuming 16px base)
+
   const baseMobileTopPx = 36 + 185 + 10; // 2.25rem + 185px + 0.625rem
-  const baseMobileBottomPx = 24 + 90 + 90 + 18; // 1.5rem + 90px + 90px + 1.125rem
+  const baseMobileBottomPx =
+    24 + Math.round(buttonDiameter * 0.75) * 2 + 18; // 1.5rem + (0.75 * diameter * 2) + 1.125rem
 
   const [mobileLayout, setMobileLayout] = React.useState<{
     top: number;
@@ -131,7 +137,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
 
       let topSpacing = Math.max(
         minTopSpacing,
-        Math.min(baseMobileTopPx, viewportHeight - gap - 120)
+        Math.min(baseMobileTopPx, viewportHeight - gap - buttonDiameter)
       );
 
       let bottomSpacing = Math.max(
@@ -490,11 +496,13 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
         ref={micButtonRef}
         style={{
           position: 'fixed',
-          bottom: isMobile ? 'calc(env(safe-area-inset-bottom) + 7.5rem)' : '6rem',
+          bottom: isMobile
+            ? `calc(env(safe-area-inset-bottom) + ${buttonBottomOffsetRem}rem)`
+            : '6rem',
           left: '50%',
           transform: 'translateX(-50%)',
           display: 'flex',
-          alignItems: isMobile ? 'flex-end' : 'center',
+          alignItems: 'center',
           justifyContent: 'center',
           gap: isMobile ? '0.75rem' : '1rem',
           zIndex: 1002,
@@ -510,8 +518,8 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             onMouseLeave={() => setHoveredButton(null)}
             style={{
               position: 'relative',
-              width: '120px',
-              height: '120px',
+              width: `${buttonDiameter}px`,
+              height: `${buttonDiameter}px`,
               borderRadius: '50%',
               backgroundColor: 'rgba(192, 216, 255, 0.3)',
               boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
@@ -548,8 +556,8 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
               alt="hand button"
               draggable="false"
               style={{
-                width: '120px',
-                height: '120px',
+                width: `${buttonDiameter}px`,
+                height: `${buttonDiameter}px`,
                 objectFit: 'contain',
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
@@ -616,8 +624,8 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           }}
           style={{
             position: 'relative',
-            width: '120px',
-            height: '120px',
+            width: `${buttonDiameter}px`,
+            height: `${buttonDiameter}px`,
             borderRadius: '50%',
             backgroundColor: isRecording ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)',
             boxShadow: isRecording
@@ -633,7 +641,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             WebkitTouchCallout: 'none',
             overflow: 'visible',
             pointerEvents: 'auto',
-              marginTop: isMobile ? '0.75rem' : '0',
+            marginTop: 0,
           }}
           onMouseDown={(event) => {
             event.preventDefault();
@@ -685,8 +693,8 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             alt="microphone"
             draggable="false"
             style={{
-              width: '120px',
-              height: '120px',
+              width: `${buttonDiameter}px`,
+              height: `${buttonDiameter}px`,
               objectFit: 'contain',
               userSelect: 'none',
               WebkitUserSelect: 'none',
@@ -754,8 +762,8 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             onMouseLeave={() => setHoveredButton(null)}
             style={{
               position: 'relative',
-              width: '120px',
-              height: '120px',
+            width: `${buttonDiameter}px`,
+            height: `${buttonDiameter}px`,
               borderRadius: '50%',
               backgroundColor: isMuted ? 'rgba(239, 68, 68, 0.3)' : 'rgba(192, 216, 255, 0.3)',
               boxShadow: isMuted ? '0 0 20px rgba(239, 68, 68, 0.5)' : '0 4px 6px rgba(0, 0, 0, 0.1)',
@@ -792,8 +800,8 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
               alt="mute button"
               draggable="false"
               style={{
-                width: '120px',
-                height: '120px',
+            width: `${buttonDiameter}px`,
+            height: `${buttonDiameter}px`,
                 objectFit: 'contain',
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
@@ -856,11 +864,11 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
               onMouseLeave={() => setHoveredButton(null)}
               style={{
                 position: 'fixed',
-                bottom: 'calc(5rem + 150px)',
-                left: 'calc(50% - 120px - 0.75rem - 60px)',
+                bottom: `calc(5rem + ${buttonDiameter + 30}px)`,
+                left: `calc(50% - ${buttonDiameter}px - 0.75rem - 60px)`,
                 transform: 'translateX(-50%)',
-                width: buttonsAnimated ? '120px' : '0px',
-                height: buttonsAnimated ? '120px' : '0px',
+                width: buttonsAnimated ? `${buttonDiameter}px` : '0px',
+                height: buttonsAnimated ? `${buttonDiameter}px` : '0px',
                 borderRadius: '50%',
                 backgroundColor: 'rgba(192, 216, 255, 0.3)',
                 boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
@@ -896,8 +904,8 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
                 alt="hand button"
                 draggable="false"
                 style={{
-                  width: buttonsAnimated ? '120px' : '0px',
-                  height: buttonsAnimated ? '120px' : '0px',
+                  width: buttonsAnimated ? `${buttonDiameter}px` : '0px',
+                  height: buttonsAnimated ? `${buttonDiameter}px` : '0px',
                   objectFit: 'contain',
                   userSelect: 'none',
                   WebkitUserSelect: 'none',
@@ -965,11 +973,11 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             ref={micButtonRef}
             style={{
               position: 'fixed',
-              bottom: 'calc(5rem + 120px)',
+              bottom: `calc(5rem + ${buttonDiameter}px)`,
               left: '50%',
               transform: 'translateX(-50%)',
-              width: '120px',
-              height: '120px',
+              width: `${buttonDiameter}px`,
+              height: `${buttonDiameter}px`,
               borderRadius: '50%',
               backgroundColor: isRecording ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)',
               boxShadow: isRecording
@@ -1020,8 +1028,8 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
               alt="microphone"
               draggable="false"
               style={{
-                width: '120px',
-                height: '120px',
+              width: `${buttonDiameter}px`,
+              height: `${buttonDiameter}px`,
                 objectFit: 'contain',
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
@@ -1090,10 +1098,10 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
               style={{
                 position: 'fixed',
                 bottom: 'calc(5rem + 150px)',
-                left: 'calc(50% + 120px + 0.75rem + 60px)',
+                left: `calc(50% + ${buttonDiameter}px + 0.75rem + 60px)`,
                 transform: 'translateX(-50%)',
-                width: buttonsAnimated ? '120px' : '0px',
-                height: buttonsAnimated ? '120px' : '0px',
+                width: buttonsAnimated ? `${buttonDiameter}px` : '0px',
+                height: buttonsAnimated ? `${buttonDiameter}px` : '0px',
                 borderRadius: '50%',
                 backgroundColor: isMuted ? 'rgba(239, 68, 68, 0.3)' : 'rgba(192, 216, 255, 0.3)',
                 boxShadow: isMuted ? '0 0 20px rgba(239, 68, 68, 0.5)' : '0 4px 6px rgba(0, 0, 0, 0.1)',
@@ -1129,8 +1137,8 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
                 alt="mute button"
                 draggable="false"
                 style={{
-                  width: buttonsAnimated ? '120px' : '0px',
-                  height: buttonsAnimated ? '120px' : '0px',
+                  width: buttonsAnimated ? `${buttonDiameter}px` : '0px',
+                  height: buttonsAnimated ? `${buttonDiameter}px` : '0px',
                   objectFit: 'contain',
                   userSelect: 'none',
                   WebkitUserSelect: 'none',
