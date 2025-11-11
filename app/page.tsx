@@ -2428,7 +2428,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   const [importProgress, setImportProgress] = useState<number | null>(null);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
   // iOS風アウトラインアイコン
   const FolderIcon = ({ size = 20, yOffset = 0 }: { size?: number; yOffset?: number }) => (
@@ -2438,7 +2437,11 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ display: 'block', transform: `translateY(${yOffset}px)` }}
+      style={{
+        display: 'block',
+        flexShrink: 0,
+        transform: `translateY(${yOffset}px)`
+      }}
     >
       <path
         d="M3.5 7.75C3.5 6.784 4.284 6 5.25 6H9l1.5 2h8.25c.966 0 1.75.784 1.75 1.75v7.5c0 .966-.784 1.75-1.75 1.75H5.25A1.75 1.75 0 0 1 3.5 17.25v-9.5Z"
@@ -2446,25 +2449,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         strokeWidth="1.75"
         strokeLinejoin="round"
       />
-    </svg>
-  );
-
-  const CameraIcon = ({ size = 20, yOffset = 0 }: { size?: number; yOffset?: number }) => (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ display: 'block', transform: `translateY(${yOffset}px)` }}
-    >
-      <path
-        d="M8.5 7.5 10 6h4l1.5 1.5H19A2 2 0 0 1 21 9.5v7A2 2 0 0 1 19 18.5H5A2 2 0 0 1 3 16.5v-7A2 2 0 0 1 5 7.5h3.5Z"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinejoin="round"
-      />
-      <circle cx="12" cy="13" r="3.25" stroke="currentColor" strokeWidth="1.75" />
     </svg>
   );
 
@@ -5324,8 +5308,17 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 入力可能文字数: {searchQuery.length} / 1,000文字
               </div>
             </div>
-            {/* 入力欄＋右端アイコン用のラッパ（入力の高さに合わせて相対配置） */}
-            <div style={{ position: 'relative' }}>
+            {/* 
+              ⚠️ IMPORTANT: フォルダアイコンの中央配置設定
+              - ラッパdiv / 入力欄 / アイコンラッパの高さは完全に一致させる
+              - 入力欄のline-heightも高さと一致させる
+              - フォーカス時はboxShadowではなくoutlineを使用する
+              - 変更時はdocs/FOLDER_ICON_CENTERING_SOLUTION.mdを参照
+            */}
+            <div style={{ 
+              position: 'relative',
+              height: isMobile ? '3rem' : '3.5rem'
+            }}>
               <input
               type="text"
                 placeholder="こちらに広東語、日本語を入力する"
@@ -5353,6 +5346,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 }}
               style={{
                 height: isMobile ? '3rem' : '3.5rem',
+                lineHeight: isMobile ? '3rem' : '3.5rem',
                 fontSize: isMobile ? '1rem' : '1.125rem',
                 width: '100%',
                 maxWidth: '100%',
@@ -5367,12 +5361,13 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 outline: 'none'
               }}
               onFocus={(e) => {
+                e.currentTarget.style.outline = '2px solid rgba(0,122,255,0.25)';
+                (e.currentTarget as HTMLInputElement).style.outlineOffset = '2px';
                 e.currentTarget.style.borderColor = '#007AFF';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,122,255,0.15), inset 0 1px 0 rgba(255,255,255,0.9)';
               }}
               onBlur={(e) => {
+                e.currentTarget.style.outline = 'none';
                 e.currentTarget.style.borderColor = 'rgba(0,0,0,0.1)';
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)';
               }}
             />
               {/* 右端アイコン（入力欄の内側右上、白枠内） */}
@@ -5383,13 +5378,15 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 bottom: 0,
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '0.25rem',
                 background: 'transparent',
                 border: 'none',
                 padding: 0,
                 boxShadow: 'none',
                 zIndex: 3,
-                pointerEvents: 'auto'
+                pointerEvents: 'auto',
+                height: isMobile ? '3rem' : '3.5rem'
               }}>
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -5400,49 +5397,34 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     border: 'none',
                     cursor: 'pointer',
                     padding: 0,
-                    lineHeight: 1,
+                    margin: 0,
+                    lineHeight: 0,
                     color: '#6b7280',
-                    width: isMobile ? 36 : 42,
-                    height: isMobile ? 36 : 42,
+                    width: isMobile ? 40 : 48,
+                    height: isMobile ? 40 : 48,
+                    minHeight: 0,
                     borderRadius: 9999,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    flexShrink: 0
                 }}
                   onMouseEnter={(e) => { e.currentTarget.style.color = '#111827'; e.currentTarget.style.background = '#f3f4f6'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.background = 'transparent'; }}
-                  onFocus={(e) => { (e.currentTarget as HTMLButtonElement).style.outline = 'none'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(0,122,255,0.25)'; e.currentTarget.style.background = '#f3f4f6'; }}
-                  onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'transparent'; }}
-                >
-                  <FolderIcon size={isMobile ? 22 : 24} yOffset={2} />
-                </button>
-                {isMobile && (
-                <button
-                  onClick={() => cameraInputRef.current?.click()}
-                  title="カメラ/OCRで読み取り"
-                    aria-label="カメラ/OCRで読み取り"
-                  style={{
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: 0,
-                      lineHeight: 1,
-                      color: '#6b7280',
-                      width: 36,
-                      height: 36,
-                      borderRadius: 9999,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
+                  onFocus={(e) => { 
+                    const button = e.currentTarget as HTMLButtonElement;
+                    button.style.outline = '2px solid rgba(0,122,255,0.25)';
+                    button.style.outlineOffset = '2px';
+                    button.style.background = '#f3f4f6';
                   }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = '#111827'; e.currentTarget.style.background = '#f3f4f6'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.background = 'transparent'; }}
-                    onFocus={(e) => { (e.currentTarget as HTMLButtonElement).style.outline = 'none'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(0,122,255,0.25)'; e.currentTarget.style.background = '#f3f4f6'; }}
-                    onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'transparent'; }}
-                  >
-                    <CameraIcon size={isMobile ? 22 : 24} yOffset={2} />
-                  </button>
-                )}
+                  onBlur={(e) => { 
+                    const button = e.currentTarget as HTMLButtonElement;
+                    button.style.outline = 'none';
+                    button.style.background = 'transparent';
+                  }}
+                >
+                  <FolderIcon size={isMobile ? 28 : 32} yOffset={0} />
+                </button>
               </div>
             </div>
 
@@ -5573,42 +5555,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   setImportProgress(null);
                   setImportMessage(null);
                   if (fileInputRef.current) fileInputRef.current.value = '';
-                }
-              }}
-            />
-
-            {/* 非表示input: カメラ（モバイルOCR） */}
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              style={{ display: 'none' }}
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                try {
-                  setIsImporting(true);
-                  setImportMessage('OCR実行中...');
-                  const text = await runOcr(file, (p) => setImportProgress(p));
-                  // 文字数制限チェック（最大1000文字）
-                  if (text.length > 1000) {
-                    const confirmMsg = `OCRで読み取ったテキストが1,000文字を超えています（${text.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
-                    if (confirm(confirmMsg)) {
-                      setSearchQuery(text.substring(0, 1000));
-                      alert(`最初の1,000文字を入力欄に設定しました。`);
-                    }
-                  } else {
-                    setSearchQuery(text);
-                  }
-                } catch (err: any) {
-                  console.error(err);
-                  alert('OCR中にエラーが発生しました: ' + (err?.message || String(err)));
-                } finally {
-                  setIsImporting(false);
-                  setImportProgress(null);
-                  setImportMessage(null);
-                  if (cameraInputRef.current) cameraInputRef.current.value = '';
                 }
               }}
             />
