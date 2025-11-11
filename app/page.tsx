@@ -5759,9 +5759,15 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   </p>
                 </>
               )}
-              
-              {/* 例文表示（翻訳された場合は非表示） */}
-              {result.exampleCantonese && !result.translatedText && (
+
+              {result.translatedText && (
+                <p style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
+                  <strong>翻訳： {result.translatedText}</strong>
+                </p>
+              )}
+
+              {/* 例文表示 */}
+              {result.exampleCantonese && (
                 <div style={{ marginTop: '1rem' }}>
                   <p style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
                     <strong>例文： {result.exampleCantonese}</strong>
