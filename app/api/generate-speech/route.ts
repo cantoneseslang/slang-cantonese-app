@@ -66,7 +66,11 @@ export async function POST(request: NextRequest) {
       audioConfig: { audioEncoding: 'MP3' }
     };
 
-    console.log('🔊 音声生成API呼び出し開始:', { text: text.substring(0, 50), languageCode: voiceParams.languageCode });
+    console.log('🔊 音声生成API呼び出し開始:', {
+      text: text.substring(0, 50),
+      languageCode: voiceParams.languageCode,
+      voice: voiceParams.name ?? 'default',
+    });
 
     // タイムアウト付きfetch（8秒でタイムアウト）
     const controller = new AbortController();

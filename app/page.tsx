@@ -59,6 +59,91 @@ interface PracticeGroup {
 }
 
 type InterpreterVoiceOption = 'female' | 'male';
+type CalculatorOperator = '+' | '-' | '×' | '÷';
+
+const HK_CATTI_IN_KG = 0.60478982;
+const POUND_IN_KG = 0.45359237;
+const FOOT_IN_CM = 30.48;
+const INCH_IN_CM = 2.54;
+
+const formatCalculatorDisplayValue = (value: string): string => {
+  if (!value) {
+    return '0';
+  }
+
+  const sanitized = value.replace(/,/g, '').trim();
+
+  if (sanitized === '') {
+    return '0';
+  }
+
+  if (sanitized === '.' || sanitized === '-.' || sanitized === '-0.') {
+    return sanitized.startsWith('-') ? '-0.' : '0.';
+  }
+
+  if (sanitized === 'Error') {
+    return 'Error';
+  }
+
+  const negative = sanitized.startsWith('-');
+  const normalized = negative ? sanitized.slice(1) : sanitized;
+  const [integerPartRaw, decimalPart] = normalized.split('.');
+  const integerPart = integerPartRaw || '0';
+
+  const formattedInteger = Number(integerPart).toLocaleString('ja-JP');
+
+  return `${negative ? '-' : ''}${formattedInteger}${decimalPart !== undefined ? `.${decimalPart}` : ''}`;
+};
+
+const convertNumberToCantoneseReading = (raw: string): string => {
+  if (!raw) return '';
+
+  const digitMap: Record<string, string> = {
+    '0': '零',
+    '1': '一',
+    '2': '二',
+    '3': '三',
+    '4': '四',
+    '5': '五',
+    '6': '六',
+    '7': '七',
+    '8': '八',
+    '9': '九',
+  };
+
+  let sanitized = raw.replace(/,/g, '').trim();
+  if (!sanitized) return '';
+
+  const isNegative = sanitized.startsWith('-');
+  if (isNegative) {
+    sanitized = sanitized.slice(1);
+  }
+
+  if (!sanitized || sanitized === '.' || sanitized === '-.') {
+    return isNegative ? '負 零' : '零';
+  }
+
+  const [integerPartRaw, decimalPart] = sanitized.split('.');
+
+  const convertDigits = (digits: string) =>
+    digits
+      .split('')
+      .map((ch) => digitMap[ch] ?? ch)
+      .join(' ');
+
+  const integerPart = integerPartRaw.replace(/^0+/, '') || '0';
+  let converted = convertDigits(integerPart);
+
+  if (decimalPart !== undefined && decimalPart !== '') {
+    converted += ' 點 ' + convertDigits(decimalPart);
+  }
+
+  if (isNegative) {
+    converted = '負 ' + converted;
+  }
+
+  return converted;
+};
 
 interface Category {
   id: string;
@@ -88,6 +173,7 @@ export default function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentWords, setCurrentWords] = useState<Word[]>([]);
   const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
+  const isNumbersCategory = currentCategory?.id === 'numbers';
 
   const selectableCategories = useMemo<{ id: string; name: string }[]>(() => {
     const filtered = categories
@@ -158,7 +244,28 @@ export default function Home() {
     const voice = language === 'cantonese' ? interpreterCantoneseVoice : interpreterMandarinVoice;
     return `${language}-${voice}`;
   }, [interpreterCantoneseVoice, interpreterMandarinVoice]);
-  
+
+  // 数字カテゴリ向けの計算機／単位変換
+  const [calculatorDisplay, setCalculatorDisplay] = useState('0');
+  const [calculatorStoredValue, setCalculatorStoredValue] = useState<number | null>(null);
+  const [calculatorPendingOperator, setCalculatorPendingOperator] = useState<CalculatorOperator | null>(null);
+  const [calculatorOverwrite, setCalculatorOverwrite] = useState(true);
+  const [calculatorHistory, setCalculatorHistory] = useState<string>('');
+  const [calculatorError, setCalculatorError] = useState<string | null>(null);
+  const [calculatorRepeatValue, setCalculatorRepeatValue] = useState<number | null>(null);
+  const [calculatorRepeatOperator, setCalculatorRepeatOperator] = useState<CalculatorOperator | null>(null);
+
+  const [activeConversionPanel, setActiveConversionPanel] = useState<'currency' | 'weight' | 'length' | null>(null);
+  const [exchangeRate, setExchangeRate] = useState<{ hkdToJpy: number; jpyToHkd: number } | null>(null);
+  const [lastRateFetchedAt, setLastRateFetchedAt] = useState<number | null>(null);
+  const [isFetchingRate, setIsFetchingRate] = useState(false);
+  const [currencyInput, setCurrencyInput] = useState('100');
+  const [currencyBase, setCurrencyBase] = useState<'HKD' | 'JPY'>('HKD');
+  const [weightInput, setWeightInput] = useState('1');
+  const [weightBase, setWeightBase] = useState<'kg' | 'catty' | 'lb'>('kg');
+  const [lengthInput, setLengthInput] = useState('100');
+  const [lengthBase, setLengthBase] = useState<'cm' | 'foot' | 'inch'>('cm');
+
   // 設定画面の状態
   const [showSettings, setShowSettings] = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -216,6 +323,345 @@ export default function Home() {
       });
     });
   }, [showCategoryPicker, defaultCategoryId, selectableCategories]);
+  
+  useEffect(() => {
+    if (!isNumbersCategory) {
+      setActiveConversionPanel(null);
+      setCalculatorError(null);
+      return;
+    }
+  }, [isNumbersCategory]);
+
+  useEffect(() => {
+    if (!isNumbersCategory || activeConversionPanel !== 'currency') {
+      return;
+    }
+    const now = Date.now();
+    if (exchangeRate && lastRateFetchedAt && now - lastRateFetchedAt < 1000 * 60 * 30) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchRate = async () => {
+      try {
+        setIsFetchingRate(true);
+        const response = await fetch('https://api.exchangerate.host/latest?base=HKD&symbols=JPY');
+        if (!response.ok) {
+          throw new Error(`failed to fetch exchange rate: ${response.status}`);
+        }
+        const data = await response.json();
+        const rate = data?.rates?.JPY;
+        if (typeof rate === 'number' && isFinite(rate) && isMounted) {
+          const inverted = rate !== 0 ? 1 / rate : 0;
+          setExchangeRate({
+            hkdToJpy: rate,
+            jpyToHkd: inverted,
+          });
+          setLastRateFetchedAt(Date.now());
+        }
+      } catch (error) {
+        console.error('為替レート取得エラー:', error);
+      } finally {
+        if (isMounted) {
+          setIsFetchingRate(false);
+        }
+      }
+    };
+
+    fetchRate();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isNumbersCategory, activeConversionPanel, exchangeRate, lastRateFetchedAt]);
+
+  const parsedCalculatorDisplayValue = useMemo(() => {
+    const sanitized = calculatorDisplay.replace(/,/g, '');
+    const numeric = Number(sanitized);
+    return Number.isFinite(numeric) ? numeric : NaN;
+  }, [calculatorDisplay]);
+
+  const formattedCalculatorDisplay = useMemo(
+    () => formatCalculatorDisplayValue(calculatorDisplay),
+    [calculatorDisplay]
+  );
+
+  const performCalculation = useCallback(
+    (first: number, second: number, operator: CalculatorOperator): number | null => {
+      switch (operator) {
+        case '+':
+          return first + second;
+        case '-':
+          return first - second;
+        case '×':
+          return first * second;
+        case '÷':
+          return second === 0 ? null : first / second;
+        default:
+          return second;
+      }
+    },
+    []
+  );
+
+  const resetCalculator = useCallback(() => {
+    setCalculatorDisplay('0');
+    setCalculatorStoredValue(null);
+    setCalculatorPendingOperator(null);
+    setCalculatorOverwrite(true);
+    setCalculatorHistory('');
+    setCalculatorError(null);
+    setCalculatorRepeatValue(null);
+    setCalculatorRepeatOperator(null);
+  }, []);
+
+  const handleCalculatorDigit = (digit: string) => {
+    setCalculatorError(null);
+    setCalculatorDisplay((prev) => {
+      if (calculatorOverwrite || prev === '0' || prev === '-0') {
+        setCalculatorOverwrite(false);
+        return prev === '-0' ? `-${digit}` : digit;
+      }
+      setCalculatorOverwrite(false);
+      return prev + digit;
+    });
+  };
+
+  const handleCalculatorDecimal = () => {
+    setCalculatorError(null);
+    setCalculatorDisplay((prev) => {
+      if (calculatorOverwrite) {
+        setCalculatorOverwrite(false);
+        return '0.';
+      }
+      if (prev.includes('.')) {
+        return prev;
+      }
+      return `${prev}.`;
+    });
+  };
+
+  const handleCalculatorOperator = (operator: CalculatorOperator) => {
+    setCalculatorError(null);
+    setCalculatorRepeatValue(null);
+    setCalculatorRepeatOperator(null);
+
+    const currentValue = parsedCalculatorDisplayValue;
+    if (!Number.isFinite(currentValue)) {
+      setCalculatorError('数値を入力してください');
+      return;
+    }
+
+    if (calculatorStoredValue === null || calculatorOverwrite) {
+      setCalculatorStoredValue(currentValue);
+    } else if (calculatorPendingOperator) {
+      const computed = performCalculation(calculatorStoredValue, currentValue, calculatorPendingOperator);
+      if (computed === null || !Number.isFinite(computed)) {
+        setCalculatorError('計算できません');
+        resetCalculator();
+        return;
+      }
+      setCalculatorStoredValue(computed);
+      setCalculatorDisplay(String(computed));
+    }
+
+    setCalculatorPendingOperator(operator);
+    setCalculatorOverwrite(true);
+    setCalculatorHistory(`${formatCalculatorDisplayValue(String(calculatorStoredValue ?? currentValue))} ${operator}`);
+  };
+
+  const handleCalculatorEquals = () => {
+    setCalculatorError(null);
+
+    const currentValue = parsedCalculatorDisplayValue;
+    if (!Number.isFinite(currentValue)) {
+      setCalculatorError('数値を入力してください');
+      return;
+    }
+
+    let firstOperand: number | null = null;
+    let secondOperand: number | null = null;
+    let operatorToUse: CalculatorOperator | null = null;
+
+    if (calculatorPendingOperator && calculatorStoredValue !== null) {
+      firstOperand = calculatorStoredValue;
+      secondOperand = currentValue;
+      operatorToUse = calculatorPendingOperator;
+      setCalculatorRepeatValue(currentValue);
+      setCalculatorRepeatOperator(calculatorPendingOperator);
+    } else if (calculatorRepeatOperator && calculatorRepeatValue !== null) {
+      firstOperand = currentValue;
+      secondOperand = calculatorRepeatValue;
+      operatorToUse = calculatorRepeatOperator;
+    }
+
+    if (firstOperand === null || secondOperand === null || operatorToUse === null) {
+      setCalculatorOverwrite(true);
+      setCalculatorHistory('');
+      return;
+    }
+
+    const computed = performCalculation(firstOperand, secondOperand, operatorToUse);
+    if (computed === null || !Number.isFinite(computed)) {
+      setCalculatorError('計算できません');
+      resetCalculator();
+      return;
+    }
+
+    setCalculatorDisplay(String(computed));
+    setCalculatorStoredValue(null);
+    setCalculatorPendingOperator(null);
+    setCalculatorOverwrite(true);
+    setCalculatorHistory('');
+  };
+
+  const handleCalculatorToggleSign = () => {
+    setCalculatorError(null);
+    setCalculatorDisplay((prev) => {
+      if (prev === '0' || prev === 'Error') {
+        return prev;
+      }
+      return prev.startsWith('-') ? prev.slice(1) : `-${prev}`;
+    });
+  };
+
+  const handleCalculatorPercent = () => {
+    setCalculatorError(null);
+    const currentValue = parsedCalculatorDisplayValue;
+    if (!Number.isFinite(currentValue)) {
+      setCalculatorError('数値を入力してください');
+      return;
+    }
+    const percentValue = currentValue / 100;
+    setCalculatorDisplay(String(percentValue));
+    setCalculatorOverwrite(true);
+  };
+
+  const handleCalculatorDelete = () => {
+    if (calculatorOverwrite) {
+      return;
+    }
+    setCalculatorDisplay((prev) => {
+      if (prev.length <= 1 || (prev.length === 2 && prev.startsWith('-'))) {
+        return '0';
+      }
+      return prev.slice(0, -1);
+    });
+  };
+
+  const handleCalculatorClear = () => {
+    if (calculatorDisplay !== '0' || calculatorError) {
+      setCalculatorDisplay('0');
+      setCalculatorError(null);
+      setCalculatorOverwrite(true);
+      setCalculatorHistory('');
+      return;
+    }
+    resetCalculator();
+  };
+
+  const calculatorDisplayValue = formattedCalculatorDisplay;
+
+  const parseNumber = (value: string) => {
+    const sanitized = value.replace(/,/g, '');
+    const numeric = Number(sanitized);
+    return Number.isFinite(numeric) ? numeric : NaN;
+  };
+
+  const formatConversionNumber = useCallback(
+    (value: number, fractionDigits = 2) =>
+      new Intl.NumberFormat('ja-JP', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: fractionDigits,
+      }).format(value),
+    []
+  );
+
+  const currencyResults = useMemo(() => {
+    const numericValue = parseNumber(currencyInput);
+    if (!Number.isFinite(numericValue)) {
+      return null;
+    }
+
+    if (!exchangeRate) {
+      return {
+        base: currencyBase,
+        baseValue: numericValue,
+        targetValue: null,
+      };
+    }
+
+    if (currencyBase === 'HKD') {
+      return {
+        base: 'HKD' as const,
+        baseValue: numericValue,
+        targetValue: numericValue * exchangeRate.hkdToJpy,
+      };
+    }
+
+    return {
+      base: 'JPY' as const,
+      baseValue: numericValue,
+      targetValue: numericValue * exchangeRate.jpyToHkd,
+    };
+  }, [currencyInput, currencyBase, exchangeRate]);
+
+  const weightResults = useMemo(() => {
+    const numericValue = parseNumber(weightInput);
+    if (!Number.isFinite(numericValue)) {
+      return null;
+    }
+
+    let valueInKg = 0;
+    switch (weightBase) {
+      case 'kg':
+        valueInKg = numericValue;
+        break;
+      case 'catty':
+        valueInKg = numericValue * HK_CATTI_IN_KG;
+        break;
+      case 'lb':
+        valueInKg = numericValue * POUND_IN_KG;
+        break;
+      default:
+        valueInKg = numericValue;
+    }
+
+    return {
+      kg: valueInKg,
+      catty: valueInKg / HK_CATTI_IN_KG,
+      lb: valueInKg / POUND_IN_KG,
+    };
+  }, [weightInput, weightBase]);
+
+  const lengthResults = useMemo(() => {
+    const numericValue = parseNumber(lengthInput);
+    if (!Number.isFinite(numericValue)) {
+      return null;
+    }
+
+    let valueInCm = 0;
+    switch (lengthBase) {
+      case 'cm':
+        valueInCm = numericValue;
+        break;
+      case 'foot':
+        valueInCm = numericValue * FOOT_IN_CM;
+        break;
+      case 'inch':
+        valueInCm = numericValue * INCH_IN_CM;
+        break;
+      default:
+        valueInCm = numericValue;
+    }
+
+    return {
+      cm: valueInCm,
+      foot: valueInCm / FOOT_IN_CM,
+      inch: valueInCm / INCH_IN_CM,
+    };
+  }, [lengthInput, lengthBase]);
 
   // デバッグ情報の状態
   const [debugInfo, setDebugInfo] = useState<any>(null);
@@ -434,6 +880,40 @@ export default function Home() {
       console.error(`${logPrefix}: 音声ロード失敗`, error);
     }
   };
+
+  const handleSpeakCalculatorResult = useCallback(async () => {
+    if (calculatorError || calculatorDisplay === 'Error' || calculatorDisplay === '') {
+      return;
+    }
+
+    const textForSpeech = convertNumberToCantoneseReading(calculatorDisplay);
+    if (!textForSpeech) {
+      return;
+    }
+
+    try {
+      playHapticAndSound();
+      const response = await fetch('/api/generate-speech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: textForSpeech, language: 'cantonese' }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`音声生成に失敗しました: ${response.status}`);
+      }
+
+      const audioData = await response.json();
+      if (audioData?.audioContent) {
+        playNormalModeAudio(audioData.audioContent, { logPrefix: '計算機' });
+      }
+    } catch (error) {
+      console.error('計算結果の読み上げエラー:', error);
+      setCalculatorError('音声生成に失敗しました');
+    }
+  }, [calculatorDisplay, calculatorError, playNormalModeAudio, playHapticAndSound]);
 
   const closeSettingsPanel = useCallback(() => {
     setShowSettings(false);
@@ -970,16 +1450,16 @@ const resetInterpreterSession = ({
   clearHelpPopups?: boolean;
   reason?: string;
 } = {}) => {
-  setIsRecording(false);
-  setRecognizedText('');
-  setFinalText('');
-  setInterimText('');
-  setTranslatedText('');
-  setRecognizedTextLines([]);
-  setTranslatedTextLines([]);
-  lastTranslatedTextRef.current = '';
-  lastProcessedFinalTextRef.current = '';
-  translatedTextSetRef.current.clear();
+    setIsRecording(false);
+    setRecognizedText('');
+    setFinalText('');
+    setInterimText('');
+    setTranslatedText('');
+    setRecognizedTextLines([]);
+    setTranslatedTextLines([]);
+    lastTranslatedTextRef.current = '';
+    lastProcessedFinalTextRef.current = '';
+    translatedTextSetRef.current.clear();
   translatedInterimSetRef.current.clear();
   recognizedFinalTextRef.current = '';
 
@@ -1023,19 +1503,19 @@ const resetInterpreterSession = ({
     }
   }
 
-  if (translateDebounceRef.current) {
-    clearTimeout(translateDebounceRef.current);
-    translateDebounceRef.current = null;
-  }
-  if (translateAbortControllerRef.current) {
-    translateAbortControllerRef.current.abort();
-    translateAbortControllerRef.current = null;
-  }
-
-  if (titleAudioRef.current) {
-    titleAudioRef.current.pause();
-    titleAudioRef.current.currentTime = 0;
-  }
+    if (translateDebounceRef.current) {
+      clearTimeout(translateDebounceRef.current);
+      translateDebounceRef.current = null;
+    }
+    if (translateAbortControllerRef.current) {
+      translateAbortControllerRef.current.abort();
+      translateAbortControllerRef.current = null;
+    }
+    
+    if (titleAudioRef.current) {
+      titleAudioRef.current.pause();
+      titleAudioRef.current.currentTime = 0;
+    }
 
   safelyResetRecognitionInstance(reason);
 
@@ -1102,7 +1582,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       });
     });
   }
-};
+  };
 
   // ESCキーで隠しモード終了
   useEffect(() => {
@@ -1316,7 +1796,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     }
     setIsMuted(prev => !prev);
   };
-  
+
   // マイクボタンのハンドラー（長押し方式）
   const handleMicPress = () => {
     if (!isHiddenMode) {
@@ -2389,34 +2869,34 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   // Stripe決済処理（アップグレード/ダウングレード）
   const handleStripeCheckout = async (plan: 'free' | 'subscription' | 'lifetime') => {
     if (plan === 'free') {
-      try {
-        const { error } = await supabase.auth.updateUser({
-          data: {
-            membership_type: plan
-          }
-        });
-
-        if (error) throw error;
-
-        const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
-        
-        if (getUserError) {
-          console.error('ユーザー情報の再取得エラー:', getUserError);
-        } else if (updatedUser) {
-          setUser(updatedUser);
-          setMembershipType(plan);
-        } else {
-          setMembershipType(plan);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          membership_type: plan
         }
+      });
 
-        setShowPricingModal(false);
-        setSelectedPlan(null);
-        setIsDowngrade(false);
-        
-        alert('ブロンズ会員に変更しました！');
-      } catch (err: any) {
-        alert('エラーが発生しました: ' + err.message);
+      if (error) throw error;
+
+      const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
+      
+      if (getUserError) {
+        console.error('ユーザー情報の再取得エラー:', getUserError);
+      } else if (updatedUser) {
+        setUser(updatedUser);
+        setMembershipType(plan);
+      } else {
+        setMembershipType(plan);
       }
+
+      setShowPricingModal(false);
+      setSelectedPlan(null);
+      setIsDowngrade(false);
+      
+        alert('ブロンズ会員に変更しました！');
+    } catch (err: any) {
+      alert('エラーが発生しました: ' + err.message);
+    }
       return;
     }
 
@@ -2492,13 +2972,13 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
 
         if (useGain) {
           const gainNode = context.createGain();
-          gainNode.gain.value = 1.0;
+        gainNode.gain.value = 1.0;
           source.connect(gainNode);
           gainNode.connect(context.destination);
         } else {
           source.connect(context.destination);
         }
-
+        
         source.start(0);
       } catch (error) {
         console.log('クリック音再生失敗:', error);
@@ -2619,6 +3099,385 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       />
     </svg>
   );
+
+  const renderCalculatorButton = useCallback(
+    (
+      label: string,
+      onClick: () => void,
+      {
+        variant = 'default',
+        span = 1,
+        disabled = false,
+      }: {
+        variant?: 'default' | 'function' | 'operator' | 'equal';
+        span?: number;
+        disabled?: boolean;
+      } = {}
+    ) => {
+      const baseColor = {
+        default: {
+          background: '#f9fafb',
+          color: '#111827',
+        },
+        function: {
+          background: '#e0f2fe',
+          color: '#0c4a6e',
+        },
+        operator: {
+          background: '#ede9fe',
+          color: '#5b21b6',
+        },
+        equal: {
+          background: 'linear-gradient(145deg, #2563eb, #1d4ed8)',
+          color: '#ffffff',
+        },
+      }[variant];
+
+      return (
+        <button
+          key={`${label}-${variant}`}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (disabled) {
+              return;
+            }
+            playHapticAndSound();
+            onClick();
+          }}
+          disabled={disabled}
+          style={{
+            gridColumn: span > 1 ? `span ${span}` : undefined,
+            padding: isMobile ? '0.75rem 0.5rem' : '0.85rem 0.75rem',
+            borderRadius: '12px',
+            border: 'none',
+            fontWeight: 700,
+            fontSize: isMobile ? '1rem' : '1.05rem',
+            background: baseColor.background,
+            color: baseColor.color,
+            boxShadow:
+              variant === 'equal'
+                ? '0 8px 18px rgba(37,99,235,0.35)'
+                : '0 4px 12px rgba(15,23,42,0.08)',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            opacity: disabled ? 0.6 : 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease',
+            touchAction: 'manipulation',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+          onMouseEnter={(e) => {
+            if (!disabled && variant !== 'equal') {
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(15,23,42,0.18)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!disabled && variant !== 'equal') {
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(15,23,42,0.08)';
+            }
+          }}
+        >
+          {label}
+        </button>
+      );
+    },
+    [isMobile, playHapticAndSound]
+  );
+
+  const handleRefreshExchangeRate = useCallback(() => {
+    setExchangeRate(null);
+    setLastRateFetchedAt(null);
+  }, []);
+
+  const conversionButtons = useMemo<
+    Array<{ id: 'currency' | 'weight' | 'length'; label: string; subLabel: string; emoji: string }>
+  >(
+    () => [
+      { id: 'currency', label: '為替', subLabel: 'HKD↔JPY', emoji: '💱' },
+      { id: 'weight', label: '重量', subLabel: '公斤/斤/磅', emoji: '⚖️' },
+      { id: 'length', label: '長さ', subLabel: 'cm/呎/吋', emoji: '📏' },
+    ],
+    []
+  );
+
+  const renderConversionPanel = () => {
+    if (!activeConversionPanel) {
+      return null;
+    }
+
+    if (activeConversionPanel === 'currency') {
+      const baseIsHKD = currencyBase === 'HKD';
+      const lastUpdatedText = lastRateFetchedAt
+        ? new Date(lastRateFetchedAt).toLocaleString('ja-JP', {
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : '未取得';
+
+      return (
+        <div style={{
+          background: '#f8fafc',
+          borderRadius: '12px',
+          padding: isMobile ? '0.9rem' : '1rem',
+          border: '1px solid #e2e8f0',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)'
+        }}>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setCurrencyBase('HKD')}
+              style={{
+                flex: isMobile ? '1 1 120px' : '0 0 auto',
+                padding: '0.6rem 1rem',
+                borderRadius: '999px',
+                border: baseIsHKD ? '1px solid #2563eb' : '1px solid #cbd5f5',
+                background: baseIsHKD ? 'linear-gradient(145deg, #2563eb, #1d4ed8)' : '#ffffff',
+                color: baseIsHKD ? '#ffffff' : '#1e3a8a',
+                fontWeight: 700,
+                cursor: 'pointer',
+                touchAction: 'manipulation'
+              }}
+            >
+              HKD → JPY
+            </button>
+            <button
+              onClick={() => setCurrencyBase('JPY')}
+              style={{
+                flex: isMobile ? '1 1 120px' : '0 0 auto',
+                padding: '0.6rem 1rem',
+                borderRadius: '999px',
+                border: !baseIsHKD ? '1px solid #2563eb' : '1px solid #cbd5f5',
+                background: !baseIsHKD ? 'linear-gradient(145deg, #2563eb, #1d4ed8)' : '#ffffff',
+                color: !baseIsHKD ? '#ffffff' : '#1e3a8a',
+                fontWeight: 700,
+                cursor: 'pointer',
+                touchAction: 'manipulation'
+              }}
+            >
+              JPY → HKD
+            </button>
+            <button
+              onClick={handleRefreshExchangeRate}
+              style={{
+                flex: isMobile ? '1 1 120px' : '0 0 auto',
+                padding: '0.6rem 1rem',
+                borderRadius: '999px',
+                border: '1px solid #cbd5f5',
+                background: '#ffffff',
+                color: '#1d4ed8',
+                fontWeight: 600,
+                cursor: 'pointer',
+                touchAction: 'manipulation'
+              }}
+            >
+              レート更新
+            </button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '1rem', alignItems: isMobile ? 'stretch' : 'flex-end' }}>
+            <div style={{ flex: '1 1 200px' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a' }}>
+                {baseIsHKD ? '香港ドル (HKD)' : '日本円 (JPY)'}
+              </label>
+              <input
+                type="number"
+                value={currencyInput}
+                onChange={(e) => setCurrencyInput(e.target.value)}
+                style={{
+                  width: '100%',
+                  marginTop: '0.35rem',
+                  padding: '0.65rem 0.75rem',
+                  borderRadius: '10px',
+                  border: '1px solid #cbd5f5',
+                  fontSize: '1rem',
+                  background: '#ffffff',
+                  color: '#0f172a'
+                }}
+              />
+            </div>
+            <div style={{ flex: '1 1 200px' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a' }}>
+                {baseIsHKD ? '日本円 (JPY)' : '香港ドル (HKD)'}
+              </label>
+              <div style={{
+                marginTop: '0.35rem',
+                padding: '0.75rem',
+                borderRadius: '10px',
+                border: '1px solid #cbd5f5',
+                background: '#ffffff',
+                fontSize: '1.1rem',
+                fontWeight: 700,
+                minHeight: '3rem',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                {currencyResults?.targetValue != null
+                  ? `${formatConversionNumber(currencyResults.targetValue, 2)}`
+                  : exchangeRate
+                  ? '0.00'
+                  : 'レート未取得'}
+              </div>
+            </div>
+          </div>
+          <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: '#1e293b', lineHeight: 1.6 }}>
+            <div>現在のレート: {exchangeRate ? `1 HKD = ${formatConversionNumber(exchangeRate.hkdToJpy, 4)} JPY` : '---'}</div>
+            <div>取得時刻: {isFetchingRate ? '更新中...' : lastUpdatedText}</div>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeConversionPanel === 'weight') {
+      return (
+        <div style={{
+          background: '#fefce8',
+          borderRadius: '12px',
+          padding: isMobile ? '0.9rem' : '1rem',
+          border: '1px solid #fcd34d',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)'
+        }}>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+            {(['kg', 'catty', 'lb'] as Array<'kg' | 'catty' | 'lb'>).map((unit) => {
+              const active = weightBase === unit;
+              const label = unit === 'kg' ? '公斤 (kg)' : unit === 'catty' ? '斤 (catty)' : '磅 (lb)';
+              return (
+                <button
+                  key={unit}
+                  onClick={() => setWeightBase(unit)}
+                  style={{
+                    flex: isMobile ? '1 1 120px' : '0 0 auto',
+                    padding: '0.6rem 1rem',
+                    borderRadius: '999px',
+                    border: active ? '1px solid #d97706' : '1px solid #fcd34d',
+                    background: active ? 'linear-gradient(145deg, #fbbf24, #d97706)' : '#fff7ed',
+                    color: active ? '#78350f' : '#b45309',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    touchAction: 'manipulation'
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '1rem', alignItems: isMobile ? 'stretch' : 'flex-end' }}>
+            <div style={{ flex: '1 1 200px' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#78350f' }}>
+                入力値
+              </label>
+              <input
+                type="number"
+                value={weightInput}
+                onChange={(e) => setWeightInput(e.target.value)}
+                style={{
+                  width: '100%',
+                  marginTop: '0.35rem',
+                  padding: '0.65rem 0.75rem',
+                  borderRadius: '10px',
+                  border: '1px solid #fcd34d',
+                  fontSize: '1rem',
+                  background: '#ffffff',
+                  color: '#78350f'
+                }}
+              />
+            </div>
+            <div style={{ flex: '1 1 200px' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#78350f', marginBottom: '0.35rem' }}>
+                結果
+              </div>
+              {weightResults ? (
+                <div style={{ display: 'grid', gap: '0.4rem', background: '#fff7ed', borderRadius: '10px', padding: '0.75rem' }}>
+                  <div style={{ fontSize: '0.85rem', color: '#92400e' }}>公斤 (kg): <strong>{formatConversionNumber(weightResults.kg, 3)}</strong></div>
+                  <div style={{ fontSize: '0.85rem', color: '#92400e' }}>斤 (catty): <strong>{formatConversionNumber(weightResults.catty, 3)}</strong></div>
+                  <div style={{ fontSize: '0.85rem', color: '#92400e' }}>磅 (lb): <strong>{formatConversionNumber(weightResults.lb, 3)}</strong></div>
+                </div>
+              ) : (
+                <div style={{ padding: '0.75rem', borderRadius: '10px', background: '#fff7ed', border: '1px dashed #fcd34d', color: '#92400e' }}>
+                  数値を入力してください。
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // length panel
+    return (
+      <div style={{
+        background: '#eef2ff',
+        borderRadius: '12px',
+        padding: isMobile ? '0.9rem' : '1rem',
+        border: '1px solid #c7d2fe',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)'
+      }}>
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+          {(['cm', 'foot', 'inch'] as Array<'cm' | 'foot' | 'inch'>).map((unit) => {
+            const active = lengthBase === unit;
+            const label = unit === 'cm' ? '公分 (cm)' : unit === 'foot' ? '呎 (ft)' : '英吋 (in)';
+            return (
+              <button
+                key={unit}
+                onClick={() => setLengthBase(unit)}
+                style={{
+                  flex: isMobile ? '1 1 120px' : '0 0 auto',
+                  padding: '0.6rem 1rem',
+                  borderRadius: '999px',
+                  border: active ? '1px solid #4c1d95' : '1px solid #c7d2fe',
+                  background: active ? 'linear-gradient(145deg, #a855f7, #7c3aed)' : '#ffffff',
+                  color: active ? '#f5f3ff' : '#4c1d95',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  touchAction: 'manipulation'
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '1rem', alignItems: isMobile ? 'stretch' : 'flex-end' }}>
+          <div style={{ flex: '1 1 200px' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#312e81' }}>
+              入力値
+            </label>
+            <input
+              type="number"
+              value={lengthInput}
+              onChange={(e) => setLengthInput(e.target.value)}
+              style={{
+                width: '100%',
+                marginTop: '0.35rem',
+                padding: '0.65rem 0.75rem',
+                borderRadius: '10px',
+                border: '1px solid #c7d2fe',
+                fontSize: '1rem',
+                background: '#ffffff',
+                color: '#312e81'
+              }}
+            />
+          </div>
+          <div style={{ flex: '1 1 200px' }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#312e81', marginBottom: '0.35rem' }}>
+              結果
+            </div>
+            {lengthResults ? (
+              <div style={{ display: 'grid', gap: '0.4rem', background: '#ede9fe', borderRadius: '10px', padding: '0.75rem' }}>
+                <div style={{ fontSize: '0.85rem', color: '#4c1d95' }}>公分 (cm): <strong>{formatConversionNumber(lengthResults.cm, 2)}</strong></div>
+                <div style={{ fontSize: '0.85rem', color: '#4c1d95' }}>呎 (ft): <strong>{formatConversionNumber(lengthResults.foot, 3)}</strong></div>
+                <div style={{ fontSize: '0.85rem', color: '#4c1d95' }}>英吋 (in): <strong>{formatConversionNumber(lengthResults.inch, 3)}</strong></div>
+              </div>
+            ) : (
+              <div style={{ padding: '0.75rem', borderRadius: '10px', background: '#ede9fe', border: '1px dashed #c4b5fd', color: '#4c1d95' }}>
+                数値を入力してください。
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // TXT読み込み
   const readTxt = (file: File): Promise<string> => {
@@ -2904,7 +3763,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       const currentMetadata = user.user_metadata || {};
       const updatedMetadata = {
         ...currentMetadata,
-        default_category_id: newCategoryId
+          default_category_id: newCategoryId
       };
       
       console.log('💾 メタデータ更新:', {
@@ -2929,7 +3788,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         updatedUser: data.user,
         savedMetadata: data.user?.user_metadata
       });
-      
+
       // 状態を更新
       setDefaultCategoryId(newCategoryId);
       setShowCategoryPicker(false);
@@ -3499,9 +4358,9 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               body: JSON.stringify({ text: word.chinese }),
             });
 
-            if (audioResponse.ok) {
-              const audioData = await audioResponse.json();
-              resultData.audioBase64 = audioData.audioContent;
+          if (audioResponse.ok) {
+            const audioData = await audioResponse.json();
+            resultData.audioBase64 = audioData.audioContent;
               console.log('✅ 学習モード: 単語音声生成成功', { word: word.chinese });
             } else {
               const errorText = await audioResponse.text();
@@ -3514,15 +4373,15 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           // 例文音声を生成（例文が存在する場合）
           if (resultData.exampleCantonese && resultData.exampleCantonese !== '例文生成エラーが発生しました' && resultData.exampleCantonese.trim() !== '') {
             try {
-              const exampleAudioResponse = await fetch('/api/generate-speech', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: resultData.exampleCantonese }),
-              });
+            const exampleAudioResponse = await fetch('/api/generate-speech', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: resultData.exampleCantonese }),
+            });
 
-              if (exampleAudioResponse.ok) {
-                const exampleAudioData = await exampleAudioResponse.json();
-                resultData.exampleAudioBase64 = exampleAudioData.audioContent;
+            if (exampleAudioResponse.ok) {
+              const exampleAudioData = await exampleAudioResponse.json();
+              resultData.exampleAudioBase64 = exampleAudioData.audioContent;
                 console.log('✅ 学習モード: 例文音声生成成功', { example: resultData.exampleCantonese });
               } else {
                 const errorText = await exampleAudioResponse.text();
@@ -3581,7 +4440,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         if (audioResponse.ok) {
           const audioData = await audioResponse.json();
           const audioBase64 = audioData.audioContent;
-          console.log('ノーマルモード: 音声データ取得', {
+          console.log('ノーマルモード: 音声データ取得', { 
             hasAudioContent: !!audioBase64,
             audioLength: audioBase64?.length,
           });
@@ -3775,11 +4634,11 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         logPrefix: '連続発音',
         clearActiveOnEnd: false,
         onEnded: () => {
-          if (button) {
-            button.style.background = '#ffffff';
-            button.style.color = '#111827';
-          }
-          console.log('連続発音完了');
+            if (button) {
+              button.style.background = '#ffffff';
+              button.style.color = '#111827';
+            }
+            console.log('連続発音完了');
         },
       });
     } catch (err) {
@@ -3800,7 +4659,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       toneButtons.forEach((btn) => {
         const text = btn.getAttribute('data-text');
         if (!text) return;
-
+        
         const buttonEl = btn as HTMLElement;
         if (!buttonEl.dataset.toneKey) {
           buttonEl.dataset.toneKey = `tone-${toneButtonKeyCounterRef.current++}`;
@@ -3887,7 +4746,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           showButtons={showButtons}
           buttonsAnimated={buttonsAnimated}
           isMuted={isMuted}
-        />
+            />
       )}
 
       {/* 通常モードコンテンツ */}
@@ -4166,14 +5025,14 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     isPlayingSoundRef.current = true;
                     
                     const handleHiddenModeStart = () => {
-                      isPlayingSoundRef.current = false;
-                      setIsHiddenMode(true);
-                      clickCountRef.current = 0;
-                      if (clickTimerRef.current) {
-                        clearTimeout(clickTimerRef.current);
-                      }
-                    };
-
+                        isPlayingSoundRef.current = false;
+                        setIsHiddenMode(true);
+                        clickCountRef.current = 0;
+                        if (clickTimerRef.current) {
+                          clearTimeout(clickTimerRef.current);
+                        }
+                      };
+                      
                     playClickSound({
                       onEnded: handleHiddenModeStart,
                     });
@@ -5594,9 +6453,9 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     button.style.outline = 'none';
                     button.style.background = 'transparent';
                   }}
-                >
+                  >
                   <FolderIcon size={isMobile ? 28 : 32} yOffset={0} />
-                </button>
+                  </button>
             </div>
 
             {/* 非表示input: PDF/画像（OCR対応、自動実行、HEIC対応） */}
@@ -5844,6 +6703,138 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
             </div>
           )}
 
+          {/* 数字カテゴリー専用ツール */}
+          {isNumbersCategory && (
+            <div style={{
+              marginBottom: '1.5rem',
+              background: '#ffffff',
+              borderRadius: '18px',
+              padding: isMobile ? '1rem' : '1.5rem',
+              boxShadow: '0 16px 32px rgba(15,23,42,0.12)'
+            }}>
+              <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '1rem' : '1.5rem' }}>
+                <div style={{ flex: '1 1 0' }}>
+                  <div style={{
+                    borderRadius: '14px',
+                    background: '#0f172a',
+                    color: '#e2e8f0',
+                    padding: isMobile ? '0.75rem' : '1rem',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15)',
+                    minHeight: '4.5rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    gap: '0.25rem'
+                  }}>
+                    <div style={{ fontSize: '0.75rem', opacity: 0.7, display: 'flex', justifyContent: 'space-between' }}>
+                      <span>{calculatorHistory}</span>
+                      {calculatorError && <span style={{ color: '#fbbf24' }}>{calculatorError}</span>}
+                    </div>
+                    <div style={{ fontSize: isMobile ? '1.9rem' : '2.2rem', fontWeight: 700, textAlign: 'right', wordBreak: 'break-all' }}>
+                      {calculatorDisplayValue}
+                    </div>
+                  </div>
+                  <div style={{ marginTop: '0.75rem', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '0.6rem' }}>
+                    {renderCalculatorButton(
+                      calculatorDisplay !== '0' || calculatorError ? 'C' : 'AC',
+                      handleCalculatorClear,
+                      { variant: 'function' }
+                    )}
+                    {renderCalculatorButton('+/-', handleCalculatorToggleSign, { variant: 'function' })}
+                    {renderCalculatorButton('%', handleCalculatorPercent, { variant: 'function' })}
+                    {renderCalculatorButton('÷', () => handleCalculatorOperator('÷'), { variant: 'operator' })}
+                    {renderCalculatorButton('7', () => handleCalculatorDigit('7'))}
+                    {renderCalculatorButton('8', () => handleCalculatorDigit('8'))}
+                    {renderCalculatorButton('9', () => handleCalculatorDigit('9'))}
+                    {renderCalculatorButton('×', () => handleCalculatorOperator('×'), { variant: 'operator' })}
+                    {renderCalculatorButton('4', () => handleCalculatorDigit('4'))}
+                    {renderCalculatorButton('5', () => handleCalculatorDigit('5'))}
+                    {renderCalculatorButton('6', () => handleCalculatorDigit('6'))}
+                    {renderCalculatorButton('-', () => handleCalculatorOperator('-'), { variant: 'operator' })}
+                    {renderCalculatorButton('1', () => handleCalculatorDigit('1'))}
+                    {renderCalculatorButton('2', () => handleCalculatorDigit('2'))}
+                    {renderCalculatorButton('3', () => handleCalculatorDigit('3'))}
+                    {renderCalculatorButton('+', () => handleCalculatorOperator('+'), { variant: 'operator' })}
+                    {renderCalculatorButton('0', () => handleCalculatorDigit('0'), { span: 2 })}
+                    {renderCalculatorButton('.', handleCalculatorDecimal)}
+                    {renderCalculatorButton('⌫', handleCalculatorDelete, { variant: 'function' })}
+                    {renderCalculatorButton('=', handleCalculatorEquals, { variant: 'equal' })}
+                  </div>
+                  <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={handleSpeakCalculatorResult}
+                      style={{
+                        padding: '0.65rem 1.1rem',
+                        borderRadius: '999px',
+                        background: 'linear-gradient(145deg, #06b6d4, #0891b2)',
+                        border: 'none',
+                        color: '#ffffff',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        boxShadow: '0 8px 16px rgba(6,182,212,0.35)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        touchAction: 'manipulation'
+                      }}
+                    >
+                      🔊 計算結果を読み上げ
+                    </button>
+                    <div style={{ color: '#475569', fontSize: '0.85rem', display: 'flex', alignItems: 'center' }}>
+                      計算結果を広東語で確認できます
+                    </div>
+                  </div>
+                </div>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: isMobile ? 'row' : 'column',
+                  gap: '0.75rem',
+                  alignItems: 'stretch',
+                  justifyContent: 'space-between'
+                }}>
+                    {conversionButtons.map((button) => {
+                    const active = activeConversionPanel === button.id;
+                    return (
+                      <button
+                        key={button.id}
+                        onClick={() =>
+                            setActiveConversionPanel((prev) => (prev === button.id ? null : button.id))
+                        }
+                        style={{
+                          flex: isMobile ? '1 1 0' : '0 0 auto',
+                          minWidth: isMobile ? 'auto' : '110px',
+                          padding: '0.9rem 0.75rem',
+                          borderRadius: '1rem',
+                          border: active ? '1px solid #2563eb' : '1px solid rgba(148,163,184,0.4)',
+                          background: active ? 'linear-gradient(145deg, #3b82f6, #2563eb)' : '#f8fafc',
+                          color: active ? '#ffffff' : '#1f2937',
+                          fontWeight: 700,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.35rem',
+                          cursor: 'pointer',
+                          boxShadow: active ? '0 10px 20px rgba(37,99,235,0.35)' : '0 4px 12px rgba(15,23,42,0.08)',
+                          touchAction: 'manipulation'
+                        }}
+                      >
+                        <span style={{ fontSize: '1.4rem' }}>{button.emoji}</span>
+                        <span>{button.label}</span>
+                        <span style={{ fontSize: '0.75rem', opacity: active ? 0.85 : 0.6 }}>{button.subLabel}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {activeConversionPanel && (
+                <div style={{ marginTop: '1rem' }}>
+                  {renderConversionPanel()}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ノーマルモード用の非表示audio要素（常にDOMに存在） */}
           <audio 
             ref={normalModeAudioRef}
@@ -5901,13 +6892,13 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   </p>
                 </>
               )}
-
+              
               {result.japaneseTranslation && (
                 <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', marginTop: '0.75rem' }}>
                   翻訳： {result.japaneseTranslation}
-                </p>
+                    </p>
               )}
-
+              
               {/* 単語音声プレーヤー */}
               {result.audioBase64 && (
                 <div style={{ marginTop: '0.5rem' }}>
@@ -7181,7 +8172,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     // 現在選択中のdefaultCategoryIdを保存（スクロール位置の計算に頼らない）
                     if (defaultCategoryId) {
                       handleDefaultCategoryChange(defaultCategoryId);
-                    } else {
+                      } else {
                       console.warn('⚠️ defaultCategoryIdが設定されていません');
                       setShowCategoryPicker(false);
                     }
@@ -7222,7 +8213,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   onWheel={(event) => event.stopPropagation()}
                   onTouchStart={(event) => event.stopPropagation()}
                   onTouchMove={(event) => event.stopPropagation()}
-                >
+                    >
                   {selectableCategories.map((category, index) => {
                     const isSelected = category.id === defaultCategoryId;
                     const isLastItem = index === selectableCategories.length - 1;
@@ -7231,12 +8222,12 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                         key={category.id}
                         data-category-id={category.id}
                         type="button"
-                        onClick={(e) => {
+            onClick={(e) => {
                           e.preventDefault();
-                          e.stopPropagation();
+                e.stopPropagation();
                           setDefaultCategoryId(category.id);
-                        }}
-                        style={{
+              }}
+              style={{
                           width: '100%',
                           textAlign: 'left',
                           padding: isMobile ? '0.85rem 1.5rem' : '1rem 1.75rem',
@@ -7244,31 +8235,31 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                           color: isSelected ? '#1d4ed8' : '#1f2937',
                           fontWeight: isSelected ? 600 : 500,
                           fontSize: isMobile ? '1rem' : '1.05rem',
-                          border: 'none',
+                    border: 'none',
                           borderBottom: isLastItem ? 'none' : '1px solid #f3f4f6',
                           outline: 'none',
-                          cursor: 'pointer',
+                    cursor: 'pointer',
                           transition: 'background 0.2s ease, color 0.2s ease'
-                        }}
-                      >
+                  }}
+                >
                         {category.name}
-                      </button>
+                </button>
                     );
                   })}
-                </div>
-                <div style={{
+              </div>
+                    <div style={{
                   padding: '0.75rem 1.5rem 1rem',
-                  color: '#9ca3af',
+                          color: '#9ca3af',
                   fontSize: '0.75rem',
                   textAlign: 'center'
-                }}>
+                        }}>
                   スクロールしてカテゴリーを選び、「完了」を押すと保存されます
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
+                        </div>
+                    </div>
+                  </div>
+                          </div>
+                        )}
+                        
         <SettingsPortal
           isMobile={isMobile}
           showSettings={showSettings}
