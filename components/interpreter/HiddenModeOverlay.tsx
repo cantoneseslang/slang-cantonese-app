@@ -511,7 +511,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             style={{
               position: 'relative',
               width: isMobile ? '96px' : '120px',
-              height: isMobile ? '96px' : '120px',
+              height: '120px',
               borderRadius: '50%',
               backgroundColor: 'rgba(192, 216, 255, 0.3)',
               boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
@@ -549,7 +549,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
               draggable="false"
               style={{
                 width: isMobile ? '96px' : '120px',
-                height: isMobile ? '96px' : '120px',
+                height: '120px',
                 objectFit: 'contain',
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
@@ -617,7 +617,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           style={{
             position: 'relative',
             width: isMobile ? '96px' : '120px',
-            height: isMobile ? '96px' : '120px',
+            height: '120px',
             borderRadius: '50%',
             backgroundColor: isRecording ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)',
             boxShadow: isRecording
@@ -686,7 +686,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             draggable="false"
             style={{
               width: isMobile ? '96px' : '120px',
-              height: isMobile ? '96px' : '120px',
+              height: '120px',
               objectFit: 'contain',
               userSelect: 'none',
               WebkitUserSelect: 'none',
@@ -755,7 +755,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             style={{
               position: 'relative',
               width: isMobile ? '96px' : '120px',
-              height: isMobile ? '96px' : '120px',
+              height: '120px',
               borderRadius: '50%',
               backgroundColor: isMuted ? 'rgba(239, 68, 68, 0.3)' : 'rgba(192, 216, 255, 0.3)',
               boxShadow: isMuted ? '0 0 20px rgba(239, 68, 68, 0.5)' : '0 4px 6px rgba(0, 0, 0, 0.1)',
@@ -792,8 +792,8 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
               alt="mute button"
               draggable="false"
               style={{
-                width: isMobile ? '96px' : '120px',
-                height: isMobile ? '96px' : '120px',
+                width: '120px',
+                height: '120px',
                 objectFit: 'contain',
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
