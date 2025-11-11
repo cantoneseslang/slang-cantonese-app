@@ -78,7 +78,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
   const handHelpRef = React.useRef<HTMLDivElement | null>(null);
   const muteHelpRef = React.useRef<HTMLDivElement | null>(null);
 
-  const baseMobileTopPx = 12 + 185 + 6; // 0.75rem + 185px + 0.375rem
+  const baseMobileTopPx = 36 + 185 + 10; // 2.25rem + 185px + 0.625rem
   const baseMobileBottomPx = 24 + 90 + 90 + 18; // 1.5rem + 90px + 90px + 1.125rem
 
   const [mobileLayout, setMobileLayout] = React.useState<{
@@ -226,7 +226,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
         ref={translationAreaRef}
         style={{
           position: 'fixed',
-          top: isMobile ? '0.75rem' : '3.25rem',
+          top: isMobile ? 'calc(env(safe-area-inset-top) + 2.25rem)' : '3.5rem',
           left: '50%',
           transform: isTranslationAreaRotated
             ? 'translateX(-50%) rotate(-180deg)'
