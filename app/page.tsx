@@ -3388,8 +3388,14 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   };
 
   // 音声ボタンのクリックハンドラー
-  const handleToneAudioClick = async (e: Event) => {
-    const button = e.target as HTMLButtonElement;
+  const handleToneAudioClick = async (event: Event) => {
+    const target = event.target as HTMLElement;
+    const button = target.closest('.tone-audio-btn') as HTMLButtonElement | null;
+    if (!button) {
+      console.error('トーンボタンが取得できませんでした', target);
+      return;
+    }
+
     const text = button.getAttribute('data-text');
     if (!text) return;
 
@@ -5965,9 +5971,18 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     
                     // 個別音声ボタン
                     toneButtons.forEach((btn) => {
-                      const handler = (e: Event) => handleToneAudioClick(e);
-                      btn.removeEventListener('click', handler as EventListener);
-                      btn.addEventListener('click', handler as EventListener);
+                      const buttonEl = btn as HTMLElement;
+                      if (buttonEl.dataset.toneBound === '1') {
+                        return;
+                      }
+                      const handler = (ev: Event) => {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        handleToneAudioClick(ev);
+                      };
+                      buttonEl.addEventListener('click', handler);
+                      buttonEl.addEventListener('touchstart', handler, { passive: false });
+                      buttonEl.dataset.toneBound = '1';
                     });
                     
                     // 連続発音ボタン（複数ある可能性があるためquerySelectorAllを使用）
