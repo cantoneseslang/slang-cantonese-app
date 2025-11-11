@@ -78,8 +78,8 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
   const handHelpRef = React.useRef<HTMLDivElement | null>(null);
   const muteHelpRef = React.useRef<HTMLDivElement | null>(null);
 
-  const baseMobileTopPx = 32 + 250 + 8; // 2rem + 250px + 0.5rem
-  const baseMobileBottomPx = 48 + 120 + 96 + 32; // 3rem + 120px + 96px + 2rem
+  const baseMobileTopPx = 24 + 220 + 8; // 1.5rem + 220px + 0.5rem
+  const baseMobileBottomPx = 40 + 110 + 96 + 28; // 2.5rem + 110px + 96px + 1.75rem
 
   const [mobileLayout, setMobileLayout] = React.useState<{
     top: number;
@@ -226,7 +226,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
         ref={translationAreaRef}
         style={{
           position: 'fixed',
-          top: isMobile ? '2rem' : '4rem',
+          top: isMobile ? '1.5rem' : '3.5rem',
           left: '50%',
           transform: isTranslationAreaRotated
             ? 'translateX(-50%) rotate(-180deg)'
@@ -234,7 +234,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           width: '90%',
           maxWidth: '800px',
           maxHeight: isMobile ? '250px' : '300px',
-          padding: '1.5rem',
+          padding: isMobile ? '1.25rem' : '1.5rem',
           backgroundColor: 'rgba(255, 255, 255, 0.95)',
           border: '1px solid rgba(0, 0, 0, 0.1)',
           borderRadius: '12px',
@@ -319,7 +319,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           height: isMobile && mobileContentHeight !== undefined
             ? `${mobileContentHeight}px`
             : 'auto',
-          padding: isMobile ? '1.5rem' : '2rem',
+          padding: isMobile ? '1.25rem' : '1.75rem',
           backgroundColor: 'rgba(255, 255, 255, 0.95)',
           border: '1px solid rgba(0, 0, 0, 0.1)',
           borderRadius: '12px',
@@ -345,9 +345,9 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: '0.75rem',
+              gap: '0.6rem',
             width: '100%',
-            paddingBottom: '1rem',
+              paddingBottom: '0.75rem',
             justifyContent: 'center',
             alignItems: 'center',
             minHeight: '100%',
@@ -399,7 +399,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             </>
           ) : (
             <>
-              {recognizedText || 'マイクボタンを押して日本語を話してください...'}
+              {recognizedText || 'マイクボタンを「長押し」しながら日本語を話してください...'}
               {interimText && (
                 <span style={{ color: '#6b7280', fontStyle: 'italic' }}>{interimText}</span>
               )}
@@ -436,7 +436,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           ref={titleRef}
           style={{
             position: 'fixed',
-            bottom: isMobile ? 'calc(env(safe-area-inset-bottom) + 3rem)' : '5rem',
+            bottom: isMobile ? 'calc(env(safe-area-inset-bottom) + 2.4rem)' : '4.25rem',
             left: '50%',
             transform: 'translateX(-50%)',
             textAlign: 'center',
@@ -493,8 +493,8 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
         style={{
           position: 'fixed',
           bottom: isMobile
-            ? 'calc(env(safe-area-inset-bottom) + 3rem + 120px)'
-            : 'calc(5rem + 140px)',
+            ? 'calc(env(safe-area-inset-bottom) + 2.25rem + 108px)'
+            : 'calc(4.25rem + 132px)',
           left: '50%',
           transform: 'translateX(-50%)',
           width: isMobile ? '96px' : '120px',
@@ -637,8 +637,8 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           style={{
             position: 'fixed',
             bottom: isMobile
-              ? 'calc(env(safe-area-inset-bottom) + 3rem + 120px)'
-              : 'calc(5rem + 140px)',
+              ? 'calc(env(safe-area-inset-bottom) + 2.25rem + 108px)'
+              : 'calc(4.25rem + 132px)',
             left: isMobile ? 'calc(50% - 96px - 0.25rem - 48px)' : 'calc(50% - 120px - 0.75rem - 60px)',
             transform: 'translateX(-50%)',
             width: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
@@ -750,8 +750,8 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           style={{
             position: 'fixed',
             bottom: isMobile
-              ? 'calc(env(safe-area-inset-bottom) + 3rem + 120px)'
-              : 'calc(5rem + 140px)',
+              ? 'calc(env(safe-area-inset-bottom) + 2.25rem + 108px)'
+              : 'calc(4.25rem + 132px)',
             left: isMobile ? 'calc(50% + 96px + 0.25rem + 48px)' : 'calc(50% + 120px + 0.75rem + 60px)',
             transform: 'translateX(-50%)',
             width: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
