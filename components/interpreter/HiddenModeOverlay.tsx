@@ -490,7 +490,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
         ref={micButtonRef}
         style={{
           position: 'fixed',
-          bottom: isMobile ? 'calc(env(safe-area-inset-bottom) + 4rem)' : '6rem',
+          bottom: isMobile ? 'calc(env(safe-area-inset-bottom) + 7.5rem)' : '6rem',
           left: '50%',
           transform: 'translateX(-50%)',
           display: 'flex',
