@@ -5370,29 +5370,16 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 e.currentTarget.style.borderColor = 'rgba(0,0,0,0.1)';
               }}
             />
-              {/* 右端アイコン（入力欄の内側右上、白枠内） */}
-              <div style={{
-                position: 'absolute',
-                right: isMobile ? '0.5rem' : '0.75rem',
-                top: 0,
-                bottom: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.25rem',
-                background: 'transparent',
-                border: 'none',
-                padding: 0,
-                boxShadow: 'none',
-                zIndex: 3,
-                pointerEvents: 'auto',
-                height: isMobile ? '3rem' : '3.5rem'
-              }}>
+              {/* 右端フォルダアイコン */}
               <button
                 onClick={() => fileInputRef.current?.click()}
                 title="ファイルから読み取り (PDF/TXT)"
                   aria-label="ファイルから読み取り (PDF/TXT)"
                 style={{
+                    position: 'absolute',
+                    right: isMobile ? '0.5rem' : '0.75rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
                     background: 'transparent',
                     border: 'none',
                     cursor: 'pointer',
@@ -5407,7 +5394,9 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    flexShrink: 0
+                    flexShrink: 0,
+                    boxShadow: 'none',
+                    zIndex: 3
                 }}
                   onMouseEnter={(e) => { e.currentTarget.style.color = '#111827'; e.currentTarget.style.background = '#f3f4f6'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.background = 'transparent'; }}
@@ -5425,7 +5414,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 >
                   <FolderIcon size={isMobile ? 28 : 32} yOffset={0} />
                 </button>
-              </div>
             </div>
 
             {/* 非表示input: PDF/画像（OCR対応、自動実行、HEIC対応） */}
