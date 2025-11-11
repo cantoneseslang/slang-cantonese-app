@@ -43,6 +43,7 @@ interface SearchResult {
   exampleAudioBase64?: string;
   originalText?: string | null;
   translatedText?: string | null;
+  japaneseTranslation?: string | null;
 }
 
 interface Word {
@@ -3248,6 +3249,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       });
 
       let resultData = { ...data };
+      resultData.japaneseTranslation = data.japaneseTranslation ?? (data.originalText ?? null);
       
       if (audioResponse.ok) {
         const audioData = await audioResponse.json();
@@ -5760,26 +5762,12 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 </>
               )}
 
-              {result.translatedText && (
-                <p style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
-                  <strong>翻訳： {result.translatedText}</strong>
+              {result.japaneseTranslation && (
+                <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', marginTop: '0.75rem' }}>
+                  翻訳： {result.japaneseTranslation}
                 </p>
               )}
 
-              {/* 例文表示 */}
-              {result.exampleCantonese && (
-                <div style={{ marginTop: '1rem' }}>
-                  <p style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
-                    <strong>例文： {result.exampleCantonese}</strong>
-                  </p>
-                  {result.exampleJapanese && (
-                    <p style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
-                      <strong>例文日本語翻訳： {result.exampleJapanese}</strong>
-                    </p>
-                  )}
-                </div>
-              )}
-              
               {/* 単語音声プレーヤー */}
               {result.audioBase64 && (
                 <div style={{ marginTop: '0.5rem' }}>
@@ -5881,9 +5869,14 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
                     例文音声:
                   </p>
-                  <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', marginBottom: '0.5rem' }}>
+                  <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', marginBottom: '0.25rem' }}>
                     {result.exampleCantonese}
                   </p>
+                  {result.exampleJapanese && (
+                    <p style={{ fontSize: isMobile ? '0.8rem' : '0.95rem', marginBottom: '0.5rem', color: '#4b5563' }}>
+                      日本語訳： {result.exampleJapanese}
+                    </p>
+                  )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <audio 
                       ref={exampleAudioRef}

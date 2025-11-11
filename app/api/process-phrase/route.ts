@@ -187,6 +187,63 @@ function isJapaneseText(text: string): boolean {
   return false;
 }
 
+async function translateCantoneseToJapanese(cantoneseText: string): Promise<string> {
+  if (!cantoneseText || cantoneseText.trim() === '') {
+    return '';
+  }
+
+  try {
+    const response = await fetch(DEEPSEEK_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a professional translator specializing in Cantonese (Traditional Chinese) to Japanese translation. Translate the given Cantonese text into natural Japanese. Provide ONLY the Japanese translation without any explanations or additional text.'
+          },
+          {
+            role: 'user',
+            content: `次の広東語（繁体字中国語）の文章を自然な日本語に翻訳してください。\n\n${cantoneseText}`
+          }
+        ],
+        max_tokens: 1500,
+        temperature: 0.2
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Cantonese→Japanese translation API error:', response.status, errorText);
+      return '';
+    }
+
+    const jsonResponse = await response.json();
+    let translatedText = jsonResponse.choices?.[0]?.message?.content?.trim() || '';
+
+    translatedText = translatedText.replace(/^[（(].*?[）)]\s*/g, '');
+    translatedText = translatedText.replace(/^["'「」『』\[\]\s]+|["'「」『』\[\]\s]+$/g, '');
+    translatedText = translatedText.replace(/^(翻訳結果|翻訳|Translation)[：:]\s*/i, '').trim();
+
+    const lines = translatedText
+      .split('\n')
+      .map((line: string) => line.trim())
+      .filter((line: string) => line.length > 0);
+
+    const japaneseRegex = /[\u3040-\u30FF]/;
+    const candidateLine = lines.find((line: string) => japaneseRegex.test(line)) || translatedText;
+
+    return candidateLine.trim();
+  } catch (error) {
+    console.error('Cantonese→Japanese translation error:', error);
+    return '';
+  }
+}
+
 async function generateExampleSentence(word: string, originalJapanese?: string | null): Promise<{ cantonese: string; japanese: string; full: string }> {
   if (!word || word.trim() === '') {
     return {
@@ -342,17 +399,31 @@ export async function POST(request: NextRequest) {
     
     // 例文生成（翻訳された広東語テキストを使用、元の日本語テキストも渡す）
     const exampleData = await generateExampleSentence(cantonesePhrase, originalJapanese);
-    
+
+    let japaneseTranslation = originalJapanese;
+    if (!japaneseTranslation) {
+      japaneseTranslation = await translateCantoneseToJapanese(cantonesePhrase);
+    }
+
+    let exampleJapanese = originalJapanese || exampleData.japanese;
+    if ((!exampleJapanese || exampleJapanese.trim() === '' || exampleJapanese.trim() === exampleData.cantonese.trim()) && exampleData.cantonese && !exampleData.cantonese.includes('エラー')) {
+      const translatedExample = await translateCantoneseToJapanese(exampleData.cantonese);
+      if (translatedExample) {
+        exampleJapanese = translatedExample;
+      }
+    }
+
     return NextResponse.json({
       jyutping: jyutpingResult,
       katakana: katakanaResult,
       jyutpingMulti: jyutpingMultiArray.join("・"),
       katakanaMulti: katakanaMultiArray.join("・"),
       exampleCantonese: exampleData.cantonese,
-      exampleJapanese: originalJapanese || exampleData.japanese,
+      exampleJapanese: exampleJapanese,
       exampleFull: exampleData.full,
       originalText: originalJapanese || null,
-      translatedText: originalJapanese ? cantonesePhrase : null
+      translatedText: originalJapanese ? cantonesePhrase : null,
+      japaneseTranslation: japaneseTranslation || ''
     });
   } catch (error) {
     console.error('Error processing phrase:', error);
