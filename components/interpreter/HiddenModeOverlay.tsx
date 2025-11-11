@@ -853,7 +853,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
               onMouseLeave={() => setHoveredButton(null)}
               style={{
                 position: 'fixed',
-                bottom: 'calc(5rem + 180px)',
+                bottom: 'calc(5rem + 140px)',
                 left: 'calc(50% - 120px - 0.75rem - 60px)',
                 transform: 'translateX(-50%)',
                 width: buttonsAnimated ? '120px' : '0px',
@@ -962,7 +962,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             ref={micButtonRef}
             style={{
               position: 'fixed',
-              bottom: 'calc(5rem + 110px)',
+              bottom: 'calc(5rem + 140px)',
               left: '50%',
               transform: 'translateX(-50%)',
               width: '120px',
@@ -1086,7 +1086,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
               onMouseLeave={() => setHoveredButton(null)}
               style={{
                 position: 'fixed',
-                bottom: 'calc(5rem + 180px)',
+                bottom: 'calc(5rem + 140px)',
                 left: 'calc(50% + 120px + 0.75rem + 60px)',
                 transform: 'translateX(-50%)',
                 width: buttonsAnimated ? '120px' : '0px',
