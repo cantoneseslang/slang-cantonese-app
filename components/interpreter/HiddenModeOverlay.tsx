@@ -1194,6 +1194,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
       </div>
       ) : (
         desktopButtonGroup
+      )}
     </>
   );
 };
