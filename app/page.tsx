@@ -237,8 +237,6 @@ export default function Home() {
   
   // ノーマルモードでアクティブな単語のID（緑色のボタン）- 1つだけアクティブ
   const [activeWordId, setActiveWordId] = useState<string | null>(null);
-  // 連続発音ボタンのアクティブ状態（ノーマルモードのみ）
-  const [activeToneSequenceId, setActiveToneSequenceId] = useState<string | null>(null);
 
   // 通訳モードの音声設定
   const [interpreterCantoneseVoice, setInterpreterCantoneseVoice] = useState<InterpreterVoiceOption>('female');
@@ -5092,19 +5090,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     // クリック音
     playClickSound();
 
-    const toneParts = sequence
-      .split(/[\s,、]+/)
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0);
-    const sanitizedSequence = toneParts.length > 0 ? toneParts.join(' ') : sequence.trim();
-    const sequenceKey = sanitizedSequence || sequence.trim();
-
-    if (sequenceKey) {
-      button.dataset.sequenceKey = sequenceKey;
-    } else {
-      delete button.dataset.sequenceKey;
-    }
-
     // 連続発音ボタンを緑色に点灯
     if (button) {
       button.style.background = 'linear-gradient(145deg, #10b981, #059669)';
@@ -5114,11 +5099,15 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     // 個別ボタンの緑点灯を消す
     if (!isLearningMode) {
       setActiveWordId(null);
-      setActiveToneSequenceId(sequenceKey);
     }
     
     // テキスト全体を一度に送信（例: "3 9 4 0 5 2" または "7 8 6"）
-    const textToSpeak = sequenceKey || sequence;
+    // カンマや読点、スペースを区切りとして分割し、スペースで連結
+    const toneParts = sequence
+      .split(/[\s,、]+/)
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
+    const textToSpeak = toneParts.length > 0 ? toneParts.join(' ') : sequence;
     console.log('連続発音テキスト:', textToSpeak);
     
     try {
@@ -5137,7 +5126,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           button.style.background = '#ffffff';
           button.style.color = '#111827';
         }
-        setActiveToneSequenceId(null);
         return;
       }
 
@@ -5150,7 +5138,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           button.style.background = '#ffffff';
           button.style.color = '#111827';
         }
-        setActiveToneSequenceId(null);
         return;
       }
 
@@ -5158,7 +5145,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         logPrefix: '連続発音',
         clearActiveOnEnd: false,
         onEnded: () => {
-            setActiveToneSequenceId(null);
             if (button) {
               button.style.background = '#ffffff';
               button.style.color = '#111827';
@@ -5173,7 +5159,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         button.style.background = '#ffffff';
         button.style.color = '#111827';
       }
-      setActiveToneSequenceId(null);
     }
   };
 
@@ -5206,50 +5191,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       // 連続発音ボタンのスタイル更新は削除（handleToneSequenceClick内で直接制御）
     }
   }, [activeWordId, isLearningMode, currentCategory]);
-
-  useEffect(() => {
-    if (currentCategory?.id !== 'pronunciation') {
-      return;
-    }
-
-    const sequenceButtons = document.querySelectorAll<HTMLButtonElement>('.tone-sequence-btn');
-    sequenceButtons.forEach((btn) => {
-      const rawSequence = btn.getAttribute('data-sequence') || '';
-      const sequenceKey =
-        btn.dataset.sequenceKey ||
-        rawSequence
-          .split(/[\s,、]+/)
-          .map((t) => t.trim())
-          .filter((t) => t.length > 0)
-          .join(' ')
-          .trim();
-
-      const isActive =
-        !isLearningMode &&
-        Boolean(sequenceKey) &&
-        activeToneSequenceId === sequenceKey;
-
-      if (isActive) {
-        btn.style.background = 'linear-gradient(145deg, #10b981, #059669)';
-        btn.style.color = '#ffffff';
-      } else {
-        btn.style.background = '#ffffff';
-        btn.style.color = '#111827';
-      }
-    });
-  }, [activeToneSequenceId, isLearningMode, currentCategory]);
-
-  useEffect(() => {
-    if (currentCategory?.id !== 'pronunciation' && activeToneSequenceId !== null) {
-      setActiveToneSequenceId(null);
-    }
-  }, [currentCategory?.id, activeToneSequenceId]);
-
-  useEffect(() => {
-    if (isLearningMode && activeToneSequenceId !== null) {
-      setActiveToneSequenceId(null);
-    }
-  }, [isLearningMode, activeToneSequenceId]);
 
   // 単語音声再生速度変更
   useEffect(() => {
@@ -7785,23 +7726,12 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     const sequenceButtons = el.querySelectorAll('.tone-sequence-btn');
                     if (sequenceButtons.length > 0) {
                       // デバッグログを削除（パフォーマンス改善とログの重複防止）
-                      sequenceButtons.forEach((btn) => {
-                        const sequence = btn.getAttribute('data-sequence') || '';
+                      sequenceButtons.forEach((btn, index) => {
+                        const sequence = btn.getAttribute('data-sequence');
                         
                         // 既存のイベントリスナーをすべて削除（異なる関数参照を防ぐため）
                         const newBtn = btn.cloneNode(true) as HTMLElement;
                         btn.parentNode?.replaceChild(newBtn, btn);
-
-                        const toneParts = sequence
-                          .split(/[\s,、]+/)
-                          .map((t) => t.trim())
-                          .filter((t) => t.length > 0);
-                        const normalizedSequence = toneParts.length > 0 ? toneParts.join(' ') : sequence.trim();
-                        if (normalizedSequence) {
-                          newBtn.dataset.sequenceKey = normalizedSequence;
-                        } else {
-                          delete newBtn.dataset.sequenceKey;
-                        }
                         
                         // クリックイベント
                         const clickHandler = (e: Event) => {
