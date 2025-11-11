@@ -58,6 +58,8 @@ interface PracticeGroup {
   words: Word[];
 }
 
+type InterpreterVoiceOption = 'female' | 'male';
+
 interface Category {
   id: string;
   name: string;
@@ -146,6 +148,17 @@ export default function Home() {
   // ノーマルモードでアクティブな単語のID（緑色のボタン）- 1つだけアクティブ
   const [activeWordId, setActiveWordId] = useState<string | null>(null);
 
+  // 通訳モードの音声設定
+  const [interpreterCantoneseVoice, setInterpreterCantoneseVoice] = useState<InterpreterVoiceOption>('female');
+  const [interpreterMandarinVoice, setInterpreterMandarinVoice] = useState<InterpreterVoiceOption>('female');
+  const [isSavingCantoneseVoice, setIsSavingCantoneseVoice] = useState(false);
+  const [isSavingMandarinVoice, setIsSavingMandarinVoice] = useState(false);
+
+  const getInterpreterVoiceKey = useCallback((language: 'cantonese' | 'mandarin') => {
+    const voice = language === 'cantonese' ? interpreterCantoneseVoice : interpreterMandarinVoice;
+    return `${language}-${voice}`;
+  }, [interpreterCantoneseVoice, interpreterMandarinVoice]);
+  
   // 設定画面の状態
   const [showSettings, setShowSettings] = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -842,12 +855,13 @@ export default function Home() {
               if (!isMuted && translated) {
                 (async () => {
                   try {
+                    const voiceKey = getInterpreterVoiceKey(translationLanguage);
                     const audioResponse = await fetch('/api/generate-speech', {
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json',
                       },
-                      body: JSON.stringify({ text: translated, language: translationLanguage }),
+                      body: JSON.stringify({ text: translated, language: translationLanguage, voiceKey }),
                     });
 
                     if (audioResponse.ok) {
@@ -894,7 +908,7 @@ export default function Home() {
         translateAbortControllerRef.current.abort();
       }
     };
-  }, [recognizedTextLines, recognizedText, interimText, isHiddenMode, isMuted, translationLanguage]);
+  }, [recognizedTextLines, recognizedText, interimText, isHiddenMode, isMuted, translationLanguage, interpreterCantoneseVoice, interpreterMandarinVoice, getInterpreterVoiceKey]);
 
 const safelyResetRecognitionInstance = (reason: string = 'reset') => {
   if (!recognitionRef.current) {
@@ -1262,12 +1276,13 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     if (!isMuted && handPhrase) {
       (async () => {
         try {
+          const voiceKey = getInterpreterVoiceKey(translationLanguage);
           const audioResponse = await fetch('/api/generate-speech', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ text: handPhrase, language: translationLanguage }),
+            body: JSON.stringify({ text: handPhrase, language: translationLanguage, voiceKey }),
           });
 
           if (audioResponse.ok) {
@@ -1607,6 +1622,78 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     setActiveWordId(null);
   };
 
+  const handleInterpreterVoiceChange = async (
+    language: 'cantonese' | 'mandarin',
+    voice: InterpreterVoiceOption
+  ) => {
+    if (!user) {
+      alert('ログインが必要です。');
+      return;
+    }
+
+    if (membershipType === 'free') {
+      alert('通訳モードの音声切り替えはシルバー会員以上でご利用いただけます。');
+      return;
+    }
+
+    const currentVoice = language === 'cantonese' ? interpreterCantoneseVoice : interpreterMandarinVoice;
+    if (currentVoice === voice) {
+      return;
+    }
+
+    const previousCantonese = interpreterCantoneseVoice;
+    const previousMandarin = interpreterMandarinVoice;
+    const nextCantonese = language === 'cantonese' ? voice : interpreterCantoneseVoice;
+    const nextMandarin = language === 'mandarin' ? voice : interpreterMandarinVoice;
+
+    const setSaving = language === 'cantonese' ? setIsSavingCantoneseVoice : setIsSavingMandarinVoice;
+    setSaving(true);
+    setInterpreterCantoneseVoice(nextCantonese);
+    setInterpreterMandarinVoice(nextMandarin);
+
+    try {
+      const currentMetadata = user.user_metadata || {};
+      const updatedMetadata = {
+        ...currentMetadata,
+        interpreter_cantonese_voice: nextCantonese,
+        interpreter_mandarin_voice: nextMandarin,
+      };
+
+      const { data, error } = await supabase.auth.updateUser({
+        data: updatedMetadata,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.user) {
+        setUser(data.user);
+      } else {
+        setUser((prev: any) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            user_metadata: {
+              ...(prev.user_metadata || {}),
+              interpreter_cantonese_voice: nextCantonese,
+              interpreter_mandarin_voice: nextMandarin,
+            },
+          };
+        });
+      }
+
+      console.log('✅ 通訳音声設定を保存:', { language, voice });
+    } catch (error) {
+      console.error('❌ 通訳音声設定保存エラー:', error);
+      setInterpreterCantoneseVoice(previousCantonese);
+      setInterpreterMandarinVoice(previousMandarin);
+      alert('音声設定の保存に失敗しました。時間をおいて再度お試しください。');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // ユーザーの会員種別を取得と初期値設定
   useEffect(() => {
     const initializeUserMetadata = async () => {
@@ -1628,6 +1715,21 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         // デフォルトカテゴリーがない場合、デフォルト値（pronunciation）を設定
         console.log('📋 デフォルトカテゴリーが未設定、デフォルト値（pronunciation）を使用');
         setDefaultCategoryId('pronunciation');
+      }
+
+      // 通訳モード音声の設定
+      const cantoneseVoiceMeta = user.user_metadata?.interpreter_cantonese_voice;
+      if (cantoneseVoiceMeta === 'female' || cantoneseVoiceMeta === 'male') {
+        setInterpreterCantoneseVoice(cantoneseVoiceMeta);
+      } else {
+        setInterpreterCantoneseVoice('female');
+      }
+
+      const mandarinVoiceMeta = user.user_metadata?.interpreter_mandarin_voice;
+      if (mandarinVoiceMeta === 'female' || mandarinVoiceMeta === 'male') {
+        setInterpreterMandarinVoice(mandarinVoiceMeta);
+      } else {
+        setInterpreterMandarinVoice('female');
       }
 
       // ユーザーネームまたは会員種別がない場合、Supabaseに初期値を設定
@@ -7185,6 +7287,11 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           defaultCategoryId={defaultCategoryId}
           isSavingDefaultCategory={isSavingDefaultCategory}
           openCategoryPicker={openCategoryPicker}
+          interpreterCantoneseVoice={interpreterCantoneseVoice}
+          interpreterMandarinVoice={interpreterMandarinVoice}
+          onInterpreterVoiceChange={handleInterpreterVoiceChange}
+          isSavingCantoneseVoice={isSavingCantoneseVoice}
+          isSavingMandarinVoice={isSavingMandarinVoice}
           isEditingUsername={isEditingUsername}
           usernameError={usernameError}
           newUsername={newUsername}

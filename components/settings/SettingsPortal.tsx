@@ -3,6 +3,7 @@ import React from 'react';
 type MembershipType = 'free' | 'subscription' | 'lifetime';
 type CurrencyCode = 'jpy' | 'hkd';
 type DisplayCurrency = 'JPY' | 'HKD';
+type InterpreterVoiceOption = 'female' | 'male';
 
 interface CategorySummary {
   id: string;
@@ -27,6 +28,11 @@ interface SettingsPortalProps {
   defaultCategoryId: string;
   isSavingDefaultCategory: boolean;
   openCategoryPicker: () => void;
+  interpreterCantoneseVoice: InterpreterVoiceOption;
+  interpreterMandarinVoice: InterpreterVoiceOption;
+  onInterpreterVoiceChange: (language: 'cantonese' | 'mandarin', voice: InterpreterVoiceOption) => void;
+  isSavingCantoneseVoice: boolean;
+  isSavingMandarinVoice: boolean;
 
   isEditingUsername: boolean;
   usernameError: string | null;
@@ -96,6 +102,11 @@ const SettingsPortal: React.FC<SettingsPortalProps> = ({
   defaultCategoryId,
   isSavingDefaultCategory,
   openCategoryPicker,
+  interpreterCantoneseVoice,
+  interpreterMandarinVoice,
+  onInterpreterVoiceChange,
+  isSavingCantoneseVoice,
+  isSavingMandarinVoice,
   isEditingUsername,
   usernameError,
   newUsername,
@@ -255,6 +266,71 @@ const SettingsPortal: React.FC<SettingsPortalProps> = ({
       </div>
     );
   };
+
+  const renderVoiceOptions = (
+    label: string,
+    language: 'cantonese' | 'mandarin',
+    currentVoice: InterpreterVoiceOption,
+    isSaving: boolean
+  ) => {
+    const options: { value: InterpreterVoiceOption; label: string; icon: string }[] = [
+      { value: 'female', label: '女声', icon: '👩‍🗣️' },
+      { value: 'male', label: '男声', icon: '👨‍🗣️' },
+    ];
+
+    return (
+      <div style={{ marginTop: '0.75rem' }}>
+        <div style={{ fontWeight: 600, color: '#374151', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+          {label}
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {options.map((option) => {
+            const isActive = currentVoice === option.value;
+            const isDisabled = isSaving || isActive;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                disabled={isDisabled}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (!isActive) {
+                    onInterpreterVoiceChange(language, option.value);
+                  }
+                }}
+                style={{
+                  flex: '1 1 120px',
+                  padding: '0.65rem 0.75rem',
+                  borderRadius: '10px',
+                  border: `1px solid ${isActive ? '#3b82f6' : '#e5e7eb'}`,
+                  background: isActive ? 'linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%)' : '#ffffff',
+                  color: isActive ? '#1e3a8a' : '#374151',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  cursor: isDisabled ? 'default' : 'pointer',
+                  opacity: isDisabled && !isActive ? 0.6 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  transition: 'all 0.2s',
+                  boxShadow: isActive ? '0 8px 18px rgba(59,130,246,0.25)' : '0 2px 6px rgba(15,23,42,0.08)',
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent'
+                }}
+              >
+                <span>{option.icon}</span>
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const isPremiumMember = membershipType === 'subscription' || membershipType === 'lifetime';
 
   const planPrices = selectedPlan && selectedPlan !== 'free'
     ? PLAN_PRICE_MAP[selectedPlan]
@@ -1203,6 +1279,52 @@ const SettingsPortal: React.FC<SettingsPortalProps> = ({
                   >
                     {isLearningMode ? '📚 学習モード' : '🎵 ノーマルモード'}
                   </button>
+
+                  {isPremiumMember ? (
+                    <div style={{
+                      marginTop: '0.75rem',
+                      padding: '0.9rem 1rem',
+                      borderRadius: '10px',
+                      border: '1px solid #e5e7eb',
+                      background: '#f9fafb',
+                      transition: 'border 0.2s ease'
+                    }}>
+                      <div style={{
+                        fontWeight: 600,
+                        color: '#1f2937',
+                        fontSize: '0.95rem'
+                      }}>
+                        通訳モードの音声
+                      </div>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: '#6b7280',
+                        marginTop: '0.35rem'
+                      }}>
+                        広東語・中国語の男女ボイスを選択できます。（即時保存）
+                      </div>
+                      {renderVoiceOptions('広東語', 'cantonese', interpreterCantoneseVoice, isSavingCantoneseVoice)}
+                      {renderVoiceOptions('中国語（普通話）', 'mandarin', interpreterMandarinVoice, isSavingMandarinVoice)}
+                      {(isSavingCantoneseVoice || isSavingMandarinVoice) && (
+                        <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#2563eb' }}>
+                          保存中...
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{
+                      marginTop: '0.75rem',
+                      padding: '0.85rem 1rem',
+                      borderRadius: '10px',
+                      border: '1px dashed #e5e7eb',
+                      background: '#f9fafb',
+                      color: '#6b7280',
+                      fontSize: '0.85rem',
+                      lineHeight: 1.5
+                    }}>
+                      🔒 シルバー / ゴールド会員になると、通訳モードの音声（広東語・中国語）を男女で切り替えられます。
+                    </div>
+                  )}
                 </div>
 
                 <button
