@@ -2428,6 +2428,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   const [importProgress, setImportProgress] = useState<number | null>(null);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const toneButtonKeyCounterRef = useRef(0);
 
   // iOS風アウトラインアイコン
   const FolderIcon = ({ size = 20, yOffset = 0 }: { size?: number; yOffset?: number }) => (
@@ -3456,6 +3457,9 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     const text = button.getAttribute('data-text');
     if (!text) return;
 
+    const toneKey = button.getAttribute('data-tone-key');
+    const activeKey = toneKey || text;
+
     // ハプティックフィードバック
     if ('vibrate' in navigator) {
       navigator.vibrate(10);
@@ -3466,7 +3470,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
 
     // ノーマルモードの場合、緑色に変える
     if (!isLearningMode) {
-      setActiveWordId(text);
+      setActiveWordId(activeKey);
     }
 
     // ボタン押下をトラッキング（pronunciationカテゴリー）
@@ -3559,9 +3563,13 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       setActiveWordId(null);
     }
     
-    // テキスト全体を一度に送信（例: "3,9,4,0,5,2" または "7,8,6"）
-    // カンマを読点に変換して自然な読み上げにする
-    const textToSpeak = sequence.split(',').map(t => t.trim()).join('、');
+    // テキスト全体を一度に送信（例: "3 9 4 0 5 2" または "7 8 6"）
+    // カンマや読点、スペースを区切りとして分割し、スペースで連結
+    const toneParts = sequence
+      .split(/[\s,、]+/)
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
+    const textToSpeak = toneParts.length > 0 ? toneParts.join(' ') : sequence;
     console.log('連続発音テキスト:', textToSpeak);
     
     try {
@@ -3624,14 +3632,21 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       toneButtons.forEach((btn) => {
         const text = btn.getAttribute('data-text');
         if (!text) return;
-        
-        const isActive = !isLearningMode && activeWordId === text;
+
+        const buttonEl = btn as HTMLElement;
+        if (!buttonEl.dataset.toneKey) {
+          buttonEl.dataset.toneKey = `tone-${toneButtonKeyCounterRef.current++}`;
+        }
+
+        const toneKey = buttonEl.dataset.toneKey || text;
+
+        const isActive = !isLearningMode && activeWordId === toneKey;
         if (isActive) {
-          (btn as HTMLElement).style.background = 'linear-gradient(145deg, #10b981, #059669)';
-          (btn as HTMLElement).style.color = 'white';
+          buttonEl.style.background = 'linear-gradient(145deg, #10b981, #059669)';
+          buttonEl.style.color = 'white';
         } else {
-          (btn as HTMLElement).style.background = '#ffffff';
-          (btn as HTMLElement).style.color = '#111827';
+          buttonEl.style.background = '#ffffff';
+          buttonEl.style.color = '#111827';
         }
       });
       
@@ -5955,6 +5970,9 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     // 個別音声ボタン
                     toneButtons.forEach((btn) => {
                       const buttonEl = btn as HTMLElement;
+                      if (!buttonEl.dataset.toneKey) {
+                        buttonEl.dataset.toneKey = `tone-${toneButtonKeyCounterRef.current++}`;
+                      }
                       if (buttonEl.dataset.toneBound === '1') {
                         return;
                       }
