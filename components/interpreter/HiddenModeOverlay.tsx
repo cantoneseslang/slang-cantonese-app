@@ -494,7 +494,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           left: '50%',
           transform: 'translateX(-50%)',
           display: 'flex',
-          alignItems: 'center',
+          alignItems: isMobile ? 'flex-end' : 'center',
           justifyContent: 'center',
           gap: isMobile ? '0.75rem' : '1rem',
           zIndex: 1002,
@@ -527,6 +527,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
               WebkitUserSelect: 'none',
               WebkitTouchCallout: 'none',
               overflow: 'visible',
+              marginTop: isMobile ? '0rem' : '0',
             }}
             onContextMenu={(event) => {
               event.preventDefault();
@@ -632,6 +633,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             WebkitTouchCallout: 'none',
             overflow: 'visible',
             pointerEvents: 'auto',
+              marginTop: isMobile ? '0.75rem' : '0',
           }}
           onMouseDown={(event) => {
             event.preventDefault();
@@ -769,6 +771,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
               WebkitUserSelect: 'none',
               WebkitTouchCallout: 'none',
               overflow: 'visible',
+              marginTop: isMobile ? '0rem' : '0',
             }}
             onContextMenu={(event) => {
               event.preventDefault();
