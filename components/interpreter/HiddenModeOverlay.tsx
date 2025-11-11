@@ -307,24 +307,18 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           top: isMobile
             ? `${mobileTopOffset ?? baseMobileTopPx}px`
             : '50%',
-          bottom: isMobile
-            ? `${mobileBottomOffset ?? baseMobileBottomPx}px`
-            : 'auto',
           left: '50%',
           transform: isMobile ? 'translate(-50%, 0)' : 'translate(-50%, -50%)',
           width: isMobile ? 'calc(100vw - 2rem)' : '90%',
           maxWidth: isMobile ? 'calc(100vw - 2rem)' : '800px',
           minHeight: isMobile ? undefined : 'auto',
-          maxHeight: isMobile ? undefined : '400px',
-          height: isMobile && mobileContentHeight !== undefined
-            ? `${mobileContentHeight}px`
-            : 'auto',
+          maxHeight: isMobile ? '260px' : '400px',
+          height: isMobile ? 'auto' : (mobileContentHeight !== undefined ? `${mobileContentHeight}px` : 'auto'),
           padding: isMobile ? '1rem' : '1.75rem',
           backgroundColor: 'rgba(255, 255, 255, 0.95)',
           border: '1px solid rgba(0, 0, 0, 0.1)',
           borderRadius: '12px',
           textAlign: 'center',
-          fontSize: isMobile ? '1.5rem' : '2rem',
           fontSize: isMobile ? '1.35rem' : '2rem',
           lineHeight: '1.8',
           wordBreak: 'break-word',
@@ -336,8 +330,8 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           overflowX: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
+          justifyContent: 'flex-start',
+          alignItems: 'stretch',
           boxSizing: 'border-box',
         }}
       >
@@ -366,7 +360,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
                     key={`line-0-${latestLine.text.substring(0, 10)}`}
                     style={{
                       color: '#111827',
-                      fontSize: isMobile ? '1.5rem' : '2rem',
+                      fontSize: isMobile ? '1.35rem' : '2rem',
                       lineHeight: '1.8',
                       wordBreak: 'break-word',
                       padding: '0.75rem 1rem',
@@ -386,7 +380,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
                   style={{
                     color: '#6b7280',
                     fontStyle: 'italic',
-                    fontSize: isMobile ? '1.5rem' : '2rem',
+                    fontSize: isMobile ? '1.35rem' : '2rem',
                     padding: '0.75rem 1rem',
                     marginBottom: '0.5rem',
                     backgroundColor: 'rgba(107, 114, 128, 0.05)',
