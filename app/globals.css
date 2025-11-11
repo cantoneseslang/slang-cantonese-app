@@ -96,6 +96,21 @@ button[title="カメラ/OCRで読み取り"] svg {
   }
 }
 
+@keyframes interpreterZoomIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /* 雲ポップアップアニメーション（ニュッと出る） */
 @keyframes cloudPopUp {
   0% {

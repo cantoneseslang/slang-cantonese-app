@@ -2388,6 +2388,32 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     
     playClickSound({ useGain: true });
   };
+
+  const getChineseFontSize = (
+    text: string,
+    isMobileDevice: boolean,
+    options: { mobileBase?: number; desktopBase?: number; mobileMin?: number; desktopMin?: number } = {}
+  ) => {
+    const cleanLength = text.replace(/[\s\n\r]/g, '').length;
+    const mobileBase = options.mobileBase ?? 1.5;
+    const desktopBase = options.desktopBase ?? 1.875;
+    const mobileMin = options.mobileMin ?? Math.max(0.9, mobileBase - 0.7);
+    const desktopMin = options.desktopMin ?? Math.max(1.2, desktopBase - 0.8);
+    const base = isMobileDevice ? mobileBase : desktopBase;
+    const min = isMobileDevice ? mobileMin : desktopMin;
+    const step = isMobileDevice ? 0.18 : 0.24;
+
+    let size = base;
+
+    if (cleanLength >= 10) size -= step * 4;
+    else if (cleanLength >= 8) size -= step * 3;
+    else if (cleanLength >= 6) size -= step * 2;
+    else if (cleanLength >= 5) size -= step;
+
+    if (size < min) size = min;
+
+    return `${size}rem`;
+  };
   const [isMobile, setIsMobile] = useState(false);
   
   // モバイルでボタンが表示された時と言語切り替え時にヘルプを表示
@@ -5315,7 +5341,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               <div>・広東語の発音、意味を調べたい時、広東語を入力して🟦ボタン</div>
               <div>・日本語を広東語に翻訳したい時、日本語を入力して🟩ボタン</div>
               <div style={{ 
-                fontSize: isMobile ? '0.7rem' : '0.8rem', 
+                fontSize: isMobile ? '0.85rem' : '0.8rem', 
                 color: searchQuery.length > 900 ? '#ef4444' : '#9ca3af', 
                 marginTop: '0.25rem',
                 fontWeight: searchQuery.length > 900 ? '600' : '400'
@@ -5362,7 +5388,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               style={{
                 height: isMobile ? '3rem' : '3.5rem',
                 lineHeight: isMobile ? '3rem' : '3.5rem',
-                fontSize: isMobile ? '1rem' : '1.125rem',
+                fontSize: isMobile ? '0.85rem' : '1.125rem',
                 width: '100%',
                 maxWidth: '100%',
                 boxSizing: 'border-box',
@@ -6129,7 +6155,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                                 </div>
                               )}
                               <strong style={{ 
-                                fontSize: isMobile ? '1.25rem' : '1.875rem',
+                                fontSize: getChineseFontSize(word.chinese, isMobile, { mobileBase: 1.25, desktopBase: 1.875, mobileMin: 0.95, desktopMin: 1.3 }),
                                 color: isActive ? '#ffffff' : '#1d1d1f'
                               }}>
                                 {word.chinese}
@@ -6239,7 +6265,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                                 </div>
                               )}
                               <strong style={{ 
-                                fontSize: isMobile ? '1.25rem' : '1.875rem',
+                                fontSize: getChineseFontSize(word.chinese, isMobile, { mobileBase: 1.25, desktopBase: 1.875, mobileMin: 0.95, desktopMin: 1.3 }),
                                 color: isActive ? '#ffffff' : '#1d1d1f'
                               }}>
                                 {word.chinese}
@@ -6346,7 +6372,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                                 </div>
                               )}
                               <strong style={{ 
-                                fontSize: isMobile ? '1.25rem' : '1.875rem',
+                                fontSize: getChineseFontSize(word.chinese, isMobile, { mobileBase: 1.25, desktopBase: 1.875, mobileMin: 0.95, desktopMin: 1.3 }),
                                 color: isActive ? '#ffffff' : '#1d1d1f'
                               }}>
                                 {word.chinese}
@@ -6453,7 +6479,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                                 </div>
                               )}
                               <strong style={{ 
-                                fontSize: isMobile ? '1.25rem' : '1.875rem',
+                                fontSize: getChineseFontSize(word.chinese, isMobile, { mobileBase: 1.25, desktopBase: 1.875, mobileMin: 0.95, desktopMin: 1.3 }),
                                 color: isActive ? '#ffffff' : '#1d1d1f'
                               }}>
                                 {word.chinese}
@@ -6586,7 +6612,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     </div>
                   )}
                   <strong style={{ 
-                    fontSize: isMobile ? '1.5rem' : '1.875rem',
+                    fontSize: getChineseFontSize(word.chinese, isMobile, { mobileBase: 1.5, desktopBase: 1.875, mobileMin: 1.05, desktopMin: 1.25 }),
                     fontWeight: '600',
                     color: isActive ? '#ffffff' : '#1d1d1f',
                     marginBottom: '0.25rem'

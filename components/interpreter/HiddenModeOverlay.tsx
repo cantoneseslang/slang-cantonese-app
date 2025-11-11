@@ -71,10 +71,159 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
   buttonsAnimated,
   isMuted,
 }) => {
+  const translationAreaRef = React.useRef<HTMLDivElement | null>(null);
+  const micButtonRef = React.useRef<HTMLDivElement | null>(null);
+  const titleRef = React.useRef<HTMLDivElement | null>(null);
+  const micHelpRef = React.useRef<HTMLDivElement | null>(null);
+  const handHelpRef = React.useRef<HTMLDivElement | null>(null);
+  const muteHelpRef = React.useRef<HTMLDivElement | null>(null);
+
+  const baseMobileTopPx = 32 + 250 + 8; // 2rem + 250px + 0.5rem
+  const baseMobileBottomPx = 48 + 120 + 96 + 32; // 3rem + 120px + 96px + 2rem
+
+  const [mobileLayout, setMobileLayout] = React.useState<{
+    top: number;
+    bottom: number;
+    height: number;
+  }>({
+    top: baseMobileTopPx,
+    bottom: baseMobileBottomPx,
+    height: Math.max(200, 780 - baseMobileTopPx - baseMobileBottomPx),
+  });
+
+  React.useEffect(() => {
+    if (!isMobile || typeof window === 'undefined') {
+      return;
+    }
+
+    const computeOffsets = () => {
+      const viewportHeight =
+        window.visualViewport?.height ?? window.innerHeight ?? 0;
+
+      const translationRect = translationAreaRef.current?.getBoundingClientRect();
+      const translationBottom = translationRect ? translationRect.bottom : baseMobileTopPx;
+      const minTopSpacing = translationBottom + 12;
+
+      const candidateTops: number[] = [];
+
+      if (micButtonRef.current) {
+        candidateTops.push(micButtonRef.current.getBoundingClientRect().top);
+      }
+      if (titleRef.current) {
+        candidateTops.push(titleRef.current.getBoundingClientRect().top);
+      }
+      if (showHelpPopups && micHelpRef.current) {
+        candidateTops.push(micHelpRef.current.getBoundingClientRect().top);
+      }
+      if (showHelpPopups && handHelpRef.current) {
+        candidateTops.push(handHelpRef.current.getBoundingClientRect().top);
+      }
+      if (showHelpPopups && muteHelpRef.current) {
+        candidateTops.push(muteHelpRef.current.getBoundingClientRect().top);
+      }
+
+      const boundaryTop =
+        candidateTops.length > 0
+          ? Math.min(...candidateTops.filter((value) => Number.isFinite(value)))
+          : viewportHeight - baseMobileBottomPx;
+
+      const gap = 20;
+
+      let topSpacing = Math.max(
+        minTopSpacing,
+        Math.min(baseMobileTopPx, viewportHeight - gap - 120)
+      );
+
+      let bottomSpacing = Math.max(
+        gap,
+        viewportHeight - boundaryTop + gap
+      );
+
+      const minContentHeight = 140;
+      let availableHeight = viewportHeight - topSpacing - bottomSpacing;
+
+      if (availableHeight < minContentHeight) {
+        const shortage = minContentHeight - availableHeight;
+
+        const reducibleBottom = Math.max(0, bottomSpacing - gap);
+        const bottomReduction = Math.min(reducibleBottom, shortage);
+        bottomSpacing -= bottomReduction;
+        availableHeight += bottomReduction;
+
+        if (availableHeight < minContentHeight) {
+          const reducibleTop = Math.max(0, topSpacing - minTopSpacing);
+          const topReduction = Math.min(reducibleTop, minContentHeight - availableHeight);
+          topSpacing -= topReduction;
+          availableHeight += topReduction;
+        }
+      }
+
+      topSpacing = Math.max(minTopSpacing, Math.min(topSpacing, viewportHeight - gap - 60));
+      bottomSpacing = Math.max(gap, Math.min(bottomSpacing, viewportHeight - topSpacing - 60));
+
+      const contentHeight = Math.max(
+        0,
+        viewportHeight - topSpacing - bottomSpacing
+      );
+
+      setMobileLayout({
+        top: Math.round(topSpacing),
+        bottom: Math.round(bottomSpacing),
+        height: Math.round(contentHeight),
+      });
+    };
+
+    const handleResize = () => {
+      computeOffsets();
+    };
+
+    computeOffsets();
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+
+    const visualViewport = window.visualViewport;
+    if (visualViewport) {
+      visualViewport.addEventListener('resize', handleResize);
+    }
+
+    const observers: ResizeObserver[] = [];
+    if (typeof ResizeObserver !== 'undefined') {
+      if (translationAreaRef.current) {
+        const observer = new ResizeObserver(handleResize);
+        observer.observe(translationAreaRef.current);
+        observers.push(observer);
+      }
+      if (micButtonRef.current) {
+        const observer = new ResizeObserver(handleResize);
+        observer.observe(micButtonRef.current);
+        observers.push(observer);
+      }
+      if (titleRef.current) {
+        const observer = new ResizeObserver(handleResize);
+        observer.observe(titleRef.current);
+        observers.push(observer);
+      }
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+      if (visualViewport) {
+        visualViewport.removeEventListener('resize', handleResize);
+      }
+      observers.forEach((observer) => observer.disconnect());
+    };
+  }, [isMobile, showHelpPopups, showButtons, showTitle, translationLanguage]);
+
+  const mobileTopOffset = isMobile ? mobileLayout.top ?? baseMobileTopPx : undefined;
+  const mobileBottomOffset = isMobile ? mobileLayout.bottom ?? baseMobileBottomPx : undefined;
+  const mobileContentHeight = isMobile ? mobileLayout.height : undefined;
+
   return (
     <>
       <div
         onClick={handleTranslationAreaClick}
+        ref={translationAreaRef}
         style={{
           position: 'fixed',
           top: isMobile ? '2rem' : '4rem',
@@ -93,7 +242,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             ? translationAreaRotationDirectionRef.current === 'forward'
               ? 'translationAreaRotate 0.6s ease-in-out'
               : 'translationAreaRotateReverse 0.6s ease-in-out'
-            : 'fadeInUp 0.6s ease-out',
+            : 'none',
           opacity: 1,
           zIndex: 1000,
           boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
@@ -107,11 +256,14 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
         }}
       >
         <div
+          key={`translation-content-${translationLanguage}`}
           style={{
             display: 'flex',
             flexDirection: 'column',
             gap: '0.5rem',
             width: '100%',
+            animation: !isTranslationAreaRotating ? 'interpreterZoomIn 0.45s ease-out' : 'none',
+            transformOrigin: 'center',
           }}
         >
           {translatedTextLines.length > 0 ? (
@@ -152,14 +304,21 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
       <div
         style={{
           position: 'fixed',
-          top: isMobile ? 'calc(2rem + 250px + 0.5rem)' : '50%',
-          bottom: isMobile ? 'calc(3rem + 120px + 96px + 2rem)' : 'auto',
+          top: isMobile
+            ? `${mobileTopOffset ?? baseMobileTopPx}px`
+            : '50%',
+          bottom: isMobile
+            ? `${mobileBottomOffset ?? baseMobileBottomPx}px`
+            : 'auto',
           left: '50%',
           transform: isMobile ? 'translate(-50%, 0)' : 'translate(-50%, -50%)',
           width: isMobile ? 'calc(100vw - 2rem)' : '90%',
           maxWidth: isMobile ? 'calc(100vw - 2rem)' : '800px',
-          minHeight: isMobile ? '150px' : 'auto',
-          maxHeight: isMobile ? 'none' : '400px',
+          minHeight: isMobile ? undefined : 'auto',
+          maxHeight: isMobile ? undefined : '400px',
+          height: isMobile && mobileContentHeight !== undefined
+            ? `${mobileContentHeight}px`
+            : 'auto',
           padding: isMobile ? '1.5rem' : '2rem',
           backgroundColor: 'rgba(255, 255, 255, 0.95)',
           border: '1px solid rgba(0, 0, 0, 0.1)',
@@ -168,7 +327,6 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           fontSize: isMobile ? '1.5rem' : '2rem',
           lineHeight: '1.8',
           wordBreak: 'break-word',
-          animation: 'fadeInUp 0.8s ease-out',
           opacity: 1,
           zIndex: 1000,
           color: '#111827',
@@ -183,6 +341,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
         }}
       >
         <div
+          key={`japanese-content-${translationLanguage}`}
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -192,6 +351,8 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             justifyContent: 'center',
             alignItems: 'center',
             minHeight: '100%',
+            animation: 'interpreterZoomIn 0.5s ease-out',
+            transformOrigin: 'center',
           }}
         >
           {recognizedTextLines.length > 0 ? (
@@ -272,9 +433,10 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
       {showTitle && (
         <div
           onClick={handleTitleClick}
+          ref={titleRef}
           style={{
             position: 'fixed',
-            bottom: isMobile ? '3rem' : '5rem',
+            bottom: isMobile ? 'calc(env(safe-area-inset-bottom) + 3rem)' : '5rem',
             left: '50%',
             transform: 'translateX(-50%)',
             textAlign: 'center',
@@ -327,9 +489,12 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             handleMicRelease();
           }
         }}
+        ref={micButtonRef}
         style={{
           position: 'fixed',
-          bottom: isMobile ? 'calc(3rem + 120px)' : 'calc(5rem + 140px)',
+          bottom: isMobile
+            ? 'calc(env(safe-area-inset-bottom) + 3rem + 120px)'
+            : 'calc(5rem + 140px)',
           left: '50%',
           transform: 'translateX(-50%)',
           width: isMobile ? '96px' : '120px',
@@ -424,6 +589,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
         />
         {((isMobile && showHelpPopups) || (!isMobile && hoveredButton === 'mic')) && (
           <div
+            ref={micHelpRef}
             style={{
               position: 'absolute',
               bottom: '100%',
@@ -470,7 +636,9 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           onMouseLeave={() => setHoveredButton(null)}
           style={{
             position: 'fixed',
-            bottom: isMobile ? 'calc(3rem + 120px)' : 'calc(5rem + 140px)',
+            bottom: isMobile
+              ? 'calc(env(safe-area-inset-bottom) + 3rem + 120px)'
+              : 'calc(5rem + 140px)',
             left: isMobile ? 'calc(50% - 96px - 0.25rem - 48px)' : 'calc(50% - 120px - 0.75rem - 60px)',
             transform: 'translateX(-50%)',
             width: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
@@ -533,6 +701,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           />
           {((isMobile && showHelpPopups) || (!isMobile && hoveredButton === 'hand')) && buttonsAnimated && (
             <div
+              ref={handHelpRef}
               style={{
                 position: 'absolute',
                 bottom: '100%',
@@ -580,7 +749,9 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           onMouseLeave={() => setHoveredButton(null)}
           style={{
             position: 'fixed',
-            bottom: isMobile ? 'calc(3rem + 120px)' : 'calc(5rem + 140px)',
+            bottom: isMobile
+              ? 'calc(env(safe-area-inset-bottom) + 3rem + 120px)'
+              : 'calc(5rem + 140px)',
             left: isMobile ? 'calc(50% + 96px + 0.25rem + 48px)' : 'calc(50% + 120px + 0.75rem + 60px)',
             transform: 'translateX(-50%)',
             width: buttonsAnimated ? (isMobile ? '96px' : '120px') : '0px',
@@ -643,6 +814,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           />
           {((isMobile && showHelpPopups) || (!isMobile && hoveredButton === 'mute')) && buttonsAnimated && (
             <div
+              ref={muteHelpRef}
               style={{
                 position: 'absolute',
                 bottom: '100%',
