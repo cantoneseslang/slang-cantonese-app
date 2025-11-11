@@ -892,7 +892,6 @@ export default function Home() {
     }
 
     try {
-      playHapticAndSound();
       const response = await fetch('/api/generate-speech', {
         method: 'POST',
         headers: {
@@ -913,7 +912,7 @@ export default function Home() {
       console.error('計算結果の読み上げエラー:', error);
       setCalculatorError('音声生成に失敗しました');
     }
-  }, [calculatorDisplay, calculatorError, playNormalModeAudio, playHapticAndSound]);
+  }, [calculatorDisplay, calculatorError, playNormalModeAudio]);
 
   const closeSettingsPanel = useCallback(() => {
     setShowSettings(false);
