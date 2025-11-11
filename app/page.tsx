@@ -476,12 +476,14 @@ export default function Home() {
 
   // 翻訳済みテキストを追跡するためのref
   const translatedTextSetRef = useRef<Set<string>>(new Set());
+  const translatedInterimSetRef = useRef<Set<string>>(new Set());
 
   // 翻訳APIの呼び出し（最速同時通訳対応、リアルタイム翻訳）
   useEffect(() => {
     if (!isHiddenMode) {
       setTranslatedText('');
       translatedTextSetRef.current.clear();
+      translatedInterimSetRef.current.clear();
       return;
     }
 
@@ -494,7 +496,11 @@ export default function Home() {
     if (textsToTranslate.length === 0) {
       // interimテキストがあれば、それも翻訳対象に
       const interimTextToTranslate = interimText.trim();
-      if (!interimTextToTranslate || translatedTextSetRef.current.has(interimTextToTranslate)) {
+      if (
+        !interimTextToTranslate ||
+        translatedTextSetRef.current.has(interimTextToTranslate) ||
+        translatedInterimSetRef.current.has(interimTextToTranslate)
+      ) {
         return;
       }
       
@@ -515,7 +521,7 @@ export default function Home() {
             const data = await response.json();
             const translated = data.translated || data.translatedText || '';
             if (translated && !translatedTextSetRef.current.has(interimTextToTranslate)) {
-              translatedTextSetRef.current.add(interimTextToTranslate);
+              translatedInterimSetRef.current.add(interimTextToTranslate);
               
               setTranslatedText(translated);
               setTranslatedTextLines(prev => {
@@ -585,6 +591,7 @@ export default function Home() {
             const data = await response.json();
             const translated = data.translated || data.translatedText || '';
             if (translated) {
+              translatedInterimSetRef.current.delete(textToTranslate);
               // 翻訳済みとしてマーク
               translatedTextSetRef.current.add(textToTranslate);
               
@@ -775,6 +782,7 @@ const resetInterpreterSession = ({
   lastTranslatedTextRef.current = '';
   lastProcessedFinalTextRef.current = '';
   translatedTextSetRef.current.clear();
+  translatedInterimSetRef.current.clear();
 
   if (clearTitle) {
     setShowTitle(false);
