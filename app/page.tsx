@@ -60,6 +60,9 @@ interface PracticeGroup {
 
 type InterpreterVoiceOption = 'female' | 'male';
 type CalculatorOperator = '+' | '-' | '×' | '÷';
+type CurrencyBase = 'HKD' | 'JPY';
+type WeightBase = 'kg' | 'catty' | 'lb' | 'gram';
+type LengthBase = 'cm' | 'foot' | 'inch' | 'meter';
 
 const HK_CATTI_IN_KG = 0.60478982;
 const POUND_IN_KG = 0.45359237;
@@ -260,11 +263,11 @@ export default function Home() {
   const [lastRateFetchedAt, setLastRateFetchedAt] = useState<number | null>(null);
   const [isFetchingRate, setIsFetchingRate] = useState(false);
   const [currencyInput, setCurrencyInput] = useState('100');
-  const [currencyBase, setCurrencyBase] = useState<'HKD' | 'JPY'>('HKD');
+  const [currencyBase, setCurrencyBase] = useState<CurrencyBase>('HKD');
   const [weightInput, setWeightInput] = useState('1');
-  const [weightBase, setWeightBase] = useState<'kg' | 'catty' | 'lb'>('kg');
+  const [weightBase, setWeightBase] = useState<WeightBase>('kg');
   const [lengthInput, setLengthInput] = useState('100');
-  const [lengthBase, setLengthBase] = useState<'cm' | 'foot' | 'inch'>('cm');
+  const [lengthBase, setLengthBase] = useState<LengthBase>('cm');
 
   // 設定画面の状態
   const [showSettings, setShowSettings] = useState(false);
@@ -624,6 +627,9 @@ export default function Home() {
       case 'lb':
         valueInKg = numericValue * POUND_IN_KG;
         break;
+      case 'gram':
+        valueInKg = numericValue / 1000;
+        break;
       default:
         valueInKg = numericValue;
     }
@@ -632,6 +638,7 @@ export default function Home() {
       kg: valueInKg,
       catty: valueInKg / HK_CATTI_IN_KG,
       lb: valueInKg / POUND_IN_KG,
+      gram: valueInKg * 1000,
     };
   }, [weightInput, weightBase]);
 
@@ -646,6 +653,9 @@ export default function Home() {
       case 'cm':
         valueInCm = numericValue;
         break;
+      case 'meter':
+        valueInCm = numericValue * 100;
+        break;
       case 'foot':
         valueInCm = numericValue * FOOT_IN_CM;
         break;
@@ -658,10 +668,173 @@ export default function Home() {
 
     return {
       cm: valueInCm,
+      meter: valueInCm / 100,
       foot: valueInCm / FOOT_IN_CM,
       inch: valueInCm / INCH_IN_CM,
     };
   }, [lengthInput, lengthBase]);
+
+  const displayInfo = useMemo(() => {
+    const defaultInfo = {
+      primaryValue: calculatorDisplayValue,
+      primaryLabel: '',
+      secondaryValue: '',
+      secondaryLabel: '',
+      detail: '',
+    };
+
+    if (activeConversionPanel === 'currency' && currencyResults) {
+      const currencyLabelMap: Record<CurrencyBase, string> = {
+        HKD: '港幣',
+        JPY: '日圓',
+      };
+      const primaryLabel = currencyLabelMap[currencyResults.base] ?? currencyResults.base;
+      const secondaryCurrency = currencyResults.base === 'HKD' ? 'JPY' : 'HKD';
+      const secondaryLabel = currencyLabelMap[secondaryCurrency] ?? secondaryCurrency;
+      const primaryValue = formatConversionNumber(currencyResults.baseValue, 2);
+      const secondaryValue =
+        currencyResults.targetValue != null
+          ? formatConversionNumber(currencyResults.targetValue, 2)
+          : '---';
+      const detail =
+        exchangeRate != null
+          ? currencyResults.base === 'HKD'
+            ? `1 ${currencyLabelMap.HKD} = ${formatConversionNumber(exchangeRate.hkdToJpy, 4)} ${currencyLabelMap.JPY}`
+            : `1 ${currencyLabelMap.JPY} = ${formatConversionNumber(exchangeRate.jpyToHkd, 4)} ${currencyLabelMap.HKD}`
+          : '';
+
+      return {
+        primaryValue,
+        primaryLabel,
+        secondaryValue,
+        secondaryLabel,
+        detail,
+      };
+    }
+
+    if (activeConversionPanel === 'weight' && weightResults) {
+      const labelMap: Record<WeightBase, string> = {
+        kg: '公斤',
+        catty: '斤',
+        lb: '磅',
+        gram: '克',
+      };
+      const baseValue =
+        weightBase === 'kg'
+          ? weightResults.kg
+          : weightBase === 'catty'
+          ? weightResults.catty
+          : weightBase === 'lb'
+          ? weightResults.lb
+          : weightResults.gram;
+
+      let secondaryLabel = '';
+      let secondaryValue = '';
+      if (weightBase === 'kg') {
+        secondaryLabel = '斤';
+        secondaryValue = formatConversionNumber(weightResults.catty, 3);
+      } else if (weightBase === 'catty') {
+        secondaryLabel = '公斤';
+        secondaryValue = formatConversionNumber(weightResults.kg, 3);
+      } else if (weightBase === 'lb') {
+        secondaryLabel = '公斤';
+        secondaryValue = formatConversionNumber(weightResults.kg, 3);
+      } else if (weightBase === 'gram') {
+        secondaryLabel = '公斤';
+        secondaryValue = formatConversionNumber(weightResults.kg, 3);
+      }
+
+      const detailParts: string[] = [];
+      if (weightBase !== 'kg') {
+        detailParts.push(`公斤 ${formatConversionNumber(weightResults.kg, 3)}`);
+      }
+      if (weightBase !== 'catty') {
+        detailParts.push(`斤 ${formatConversionNumber(weightResults.catty, 3)}`);
+      }
+      if (weightBase !== 'lb') {
+        detailParts.push(`磅 ${formatConversionNumber(weightResults.lb, 3)}`);
+      }
+      if (weightBase !== 'gram') {
+        detailParts.push(`克 ${formatConversionNumber(weightResults.gram, 0)}`);
+      }
+
+      return {
+        primaryValue: formatConversionNumber(baseValue, 3),
+        primaryLabel: labelMap[weightBase],
+        secondaryValue,
+        secondaryLabel,
+        detail: detailParts.join(' ／ '),
+      };
+    }
+
+    if (activeConversionPanel === 'length' && lengthResults) {
+      const labelMap: Record<LengthBase, string> = {
+        cm: '公分',
+        meter: '公尺',
+        foot: '呎',
+        inch: '吋',
+      };
+
+      const baseValue =
+        lengthBase === 'cm'
+          ? lengthResults.cm
+          : lengthBase === 'meter'
+          ? lengthResults.meter
+          : lengthBase === 'foot'
+          ? lengthResults.foot
+          : lengthResults.inch;
+
+      let secondaryLabel = '';
+      let secondaryValue = '';
+      if (lengthBase === 'cm') {
+        secondaryLabel = '呎';
+        secondaryValue = formatConversionNumber(lengthResults.foot, 3);
+      } else if (lengthBase === 'meter') {
+        secondaryLabel = '呎';
+        secondaryValue = formatConversionNumber(lengthResults.foot, 3);
+      } else if (lengthBase === 'foot') {
+        secondaryLabel = '公分';
+        secondaryValue = formatConversionNumber(lengthResults.cm, 2);
+      } else if (lengthBase === 'inch') {
+        secondaryLabel = '公分';
+        secondaryValue = formatConversionNumber(lengthResults.cm, 2);
+      }
+
+      const detailParts: string[] = [];
+      if (lengthBase !== 'cm') {
+        detailParts.push(`公分 ${formatConversionNumber(lengthResults.cm, 2)}`);
+      }
+      if (lengthBase !== 'meter') {
+        detailParts.push(`公尺 ${formatConversionNumber(lengthResults.meter, 3)}`);
+      }
+      if (lengthBase !== 'foot') {
+        detailParts.push(`呎 ${formatConversionNumber(lengthResults.foot, 3)}`);
+      }
+      if (lengthBase !== 'inch') {
+        detailParts.push(`吋 ${formatConversionNumber(lengthResults.inch, 3)}`);
+      }
+
+      return {
+        primaryValue: formatConversionNumber(baseValue, 3),
+        primaryLabel: labelMap[lengthBase],
+        secondaryValue,
+        secondaryLabel,
+        detail: detailParts.join(' ／ '),
+      };
+    }
+
+    return defaultInfo;
+  }, [
+    activeConversionPanel,
+    calculatorDisplayValue,
+    currencyResults,
+    exchangeRate,
+    formatConversionNumber,
+    lengthBase,
+    lengthResults,
+    weightBase,
+    weightResults,
+  ]);
 
   // デバッグ情報の状態
   const [debugInfo, setDebugInfo] = useState<any>(null);
@@ -886,10 +1059,42 @@ export default function Home() {
       return;
     }
 
-    const textForSpeech = convertNumberToCantoneseReading(calculatorDisplay);
-    if (!textForSpeech) {
+    calculatorSpeechCycleRef.current = (calculatorSpeechCycleRef.current % 3) + 1;
+    const cycle = calculatorSpeechCycleRef.current;
+    if (cycle === 3) {
+      calculatorSpeechCycleRef.current = 0;
+    }
+
+    const language = cycle === 3 ? 'mandarin' : 'cantonese';
+
+    let numericForSpeech = '';
+    let unitForSpeech = '';
+
+    const sanitizedCalculatorValue = calculatorDisplay.replace(/,/g, '');
+
+    if (
+      activeConversionPanel &&
+      displayInfo.secondaryValue &&
+      displayInfo.secondaryValue !== '---'
+    ) {
+      const secondaryNumeric = displayInfo.secondaryValue.replace(/[^\d.\-]/g, '');
+      if (secondaryNumeric) {
+        numericForSpeech = convertNumberToCantoneseReading(secondaryNumeric);
+        unitForSpeech = displayInfo.secondaryLabel ?? '';
+      }
+    }
+
+    if (!numericForSpeech) {
+      const primaryNumeric = sanitizedCalculatorValue.replace(/[^\d.\-]/g, '') || '0';
+      numericForSpeech = convertNumberToCantoneseReading(primaryNumeric);
+      unitForSpeech = displayInfo.primaryLabel ?? '';
+    }
+
+    if (!numericForSpeech) {
       return;
     }
+
+    const speechText = unitForSpeech ? `${numericForSpeech} ${unitForSpeech}` : numericForSpeech;
 
     try {
       const response = await fetch('/api/generate-speech', {
@@ -897,7 +1102,7 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text: textForSpeech, language: 'cantonese' }),
+        body: JSON.stringify({ text: speechText, language }),
       });
 
       if (!response.ok) {
@@ -906,13 +1111,14 @@ export default function Home() {
 
       const audioData = await response.json();
       if (audioData?.audioContent) {
-        playNormalModeAudio(audioData.audioContent, { logPrefix: '計算機' });
+        playNormalModeAudio(audioData.audioContent, { logPrefix: '数字ツール' });
+        setCalculatorError(null);
       }
     } catch (error) {
       console.error('計算結果の読み上げエラー:', error);
       setCalculatorError('音声生成に失敗しました');
     }
-  }, [calculatorDisplay, calculatorError, playNormalModeAudio]);
+  }, [activeConversionPanel, calculatorDisplay, calculatorError, displayInfo, playNormalModeAudio]);
 
   const closeSettingsPanel = useCallback(() => {
     setShowSettings(false);
@@ -3009,6 +3215,33 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     playClickSound({ useGain: true });
   };
 
+  const handleQuickConversionClick = useCallback(
+    (button: QuickConversionButton) => {
+      playHapticAndSound();
+
+      if (button.panel === 'currency') {
+        const shouldToggle = activeConversionPanel === 'currency' && currencyBase === button.unit;
+        setCurrencyBase(button.unit);
+        setActiveConversionPanel(shouldToggle ? null : 'currency');
+        return;
+      }
+
+      if (button.panel === 'weight') {
+        const shouldToggle = activeConversionPanel === 'weight' && weightBase === button.unit;
+        setWeightBase(button.unit);
+        setActiveConversionPanel(shouldToggle ? null : 'weight');
+        return;
+      }
+
+      if (button.panel === 'length') {
+        const shouldToggle = activeConversionPanel === 'length' && lengthBase === button.unit;
+        setLengthBase(button.unit);
+        setActiveConversionPanel(shouldToggle ? null : 'length');
+      }
+    },
+    [playHapticAndSound, activeConversionPanel, currencyBase, weightBase, lengthBase]
+  );
+
   const getChineseFontSize = (
     text: string,
     isMobileDevice: boolean,
@@ -3075,6 +3308,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const toneButtonKeyCounterRef = useRef(0);
+  const calculatorSpeechCycleRef = useRef(0);
 
   // iOS風アウトラインアイコン
   const FolderIcon = ({ size = 20, yOffset = 0 }: { size?: number; yOffset?: number }) => (
@@ -3108,27 +3342,41 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         span = 1,
         disabled = false,
       }: {
-        variant?: 'default' | 'function' | 'operator' | 'equal';
+        variant?: 'default' | 'function' | 'operator' | 'equal' | 'speak';
         span?: number;
         disabled?: boolean;
       } = {}
     ) => {
-      const baseColor = {
+      const palette = {
         default: {
-          background: '#f9fafb',
-          color: '#111827',
+          background: '#1f2937',
+          color: '#e2e8f0',
+          border: '#27324a',
+          shadow: '0 6px 18px rgba(15,23,42,0.45)',
         },
         function: {
-          background: '#e0f2fe',
-          color: '#0c4a6e',
+          background: '#273041',
+          color: '#e2e8f0',
+          border: '#323b52',
+          shadow: '0 6px 18px rgba(15,23,42,0.4)',
         },
         operator: {
-          background: '#ede9fe',
-          color: '#5b21b6',
+          background: '#9a5c17',
+          color: '#fff7ed',
+          border: '#a96c24',
+          shadow: '0 8px 20px rgba(154,92,23,0.55)',
         },
         equal: {
+          background: 'linear-gradient(145deg, #f97316, #ea580c)',
+          color: '#ffffff',
+          border: '#f97316',
+          shadow: '0 10px 24px rgba(249,115,22,0.55)',
+        },
+        speak: {
           background: 'linear-gradient(145deg, #2563eb, #1d4ed8)',
           color: '#ffffff',
+          border: '#2563eb',
+          shadow: '0 10px 24px rgba(37,99,235,0.45)',
         },
       }[variant];
 
@@ -3147,34 +3395,43 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           disabled={disabled}
           style={{
             gridColumn: span > 1 ? `span ${span}` : undefined,
-            padding: isMobile ? '0.75rem 0.5rem' : '0.85rem 0.75rem',
-            borderRadius: '12px',
-            border: 'none',
+            borderRadius: '999px',
+            border: `1px solid ${palette.border}`,
             fontWeight: 700,
-            fontSize: isMobile ? '1rem' : '1.05rem',
-            background: baseColor.background,
-            color: baseColor.color,
-            boxShadow:
-              variant === 'equal'
-                ? '0 8px 18px rgba(37,99,235,0.35)'
-                : '0 4px 12px rgba(15,23,42,0.08)',
+            fontSize: isMobile ? '1.05rem' : '1.15rem',
+            background: palette.background,
+            color: palette.color,
+            boxShadow: palette.shadow,
             cursor: disabled ? 'not-allowed' : 'pointer',
-            opacity: disabled ? 0.6 : 1,
+            opacity: disabled ? 0.55 : 1,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             transition: 'transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease',
             touchAction: 'manipulation',
             WebkitTapHighlightColor: 'transparent',
+            aspectRatio: '1 / 1',
+            width: '100%',
+            userSelect: 'none',
           }}
           onMouseEnter={(e) => {
-            if (!disabled && variant !== 'equal') {
-              e.currentTarget.style.boxShadow = '0 6px 16px rgba(15,23,42,0.18)';
+            if (!disabled) {
+              e.currentTarget.style.transform = 'translateY(-2px)';
             }
           }}
           onMouseLeave={(e) => {
-            if (!disabled && variant !== 'equal') {
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(15,23,42,0.08)';
+            if (!disabled) {
+              e.currentTarget.style.transform = 'translateY(0)';
+            }
+          }}
+          onMouseDown={(e) => {
+            if (!disabled) {
+              e.currentTarget.style.transform = 'translateY(1px) scale(0.97)';
+            }
+          }}
+          onMouseUp={(e) => {
+            if (!disabled) {
+              e.currentTarget.style.transform = 'translateY(-2px)';
             }
           }}
         >
@@ -3190,15 +3447,82 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     setLastRateFetchedAt(null);
   }, []);
 
-  const conversionButtons = useMemo<
-    Array<{ id: 'currency' | 'weight' | 'length'; label: string; subLabel: string; emoji: string }>
-  >(
+  type QuickConversionButton =
+    | { key: string; label: string; panel: 'currency'; unit: CurrencyBase }
+    | { key: string; label: string; panel: 'weight'; unit: WeightBase }
+    | { key: string; label: string; panel: 'length'; unit: LengthBase };
+
+  const quickConversionButtons = useMemo<QuickConversionButton[]>(
     () => [
-      { id: 'currency', label: '為替', subLabel: 'HKD↔JPY', emoji: '💱' },
-      { id: 'weight', label: '重量', subLabel: '公斤/斤/磅', emoji: '⚖️' },
-      { id: 'length', label: '長さ', subLabel: 'cm/呎/吋', emoji: '📏' },
+      { key: 'currency-hkd', label: '港幣', panel: 'currency', unit: 'HKD' },
+      { key: 'currency-jpy', label: '日圓', panel: 'currency', unit: 'JPY' },
+      { key: 'weight-kg', label: '公斤', panel: 'weight', unit: 'kg' },
+      { key: 'weight-catty', label: '斤', panel: 'weight', unit: 'catty' },
+      { key: 'weight-lb', label: '磅', panel: 'weight', unit: 'lb' },
+      { key: 'weight-gram', label: '克', panel: 'weight', unit: 'gram' },
+      { key: 'length-cm', label: '公分', panel: 'length', unit: 'cm' },
+      { key: 'length-meter', label: '公尺', panel: 'length', unit: 'meter' },
+      { key: 'length-foot', label: '呎', panel: 'length', unit: 'foot' },
+      { key: 'length-inch', label: '吋', panel: 'length', unit: 'inch' },
     ],
     []
+  );
+
+  const renderConversionShortcut = useCallback(
+    (button: QuickConversionButton) => {
+      const isActive =
+        activeConversionPanel === button.panel &&
+        ((button.panel === 'currency' && currencyBase === button.unit) ||
+          (button.panel === 'weight' && weightBase === button.unit) ||
+          (button.panel === 'length' && lengthBase === button.unit));
+
+      return (
+        <button
+          key={button.key}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            handleQuickConversionClick(button);
+          }}
+          style={{
+            border: 'none',
+            borderRadius: '999px',
+            width: '100%',
+            aspectRatio: '1 / 1',
+            fontSize: isMobile ? '1.05rem' : '1.15rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            background: isActive ? '#f97316' : '#1f2937',
+            color: isActive ? '#fff7ed' : '#e2e8f0',
+            boxShadow: isActive
+              ? '0 10px 24px rgba(249,115,22,0.55)'
+              : '0 6px 18px rgba(15,23,42,0.45)',
+            transition: 'transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            touchAction: 'manipulation',
+            WebkitTapHighlightColor: 'transparent',
+            opacity: 1,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+          onMouseDown={(e) => {
+            e.currentTarget.style.transform = 'translateY(1px) scale(0.97)';
+          }}
+          onMouseUp={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+          }}
+        >
+          {button.label}
+        </button>
+      );
+    },
+    [activeConversionPanel, currencyBase, weightBase, lengthBase, handleQuickConversionClick, isMobile]
   );
 
   const renderConversionPanel = () => {
@@ -3216,26 +3540,29 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         : '未取得';
 
       return (
-        <div style={{
-          background: '#f8fafc',
-          borderRadius: '12px',
-          padding: isMobile ? '0.9rem' : '1rem',
-          border: '1px solid #e2e8f0',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)'
-        }}>
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+        <div
+          style={{
+            background: '#111c2f',
+            borderRadius: '16px',
+            padding: isMobile ? '0.95rem' : '1.15rem',
+            border: '1px solid rgba(148,163,184,0.25)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+            color: '#cbd5f5',
+          }}
+        >
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.85rem', flexWrap: 'wrap' }}>
             <button
               onClick={() => setCurrencyBase('HKD')}
               style={{
                 flex: isMobile ? '1 1 120px' : '0 0 auto',
                 padding: '0.6rem 1rem',
                 borderRadius: '999px',
-                border: baseIsHKD ? '1px solid #2563eb' : '1px solid #cbd5f5',
-                background: baseIsHKD ? 'linear-gradient(145deg, #2563eb, #1d4ed8)' : '#ffffff',
-                color: baseIsHKD ? '#ffffff' : '#1e3a8a',
+                border: baseIsHKD ? '1px solid #60a5fa' : '1px solid rgba(96,165,250,0.35)',
+                background: baseIsHKD ? 'linear-gradient(145deg, #2563eb, #1d4ed8)' : '#1c2845',
+                color: '#f8fafc',
                 fontWeight: 700,
                 cursor: 'pointer',
-                touchAction: 'manipulation'
+                touchAction: 'manipulation',
               }}
             >
               HKD → JPY
@@ -3246,12 +3573,12 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 flex: isMobile ? '1 1 120px' : '0 0 auto',
                 padding: '0.6rem 1rem',
                 borderRadius: '999px',
-                border: !baseIsHKD ? '1px solid #2563eb' : '1px solid #cbd5f5',
-                background: !baseIsHKD ? 'linear-gradient(145deg, #2563eb, #1d4ed8)' : '#ffffff',
-                color: !baseIsHKD ? '#ffffff' : '#1e3a8a',
+                border: !baseIsHKD ? '1px solid #60a5fa' : '1px solid rgba(96,165,250,0.35)',
+                background: !baseIsHKD ? 'linear-gradient(145deg, #2563eb, #1d4ed8)' : '#1c2845',
+                color: '#f8fafc',
                 fontWeight: 700,
                 cursor: 'pointer',
-                touchAction: 'manipulation'
+                touchAction: 'manipulation',
               }}
             >
               JPY → HKD
@@ -3262,20 +3589,27 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 flex: isMobile ? '1 1 120px' : '0 0 auto',
                 padding: '0.6rem 1rem',
                 borderRadius: '999px',
-                border: '1px solid #cbd5f5',
-                background: '#ffffff',
-                color: '#1d4ed8',
+                border: '1px solid rgba(96,165,250,0.35)',
+                background: '#1c2845',
+                color: '#93c5fd',
                 fontWeight: 600,
                 cursor: 'pointer',
-                touchAction: 'manipulation'
+                touchAction: 'manipulation',
               }}
             >
               レート更新
             </button>
           </div>
-          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '1rem', alignItems: isMobile ? 'stretch' : 'flex-end' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: '1rem',
+              alignItems: isMobile ? 'stretch' : 'flex-end',
+            }}
+          >
             <div style={{ flex: '1 1 200px' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#bfdbfe' }}>
                 {baseIsHKD ? '香港ドル (HKD)' : '日本円 (JPY)'}
               </label>
               <input
@@ -3286,30 +3620,34 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   width: '100%',
                   marginTop: '0.35rem',
                   padding: '0.65rem 0.75rem',
-                  borderRadius: '10px',
-                  border: '1px solid #cbd5f5',
-                  fontSize: '1rem',
-                  background: '#ffffff',
-                  color: '#0f172a'
+                  borderRadius: '12px',
+                  border: '1px solid rgba(96,165,250,0.35)',
+                  fontSize: '1.05rem',
+                  background: '#0f172a',
+                  color: '#e2e8f0',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
                 }}
               />
             </div>
             <div style={{ flex: '1 1 200px' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#bfdbfe' }}>
                 {baseIsHKD ? '日本円 (JPY)' : '香港ドル (HKD)'}
               </label>
-              <div style={{
-                marginTop: '0.35rem',
-                padding: '0.75rem',
-                borderRadius: '10px',
-                border: '1px solid #cbd5f5',
-                background: '#ffffff',
-                fontSize: '1.1rem',
-                fontWeight: 700,
-                minHeight: '3rem',
-                display: 'flex',
-                alignItems: 'center'
-              }}>
+              <div
+                style={{
+                  marginTop: '0.35rem',
+                  padding: '0.75rem 0.9rem',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(96,165,250,0.35)',
+                  background: '#0f172a',
+                  fontSize: '1.2rem',
+                  fontWeight: 700,
+                  minHeight: '3.1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: '#e2e8f0',
+                }}
+              >
                 {currencyResults?.targetValue != null
                   ? `${formatConversionNumber(currencyResults.targetValue, 2)}`
                   : exchangeRate
@@ -3318,7 +3656,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               </div>
             </div>
           </div>
-          <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: '#1e293b', lineHeight: 1.6 }}>
+          <div style={{ marginTop: '0.85rem', fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.6 }}>
             <div>現在のレート: {exchangeRate ? `1 HKD = ${formatConversionNumber(exchangeRate.hkdToJpy, 4)} JPY` : '---'}</div>
             <div>取得時刻: {isFetchingRate ? '更新中...' : lastUpdatedText}</div>
           </div>
@@ -3327,32 +3665,41 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     }
 
     if (activeConversionPanel === 'weight') {
+      const weightUnits: Array<{ value: WeightBase; label: string }> = [
+        { value: 'kg', label: '公斤 (kg)' },
+        { value: 'catty', label: '斤 (catty)' },
+        { value: 'lb', label: '磅 (lb)' },
+        { value: 'gram', label: '克 (gram)' },
+      ];
+
       return (
-        <div style={{
-          background: '#fefce8',
-          borderRadius: '12px',
-          padding: isMobile ? '0.9rem' : '1rem',
-          border: '1px solid #fcd34d',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)'
-        }}>
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-            {(['kg', 'catty', 'lb'] as Array<'kg' | 'catty' | 'lb'>).map((unit) => {
-              const active = weightBase === unit;
-              const label = unit === 'kg' ? '公斤 (kg)' : unit === 'catty' ? '斤 (catty)' : '磅 (lb)';
+        <div
+          style={{
+            background: '#1b2435',
+            borderRadius: '16px',
+            padding: isMobile ? '0.95rem' : '1.15rem',
+            border: '1px solid rgba(248,188,77,0.3)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+            color: '#fde68a',
+          }}
+        >
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.85rem', flexWrap: 'wrap' }}>
+            {weightUnits.map(({ value, label }) => {
+              const active = weightBase === value;
               return (
                 <button
-                  key={unit}
-                  onClick={() => setWeightBase(unit)}
+                  key={value}
+                  onClick={() => setWeightBase(value)}
                   style={{
                     flex: isMobile ? '1 1 120px' : '0 0 auto',
                     padding: '0.6rem 1rem',
                     borderRadius: '999px',
-                    border: active ? '1px solid #d97706' : '1px solid #fcd34d',
-                    background: active ? 'linear-gradient(145deg, #fbbf24, #d97706)' : '#fff7ed',
-                    color: active ? '#78350f' : '#b45309',
+                    border: active ? '1px solid #fbbf24' : '1px solid rgba(248,188,77,0.35)',
+                    background: active ? 'linear-gradient(145deg, #fbbf24, #d97706)' : '#2a3144',
+                    color: '#fefce8',
                     fontWeight: 700,
                     cursor: 'pointer',
-                    touchAction: 'manipulation'
+                    touchAction: 'manipulation',
                   }}
                 >
                   {label}
@@ -3360,9 +3707,16 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               );
             })}
           </div>
-          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '1rem', alignItems: isMobile ? 'stretch' : 'flex-end' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: '1rem',
+              alignItems: isMobile ? 'stretch' : 'flex-end',
+            }}
+          >
             <div style={{ flex: '1 1 200px' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#78350f' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fde68a' }}>
                 入力値
               </label>
               <input
@@ -3373,26 +3727,53 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   width: '100%',
                   marginTop: '0.35rem',
                   padding: '0.65rem 0.75rem',
-                  borderRadius: '10px',
-                  border: '1px solid #fcd34d',
-                  fontSize: '1rem',
-                  background: '#ffffff',
-                  color: '#78350f'
+                  borderRadius: '12px',
+                  border: '1px solid rgba(248,188,77,0.35)',
+                  fontSize: '1.05rem',
+                  background: '#111827',
+                  color: '#fde68a',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
                 }}
               />
             </div>
             <div style={{ flex: '1 1 200px' }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#78350f', marginBottom: '0.35rem' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fde68a', marginBottom: '0.35rem' }}>
                 結果
               </div>
               {weightResults ? (
-                <div style={{ display: 'grid', gap: '0.4rem', background: '#fff7ed', borderRadius: '10px', padding: '0.75rem' }}>
-                  <div style={{ fontSize: '0.85rem', color: '#92400e' }}>公斤 (kg): <strong>{formatConversionNumber(weightResults.kg, 3)}</strong></div>
-                  <div style={{ fontSize: '0.85rem', color: '#92400e' }}>斤 (catty): <strong>{formatConversionNumber(weightResults.catty, 3)}</strong></div>
-                  <div style={{ fontSize: '0.85rem', color: '#92400e' }}>磅 (lb): <strong>{formatConversionNumber(weightResults.lb, 3)}</strong></div>
+                <div
+                  style={{
+                    display: 'grid',
+                    gap: '0.4rem',
+                    background: '#111827',
+                    borderRadius: '12px',
+                    padding: '0.8rem',
+                    border: '1px solid rgba(248,188,77,0.25)',
+                  }}
+                >
+                  <div style={{ fontSize: '0.85rem', color: '#fde68a' }}>
+                    公斤 (kg): <strong>{formatConversionNumber(weightResults.kg, 3)}</strong>
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: '#fde68a' }}>
+                    斤 (catty): <strong>{formatConversionNumber(weightResults.catty, 3)}</strong>
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: '#fde68a' }}>
+                    磅 (lb): <strong>{formatConversionNumber(weightResults.lb, 3)}</strong>
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: '#fde68a' }}>
+                    克 (gram): <strong>{formatConversionNumber(weightResults.gram, 0)}</strong>
+                  </div>
                 </div>
               ) : (
-                <div style={{ padding: '0.75rem', borderRadius: '10px', background: '#fff7ed', border: '1px dashed #fcd34d', color: '#92400e' }}>
+                <div
+                  style={{
+                    padding: '0.75rem',
+                    borderRadius: '12px',
+                    background: '#111827',
+                    border: '1px dashed rgba(248,188,77,0.35)',
+                    color: '#fde68a',
+                  }}
+                >
                   数値を入力してください。
                 </div>
               )}
@@ -3402,33 +3783,41 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       );
     }
 
-    // length panel
+    const lengthUnits: Array<{ value: LengthBase; label: string }> = [
+      { value: 'cm', label: '公分 (cm)' },
+      { value: 'meter', label: '公尺 (m)' },
+      { value: 'foot', label: '呎 (ft)' },
+      { value: 'inch', label: '吋 (inch)' },
+    ];
+
     return (
-      <div style={{
-        background: '#eef2ff',
-        borderRadius: '12px',
-        padding: isMobile ? '0.9rem' : '1rem',
-        border: '1px solid #c7d2fe',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)'
-      }}>
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-          {(['cm', 'foot', 'inch'] as Array<'cm' | 'foot' | 'inch'>).map((unit) => {
-            const active = lengthBase === unit;
-            const label = unit === 'cm' ? '公分 (cm)' : unit === 'foot' ? '呎 (ft)' : '英吋 (in)';
+      <div
+        style={{
+          background: '#141d35',
+          borderRadius: '16px',
+          padding: isMobile ? '0.95rem' : '1.15rem',
+          border: '1px solid rgba(129,140,248,0.35)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+          color: '#c7d2fe',
+        }}
+      >
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.85rem', flexWrap: 'wrap' }}>
+          {lengthUnits.map(({ value, label }) => {
+            const active = lengthBase === value;
             return (
               <button
-                key={unit}
-                onClick={() => setLengthBase(unit)}
+                key={value}
+                onClick={() => setLengthBase(value)}
                 style={{
                   flex: isMobile ? '1 1 120px' : '0 0 auto',
                   padding: '0.6rem 1rem',
                   borderRadius: '999px',
-                  border: active ? '1px solid #4c1d95' : '1px solid #c7d2fe',
-                  background: active ? 'linear-gradient(145deg, #a855f7, #7c3aed)' : '#ffffff',
-                  color: active ? '#f5f3ff' : '#4c1d95',
+                  border: active ? '1px solid #818cf8' : '1px solid rgba(129,140,248,0.35)',
+                  background: active ? 'linear-gradient(145deg, #6366f1, #4338ca)' : '#1f2947',
+                  color: '#eef2ff',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  touchAction: 'manipulation'
+                  touchAction: 'manipulation',
                 }}
               >
                 {label}
@@ -3436,9 +3825,16 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
             );
           })}
         </div>
-        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '1rem', alignItems: isMobile ? 'stretch' : 'flex-end' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: '1rem',
+            alignItems: isMobile ? 'stretch' : 'flex-end',
+          }}
+        >
           <div style={{ flex: '1 1 200px' }}>
-            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#312e81' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#c7d2fe' }}>
               入力値
             </label>
             <input
@@ -3449,26 +3845,53 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 width: '100%',
                 marginTop: '0.35rem',
                 padding: '0.65rem 0.75rem',
-                borderRadius: '10px',
-                border: '1px solid #c7d2fe',
-                fontSize: '1rem',
-                background: '#ffffff',
-                color: '#312e81'
+                borderRadius: '12px',
+                border: '1px solid rgba(129,140,248,0.35)',
+                fontSize: '1.05rem',
+                background: '#0f172a',
+                color: '#c7d2fe',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
               }}
             />
           </div>
           <div style={{ flex: '1 1 200px' }}>
-            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#312e81', marginBottom: '0.35rem' }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#c7d2fe', marginBottom: '0.35rem' }}>
               結果
             </div>
             {lengthResults ? (
-              <div style={{ display: 'grid', gap: '0.4rem', background: '#ede9fe', borderRadius: '10px', padding: '0.75rem' }}>
-                <div style={{ fontSize: '0.85rem', color: '#4c1d95' }}>公分 (cm): <strong>{formatConversionNumber(lengthResults.cm, 2)}</strong></div>
-                <div style={{ fontSize: '0.85rem', color: '#4c1d95' }}>呎 (ft): <strong>{formatConversionNumber(lengthResults.foot, 3)}</strong></div>
-                <div style={{ fontSize: '0.85rem', color: '#4c1d95' }}>英吋 (in): <strong>{formatConversionNumber(lengthResults.inch, 3)}</strong></div>
+              <div
+                style={{
+                  display: 'grid',
+                  gap: '0.4rem',
+                  background: '#0f172a',
+                  borderRadius: '12px',
+                  padding: '0.8rem',
+                  border: '1px solid rgba(129,140,248,0.25)',
+                }}
+              >
+                <div style={{ fontSize: '0.85rem', color: '#c7d2fe' }}>
+                  公分 (cm): <strong>{formatConversionNumber(lengthResults.cm, 2)}</strong>
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#c7d2fe' }}>
+                  公尺 (m): <strong>{formatConversionNumber(lengthResults.meter, 3)}</strong>
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#c7d2fe' }}>
+                  呎 (ft): <strong>{formatConversionNumber(lengthResults.foot, 3)}</strong>
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#c7d2fe' }}>
+                  吋 (inch): <strong>{formatConversionNumber(lengthResults.inch, 3)}</strong>
+                </div>
               </div>
             ) : (
-              <div style={{ padding: '0.75rem', borderRadius: '10px', background: '#ede9fe', border: '1px dashed #c4b5fd', color: '#4c1d95' }}>
+              <div
+                style={{
+                  padding: '0.75rem',
+                  borderRadius: '12px',
+                  background: '#0f172a',
+                  border: '1px dashed rgba(129,140,248,0.35)',
+                  color: '#c7d2fe',
+                }}
+              >
                 数値を入力してください。
               </div>
             )}
@@ -6704,132 +7127,158 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
 
           {/* 数字カテゴリー専用ツール */}
           {isNumbersCategory && (
-            <div style={{
-              marginBottom: '1.5rem',
-              background: '#ffffff',
-              borderRadius: '18px',
-              padding: isMobile ? '1rem' : '1.5rem',
-              boxShadow: '0 16px 32px rgba(15,23,42,0.12)'
-            }}>
-              <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '1rem' : '1.5rem' }}>
-                <div style={{ flex: '1 1 0' }}>
-                  <div style={{
-                    borderRadius: '14px',
-                    background: '#0f172a',
-                    color: '#e2e8f0',
-                    padding: isMobile ? '0.75rem' : '1rem',
-                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15)',
-                    minHeight: '4.5rem',
+            <div
+              style={{
+                marginBottom: '1.5rem',
+                background: '#0b1120',
+                borderRadius: '20px',
+                padding: isMobile ? '1rem' : '1.5rem',
+                boxShadow: '0 18px 36px rgba(8,15,30,0.35)',
+                border: '1px solid rgba(148,163,184,0.15)',
+                color: '#e2e8f0',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: isMobile ? '0.9rem' : '1.1rem',
+                }}
+              >
+                <div
+                  style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    justifyContent: 'center',
-                    gap: '0.25rem'
-                  }}>
-                    <div style={{ fontSize: '0.75rem', opacity: 0.7, display: 'flex', justifyContent: 'space-between' }}>
-                      <span>{calculatorHistory}</span>
-                      {calculatorError && <span style={{ color: '#fbbf24' }}>{calculatorError}</span>}
-                    </div>
-                    <div style={{ fontSize: isMobile ? '1.9rem' : '2.2rem', fontWeight: 700, textAlign: 'right', wordBreak: 'break-all' }}>
-                      {calculatorDisplayValue}
-                    </div>
+                    gap: '0.45rem',
+                    background: '#111c2f',
+                    borderRadius: '16px',
+                    padding: isMobile ? '0.95rem' : '1.15rem',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+                    border: '1px solid rgba(30,41,59,0.6)',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: '0.75rem',
+                      opacity: 0.7,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <span>{calculatorHistory}</span>
+                    {calculatorError && <span style={{ color: '#fbbf24' }}>{calculatorError}</span>}
                   </div>
-                  <div style={{ marginTop: '0.75rem', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '0.6rem' }}>
-                    {renderCalculatorButton(
-                      calculatorDisplay !== '0' || calculatorError ? 'C' : 'AC',
-                      handleCalculatorClear,
-                      { variant: 'function' }
-                    )}
-                    {renderCalculatorButton('+/-', handleCalculatorToggleSign, { variant: 'function' })}
-                    {renderCalculatorButton('%', handleCalculatorPercent, { variant: 'function' })}
-                    {renderCalculatorButton('÷', () => handleCalculatorOperator('÷'), { variant: 'operator' })}
-                    {renderCalculatorButton('7', () => handleCalculatorDigit('7'))}
-                    {renderCalculatorButton('8', () => handleCalculatorDigit('8'))}
-                    {renderCalculatorButton('9', () => handleCalculatorDigit('9'))}
-                    {renderCalculatorButton('×', () => handleCalculatorOperator('×'), { variant: 'operator' })}
-                    {renderCalculatorButton('4', () => handleCalculatorDigit('4'))}
-                    {renderCalculatorButton('5', () => handleCalculatorDigit('5'))}
-                    {renderCalculatorButton('6', () => handleCalculatorDigit('6'))}
-                    {renderCalculatorButton('-', () => handleCalculatorOperator('-'), { variant: 'operator' })}
-                    {renderCalculatorButton('1', () => handleCalculatorDigit('1'))}
-                    {renderCalculatorButton('2', () => handleCalculatorDigit('2'))}
-                    {renderCalculatorButton('3', () => handleCalculatorDigit('3'))}
-                    {renderCalculatorButton('+', () => handleCalculatorOperator('+'), { variant: 'operator' })}
-                    {renderCalculatorButton('0', () => handleCalculatorDigit('0'), { span: 2 })}
-                    {renderCalculatorButton('.', handleCalculatorDecimal)}
-                    {renderCalculatorButton('⌫', handleCalculatorDelete, { variant: 'function' })}
-                    {renderCalculatorButton('=', handleCalculatorEquals, { variant: 'equal' })}
-                  </div>
-                  <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    <button
-                      onClick={handleSpeakCalculatorResult}
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-end',
+                      gap: '0.35rem',
+                    }}
+                  >
+                    <div
                       style={{
-                        padding: '0.65rem 1.1rem',
-                        borderRadius: '999px',
-                        background: 'linear-gradient(145deg, #06b6d4, #0891b2)',
-                        border: 'none',
-                        color: '#ffffff',
+                        fontSize: isMobile ? '2rem' : '2.4rem',
                         fontWeight: 700,
-                        cursor: 'pointer',
-                        boxShadow: '0 8px 16px rgba(6,182,212,0.35)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        touchAction: 'manipulation'
+                        lineHeight: 1.1,
+                        letterSpacing: '0.03em',
+                        wordBreak: 'break-word',
                       }}
                     >
-                      🔊 計算結果を読み上げ
-                    </button>
-                    <div style={{ color: '#475569', fontSize: '0.85rem', display: 'flex', alignItems: 'center' }}>
-                      計算結果を広東語で確認できます
+                      {displayInfo.primaryValue}
+                      {displayInfo.primaryLabel && (
+                        <span style={{ fontSize: '0.7em', marginLeft: '0.35rem', opacity: 0.8 }}>
+                          {displayInfo.primaryLabel}
+                        </span>
+                      )}
                     </div>
-                  </div>
-                </div>
-                <div style={{
-                  display: 'flex',
-                  flexDirection: isMobile ? 'row' : 'column',
-                  gap: '0.75rem',
-                  alignItems: 'stretch',
-                  justifyContent: 'space-between'
-                }}>
-                    {conversionButtons.map((button) => {
-                    const active = activeConversionPanel === button.id;
-                    return (
-                      <button
-                        key={button.id}
-                        onClick={() =>
-                            setActiveConversionPanel((prev) => (prev === button.id ? null : button.id))
-                        }
+                    {activeConversionPanel && displayInfo.secondaryValue && (
+                      <div
                         style={{
-                          flex: isMobile ? '1 1 0' : '0 0 auto',
-                          minWidth: isMobile ? 'auto' : '110px',
-                          padding: '0.9rem 0.75rem',
-                          borderRadius: '1rem',
-                          border: active ? '1px solid #2563eb' : '1px solid rgba(148,163,184,0.4)',
-                          background: active ? 'linear-gradient(145deg, #3b82f6, #2563eb)' : '#f8fafc',
-                          color: active ? '#ffffff' : '#1f2937',
-                          fontWeight: 700,
+                          fontSize: isMobile ? '1.4rem' : '1.65rem',
+                          fontWeight: 600,
+                          color: '#cbd5f5',
+                          lineHeight: 1.2,
                           display: 'flex',
-                          flexDirection: 'column',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.35rem',
-                          cursor: 'pointer',
-                          boxShadow: active ? '0 10px 20px rgba(37,99,235,0.35)' : '0 4px 12px rgba(15,23,42,0.08)',
-                          touchAction: 'manipulation'
+                          gap: '0.45rem',
                         }}
                       >
-                        <span style={{ fontSize: '1.4rem' }}>{button.emoji}</span>
-                        <span>{button.label}</span>
-                        <span style={{ fontSize: '0.75rem', opacity: active ? 0.85 : 0.6 }}>{button.subLabel}</span>
-                      </button>
-                    );
-                  })}
+                        <span style={{ opacity: 0.65 }}>⇄</span>
+                        <span>{displayInfo.secondaryValue}</span>
+                        {displayInfo.secondaryLabel && (
+                          <span style={{ fontSize: '0.75em', opacity: 0.85 }}>{displayInfo.secondaryLabel}</span>
+                        )}
+                      </div>
+                    )}
+                    {displayInfo.detail && (
+                      <div
+                        style={{
+                          fontSize: '0.8rem',
+                          opacity: 0.65,
+                          textAlign: 'right',
+                        }}
+                      >
+                        {displayInfo.detail}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? 'repeat(5, minmax(0, 1fr))' : 'repeat(5, minmax(0, 11rem))',
+                    gap: isMobile ? '0.5rem' : '0.6rem',
+                  }}
+                >
+                  {quickConversionButtons.map(renderConversionShortcut)}
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                    gap: isMobile ? '0.55rem' : '0.65rem',
+                    alignItems: 'stretch',
+                  }}
+                >
+                  {renderCalculatorButton(
+                    calculatorDisplay !== '0' || calculatorError ? 'C' : 'AC',
+                    handleCalculatorClear,
+                    { variant: 'function' }
+                  )}
+                  {renderCalculatorButton('⌫', handleCalculatorDelete, { variant: 'function' })}
+                  {renderCalculatorButton('%', handleCalculatorPercent, { variant: 'function' })}
+                  {renderCalculatorButton('÷', () => handleCalculatorOperator('÷'), { variant: 'operator' })}
+
+                  {renderCalculatorButton('7', () => handleCalculatorDigit('7'))}
+                  {renderCalculatorButton('8', () => handleCalculatorDigit('8'))}
+                  {renderCalculatorButton('9', () => handleCalculatorDigit('9'))}
+                  {renderCalculatorButton('×', () => handleCalculatorOperator('×'), { variant: 'operator' })}
+
+                  {renderCalculatorButton('4', () => handleCalculatorDigit('4'))}
+                  {renderCalculatorButton('5', () => handleCalculatorDigit('5'))}
+                  {renderCalculatorButton('6', () => handleCalculatorDigit('6'))}
+                  {renderCalculatorButton('-', () => handleCalculatorOperator('-'), { variant: 'operator' })}
+
+                  {renderCalculatorButton('1', () => handleCalculatorDigit('1'))}
+                  {renderCalculatorButton('2', () => handleCalculatorDigit('2'))}
+                  {renderCalculatorButton('3', () => handleCalculatorDigit('3'))}
+                  {renderCalculatorButton('+', () => handleCalculatorOperator('+'), { variant: 'operator' })}
+
+                  {renderCalculatorButton('發音', handleSpeakCalculatorResult, { variant: 'speak' })}
+                  {renderCalculatorButton('0', () => handleCalculatorDigit('0'), { span: 2 })}
+                  {renderCalculatorButton('.', handleCalculatorDecimal)}
+                  {renderCalculatorButton('=', handleCalculatorEquals, { variant: 'equal' })}
+
+                  {renderCalculatorButton('+/-', handleCalculatorToggleSign, { variant: 'function', span: 4 })}
                 </div>
               </div>
+
               {activeConversionPanel && (
-                <div style={{ marginTop: '1rem' }}>
-                  {renderConversionPanel()}
-                </div>
+                <div style={{ marginTop: '1.2rem' }}>{renderConversionPanel()}</div>
               )}
             </div>
           )}
