@@ -63,6 +63,7 @@ type CalculatorOperator = '+' | '-' | '×' | '÷';
 type CurrencyBase = 'HKD' | 'JPY';
 type WeightBase = 'kg' | 'catty' | 'lb' | 'gram';
 type LengthBase = 'cm' | 'foot' | 'inch' | 'meter';
+type ConversionPanel = 'currency' | 'weight' | 'length';
 
 const HK_CATTI_IN_KG = 0.60478982;
 const POUND_IN_KG = 0.45359237;
@@ -258,7 +259,7 @@ export default function Home() {
   const [calculatorRepeatValue, setCalculatorRepeatValue] = useState<number | null>(null);
   const [calculatorRepeatOperator, setCalculatorRepeatOperator] = useState<CalculatorOperator | null>(null);
 
-  const [activeConversionPanel, setActiveConversionPanel] = useState<'currency' | 'weight' | 'length' | null>(null);
+  const [activeConversionPanel, setActiveConversionPanel] = useState<ConversionPanel | null>(null);
   const [exchangeRate, setExchangeRate] = useState<{ hkdToJpy: number; jpyToHkd: number } | null>(null);
   const [lastRateFetchedAt, setLastRateFetchedAt] = useState<number | null>(null);
   const [isFetchingRate, setIsFetchingRate] = useState(false);
@@ -835,6 +836,70 @@ export default function Home() {
     weightBase,
     weightResults,
   ]);
+
+  const clearButtonLabel = calculatorDisplay !== '0' || calculatorError ? 'C' : 'AC';
+
+  const calculatorGridLayout = useMemo<CalculatorGridItem[][]>(
+    () => [
+      [
+        { key: 'conversion-currency-hkd', type: 'conversion', shortcutKey: 'currency-hkd' },
+        { key: 'conversion-currency-jpy', type: 'conversion', shortcutKey: 'currency-jpy' },
+        { key: 'conversion-weight-kg', type: 'conversion', shortcutKey: 'weight-kg' },
+        { key: 'conversion-weight-catty', type: 'conversion', shortcutKey: 'weight-catty' },
+        { key: 'conversion-weight-lb', type: 'conversion', shortcutKey: 'weight-lb' },
+      ],
+      [
+        { key: 'conversion-weight-gram', type: 'conversion', shortcutKey: 'weight-gram' },
+        { key: 'conversion-length-cm', type: 'conversion', shortcutKey: 'length-cm' },
+        { key: 'conversion-length-meter', type: 'conversion', shortcutKey: 'length-meter' },
+        { key: 'conversion-length-foot', type: 'conversion', shortcutKey: 'length-foot' },
+        { key: 'conversion-length-inch', type: 'conversion', shortcutKey: 'length-inch' },
+      ],
+      [
+        { key: 'panel-currency-main', type: 'panel', panel: 'currency', label: '貨幣' },
+        { key: 'panel-weight-main', type: 'panel', panel: 'weight', label: '重量' },
+        { key: 'panel-length-main', type: 'panel', panel: 'length', label: '長さ' },
+        { key: 'panel-cycle-main', type: 'cycle', label: '切替' },
+        { key: 'panel-close-main', type: 'close', label: '閉じる' },
+      ],
+      [
+        { key: 'function-clear', type: 'function', action: 'clear', label: clearButtonLabel },
+        { key: 'function-delete', type: 'function', action: 'delete', label: '⌫' },
+        { key: 'function-percent', type: 'function', action: 'percent', label: '%' },
+        { key: 'function-toggle', type: 'function', action: 'toggleSign', label: '+/-' },
+        { key: 'operator-divide', type: 'operator', operator: '÷', label: '÷' },
+      ],
+      [
+        { key: 'digit-7', type: 'digit', digit: '7' },
+        { key: 'digit-8', type: 'digit', digit: '8' },
+        { key: 'digit-9', type: 'digit', digit: '9' },
+        { key: 'panel-currency-shortcut', type: 'panel', panel: 'currency', label: '貨幣' },
+        { key: 'operator-multiply', type: 'operator', operator: '×', label: '×' },
+      ],
+      [
+        { key: 'digit-4', type: 'digit', digit: '4' },
+        { key: 'digit-5', type: 'digit', digit: '5' },
+        { key: 'digit-6', type: 'digit', digit: '6' },
+        { key: 'panel-weight-shortcut', type: 'panel', panel: 'weight', label: '重量' },
+        { key: 'operator-minus', type: 'operator', operator: '-', label: '－' },
+      ],
+      [
+        { key: 'digit-1', type: 'digit', digit: '1' },
+        { key: 'digit-2', type: 'digit', digit: '2' },
+        { key: 'digit-3', type: 'digit', digit: '3' },
+        { key: 'panel-length-shortcut', type: 'panel', panel: 'length', label: '長さ' },
+        { key: 'operator-plus', type: 'operator', operator: '+', label: '＋' },
+      ],
+      [
+        { key: 'speak', type: 'speak', label: '發音' },
+        { key: 'digit-0', type: 'digit', digit: '0' },
+        { key: 'decimal', type: 'decimal', label: '.' },
+        { key: 'panel-close-shortcut', type: 'close', label: '隠す' },
+        { key: 'equal', type: 'equal', label: '=' },
+      ],
+    ],
+    [clearButtonLabel]
+  );
 
   // デバッグ情報の状態
   const [debugInfo, setDebugInfo] = useState<any>(null);
@@ -3217,8 +3282,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
 
   const handleQuickConversionClick = useCallback(
     (button: QuickConversionButton) => {
-      playHapticAndSound();
-
       if (button.panel === 'currency') {
         const shouldToggle = activeConversionPanel === 'currency' && currencyBase === button.unit;
         setCurrencyBase(button.unit);
@@ -3239,8 +3302,35 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         setActiveConversionPanel(shouldToggle ? null : 'length');
       }
     },
-    [playHapticAndSound, activeConversionPanel, currencyBase, weightBase, lengthBase]
+    [activeConversionPanel, currencyBase, weightBase, lengthBase]
   );
+
+  const openConversionPanel = useCallback(
+    (panel: ConversionPanel) => {
+      setActiveConversionPanel(panel);
+      if (panel === 'currency' && currencyBase !== 'HKD') {
+        setCurrencyBase('HKD');
+      }
+      if (panel === 'weight' && weightBase !== 'kg') {
+        setWeightBase('kg');
+      }
+      if (panel === 'length' && lengthBase !== 'cm') {
+        setLengthBase('cm');
+      }
+    },
+    [currencyBase, weightBase, lengthBase]
+  );
+
+  const cycleConversionPanel = useCallback(() => {
+    const order: ConversionPanel[] = ['currency', 'weight', 'length'];
+    const currentIndex = activeConversionPanel ? order.indexOf(activeConversionPanel) : -1;
+    const nextPanel = order[(currentIndex + 1) % order.length];
+    openConversionPanel(nextPanel);
+  }, [activeConversionPanel, openConversionPanel]);
+
+  const closeConversionPanel = useCallback(() => {
+    setActiveConversionPanel(null);
+  }, []);
 
   const getChineseFontSize = (
     text: string,
@@ -3339,12 +3429,22 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       onClick: () => void,
       {
         variant = 'default',
-        span = 1,
         disabled = false,
+        keyOverride,
       }: {
-        variant?: 'default' | 'function' | 'operator' | 'equal' | 'speak';
-        span?: number;
+        variant?:
+          | 'default'
+          | 'function'
+          | 'operator'
+          | 'equal'
+          | 'speak'
+          | 'conversion'
+          | 'panel'
+          | 'cycle'
+          | 'close'
+          | 'conversionActive';
         disabled?: boolean;
+        keyOverride?: string;
       } = {}
     ) => {
       const palette = {
@@ -3378,11 +3478,43 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           border: '#2563eb',
           shadow: '0 10px 24px rgba(37,99,235,0.45)',
         },
+        conversion: {
+          background: '#1f2937',
+          color: '#e2e8f0',
+          border: '#27324a',
+          shadow: '0 6px 18px rgba(15,23,42,0.38)',
+        },
+        panel: {
+          background: '#182540',
+          color: '#cbd5f5',
+          border: '#22304a',
+          shadow: '0 6px 18px rgba(23,37,64,0.32)',
+        },
+        cycle: {
+          background: 'linear-gradient(145deg, #0ea5e9, #2563eb)',
+          color: '#ffffff',
+          border: '#1d4ed8',
+          shadow: '0 10px 24px rgba(14,165,233,0.45)',
+        },
+        close: {
+          background: '#1b2435',
+          color: '#f8fafc',
+          border: '#273449',
+          shadow: '0 6px 18px rgba(15,23,42,0.4)',
+        },
+        conversionActive: {
+          background: 'linear-gradient(145deg, #f97316, #ea580c)',
+          color: '#ffffff',
+          border: '#f97316',
+          shadow: '0 10px 24px rgba(249,115,22,0.45)',
+        },
       }[variant];
+
+      const buttonKey = keyOverride ?? `${label}-${variant}`;
 
       return (
         <button
-          key={`${label}-${variant}`}
+          key={buttonKey}
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -3394,7 +3526,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           }}
           disabled={disabled}
           style={{
-            gridColumn: span > 1 ? `span ${span}` : undefined,
             borderRadius: '999px',
             border: `1px solid ${palette.border}`,
             fontWeight: 700,
@@ -3452,78 +3583,36 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     | { key: string; label: string; panel: 'weight'; unit: WeightBase }
     | { key: string; label: string; panel: 'length'; unit: LengthBase };
 
-  const quickConversionButtons = useMemo<QuickConversionButton[]>(
-    () => [
-      { key: 'currency-hkd', label: '港幣', panel: 'currency', unit: 'HKD' },
-      { key: 'currency-jpy', label: '日圓', panel: 'currency', unit: 'JPY' },
-      { key: 'weight-kg', label: '公斤', panel: 'weight', unit: 'kg' },
-      { key: 'weight-catty', label: '斤', panel: 'weight', unit: 'catty' },
-      { key: 'weight-lb', label: '磅', panel: 'weight', unit: 'lb' },
-      { key: 'weight-gram', label: '克', panel: 'weight', unit: 'gram' },
-      { key: 'length-cm', label: '公分', panel: 'length', unit: 'cm' },
-      { key: 'length-meter', label: '公尺', panel: 'length', unit: 'meter' },
-      { key: 'length-foot', label: '呎', panel: 'length', unit: 'foot' },
-      { key: 'length-inch', label: '吋', panel: 'length', unit: 'inch' },
-    ],
+  const conversionShortcutMap = useMemo<Record<string, QuickConversionButton>>(
+    () => ({
+      'currency-hkd': { key: 'currency-hkd', label: '港幣', panel: 'currency', unit: 'HKD' },
+      'currency-jpy': { key: 'currency-jpy', label: '日圓', panel: 'currency', unit: 'JPY' },
+      'weight-kg': { key: 'weight-kg', label: '公斤', panel: 'weight', unit: 'kg' },
+      'weight-catty': { key: 'weight-catty', label: '斤', panel: 'weight', unit: 'catty' },
+      'weight-lb': { key: 'weight-lb', label: '磅', panel: 'weight', unit: 'lb' },
+      'weight-gram': { key: 'weight-gram', label: '克', panel: 'weight', unit: 'gram' },
+      'length-cm': { key: 'length-cm', label: '公分', panel: 'length', unit: 'cm' },
+      'length-meter': { key: 'length-meter', label: '公尺', panel: 'length', unit: 'meter' },
+      'length-foot': { key: 'length-foot', label: '呎', panel: 'length', unit: 'foot' },
+      'length-inch': { key: 'length-inch', label: '吋', panel: 'length', unit: 'inch' },
+    }),
     []
   );
 
-  const renderConversionShortcut = useCallback(
-    (button: QuickConversionButton) => {
-      const isActive =
-        activeConversionPanel === button.panel &&
-        ((button.panel === 'currency' && currencyBase === button.unit) ||
-          (button.panel === 'weight' && weightBase === button.unit) ||
-          (button.panel === 'length' && lengthBase === button.unit));
+  type ConversionShortcutKey = keyof typeof conversionShortcutMap;
+  type CalculatorFunctionAction = 'clear' | 'delete' | 'percent' | 'toggleSign';
 
-      return (
-        <button
-          key={button.key}
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            handleQuickConversionClick(button);
-          }}
-          style={{
-            border: 'none',
-            borderRadius: '999px',
-            width: '100%',
-            aspectRatio: '1 / 1',
-            fontSize: isMobile ? '1.05rem' : '1.15rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            background: isActive ? '#f97316' : '#1f2937',
-            color: isActive ? '#fff7ed' : '#e2e8f0',
-            boxShadow: isActive
-              ? '0 10px 24px rgba(249,115,22,0.55)'
-              : '0 6px 18px rgba(15,23,42,0.45)',
-            transition: 'transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            touchAction: 'manipulation',
-            WebkitTapHighlightColor: 'transparent',
-            opacity: 1,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}
-          onMouseDown={(e) => {
-            e.currentTarget.style.transform = 'translateY(1px) scale(0.97)';
-          }}
-          onMouseUp={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-          }}
-        >
-          {button.label}
-        </button>
-      );
-    },
-    [activeConversionPanel, currencyBase, weightBase, lengthBase, handleQuickConversionClick, isMobile]
-  );
+  type CalculatorGridItem =
+    | { key: string; type: 'conversion'; shortcutKey: ConversionShortcutKey }
+    | { key: string; type: 'panel'; panel: ConversionPanel; label: string }
+    | { key: string; type: 'cycle'; label: string }
+    | { key: string; type: 'close'; label: string }
+    | { key: string; type: 'function'; action: CalculatorFunctionAction; label: string }
+    | { key: string; type: 'digit'; digit: string }
+    | { key: string; type: 'operator'; operator: CalculatorOperator; label: string }
+    | { key: string; type: 'decimal'; label: string }
+    | { key: string; type: 'equal'; label: string }
+    | { key: string; type: 'speak'; label: string };
 
   const renderConversionPanel = () => {
     if (!activeConversionPanel) {
@@ -7228,52 +7317,95 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
 
                 <div
                   style={{
+                    marginTop: '0.75rem',
                     display: 'grid',
                     gridTemplateColumns: isMobile ? 'repeat(5, minmax(0, 1fr))' : 'repeat(5, minmax(0, 11rem))',
-                    gap: isMobile ? '0.5rem' : '0.6rem',
-                  }}
-                >
-                  {quickConversionButtons.map(renderConversionShortcut)}
-                </div>
-
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
                     gap: isMobile ? '0.55rem' : '0.65rem',
                     alignItems: 'stretch',
                   }}
                 >
-                  {renderCalculatorButton(
-                    calculatorDisplay !== '0' || calculatorError ? 'C' : 'AC',
-                    handleCalculatorClear,
-                    { variant: 'function' }
+                  {calculatorGridLayout.flatMap((row, rowIndex) =>
+                    row.map((item, columnIndex) => {
+                      const key = `${item.key}-${rowIndex}-${columnIndex}`;
+                      switch (item.type) {
+                        case 'conversion': {
+                          const shortcut = conversionShortcutMap[item.shortcutKey];
+                          const isActive =
+                            activeConversionPanel === shortcut.panel &&
+                            ((shortcut.panel === 'currency' && currencyBase === shortcut.unit) ||
+                              (shortcut.panel === 'weight' && weightBase === shortcut.unit) ||
+                              (shortcut.panel === 'length' && lengthBase === shortcut.unit));
+
+                          return renderCalculatorButton(
+                            shortcut.label,
+                            () => handleQuickConversionClick(shortcut),
+                            {
+                              variant: isActive ? 'conversionActive' : 'conversion',
+                              keyOverride: key,
+                            }
+                          );
+                        }
+                        case 'panel': {
+                          const isActive = activeConversionPanel === item.panel;
+                          return renderCalculatorButton(
+                            item.label,
+                            () => openConversionPanel(item.panel),
+                            {
+                              variant: isActive ? 'conversionActive' : 'panel',
+                              keyOverride: key,
+                            }
+                          );
+                        }
+                        case 'cycle':
+                          return renderCalculatorButton(item.label, cycleConversionPanel, {
+                            variant: 'cycle',
+                            keyOverride: key,
+                          });
+                        case 'close':
+                          return renderCalculatorButton(item.label, closeConversionPanel, {
+                            variant: 'close',
+                            keyOverride: key,
+                          });
+                        case 'function': {
+                          const actionHandlers: Record<CalculatorFunctionAction, () => void> = {
+                            clear: handleCalculatorClear,
+                            delete: handleCalculatorDelete,
+                            percent: handleCalculatorPercent,
+                            toggleSign: handleCalculatorToggleSign,
+                          };
+                          return renderCalculatorButton(item.label, actionHandlers[item.action], {
+                            variant: 'function',
+                            keyOverride: key,
+                          });
+                        }
+                        case 'digit':
+                          return renderCalculatorButton(item.digit, () => handleCalculatorDigit(item.digit), {
+                            keyOverride: key,
+                          });
+                        case 'operator':
+                          return renderCalculatorButton(item.label, () => handleCalculatorOperator(item.operator), {
+                            variant: 'operator',
+                            keyOverride: key,
+                          });
+                        case 'decimal':
+                          return renderCalculatorButton(item.label, handleCalculatorDecimal, {
+                            keyOverride: key,
+                          });
+                        case 'equal':
+                          return renderCalculatorButton(item.label, handleCalculatorEquals, {
+                            variant: 'equal',
+                            keyOverride: key,
+                          });
+                        case 'speak':
+                          return renderCalculatorButton(item.label, handleSpeakCalculatorResult, {
+                            variant: 'speak',
+                            keyOverride: key,
+                          });
+                        default:
+                          return null;
+                      }
+                    })
                   )}
-                  {renderCalculatorButton('⌫', handleCalculatorDelete, { variant: 'function' })}
-                  {renderCalculatorButton('%', handleCalculatorPercent, { variant: 'function' })}
-                  {renderCalculatorButton('÷', () => handleCalculatorOperator('÷'), { variant: 'operator' })}
-
-                  {renderCalculatorButton('7', () => handleCalculatorDigit('7'))}
-                  {renderCalculatorButton('8', () => handleCalculatorDigit('8'))}
-                  {renderCalculatorButton('9', () => handleCalculatorDigit('9'))}
-                  {renderCalculatorButton('×', () => handleCalculatorOperator('×'), { variant: 'operator' })}
-
-                  {renderCalculatorButton('4', () => handleCalculatorDigit('4'))}
-                  {renderCalculatorButton('5', () => handleCalculatorDigit('5'))}
-                  {renderCalculatorButton('6', () => handleCalculatorDigit('6'))}
-                  {renderCalculatorButton('-', () => handleCalculatorOperator('-'), { variant: 'operator' })}
-
-                  {renderCalculatorButton('1', () => handleCalculatorDigit('1'))}
-                  {renderCalculatorButton('2', () => handleCalculatorDigit('2'))}
-                  {renderCalculatorButton('3', () => handleCalculatorDigit('3'))}
-                  {renderCalculatorButton('+', () => handleCalculatorOperator('+'), { variant: 'operator' })}
-
-                  {renderCalculatorButton('發音', handleSpeakCalculatorResult, { variant: 'speak' })}
-                  {renderCalculatorButton('0', () => handleCalculatorDigit('0'), { span: 2 })}
-                  {renderCalculatorButton('.', handleCalculatorDecimal)}
-                  {renderCalculatorButton('=', handleCalculatorEquals, { variant: 'equal' })}
-
-                  {renderCalculatorButton('+/-', handleCalculatorToggleSign, { variant: 'function', span: 4 })}
                 </div>
               </div>
 
