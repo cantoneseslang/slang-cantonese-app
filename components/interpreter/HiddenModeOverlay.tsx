@@ -394,7 +394,11 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
       >
         <img
           ref={volumeLogoRef}
-          src={translationLanguage === 'cantonese' ? '/volume-logo.svg?v=3' : '/volume-logo-mandarin.svg?v=3'}
+          src={
+            translationLanguage === 'cantonese'
+              ? '/volume-logo-1.svg?v=1'
+              : '/volume-logo-mandarin-1.svg?v=1'
+          }
           alt="microphone"
           draggable="false"
           style={{
@@ -498,7 +502,11 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           }}
         >
           <img
-            src={translationLanguage === 'cantonese' ? '/hand-button.svg?v=9' : '/hand-button-mandarin.svg?v=9'}
+            src={
+              translationLanguage === 'cantonese'
+                ? '/hand-button-1.svg?v=1'
+                : '/hand-button-mandarin-1.svg?v=1'
+            }
             alt="hand button"
             draggable="false"
             style={{
@@ -604,7 +612,11 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           }}
         >
           <img
-                src={translationLanguage === 'cantonese' ? '/mute-button.svg?v=3' : '/mute-button-mandarin.svg?v=3'}
+                src={
+                  translationLanguage === 'cantonese'
+                    ? '/mute-button-1.svg?v=1'
+                    : '/mute-button-mandarin-1.svg?v=1'
+                }
             alt="mute button"
             draggable="false"
             style={{

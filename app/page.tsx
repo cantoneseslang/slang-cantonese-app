@@ -4143,7 +4143,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
             }}>
               <img 
                 ref={volumeLogoRef}
-                src="/volume-logo.svg?v=2" 
+                src="/volume-logo-1.svg?v=1" 
                 alt="logo" 
                 draggable="false"
                 style={{ 
