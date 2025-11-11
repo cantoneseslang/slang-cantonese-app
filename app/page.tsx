@@ -214,7 +214,6 @@ export default function Home() {
   
   // 同時通訳モード用の音声再生とミュート状態
   const simultaneousModeAudioRef = useRef<HTMLAudioElement | null>(null);
-  const simultaneousModeAudioBlobUrlRef = useRef<string | null>(null); // Blob URLを保持（メモリリーク防止）
   const [isMuted, setIsMuted] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
   const [buttonsAnimated, setButtonsAnimated] = useState(false);
@@ -223,6 +222,166 @@ export default function Home() {
   const lastTranslatedTextRef = useRef<string>('');
   const lastProcessedFinalTextRef = useRef<string>('');
   const recognizedFinalTextRef = useRef<string>('');
+
+  const resetAudioElement = (audio: HTMLAudioElement | null) => {
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
+    audio.onloadeddata = null;
+    audio.onended = null;
+    audio.onerror = null;
+    audio.removeAttribute('src');
+    try {
+      audio.load();
+    } catch {
+      // 一部ブラウザではloadで例外が発生する場合があるが無視して問題ない
+    }
+  };
+
+  const prepareAudioPlayback = (
+    audio: HTMLAudioElement | null,
+    dataUrl: string,
+    errorLabel: string,
+    onEnded?: () => void
+  ) => {
+    if (!audio) return;
+    resetAudioElement(audio);
+    audio.onloadeddata = () => {
+      audio
+        .play()
+        .catch((e) => {
+          console.error(`${errorLabel}:`, e);
+        });
+    };
+    audio.onerror = (event) => {
+      if (audio.src === dataUrl) {
+        console.error('音声ロードエラー:', event);
+      }
+    };
+    audio.onended = () => {
+      audio.onended = null;
+      audio.onloadeddata = null;
+      audio.onerror = null;
+      if (onEnded) {
+        onEnded();
+      }
+    };
+    audio.src = dataUrl;
+    try {
+      audio.load();
+    } catch (e) {
+      console.error('音声ロード失敗:', e);
+    }
+  };
+
+  const playNormalModeAudio = (
+    audioBase64: string,
+    {
+      logPrefix,
+      clearActiveOnEnd = true,
+      onEnded,
+    }: {
+      logPrefix: string;
+      clearActiveOnEnd?: boolean;
+      onEnded?: () => void;
+    }
+  ) => {
+    const audio = normalModeAudioRef.current;
+    if (!audio || !audioBase64) {
+      console.error(`${logPrefix}: audio要素または音声データが存在しません`, {
+        hasAudioRef: !!audio,
+        hasAudioBase64: !!audioBase64,
+      });
+      return;
+    }
+
+    resetAudioElement(audio);
+    audio.playbackRate = 1.0;
+
+    let useWebAudioAPI = false;
+    if (normalModeAudioContextRef.current) {
+      try {
+        if (normalModeAudioContextRef.current.state === 'suspended') {
+          normalModeAudioContextRef.current
+            .resume()
+            .catch((error) => console.error(`${logPrefix}: AudioContext resumeエラー`, error));
+        }
+
+        if (!normalModeAudioSourceNodeRef.current) {
+          const source = normalModeAudioContextRef.current.createMediaElementSource(audio);
+          normalModeAudioSourceNodeRef.current = source;
+
+          const gainNode = normalModeAudioContextRef.current.createGain();
+          gainNode.gain.value = normalModeAudioVolume;
+
+          source.connect(gainNode);
+          gainNode.connect(normalModeAudioContextRef.current.destination);
+
+          normalModeAudioGainNodeRef.current = gainNode;
+          useWebAudioAPI = true;
+          console.log(`${logPrefix}: Web Audio API接続成功`);
+        } else {
+          if (normalModeAudioGainNodeRef.current) {
+            normalModeAudioGainNodeRef.current.gain.value = normalModeAudioVolume;
+          }
+          useWebAudioAPI = true;
+          console.log(`${logPrefix}: Web Audio API接続再利用`);
+        }
+      } catch (error) {
+        console.error(`${logPrefix}: Web Audio API接続エラー`, error);
+        useWebAudioAPI = false;
+      }
+    }
+
+    if (!useWebAudioAPI) {
+      audio.volume = normalModeAudioVolume;
+      console.log(`${logPrefix}: HTMLAudioElementのvolumeを使用`, { volume: normalModeAudioVolume });
+    } else {
+      audio.volume = 1.0;
+    }
+
+    const dataUrl = `data:audio/mp3;base64,${audioBase64}`;
+    audio.onloadeddata = () => {
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log(`${logPrefix}: 音声再生成功`, { useWebAudioAPI });
+          })
+          .catch((e) => {
+            console.error(`${logPrefix}: 音声再生失敗`, e);
+          });
+      }
+    };
+    audio.onerror = (event) => {
+      if (audio.src === dataUrl) {
+        console.error(`${logPrefix}: 音声ロードエラー`, event);
+      }
+      audio.onended = null;
+      audio.onloadeddata = null;
+      audio.onerror = null;
+      if (onEnded) {
+        onEnded();
+      }
+    };
+    audio.onended = () => {
+      if (clearActiveOnEnd && !isLearningMode) {
+        setActiveWordId(null);
+      }
+      audio.onended = null;
+      audio.onloadeddata = null;
+      audio.onerror = null;
+      if (onEnded) {
+        onEnded();
+      }
+    };
+    audio.src = dataUrl;
+    try {
+      audio.load();
+    } catch (error) {
+      console.error(`${logPrefix}: 音声ロード失敗`, error);
+    }
+  };
 
   const closeSettingsPanel = useCallback(() => {
     setShowSettings(false);
@@ -627,57 +786,12 @@ export default function Home() {
                       const audioBase64 = audioData.audioContent;
 
                       if (simultaneousModeAudioRef.current && audioBase64) {
-                        simultaneousModeAudioRef.current.pause();
-                        simultaneousModeAudioRef.current.currentTime = 0;
-                        
-                        // モバイル軽量化: 古いBlob URLをクリア（メモリリーク防止）
-                        if (simultaneousModeAudioBlobUrlRef.current) {
-                          URL.revokeObjectURL(simultaneousModeAudioBlobUrlRef.current);
-                          simultaneousModeAudioBlobUrlRef.current = null;
-                        }
-                        
-                        // Base64をBlobに変換してBlob URLを作成（モバイルでボリューム調整可能にするため）
-                        const binaryString = atob(audioBase64);
-                        const bytes = new Uint8Array(binaryString.length);
-                        for (let i = 0; i < binaryString.length; i++) {
-                          bytes[i] = binaryString.charCodeAt(i);
-                        }
-                        const blob = new Blob([bytes], { type: 'audio/mp3' });
-                        const blobUrl = URL.createObjectURL(blob);
-                        simultaneousModeAudioBlobUrlRef.current = blobUrl;
-                        
-                        simultaneousModeAudioRef.current.src = blobUrl;
-                        simultaneousModeAudioRef.current.volume = 1.0; // ボリュームを明示的に設定
-                        
-                        // 音声がロードされるまで待ってから再生
-                        const playAudio = () => {
-                          if (simultaneousModeAudioRef.current) {
-                            simultaneousModeAudioRef.current.play().catch((e) => {
-                              console.error('音声再生エラー:', e);
-                            });
-                          }
-                        };
-                        
-                        // 既にロード済みの場合は即座に再生
-                        if (simultaneousModeAudioRef.current.readyState >= 2) {
-                          playAudio();
-                        } else {
-                          simultaneousModeAudioRef.current.addEventListener('loadeddata', playAudio, { once: true });
-                        }
-                        
-                        // エラー処理
-                        simultaneousModeAudioRef.current.addEventListener('error', (e) => {
-                          console.error('音声ロードエラー:', e);
-                        }, { once: true });
-                        
-                        // モバイル軽量化: 再生後にBlob URLをクリア（メモリリーク防止）
-                        simultaneousModeAudioRef.current.addEventListener('ended', () => {
-                          if (simultaneousModeAudioRef.current && simultaneousModeAudioBlobUrlRef.current) {
-                            simultaneousModeAudioRef.current.src = '';
-                            URL.revokeObjectURL(simultaneousModeAudioBlobUrlRef.current);
-                            simultaneousModeAudioBlobUrlRef.current = null;
-                          }
-                        }, { once: true });
+                        const audioElement = simultaneousModeAudioRef.current;
+                        const dataUrl = `data:audio/mp3;base64,${audioBase64}`;
+                        prepareAudioPlayback(audioElement, dataUrl, '同時通訳音声再生エラー', () => {
+                          resetAudioElement(audioElement);
+                        });
+                        audioElement.volume = 1.0;
                       }
                     } else {
                       const errorText = await audioResponse.text();
@@ -791,26 +905,8 @@ const resetInterpreterSession = ({
   }
 
   // 同時通訳モードの音声を停止・クリア
-  if (simultaneousModeAudioRef.current) {
-    simultaneousModeAudioRef.current.pause();
-    simultaneousModeAudioRef.current.currentTime = 0;
-    simultaneousModeAudioRef.current.src = '';
-  }
-  if (simultaneousModeAudioBlobUrlRef.current) {
-    URL.revokeObjectURL(simultaneousModeAudioBlobUrlRef.current);
-    simultaneousModeAudioBlobUrlRef.current = null;
-  }
-
-  // ノーマルモードの音声も停止・クリア
-  if (normalModeAudioRef.current) {
-    normalModeAudioRef.current.pause();
-    normalModeAudioRef.current.currentTime = 0;
-    normalModeAudioRef.current.src = '';
-  }
-  if (normalModeAudioBlobUrlRef.current) {
-    URL.revokeObjectURL(normalModeAudioBlobUrlRef.current);
-    normalModeAudioBlobUrlRef.current = null;
-  }
+  resetAudioElement(simultaneousModeAudioRef.current);
+  resetAudioElement(normalModeAudioRef.current);
   if (normalModeAudioSourceNodeRef.current) {
     normalModeAudioSourceNodeRef.current.disconnect();
     normalModeAudioSourceNodeRef.current = null;
@@ -943,16 +1039,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   useEffect(() => {
     if (isHiddenMode) {
       // ノーマルモードの音声を停止（通訳モードに入る時に確実に停止）
-      if (normalModeAudioRef.current) {
-        normalModeAudioRef.current.pause();
-        normalModeAudioRef.current.currentTime = 0;
-        normalModeAudioRef.current.src = '';
-      }
-      // Blob URLもクリア
-      if (normalModeAudioBlobUrlRef.current) {
-        URL.revokeObjectURL(normalModeAudioBlobUrlRef.current);
-        normalModeAudioBlobUrlRef.current = null;
-      }
+      resetAudioElement(normalModeAudioRef.current);
       // Web Audio API接続もクリア
       if (normalModeAudioSourceNodeRef.current) {
         normalModeAudioSourceNodeRef.current.disconnect();
@@ -1119,57 +1206,12 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
             const audioBase64 = audioData.audioContent;
 
             if (simultaneousModeAudioRef.current && audioBase64) {
-              simultaneousModeAudioRef.current.pause();
-              simultaneousModeAudioRef.current.currentTime = 0;
-              
-              // モバイル軽量化: 古いBlob URLをクリア（メモリリーク防止）
-              if (simultaneousModeAudioBlobUrlRef.current) {
-                URL.revokeObjectURL(simultaneousModeAudioBlobUrlRef.current);
-                simultaneousModeAudioBlobUrlRef.current = null;
-              }
-              
-              // Base64をBlobに変換してBlob URLを作成（モバイルでボリューム調整可能にするため）
-              const binaryString = atob(audioBase64);
-              const bytes = new Uint8Array(binaryString.length);
-              for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-              }
-              const blob = new Blob([bytes], { type: 'audio/mp3' });
-              const blobUrl = URL.createObjectURL(blob);
-              simultaneousModeAudioBlobUrlRef.current = blobUrl;
-              
-              simultaneousModeAudioRef.current.src = blobUrl;
-              simultaneousModeAudioRef.current.volume = 1.0; // ボリュームを明示的に設定
-              
-              // 音声がロードされるまで待ってから再生
-              const playAudio = () => {
-                if (simultaneousModeAudioRef.current) {
-                  simultaneousModeAudioRef.current.play().catch((e) => {
-                    console.error('音声再生エラー:', e);
-                  });
-                }
-              };
-              
-              // 既にロード済みの場合は即座に再生
-              if (simultaneousModeAudioRef.current.readyState >= 2) {
-                playAudio();
-              } else {
-                simultaneousModeAudioRef.current.addEventListener('loadeddata', playAudio, { once: true });
-              }
-              
-              // エラー処理
-              simultaneousModeAudioRef.current.addEventListener('error', (e) => {
-                console.error('音声ロードエラー:', e);
-              }, { once: true });
-              
-              // モバイル軽量化: 再生後にBlob URLをクリア（メモリリーク防止）
-              simultaneousModeAudioRef.current.addEventListener('ended', () => {
-                if (simultaneousModeAudioRef.current && simultaneousModeAudioBlobUrlRef.current) {
-                  simultaneousModeAudioRef.current.src = '';
-                  URL.revokeObjectURL(simultaneousModeAudioBlobUrlRef.current);
-                  simultaneousModeAudioBlobUrlRef.current = null;
-                }
-              }, { once: true });
+              const audioElement = simultaneousModeAudioRef.current;
+              const dataUrl = `data:audio/mp3;base64,${audioBase64}`;
+              prepareAudioPlayback(audioElement, dataUrl, '同時通訳音声再生エラー', () => {
+                resetAudioElement(audioElement);
+              });
+              audioElement.volume = 1.0;
             }
           } else {
             const errorText = await audioResponse.text();
@@ -2295,7 +2337,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   const audioRef = useRef<HTMLAudioElement>(null); // 学習モード用
   const exampleAudioRef = useRef<HTMLAudioElement>(null); // 学習モード用
   const normalModeAudioRef = useRef<HTMLAudioElement>(null); // ノーマルモード用
-  const normalModeAudioBlobUrlRef = useRef<string | null>(null); // ノーマルモード用Blob URL
   
   // Web Audio API用のGainNode（ノーマルモード用のみ）
   const normalModeAudioGainNodeRef = useRef<GainNode | null>(null);
@@ -3314,114 +3355,15 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         if (audioResponse.ok) {
           const audioData = await audioResponse.json();
           const audioBase64 = audioData.audioContent;
-          console.log('ノーマルモード: 音声データ取得', { 
+          console.log('ノーマルモード: 音声データ取得', {
             hasAudioContent: !!audioBase64,
-            audioLength: audioBase64?.length 
+            audioLength: audioBase64?.length,
           });
-          
-          // 音声を自動再生（ノーマルモード専用audio要素を使用）
-          if (normalModeAudioRef.current && audioBase64) {
-            console.log('ノーマルモード: 音声再生開始', { wordId, audioBase64Length: audioBase64.length });
-            
-            // 既存の音声を停止
-            normalModeAudioRef.current.pause();
-            normalModeAudioRef.current.currentTime = 0;
-            
-            // 古いBlob URLをクリア
-            if (normalModeAudioBlobUrlRef.current) {
-              URL.revokeObjectURL(normalModeAudioBlobUrlRef.current);
-              normalModeAudioBlobUrlRef.current = null;
-            }
-            
-            // Base64をBlobに変換してBlob URLを作成（モバイルでボリューム調整可能にするため）
-            const binaryString = atob(audioBase64);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-              bytes[i] = binaryString.charCodeAt(i);
-            }
-            const blob = new Blob([bytes], { type: 'audio/mp3' });
-            const blobUrl = URL.createObjectURL(blob);
-            normalModeAudioBlobUrlRef.current = blobUrl;
-            
-            // 新しい音声をセット（先にsrcを設定）
-            normalModeAudioRef.current.src = blobUrl;
-            normalModeAudioRef.current.playbackRate = 1.0; // ノーマルモードでは速度固定
-            
-            // Web Audio APIの接続を確立（src設定後に接続、PCブラウザ対応）
-            let useWebAudioAPI = false;
-            if (normalModeAudioContextRef.current) {
-              try {
-                // AudioContextがsuspended状態の場合はresume（PCブラウザ対応）
-                if (normalModeAudioContextRef.current.state === 'suspended') {
-                  await normalModeAudioContextRef.current.resume();
-                }
-                
-                // MediaElementAudioSourceNodeが既に存在する場合は再利用
-                if (!normalModeAudioSourceNodeRef.current) {
-                  // srcを設定した後に接続を確立（PCブラウザ対応）
-                  const source = normalModeAudioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
-                  normalModeAudioSourceNodeRef.current = source;
-                  
-                  // GainNodeを作成
-                  const gainNode = normalModeAudioContextRef.current.createGain();
-                  gainNode.gain.value = normalModeAudioVolume;
-                  
-                  source.connect(gainNode);
-                  gainNode.connect(normalModeAudioContextRef.current.destination);
-                  
-                  normalModeAudioGainNodeRef.current = gainNode;
-                  useWebAudioAPI = true;
-                  console.log('ノーマルモード: Web Audio API接続成功');
-                } else {
-                  // 既存のGainNodeのボリュームを更新
-                  if (normalModeAudioGainNodeRef.current) {
-                    normalModeAudioGainNodeRef.current.gain.value = normalModeAudioVolume;
-                  }
-                  useWebAudioAPI = true;
-                  console.log('ノーマルモード: Web Audio API接続再利用');
-                }
-              } catch (error) {
-                console.error('ノーマルモード: Web Audio API接続エラー:', error);
-                // エラーが発生した場合は、Web Audio APIなしで再生を試みる
-                useWebAudioAPI = false;
-              }
-            }
-            
-            // Web Audio APIを使用しない場合は、HTMLAudioElementのvolumeを使用
-            if (!useWebAudioAPI) {
-              normalModeAudioRef.current.volume = normalModeAudioVolume;
-              console.log('ノーマルモード: HTMLAudioElementのvolumeを使用', { volume: normalModeAudioVolume });
-            } else {
-              normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に（Web Audio APIで制御）
-            }
-            
-            // 音声がロードされるまで待ってから再生
-            const playAudio = () => {
-              if (normalModeAudioRef.current) {
-                const playPromise = normalModeAudioRef.current.play();
-                if (playPromise !== undefined) {
-                  playPromise
-                    .then(() => {
-                      console.log('ノーマルモード: 音声再生成功', { useWebAudioAPI });
-                    })
-                    .catch(e => {
-                      console.error('ノーマルモード: 音声再生失敗', e);
-                    });
-                }
-              }
-            };
-            
-            // 既にロード済みの場合は即座に再生
-            if (normalModeAudioRef.current.readyState >= 2) {
-              playAudio();
-            } else {
-              normalModeAudioRef.current.addEventListener('loadeddata', playAudio, { once: true });
-            }
+
+          if (audioBase64) {
+            playNormalModeAudio(audioBase64, { logPrefix: 'ノーマルモード' });
           } else {
-            console.error('ノーマルモード: audio要素またはaudioBase64が存在しない', {
-              hasAudioRef: !!normalModeAudioRef.current,
-              hasAudioBase64: !!audioBase64
-            });
+            console.error('ノーマルモード: 音声データが空です');
           }
         } else {
           console.error('ノーマルモード: API呼び出し失敗', { 
@@ -3493,90 +3435,10 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       if (audioResponse.ok) {
         const audioData = await audioResponse.json();
         const audioBase64 = audioData.audioContent;
-
-        if (normalModeAudioRef.current && audioBase64) {
-          normalModeAudioRef.current.pause();
-          normalModeAudioRef.current.currentTime = 0;
-          
-          // 古いBlob URLをクリア
-          if (normalModeAudioBlobUrlRef.current) {
-            URL.revokeObjectURL(normalModeAudioBlobUrlRef.current);
-            normalModeAudioBlobUrlRef.current = null;
-          }
-          
-          // Base64をBlobに変換してBlob URLを作成（モバイルでボリューム調整可能にするため）
-          const binaryString = atob(audioBase64);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          const blob = new Blob([bytes], { type: 'audio/mp3' });
-          const blobUrl = URL.createObjectURL(blob);
-          normalModeAudioBlobUrlRef.current = blobUrl;
-          
-          // Web Audio APIの接続を確立（srcを設定する前に接続を確立）
-          let useWebAudioAPI = false;
-          if (normalModeAudioContextRef.current) {
-            try {
-              // MediaElementAudioSourceNodeが既に存在する場合は再利用
-              if (!normalModeAudioSourceNodeRef.current) {
-                // srcを設定する前に接続を確立（空のsrcでも接続可能）
-                const source = normalModeAudioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
-                normalModeAudioSourceNodeRef.current = source;
-                
-                // GainNodeを作成
-                const gainNode = normalModeAudioContextRef.current.createGain();
-                gainNode.gain.value = normalModeAudioVolume;
-                
-                source.connect(gainNode);
-                gainNode.connect(normalModeAudioContextRef.current.destination);
-                
-                normalModeAudioGainNodeRef.current = gainNode;
-                useWebAudioAPI = true;
-              } else {
-                // 既存のGainNodeのボリュームを更新
-                if (normalModeAudioGainNodeRef.current) {
-                  normalModeAudioGainNodeRef.current.gain.value = normalModeAudioVolume;
-                }
-                useWebAudioAPI = true;
-              }
-            } catch (error) {
-              console.error('Web Audio API接続エラー:', error);
-              // エラーが発生した場合は、Web Audio APIなしで再生を試みる
-              useWebAudioAPI = false;
-            }
-          }
-          
-          // 新しい音声をセット
-          normalModeAudioRef.current.src = blobUrl;
-          
-          // Web Audio APIを使用しない場合は、HTMLAudioElementのvolumeを使用
-          if (!useWebAudioAPI) {
-            normalModeAudioRef.current.volume = normalModeAudioVolume;
-          } else {
-            normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に（Web Audio APIで制御）
-          }
-          
-          // 音声がロードされるまで待ってから再生
-          const playAudio = () => {
-            if (normalModeAudioRef.current) {
-              normalModeAudioRef.current.play();
-            }
-          };
-          
-          // 既にロード済みの場合は即座に再生
-          if (normalModeAudioRef.current.readyState >= 2) {
-            playAudio();
-          } else {
-            normalModeAudioRef.current.addEventListener('loadeddata', playAudio, { once: true });
-          }
-          
-          // 音声再生終了時にactiveWordIdをクリアして緑点灯を消す
-          normalModeAudioRef.current.addEventListener('ended', () => {
-            if (!isLearningMode) {
-              setActiveWordId(null);
-            }
-          }, { once: true });
+        if (audioBase64) {
+          playNormalModeAudio(audioBase64, { logPrefix: 'トーン音声' });
+        } else {
+          console.error('トーン音声: 音声データが空です');
         }
       }
     } catch (err) {
@@ -3680,127 +3542,17 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         return;
       }
 
-      if (normalModeAudioRef.current) {
-        // 前の音声を停止
-        normalModeAudioRef.current.pause();
-        normalModeAudioRef.current.currentTime = 0;
-        
-        // 古いBlob URLをクリア
-        if (normalModeAudioBlobUrlRef.current) {
-          URL.revokeObjectURL(normalModeAudioBlobUrlRef.current);
-          normalModeAudioBlobUrlRef.current = null;
-        }
-        
-        // Base64をBlobに変換してBlob URLを作成（モバイルでボリューム調整可能にするため）
-        const binaryString = atob(audioBase64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        const blob = new Blob([bytes], { type: 'audio/mp3' });
-        const blobUrl = URL.createObjectURL(blob);
-        normalModeAudioBlobUrlRef.current = blobUrl;
-        
-        // Web Audio APIの接続を確立（srcを設定する前に接続を確立）
-        let useWebAudioAPI = false;
-        if (normalModeAudioContextRef.current) {
-          try {
-            // MediaElementAudioSourceNodeが既に存在する場合は再利用
-            if (!normalModeAudioSourceNodeRef.current) {
-              // srcを設定する前に接続を確立（空のsrcでも接続可能）
-              const source = normalModeAudioContextRef.current.createMediaElementSource(normalModeAudioRef.current);
-              normalModeAudioSourceNodeRef.current = source;
-              
-              // GainNodeを作成
-              const gainNode = normalModeAudioContextRef.current.createGain();
-              gainNode.gain.value = normalModeAudioVolume;
-              
-              source.connect(gainNode);
-              gainNode.connect(normalModeAudioContextRef.current.destination);
-              
-              normalModeAudioGainNodeRef.current = gainNode;
-              useWebAudioAPI = true;
-            } else {
-              // 既存のGainNodeのボリュームを更新
-              if (normalModeAudioGainNodeRef.current) {
-                normalModeAudioGainNodeRef.current.gain.value = normalModeAudioVolume;
-              }
-              useWebAudioAPI = true;
-            }
-          } catch (error) {
-            console.error('Web Audio API接続エラー:', error);
-            // エラーが発生した場合は、Web Audio APIなしで再生を試みる
-            useWebAudioAPI = false;
+      playNormalModeAudio(audioBase64, {
+        logPrefix: '連続発音',
+        clearActiveOnEnd: false,
+        onEnded: () => {
+          if (button) {
+            button.style.background = '#ffffff';
+            button.style.color = '#111827';
           }
-        }
-        
-        // 新しい音声を設定
-        normalModeAudioRef.current.src = blobUrl;
-        
-        // Web Audio APIを使用しない場合は、HTMLAudioElementのvolumeを使用
-        if (!useWebAudioAPI) {
-          normalModeAudioRef.current.volume = normalModeAudioVolume;
-        } else {
-          normalModeAudioRef.current.volume = 1.0; // HTMLAudioElementのボリュームは最大に（Web Audio APIで制御）
-        }
-        
-        // 音声をロードして再生
-        await new Promise<void>((resolve, reject) => {
-          if (!normalModeAudioRef.current) {
-            reject(new Error('audioRef is null'));
-            return;
-          }
-          
-          const audio = normalModeAudioRef.current;
-          
-          // ロード完了を待つ
-          const handleCanPlay = () => {
-            audio.removeEventListener('canplaythrough', handleCanPlay);
-            audio.removeEventListener('error', handleError);
-            
-            // 再生開始
-            audio.play().then(() => {
-              console.log('連続発音再生開始:', textToSpeak);
-              resolve();
-            }).catch((playErr) => {
-              console.error('音声再生エラー:', playErr);
-              reject(playErr);
-            });
-          };
-          
-          const handleError = () => {
-            audio.removeEventListener('canplaythrough', handleCanPlay);
-            audio.removeEventListener('error', handleError);
-            reject(new Error('音声のロードに失敗しました'));
-          };
-          
-          audio.addEventListener('canplaythrough', handleCanPlay);
-          audio.addEventListener('error', handleError);
-          
-          // 既にロード済みの場合
-          if (audio.readyState >= 3) {
-            handleCanPlay();
-          }
-        });
-        
-        // 再生完了後、連続発音ボタンの色をリセット
-        if (normalModeAudioRef.current) {
-          normalModeAudioRef.current.addEventListener('ended', () => {
-            // 連続発音ボタンの色をリセット
-            if (button) {
-              button.style.background = '#ffffff';
-              button.style.color = '#111827';
-            }
-            console.log('連続発音完了');
-          }, { once: true });
-        }
-      } else {
-        console.error('normalModeAudioRef.currentがnullです');
-        if (button) {
-          button.style.background = '#ffffff';
-          button.style.color = '#111827';
-        }
-      }
+          console.log('連続発音完了');
+        },
+      });
     } catch (err) {
       console.error('音声再生エラー:', err);
       // エラー時はボタンの色をリセット
