@@ -485,6 +485,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
       <audio ref={titleAudioRef} src="/interpreter-start.mp3" preload="auto" style={{ display: 'none' }} />
       <audio ref={simultaneousModeAudioRef} style={{ display: 'none' }} />
 
+      {isMobile ? (
       <div
         ref={micButtonRef}
         style={{
@@ -843,6 +844,344 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           </div>
         )}
       </div>
+      ) : (
+        <>
+          {showButtons && (
+            <div
+              onClick={handleHandButtonClick}
+              onMouseEnter={() => setHoveredButton('hand')}
+              onMouseLeave={() => setHoveredButton(null)}
+              style={{
+                position: 'fixed',
+                bottom: 'calc(5rem + 140px)',
+                left: 'calc(50% - 120px - 0.75rem - 60px)',
+                transform: 'translateX(-50%)',
+                width: buttonsAnimated ? '120px' : '0px',
+                height: buttonsAnimated ? '120px' : '0px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(192, 216, 255, 0.3)',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                zIndex: 1002,
+                pointerEvents: 'auto',
+                opacity: buttonsAnimated ? 1 : 0,
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                WebkitTouchCallout: 'none',
+                overflow: 'visible',
+              }}
+              onContextMenu={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                return false;
+              }}
+              onDragStart={(event) => {
+                event.preventDefault();
+                return false;
+              }}
+            >
+              <img
+                src={
+                  translationLanguage === 'cantonese'
+                    ? '/hand-button-1.svg?v=1'
+                    : '/hand-button-mandarin-1.svg?v=1'
+                }
+                alt="hand button"
+                draggable="false"
+                style={{
+                  width: buttonsAnimated ? '120px' : '0px',
+                  height: buttonsAnimated ? '120px' : '0px',
+                  objectFit: 'contain',
+                  userSelect: 'none',
+                  WebkitUserSelect: 'none',
+                  WebkitTouchCallout: 'none',
+                  transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  animation: isButtonRotating ? 'buttonRotate 0.6s ease-in-out' : 'none',
+                  transform: isButtonRotating ? 'rotateY(360deg)' : 'none',
+                  borderRadius: buttonsAnimated ? '50%' : '0%',
+                }}
+              />
+              {hoveredButton === 'hand' && buttonsAnimated && (
+                <div
+                  ref={handHelpRef}
+                  style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    marginBottom: '12px',
+                    padding: '8px 12px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderRadius: '16px',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                    fontSize: '0.875rem',
+                    color: '#111827',
+                    whiteSpace: 'nowrap',
+                    zIndex: 1003,
+                    pointerEvents: 'none',
+                    animation:
+                      'cloudPopUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), helpPopUpBounce 0.5s ease-in-out 0.3s infinite',
+                    border: '1px solid rgba(0, 0, 0, 0.1)',
+                    fontWeight: 500,
+                  }}
+                >
+                  翻訳機使わせて
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '-8px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: 0,
+                      height: 0,
+                      borderLeft: '8px solid transparent',
+                      borderRight: '8px solid transparent',
+                      borderTop: '8px solid rgba(255, 255, 255, 0.95)',
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          <div
+            onMouseEnter={() => setHoveredButton('mic')}
+            onMouseLeave={(event) => {
+              setHoveredButton(null);
+              if (isRecording) {
+                event.preventDefault();
+                event.stopPropagation();
+                console.log('ロゴからマウス離脱 - 音声認識停止');
+                handleMicRelease();
+              }
+            }}
+            ref={micButtonRef}
+            style={{
+              position: 'fixed',
+              bottom: 'calc(5rem + 140px)',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '120px',
+              height: '120px',
+              borderRadius: '50%',
+              backgroundColor: isRecording ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)',
+              boxShadow: isRecording
+                ? '0 0 20px rgba(239, 68, 68, 0.5)'
+                : '0 4px 6px rgba(0, 0, 0, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.5s ease-out',
+              zIndex: 1002,
+              pointerEvents: 'auto',
+              animation: 'fadeInUp 1s ease-out',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+              WebkitTouchCallout: 'none',
+              overflow: 'visible',
+            }}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              console.log('ロゴ長押し開始 - 音声認識開始');
+              handleMicPress();
+            }}
+            onMouseUp={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              console.log('ロゴ離す - 音声認識停止');
+              handleMicRelease();
+            }}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              return false;
+            }}
+            onDragStart={(event) => {
+              event.preventDefault();
+              return false;
+            }}
+          >
+            <img
+              ref={volumeLogoRef}
+              src={
+                translationLanguage === 'cantonese'
+                  ? '/volume-logo-1.svg?v=1'
+                  : '/volume-logo-mandarin-1.svg?v=1'
+              }
+              alt="microphone"
+              draggable="false"
+              style={{
+                width: '120px',
+                height: '120px',
+                objectFit: 'contain',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                WebkitTouchCallout: 'none',
+                animation: isButtonRotating ? 'buttonRotate 0.6s ease-in-out' : 'none',
+                transform: isButtonRotating ? 'rotateY(360deg)' : 'none',
+                borderRadius: '50%',
+              }}
+              onContextMenu={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                return false;
+              }}
+              onDragStart={(event) => {
+                event.preventDefault();
+                return false;
+              }}
+            />
+            {hoveredButton === 'mic' && (
+              <div
+                ref={micHelpRef}
+                style={{
+                  position: 'absolute',
+                  bottom: '100%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  marginBottom: '12px',
+                  padding: '8px 12px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  borderRadius: '16px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                  fontSize: '0.875rem',
+                  color: '#111827',
+                  whiteSpace: 'nowrap',
+                  zIndex: 1003,
+                  pointerEvents: 'none',
+                  animation:
+                    'cloudPopUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), helpPopUpBounce 0.5s ease-in-out 0.3s infinite',
+                  border: '1px solid rgba(0, 0, 0, 0.1)',
+                  fontWeight: 500,
+                }}
+              >
+                長押しで通訳
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '-8px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: 0,
+                    height: 0,
+                    borderLeft: '8px solid transparent',
+                    borderRight: '8px solid transparent',
+                    borderTop: '8px solid rgba(255, 255, 255, 0.95)',
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          {showButtons && (
+            <div
+              onClick={handleMuteButtonClick}
+              onMouseEnter={() => setHoveredButton('mute')}
+              onMouseLeave={() => setHoveredButton(null)}
+              style={{
+                position: 'fixed',
+                bottom: 'calc(5rem + 140px)',
+                left: 'calc(50% + 120px + 0.75rem + 60px)',
+                transform: 'translateX(-50%)',
+                width: buttonsAnimated ? '120px' : '0px',
+                height: buttonsAnimated ? '120px' : '0px',
+                borderRadius: '50%',
+                backgroundColor: isMuted ? 'rgba(239, 68, 68, 0.3)' : 'rgba(192, 216, 255, 0.3)',
+                boxShadow: isMuted ? '0 0 20px rgba(239, 68, 68, 0.5)' : '0 4px 6px rgba(0, 0, 0, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                zIndex: 1002,
+                pointerEvents: 'auto',
+                opacity: buttonsAnimated ? 1 : 0,
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                WebkitTouchCallout: 'none',
+                overflow: 'visible',
+              }}
+              onContextMenu={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                return false;
+              }}
+              onDragStart={(event) => {
+                event.preventDefault();
+                return false;
+              }}
+            >
+              <img
+                src={
+                  translationLanguage === 'cantonese'
+                    ? '/mute-button-1.svg?v=1'
+                    : '/mute-button-mandarin-1.svg?v=1'
+                }
+                alt="mute button"
+                draggable="false"
+                style={{
+                  width: buttonsAnimated ? '120px' : '0px',
+                  height: buttonsAnimated ? '120px' : '0px',
+                  objectFit: 'contain',
+                  userSelect: 'none',
+                  WebkitUserSelect: 'none',
+                  WebkitTouchCallout: 'none',
+                  transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  animation: isButtonRotating ? 'buttonRotate 0.6s ease-in-out' : 'none',
+                  transform: isButtonRotating ? 'rotateY(360deg)' : 'none',
+                  borderRadius: buttonsAnimated ? '50%' : '0%',
+                }}
+              />
+              {hoveredButton === 'mute' && buttonsAnimated && (
+                <div
+                  ref={muteHelpRef}
+                  style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    marginBottom: '12px',
+                    padding: '8px 12px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderRadius: '16px',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                    fontSize: '0.875rem',
+                    color: '#111827',
+                    whiteSpace: 'nowrap',
+                    zIndex: 1003,
+                    pointerEvents: 'none',
+                    animation:
+                      'cloudPopUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), helpPopUpBounce 0.5s ease-in-out 0.3s infinite',
+                    border: '1px solid rgba(0, 0, 0, 0.1)',
+                    fontWeight: 500,
+                  }}
+                >
+                  音声ミュート
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '-8px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: 0,
+                      height: 0,
+                      borderLeft: '8px solid transparent',
+                      borderRight: '8px solid transparent',
+                      borderTop: '8px solid rgba(255, 255, 255, 0.95)',
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
     </>
   );
 };
