@@ -86,6 +86,18 @@ export default function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentWords, setCurrentWords] = useState<Word[]>([]);
   const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
+
+  const selectableCategories = useMemo<{ id: string; name: string }[]>(() => {
+    const filtered = categories
+      .filter((category) => category.id !== 'pronunciation' && !category.id.startsWith('note_'))
+      .map((category) => ({ id: category.id, name: category.name }));
+
+    if (categories.some((category) => category.id === 'pronunciation')) {
+      return [{ id: 'pronunciation', name: '発音表記について' }, ...filtered];
+    }
+
+    return filtered;
+  }, [categories]);
   
   // Noteフレーズ機能の状態
   const [showNoteSubCategories, setShowNoteSubCategories] = useState(false);
@@ -166,6 +178,32 @@ export default function Home() {
   const [isSavingDefaultCategory, setIsSavingDefaultCategory] = useState(false);
   const categoryPickerScrollRef = useRef<HTMLDivElement>(null);
   
+  useEffect(() => {
+    if (!showCategoryPicker) {
+      return;
+    }
+
+    const container = categoryPickerScrollRef.current;
+    if (!container) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      const activeItem = container.querySelector<HTMLElement>(`[data-category-id="${defaultCategoryId}"]`);
+      if (!activeItem) {
+        return;
+      }
+
+      const targetScrollTop =
+        activeItem.offsetTop - Math.max(0, container.clientHeight / 2 - activeItem.offsetHeight / 2);
+
+      container.scrollTo({
+        top: Math.max(0, targetScrollTop),
+        behavior: 'auto',
+      });
+    });
+  }, [showCategoryPicker, defaultCategoryId, selectableCategories]);
+
   // デバッグ情報の状態
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [loadingDebugInfo, setLoadingDebugInfo] = useState(false);
@@ -7059,212 +7097,70 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 </button>
               </div>
 
-              {/* ロール型ピッカー */}
+              {/* カテゴリーリスト */}
               <div style={{
                 flex: 1,
-                overflow: 'hidden',
-                position: 'relative',
-                height: '300px',
+                minHeight: 0,
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
+                flexDirection: 'column'
               }}>
-                {/* 中央の選択エリアのハイライト */}
-                <div style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: 0,
-                  right: 0,
-                  height: '60px',
-                  marginTop: '-30px',
-                  borderTop: '1px solid #e5e7eb',
-                  borderBottom: '1px solid #e5e7eb',
-                  backgroundColor: 'rgba(59, 130, 246, 0.05)',
-                  pointerEvents: 'none',
-                  zIndex: 1
-                }} />
-                
-                {/* ピッカーホイール */}
                 <div
-                  id="category-picker-scroll"
-                  ref={(el) => {
-                    categoryPickerScrollRef.current = el;
-                    if (el && showCategoryPicker) {
-                      // スクロール位置を選択中のカテゴリーに合わせる
-                      const allCategories = [
-                        ...(categories.find(c => c.id === 'pronunciation') ? [{ id: 'pronunciation', name: '発音表記について' }] : []),
-                        ...categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_'))
-                      ];
-                      const selectedIndex = allCategories.findIndex(c => c.id === defaultCategoryId);
-                      if (selectedIndex >= 0) {
-                        setTimeout(() => {
-                          const itemHeight = 60;
-                          const containerHeight = el.clientHeight;
-                          const centerOffset = containerHeight / 2 - itemHeight / 2;
-                          const paddingTop = containerHeight / 2; // paddingTop: 50%
-                          // paddingTopを考慮してスクロール位置を設定
-                          el.scrollTop = selectedIndex * itemHeight - centerOffset + paddingTop;
-                        }, 100);
-                      }
-                    }
-                  }}
-                  onScroll={(e) => {
-                    // デバウンス処理でガタガタを防ぐ
-                    const scrollTop = e.currentTarget.scrollTop;
-                    const itemHeight = 60;
-                    const containerHeight = e.currentTarget.clientHeight;
-                    const centerOffset = containerHeight / 2 - itemHeight / 2;
-                    
-                    // paddingTopを考慮した実際のスクロール位置を計算
-                    const paddingTop = containerHeight / 2; // paddingTop: 50%
-                    const actualScrollTop = scrollTop - paddingTop;
-                    const selectedIndex = Math.round((actualScrollTop + centerOffset) / itemHeight);
-                    
-                    const allCategories = [
-                      ...(categories.find(c => c.id === 'pronunciation') ? [{ id: 'pronunciation', name: '発音表記について' }] : []),
-                      ...categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_'))
-                    ];
-                    
-                    if (selectedIndex >= 0 && selectedIndex < allCategories.length) {
-                      const selectedCategory = allCategories[selectedIndex];
-                      if (selectedCategory.id !== defaultCategoryId) {
-                        // スクロールが停止した後に表示を更新（保存は「完了」ボタンで行う）
-                        clearTimeout((window as any).categoryPickerScrollTimeout);
-                        (window as any).categoryPickerScrollTimeout = setTimeout(() => {
-                          setDefaultCategoryId(selectedCategory.id);
-                        }, 150);
-                      }
-                    }
-                  }}
+                  ref={categoryPickerScrollRef}
                   style={{
-                    width: '100%',
-                    height: '100%',
+                    flex: 1,
                     overflowY: 'auto',
                     overflowX: 'hidden',
-                    scrollSnapType: 'y proximity',
+                    padding: '0.75rem 0',
+                    margin: 0,
                     WebkitOverflowScrolling: 'touch',
-                    scrollbarWidth: isMobile ? 'none' : 'thin', // PCではスクロールバーを表示
-                    msOverflowStyle: 'none',
-                    paddingTop: '50%',
-                    paddingBottom: '50%',
-                    boxSizing: 'border-box',
-                    overscrollBehavior: 'contain',
-                    scrollBehavior: 'smooth',
-                    cursor: isMobile ? 'default' : 'grab', // PCではカーソルを変更
-                    userSelect: 'none',
-                    WebkitUserSelect: 'none'
+                    scrollbarWidth: isMobile ? 'none' : 'thin',
+                    msOverflowStyle: isMobile ? 'none' : undefined,
+                    touchAction: 'pan-y'
                   }}
+                  onWheel={(event) => event.stopPropagation()}
+                  onTouchStart={(event) => event.stopPropagation()}
+                  onTouchMove={(event) => event.stopPropagation()}
                 >
-                  <style>{`
-                    #category-picker-scroll::-webkit-scrollbar {
-                      ${isMobile ? 'display: none;' : 'width: 8px;'}
-                    }
-                    ${!isMobile ? `
-                    #category-picker-scroll::-webkit-scrollbar-track {
-                      background: #f1f1f1;
-                      border-radius: 4px;
-                    }
-                    #category-picker-scroll::-webkit-scrollbar-thumb {
-                      background: #888;
-                      border-radius: 4px;
-                    }
-                    #category-picker-scroll::-webkit-scrollbar-thumb:hover {
-                      background: #555;
-                    }
-                    ` : ''}
-                  `}</style>
-                  
-                  {/* 発音表記についてを最初に表示 */}
-                  {categories.find(c => c.id === 'pronunciation') && (
-                    <div
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log('🖱️ 発音表記についてクリック');
-                        // クリックしたカテゴリーを即座に選択・保存
-                        handleDefaultCategoryChange('pronunciation');
-                        // 視覚的なフィードバックのためにスクロール
-                        if (categoryPickerScrollRef.current) {
-                          const itemHeight = 60;
-                          const containerHeight = categoryPickerScrollRef.current.clientHeight;
-                          const centerOffset = containerHeight / 2 - itemHeight / 2;
-                          const paddingTop = containerHeight / 2;
-                          categoryPickerScrollRef.current.scrollTo({ 
-                            top: 0 - centerOffset + paddingTop, 
-                            behavior: 'smooth' 
-                          });
-                        }
-                      }}
-                      style={{
-                        height: '60px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        scrollSnapAlign: 'center',
-                        cursor: 'pointer',
-                        fontSize: '1.25rem',
-                        fontWeight: defaultCategoryId === 'pronunciation' ? '600' : '400',
-                        color: defaultCategoryId === 'pronunciation' ? '#1e40af' : '#6b7280',
-                        transition: 'all 0.2s',
-                        transform: defaultCategoryId === 'pronunciation' ? 'scale(1.1)' : 'scale(1)',
-                        opacity: defaultCategoryId === 'pronunciation' ? 1 : 0.6
-                      }}
-                    >
-                      発音表記について
-                    </div>
-                  )}
-                  {/* その他のカテゴリー */}
-                  {categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_')).map((category, index) => {
-                    const allCategories = [
-                      ...(categories.find(c => c.id === 'pronunciation') ? [{ id: 'pronunciation', name: '発音表記について' }] : []),
-                      ...categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_'))
-                    ];
-                    const categoryIndex = allCategories.findIndex(c => c.id === category.id);
+                  {selectableCategories.map((category, index) => {
                     const isSelected = category.id === defaultCategoryId;
-                    const distanceFromCenter = Math.abs(categoryIndex - allCategories.findIndex(c => c.id === defaultCategoryId));
-                    const scale = Math.max(0.8, 1 - distanceFromCenter * 0.1);
-                    const opacity = Math.max(0.4, 1 - distanceFromCenter * 0.2);
-                    
+                    const isLastItem = index === selectableCategories.length - 1;
                     return (
-                      <div
+                      <button
                         key={category.id}
+                        data-category-id={category.id}
+                        type="button"
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          console.log('🖱️ カテゴリークリック:', { categoryId: category.id, categoryName: category.name });
-                          // クリックしたカテゴリーを即座に選択・保存
-                          handleDefaultCategoryChange(category.id);
-                          // 視覚的なフィードバックのためにスクロール
-                          if (categoryPickerScrollRef.current) {
-                            const itemHeight = 60;
-                            const containerHeight = categoryPickerScrollRef.current.clientHeight;
-                            const centerOffset = containerHeight / 2 - itemHeight / 2;
-                            const paddingTop = containerHeight / 2;
-                            categoryPickerScrollRef.current.scrollTo({ 
-                              top: categoryIndex * itemHeight - centerOffset + paddingTop, 
-                              behavior: 'smooth' 
-                            });
-                          }
+                          setDefaultCategoryId(category.id);
                         }}
                         style={{
-                          height: '60px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          scrollSnapAlign: 'center',
+                          width: '100%',
+                          textAlign: 'left',
+                          padding: isMobile ? '0.85rem 1.5rem' : '1rem 1.75rem',
+                          background: isSelected ? 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)' : 'transparent',
+                          color: isSelected ? '#1d4ed8' : '#1f2937',
+                          fontWeight: isSelected ? 600 : 500,
+                          fontSize: isMobile ? '1rem' : '1.05rem',
+                          border: 'none',
+                          borderBottom: isLastItem ? 'none' : '1px solid #f3f4f6',
+                          outline: 'none',
                           cursor: 'pointer',
-                          fontSize: isSelected ? '1.25rem' : '1rem',
-                          fontWeight: isSelected ? '600' : '400',
-                          color: isSelected ? '#1e40af' : '#6b7280',
-                          transition: 'all 0.2s',
-                          transform: `scale(${scale})`,
-                          opacity: opacity
+                          transition: 'background 0.2s ease, color 0.2s ease'
                         }}
                       >
                         {category.name}
-                      </div>
+                      </button>
                     );
                   })}
+                </div>
+                <div style={{
+                  padding: '0.75rem 1.5rem 1rem',
+                  color: '#9ca3af',
+                  fontSize: '0.75rem',
+                  textAlign: 'center'
+                }}>
+                  スクロールしてカテゴリーを選び、「完了」を押すと保存されます
                 </div>
               </div>
             </div>
@@ -7324,301 +7220,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           selectedCurrency={selectedCurrency}
           onCurrencyChange={handleCurrencyChange}
         />
-
-        {/* iOS風カテゴリーピッカーモーダル */}
-        {showCategoryPicker && (
-          <div
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                setShowCategoryPicker(false);
-              }
-            }}
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 10000,
-              backgroundColor: 'rgba(0,0,0,0.5)',
-              display: 'flex',
-              alignItems: 'flex-end',
-              justifyContent: 'center',
-              pointerEvents: 'auto',
-              touchAction: isMobile ? 'manipulation' : 'auto' // PCではautoにしてスクロールを有効化
-            }}
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
-              onTouchMove={(e) => e.stopPropagation()}
-              style={{
-                width: '100%',
-                maxWidth: '500px',
-                backgroundColor: 'white',
-                borderTopLeftRadius: '20px',
-                borderTopRightRadius: '20px',
-                paddingBottom: 'env(safe-area-inset-bottom)',
-                maxHeight: '80vh',
-                display: 'flex',
-                flexDirection: 'column',
-                pointerEvents: 'auto',
-                touchAction: isMobile ? 'pan-y' : 'auto', // PCではautoにしてスクロールを有効化
-                transform: 'translateZ(0)',
-                willChange: 'transform'
-              }}
-            >
-              {/* ヘッダー */}
-              <div style={{
-                padding: '1rem',
-                borderBottom: '1px solid #e5e7eb',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <h3 style={{
-                  margin: 0,
-                  fontSize: '1.125rem',
-                  fontWeight: '600',
-                  color: '#111827'
-                }}>カテゴリーを選択</h3>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('✅ 完了ボタンクリック:', { currentDefaultCategoryId: defaultCategoryId });
-                    // 現在選択中のdefaultCategoryIdを保存（スクロール位置の計算に頼らない）
-                    if (defaultCategoryId) {
-                      handleDefaultCategoryChange(defaultCategoryId);
-                    } else {
-                      console.warn('⚠️ defaultCategoryIdが設定されていません');
-                      setShowCategoryPicker(false);
-                    }
-                  }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    fontSize: '1.25rem',
-                    cursor: 'pointer',
-                    color: '#3b82f6',
-                    fontWeight: '600'
-                  }}
-                >
-                  完了
-                </button>
-              </div>
-
-              {/* ロール型ピッカー */}
-              <div style={{
-                flex: 1,
-                overflow: 'hidden',
-                position: 'relative',
-                height: '300px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                {/* 中央の選択エリアのハイライト */}
-                <div style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: 0,
-                  right: 0,
-                  height: '60px',
-                  marginTop: '-30px',
-                  borderTop: '1px solid #e5e7eb',
-                  borderBottom: '1px solid #e5e7eb',
-                  backgroundColor: 'rgba(59, 130, 246, 0.05)',
-                  pointerEvents: 'none',
-                  zIndex: 1
-                }} />
-                
-                {/* ピッカーホイール */}
-                <div
-                  id="category-picker-scroll"
-                  ref={(el) => {
-                    categoryPickerScrollRef.current = el;
-                    if (el && showCategoryPicker) {
-                      // スクロール位置を選択中のカテゴリーに合わせる
-                      const allCategories = [
-                        ...(categories.find(c => c.id === 'pronunciation') ? [{ id: 'pronunciation', name: '発音表記について' }] : []),
-                        ...categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_'))
-                      ];
-                      const selectedIndex = allCategories.findIndex(c => c.id === defaultCategoryId);
-                      if (selectedIndex >= 0) {
-                        setTimeout(() => {
-                          const itemHeight = 60;
-                          const containerHeight = el.clientHeight;
-                          const centerOffset = containerHeight / 2 - itemHeight / 2;
-                          const paddingTop = containerHeight / 2; // paddingTop: 50%
-                          // paddingTopを考慮してスクロール位置を設定
-                          el.scrollTop = selectedIndex * itemHeight - centerOffset + paddingTop;
-                        }, 100);
-                      }
-                    }
-                  }}
-                  onScroll={(e) => {
-                    // デバウンス処理でガタガタを防ぐ
-                    const scrollTop = e.currentTarget.scrollTop;
-                    const itemHeight = 60;
-                    const containerHeight = e.currentTarget.clientHeight;
-                    const centerOffset = containerHeight / 2 - itemHeight / 2;
-                    
-                    // paddingTopを考慮した実際のスクロール位置を計算
-                    const paddingTop = containerHeight / 2; // paddingTop: 50%
-                    const actualScrollTop = scrollTop - paddingTop;
-                    const selectedIndex = Math.round((actualScrollTop + centerOffset) / itemHeight);
-                    
-                    const allCategories = [
-                      ...(categories.find(c => c.id === 'pronunciation') ? [{ id: 'pronunciation', name: '発音表記について' }] : []),
-                      ...categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_'))
-                    ];
-                    
-                    if (selectedIndex >= 0 && selectedIndex < allCategories.length) {
-                      const selectedCategory = allCategories[selectedIndex];
-                      if (selectedCategory.id !== defaultCategoryId) {
-                        // スクロールが停止した後に表示を更新（保存は「完了」ボタンで行う）
-                        clearTimeout((window as any).categoryPickerScrollTimeout);
-                        (window as any).categoryPickerScrollTimeout = setTimeout(() => {
-                          setDefaultCategoryId(selectedCategory.id);
-                        }, 150);
-                      }
-                    }
-                  }}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    overflowY: 'auto',
-                    overflowX: 'hidden',
-                    scrollSnapType: 'y proximity',
-                    WebkitOverflowScrolling: 'touch',
-                    scrollbarWidth: isMobile ? 'none' : 'thin', // PCではスクロールバーを表示
-                    msOverflowStyle: 'none',
-                    paddingTop: '50%',
-                    paddingBottom: '50%',
-                    boxSizing: 'border-box',
-                    overscrollBehavior: 'contain',
-                    scrollBehavior: 'smooth',
-                    cursor: isMobile ? 'default' : 'grab', // PCではカーソルを変更
-                    userSelect: 'none',
-                    WebkitUserSelect: 'none'
-                  }}
-                >
-                  <style>{`
-                    #category-picker-scroll::-webkit-scrollbar {
-                      ${isMobile ? 'display: none;' : 'width: 8px;'}
-                    }
-                    ${!isMobile ? `
-                    #category-picker-scroll::-webkit-scrollbar-track {
-                      background: #f1f1f1;
-                      border-radius: 4px;
-                    }
-                    #category-picker-scroll::-webkit-scrollbar-thumb {
-                      background: #888;
-                      border-radius: 4px;
-                    }
-                    #category-picker-scroll::-webkit-scrollbar-thumb:hover {
-                      background: #555;
-                    }
-                    ` : ''}
-                  `}</style>
-                  
-                  {/* 発音表記についてを最初に表示 */}
-                  {categories.find(c => c.id === 'pronunciation') && (
-                    <div
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log('🖱️ 発音表記についてクリック');
-                        // クリックしたカテゴリーを即座に選択・保存
-                        handleDefaultCategoryChange('pronunciation');
-                        // 視覚的なフィードバックのためにスクロール
-                        if (categoryPickerScrollRef.current) {
-                          const itemHeight = 60;
-                          const containerHeight = categoryPickerScrollRef.current.clientHeight;
-                          const centerOffset = containerHeight / 2 - itemHeight / 2;
-                          const paddingTop = containerHeight / 2;
-                          categoryPickerScrollRef.current.scrollTo({ 
-                            top: 0 - centerOffset + paddingTop, 
-                            behavior: 'smooth' 
-                          });
-                        }
-                      }}
-                      style={{
-                        height: '60px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        scrollSnapAlign: 'center',
-                        cursor: 'pointer',
-                        fontSize: '1.25rem',
-                        fontWeight: defaultCategoryId === 'pronunciation' ? '600' : '400',
-                        color: defaultCategoryId === 'pronunciation' ? '#1e40af' : '#6b7280',
-                        transition: 'all 0.2s',
-                        transform: defaultCategoryId === 'pronunciation' ? 'scale(1.1)' : 'scale(1)',
-                        opacity: defaultCategoryId === 'pronunciation' ? 1 : 0.6
-                      }}
-                    >
-                      発音表記について
-                    </div>
-                  )}
-                  {/* その他のカテゴリー */}
-                  {categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_')).map((category, index) => {
-                    const allCategories = [
-                      ...(categories.find(c => c.id === 'pronunciation') ? [{ id: 'pronunciation', name: '発音表記について' }] : []),
-                      ...categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_'))
-                    ];
-                    const categoryIndex = allCategories.findIndex(c => c.id === category.id);
-                    const isSelected = category.id === defaultCategoryId;
-                    const distanceFromCenter = Math.abs(categoryIndex - allCategories.findIndex(c => c.id === defaultCategoryId));
-                    const scale = Math.max(0.8, 1 - distanceFromCenter * 0.1);
-                    const opacity = Math.max(0.4, 1 - distanceFromCenter * 0.2);
-                    
-                    return (
-                      <div
-                        key={category.id}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          console.log('🖱️ カテゴリークリック:', { categoryId: category.id, categoryName: category.name });
-                          // クリックしたカテゴリーを即座に選択・保存
-                          handleDefaultCategoryChange(category.id);
-                          // 視覚的なフィードバックのためにスクロール
-                          if (categoryPickerScrollRef.current) {
-                            const itemHeight = 60;
-                            const containerHeight = categoryPickerScrollRef.current.clientHeight;
-                            const centerOffset = containerHeight / 2 - itemHeight / 2;
-                            const paddingTop = containerHeight / 2;
-                            categoryPickerScrollRef.current.scrollTo({ 
-                              top: categoryIndex * itemHeight - centerOffset + paddingTop, 
-                              behavior: 'smooth' 
-                            });
-                          }
-                        }}
-                        style={{
-                          height: '60px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          scrollSnapAlign: 'center',
-                          cursor: 'pointer',
-                          fontSize: isSelected ? '1.25rem' : '1rem',
-                          fontWeight: isSelected ? '600' : '400',
-                          color: isSelected ? '#1e40af' : '#6b7280',
-                          transition: 'all 0.2s',
-                          transform: `scale(${scale})`,
-                          opacity: opacity
-                        }}
-                      >
-                        {category.name}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
 
 
