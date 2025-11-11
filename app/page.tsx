@@ -149,45 +149,6 @@ const convertNumberToCantoneseReading = (raw: string): string => {
   return converted;
 };
 
-type SpeechCacheKeyOptions = {
-  language?: 'cantonese' | 'mandarin';
-  voiceKey?: string;
-};
-
-type SpeechAudioFetchOptions = SpeechCacheKeyOptions & {
-  persist?: boolean;
-  logLabel?: string;
-};
-
-const normalizeSpeechText = (raw: string): string => raw.replace(/\s+/g, ' ').trim();
-
-const buildSpeechCacheKey = (text: string, options: SpeechCacheKeyOptions = {}) => {
-  const normalized = normalizeSpeechText(text);
-  const languageKey = options.language ?? 'default';
-  const voiceKey = options.voiceKey ?? 'default';
-  return `${normalized}__lang:${languageKey}__voice:${voiceKey}`;
-};
-
-const getSpeechStorageKey = (cacheKey: string) => `SLANG_SPEECH_CACHE::${cacheKey}`;
-
-const CRITICAL_TONE_TEXTS = [
-  '3 9 4 0 5 2',
-  '7 8 6',
-  '3',
-  '9',
-  '4',
-  '0',
-  '5',
-  '2',
-  '7',
-  '8',
-  '6',
-] as const;
-
-const CRITICAL_TONE_CACHE_KEYS = new Set(
-  CRITICAL_TONE_TEXTS.map((text) => buildSpeechCacheKey(text))
-);
-
 interface Category {
   id: string;
   name: string;
@@ -3319,95 +3280,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     playClickSound({ useGain: true });
   };
 
-  const fetchSpeechAudio = useCallback(
-    async (text: string, options: SpeechAudioFetchOptions = {}) => {
-      const normalizedText = normalizeSpeechText(text);
-      if (!normalizedText) {
-        return null;
-      }
-
-      const cacheKey = buildSpeechCacheKey(normalizedText, options);
-      const cache = speechAudioCacheRef.current;
-      if (cache.has(cacheKey)) {
-        return cache.get(cacheKey) ?? null;
-      }
-
-      const shouldPersist = options.persist ?? CRITICAL_TONE_CACHE_KEYS.has(cacheKey);
-
-      if (shouldPersist && typeof window !== 'undefined') {
-        try {
-          const stored = window.localStorage.getItem(getSpeechStorageKey(cacheKey));
-          if (stored) {
-            cache.set(cacheKey, stored);
-            return stored;
-          }
-        } catch (storageError) {
-          console.warn('音声キャッシュの読み込みに失敗しました', storageError);
-        }
-      }
-
-      const pending = speechAudioPendingRef.current.get(cacheKey);
-      if (pending) {
-        return pending;
-      }
-
-      const payload: Record<string, string> = { text: normalizedText };
-      if (options.language) {
-        payload.language = options.language;
-      }
-      if (options.voiceKey) {
-        payload.voiceKey = options.voiceKey;
-      }
-      const logLabel = options.logLabel ?? '音声再生';
-
-      const requestPromise = (async () => {
-        try {
-          const response = await fetch('/api/generate-speech', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          });
-
-          if (!response.ok) {
-            console.error(`${logLabel}: API呼び出し失敗`, {
-              status: response.status,
-              statusText: response.statusText,
-            });
-            return null;
-          }
-
-          const data = await response.json();
-          const audioContent: string | undefined = data?.audioContent;
-          if (!audioContent) {
-            console.error(`${logLabel}: 音声データが空です`);
-            return null;
-          }
-
-          cache.set(cacheKey, audioContent);
-
-          if (shouldPersist && typeof window !== 'undefined') {
-            try {
-              window.localStorage.setItem(getSpeechStorageKey(cacheKey), audioContent);
-            } catch (storageError) {
-              console.warn('音声キャッシュの保存に失敗しました', storageError);
-            }
-          }
-
-          return audioContent;
-        } catch (error) {
-          console.error(`${logLabel}: 音声生成リクエスト中にエラーが発生`, error);
-          return null;
-        } finally {
-          speechAudioPendingRef.current.delete(cacheKey);
-        }
-      })();
-
-      speechAudioPendingRef.current.set(cacheKey, requestPromise);
-      return requestPromise;
-    },
-    []
-  );
-
   const handleQuickConversionClick = useCallback(
     (button: QuickConversionButton) => {
       if (button.panel === 'currency') {
@@ -3507,38 +3379,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   const audioRef = useRef<HTMLAudioElement>(null); // 学習モード用
   const exampleAudioRef = useRef<HTMLAudioElement>(null); // 学習モード用
   const normalModeAudioRef = useRef<HTMLAudioElement>(null); // ノーマルモード用
-  const speechAudioCacheRef = useRef<Map<string, string>>(new Map());
-  const speechAudioPendingRef = useRef<Map<string, Promise<string | null>>>(new Map());
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    let cancelled = false;
-
-    const runPrefetch = async () => {
-      for (const text of CRITICAL_TONE_TEXTS) {
-        if (cancelled) {
-          break;
-        }
-        const cacheKey = buildSpeechCacheKey(text);
-        if (speechAudioCacheRef.current.has(cacheKey)) {
-          continue;
-        }
-        await fetchSpeechAudio(text, { persist: true, logLabel: '音声プリフェッチ' });
-      }
-    };
-
-    const timer = window.setTimeout(() => {
-      runPrefetch().catch((error) => console.error('音声プリフェッチ中にエラーが発生', error));
-    }, 250);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [fetchSpeechAudio]);
   
   // Web Audio API用のGainNode（ノーマルモード用のみ）
   const normalModeAudioGainNodeRef = useRef<GainNode | null>(null);
@@ -5092,12 +4932,43 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       setActiveWordId(wordId);
       
       // 単語の音声のみを生成して再生
-      const audioBase64 = await fetchSpeechAudio(word.chinese, { logLabel: 'ノーマルモード' });
-      if (audioBase64) {
-        playNormalModeAudio(audioBase64, { logPrefix: 'ノーマルモード' });
-      } else {
-        console.error('ノーマルモード: 音声データを取得できませんでした');
-        setActiveWordId(null);
+      try {
+        console.log('ノーマルモード: API呼び出し開始', { text: word.chinese });
+        
+        const audioResponse = await fetch('/api/generate-speech', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text: word.chinese }),
+        });
+        
+        console.log('ノーマルモード: APIレスポンス受信', { 
+          ok: audioResponse.ok, 
+          status: audioResponse.status 
+        });
+        
+        if (audioResponse.ok) {
+          const audioData = await audioResponse.json();
+          const audioBase64 = audioData.audioContent;
+          console.log('ノーマルモード: 音声データ取得', { 
+            hasAudioContent: !!audioBase64,
+            audioLength: audioBase64?.length,
+          });
+
+          if (audioBase64) {
+            playNormalModeAudio(audioBase64, { logPrefix: 'ノーマルモード' });
+          } else {
+            console.error('ノーマルモード: 音声データが空です');
+          }
+        } else {
+          console.error('ノーマルモード: API呼び出し失敗', { 
+            status: audioResponse.status,
+            statusText: audioResponse.statusText
+          });
+        }
+      } catch (err) {
+        console.error('ノーマルモード: エラー発生', err);
       }
     }
   };
@@ -5152,11 +5023,30 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     }
 
     // 音声再生
-    const audioBase64 = await fetchSpeechAudio(text, { logLabel: 'トーン音声' });
-    if (audioBase64) {
-      playNormalModeAudio(audioBase64, { logPrefix: 'トーン音声' });
-    } else if (!isLearningMode) {
-      setActiveWordId(null);
+    try {
+      const audioResponse = await fetch('/api/generate-speech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
+      });
+
+      if (audioResponse.ok) {
+        const audioData = await audioResponse.json();
+        const audioBase64 = audioData.audioContent;
+        if (audioBase64) {
+          playNormalModeAudio(audioBase64, { logPrefix: 'トーン音声' });
+        } else {
+          console.error('トーン音声: 音声データが空です');
+        }
+      }
+    } catch (err) {
+      console.error('音声再生エラー:', err);
+      // エラー時もactiveWordIdをクリア
+      if (!isLearningMode) {
+        setActiveWordId(null);
+      }
     }
     // categoryIdの取得: noteカテゴリーが選択されている場合はselectedNoteCategoryを優先
     const categoryId = selectedNoteCategory || currentCategory?.id || 'pronunciation';
@@ -5200,14 +5090,9 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     // クリック音
     playClickSound();
 
-    const originalBackground = button.style.background;
-    const originalBackgroundColor = button.style.backgroundColor;
-    const originalColor = button.style.color;
-
     // 連続発音ボタンを緑色に点灯
     if (button) {
       button.style.background = 'linear-gradient(145deg, #10b981, #059669)';
-      button.style.backgroundColor = '';
       button.style.color = 'white';
     }
     
@@ -5225,27 +5110,56 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     const textToSpeak = toneParts.length > 0 ? toneParts.join(' ') : sequence;
     console.log('連続発音テキスト:', textToSpeak);
     
-    const resetStyles = () => {
-      button.style.background = originalBackground || '';
-      button.style.backgroundColor = originalBackgroundColor || '#ffffff';
-      button.style.color = originalColor || '#111827';
-    };
+    try {
+      const audioResponse = await fetch('/api/generate-speech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: textToSpeak }),
+      });
 
-    const audioBase64 = await fetchSpeechAudio(textToSpeak, { logLabel: '連続発音', persist: true });
+      if (!audioResponse.ok) {
+        console.error('音声生成エラー:', audioResponse.status, await audioResponse.text());
+        // エラー時はボタンの色をリセット
+        if (button) {
+          button.style.background = '#ffffff';
+          button.style.color = '#111827';
+        }
+        return;
+      }
 
-    if (!audioBase64) {
-      resetStyles();
-      return;
+      const audioData = await audioResponse.json();
+      const audioBase64 = audioData.audioContent;
+
+      if (!audioBase64) {
+        console.error('音声データが空です');
+        if (button) {
+          button.style.background = '#ffffff';
+          button.style.color = '#111827';
+        }
+        return;
+      }
+
+      playNormalModeAudio(audioBase64, {
+        logPrefix: '連続発音',
+        clearActiveOnEnd: false,
+        onEnded: () => {
+            if (button) {
+              button.style.background = '#ffffff';
+              button.style.color = '#111827';
+            }
+            console.log('連続発音完了');
+        },
+      });
+    } catch (err) {
+      console.error('音声再生エラー:', err);
+      // エラー時はボタンの色をリセット
+      if (button) {
+        button.style.background = '#ffffff';
+        button.style.color = '#111827';
+      }
     }
-
-    playNormalModeAudio(audioBase64, {
-      logPrefix: '連続発音',
-      clearActiveOnEnd: false,
-      onEnded: () => {
-        resetStyles();
-        console.log('連続発音完了');
-      },
-    });
   };
 
   // 音声ボタンのスタイル更新（activeWordIdが変わった時）
