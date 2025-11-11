@@ -222,6 +222,7 @@ export default function Home() {
   const [showHelpPopups, setShowHelpPopups] = useState(false); // モバイルでヘルプを表示するかどうか
   const lastTranslatedTextRef = useRef<string>('');
   const lastProcessedFinalTextRef = useRef<string>('');
+  const recognizedFinalTextRef = useRef<string>('');
 
   const closeSettingsPanel = useCallback(() => {
     setShowSettings(false);
@@ -783,6 +784,7 @@ const resetInterpreterSession = ({
   lastProcessedFinalTextRef.current = '';
   translatedTextSetRef.current.clear();
   translatedInterimSetRef.current.clear();
+  recognizedFinalTextRef.current = '';
 
   if (clearTitle) {
     setShowTitle(false);
@@ -1266,32 +1268,19 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
               });
               
-              // recognizedTextも更新（下位互換のため）
-              setRecognizedText(prev => {
-                // 現在のrecognizedTextからinterim部分を除去
-                let cleanText = prev;
-                if (interimTranscript && cleanText.includes(interimTranscript)) {
-                  const lastInterimIndex = cleanText.lastIndexOf(interimTranscript);
-                  if (lastInterimIndex !== -1) {
-                    cleanText = cleanText.substring(0, lastInterimIndex) + 
-                               cleanText.substring(lastInterimIndex + interimTranscript.length);
-                  }
-                }
-                cleanText = cleanText.trim();
-                
-                // finalテキストを追加（下位互換のため）
-                return cleanText + (cleanText ? ' ' : '') + trimmedFinal;
-              });
+              recognizedFinalTextRef.current = recognizedFinalTextRef.current
+                ? `${recognizedFinalTextRef.current} ${trimmedFinal}`
+                : trimmedFinal;
+              setRecognizedText(recognizedFinalTextRef.current);
               
               setInterimText('');
             } else if (interimTranscript) {
               // interimのみの場合
-              setRecognizedText(prev => {
-                // 既存のfinalTextを保持し、interim部分を更新
-                const finalPart = prev.trim();
-                // interim部分を追加（既存のinterim部分は上書き）
-                return finalPart + (finalPart ? ' ' : '') + interimTranscript;
-              });
+              setRecognizedText(
+                recognizedFinalTextRef.current
+                  ? `${recognizedFinalTextRef.current} ${interimTranscript}`
+                  : interimTranscript
+              );
             }
               };
 
@@ -1377,14 +1366,10 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   // finalのテキストを追加
                   setFinalText(prev => prev + trimmed + ' ');
                   
-                  setRecognizedText(prev => {
-                    // interimテキストを除去してから追加
-                    const baseText = prev.replace(interim, '').trim();
-                    if (baseText.endsWith(trimmed)) {
-                      return baseText;
-                    }
-                    return baseText + (baseText ? ' ' : '') + trimmed;
-                  });
+                  recognizedFinalTextRef.current = recognizedFinalTextRef.current
+                    ? `${recognizedFinalTextRef.current} ${trimmed}`
+                    : trimmed;
+                  setRecognizedText(recognizedFinalTextRef.current);
                   
                   // recognizedTextLinesに追加（重複チェック付き）
                   setRecognizedTextLines(prev => {
@@ -1403,11 +1388,11 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   setInterimText('');
                 } else if (interim) {
                   // interimのみの場合
-                  setRecognizedText(prev => {
-                    // 既存のfinalTextを保持し、interimを追加
-                    const baseText = prev.trim();
-                    return baseText + (baseText ? ' ' : '') + interim;
-                  });
+                  setRecognizedText(
+                    recognizedFinalTextRef.current
+                      ? `${recognizedFinalTextRef.current} ${interim}`
+                      : interim
+                  );
                 }
               };
               
