@@ -856,17 +856,26 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
         )}
       </div>
       ) : (
-        <>
+        <div
+          style={{
+            position: 'fixed',
+            bottom: `calc(5rem + ${buttonDiameter}px)`,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: showButtons ? 'calc(60px + 0.75rem)' : '0',
+            zIndex: 1002,
+            pointerEvents: 'none',
+          }}
+        >
           {showButtons && (
             <div
               onClick={handleHandButtonClick}
               onMouseEnter={() => setHoveredButton('hand')}
               onMouseLeave={() => setHoveredButton(null)}
               style={{
-                position: 'fixed',
-                bottom: `calc(5rem + ${buttonDiameter + 30}px)`,
-                left: `calc(50% - ${buttonDiameter}px - 0.75rem - 60px)`,
-                transform: 'translateX(-50%)',
                 width: buttonsAnimated ? `${buttonDiameter}px` : '0px',
                 height: buttonsAnimated ? `${buttonDiameter}px` : '0px',
                 borderRadius: '50%',
@@ -877,7 +886,6 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
                 justifyContent: 'center',
                 cursor: 'pointer',
                 transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                zIndex: 1002,
                 pointerEvents: 'auto',
                 opacity: buttonsAnimated ? 1 : 0,
                 userSelect: 'none',
@@ -972,10 +980,6 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             }}
             ref={micButtonRef}
             style={{
-              position: 'fixed',
-              bottom: `calc(5rem + ${buttonDiameter}px)`,
-              left: '50%',
-              transform: 'translateX(-50%)',
               width: `${buttonDiameter}px`,
               height: `${buttonDiameter}px`,
               borderRadius: '50%',
@@ -988,7 +992,6 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
               justifyContent: 'center',
               cursor: 'pointer',
               transition: 'all 0.5s ease-out',
-              zIndex: 1002,
               pointerEvents: 'auto',
               animation: 'fadeInUp 1s ease-out',
               userSelect: 'none',
@@ -1096,10 +1099,6 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
               onMouseEnter={() => setHoveredButton('mute')}
               onMouseLeave={() => setHoveredButton(null)}
               style={{
-                position: 'fixed',
-                bottom: 'calc(5rem + 150px)',
-                left: `calc(50% + ${buttonDiameter}px + 0.75rem + 60px)`,
-                transform: 'translateX(-50%)',
                 width: buttonsAnimated ? `${buttonDiameter}px` : '0px',
                 height: buttonsAnimated ? `${buttonDiameter}px` : '0px',
                 borderRadius: '50%',
@@ -1110,7 +1109,6 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
                 justifyContent: 'center',
                 cursor: 'pointer',
                 transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                zIndex: 1002,
                 pointerEvents: 'auto',
                 opacity: buttonsAnimated ? 1 : 0,
                 userSelect: 'none',
@@ -1191,8 +1189,8 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
               )}
             </div>
           )}
-        </>
-      )}
+        </div>
+      )
     </>
   );
 };
