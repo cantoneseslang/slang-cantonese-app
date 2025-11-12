@@ -163,27 +163,14 @@ function isJapaneseText(text: string): boolean {
   if (!text || text.trim() === '') {
     return false;
   }
-  
-  // 日本語文字（ひらがな、カタカナ、漢字）が含まれているかチェック
-  // 広東語の繁体字と日本語の漢字は重複するため、ひらがな・カタカナが含まれているか、または日本語特有のパターンで判定
-  const hiraganaKatakanaRegex = /[\u3040-\u309F\u30A0-\u30FF]/; // ひらがな・カタカナ
-  
-  // ひらがな・カタカナが含まれていれば日本語と判定（最も確実）
+
+  // 日本語文字（ひらがな、カタカナ）が含まれているかチェック
+  // 広東語の繁体字と日本語の漢字は重複するため、仮名の存在を日本語判定の主条件とする
+  const hiraganaKatakanaRegex = /[\u3040-\u309F\u30A0-\u30FF]/;
   if (hiraganaKatakanaRegex.test(text)) {
     return true;
   }
-  
-  // 日本語の句読点（、。）が含まれていれば日本語
-  if (/[、。]/.test(text)) {
-    return true;
-  }
-  
-  // 漢字のみの場合、日本語特有の助詞（の、を、に、は、が、で、へ、と、から、まで、より）が含まれていれば日本語
-  const japaneseParticles = /[のはがをにでへとからまでより]/;
-  if (japaneseParticles.test(text)) {
-    return true;
-  }
-  
+
   return false;
 }
 
@@ -347,7 +334,8 @@ export async function POST(request: NextRequest) {
     let cantonesePhrase = phrase;
     let originalJapanese = null;
     
-    const isJapanese = isJapaneseText(phrase);
+    let isJapanese = isJapaneseText(phrase);
+    const containsKana = /[\u3040-\u309F\u30A0-\u30FF]/.test(phrase);
     console.log('🔍 テキスト判定:', { phrase: phrase.substring(0, 50), isJapanese });
     
     if (isJapanese) {
@@ -359,6 +347,53 @@ export async function POST(request: NextRequest) {
           original: phrase.substring(0, 50), 
           translated: cantonesePhrase.substring(0, 50) 
         });
+
+        if (!containsKana) {
+          const cantoneseIndicators = /[呀啦喺咁嘅冇哋唔嗰嚟噉咗嘢佢咩囉喎]/;
+          const punctuationRemovalRegex = /[\p{P}\p{S}\s]/gu;
+          const normalizedOriginal = phrase.replace(punctuationRemovalRegex, '');
+          const normalizedTranslated = cantonesePhrase.replace(punctuationRemovalRegex, '');
+
+          let similarity = 0;
+          if (normalizedOriginal.length > 0 && normalizedTranslated.length > 0) {
+            const originalChars = Array.from(normalizedOriginal);
+            const translatedChars = Array.from(normalizedTranslated);
+            const minLength = Math.min(originalChars.length, translatedChars.length);
+            let matchCount = 0;
+            for (let i = 0; i < minLength; i++) {
+              if (originalChars[i] === translatedChars[i]) {
+                matchCount++;
+              }
+            }
+            similarity = minLength > 0 ? matchCount / minLength : 0;
+          }
+
+          const isMostlyUnchanged =
+            normalizedOriginal.length > 0 &&
+            normalizedTranslated.length > 0 &&
+            (
+              normalizedOriginal === normalizedTranslated ||
+              normalizedOriginal.includes(normalizedTranslated) ||
+              normalizedTranslated.includes(normalizedOriginal) ||
+              similarity >= 0.95
+            );
+
+          if (
+            cantoneseIndicators.test(phrase) ||
+            (phrase.length >= 20 && isMostlyUnchanged)
+          ) {
+            console.warn('🔁 日本語判定をキャンセル: 広東語特有のパターンを検出', {
+              phrasePreview: phrase.substring(0, 60),
+              normalizedOriginalLength: normalizedOriginal.length,
+              normalizedTranslatedLength: normalizedTranslated.length,
+              similarity,
+              isMostlyUnchanged,
+            });
+            isJapanese = false;
+            originalJapanese = null;
+            cantonesePhrase = phrase;
+          }
+        }
       } catch (error) {
         console.error('❌ 翻訳失敗:', error);
         return NextResponse.json({ 
