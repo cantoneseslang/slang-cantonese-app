@@ -950,6 +950,7 @@ export default function Home() {
   
   // 同時通訳モード用の音声再生とミュート状態
   const simultaneousModeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const isSimultaneousAudioUnlockedRef = useRef(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
   const [buttonsAnimated, setButtonsAnimated] = useState(false);
@@ -958,6 +959,12 @@ export default function Home() {
   const lastTranslatedTextRef = useRef<string>('');
   const lastProcessedFinalTextRef = useRef<string>('');
   const recognizedFinalTextRef = useRef<string>('');
+
+  useEffect(() => {
+    if (!isHiddenMode) {
+      isSimultaneousAudioUnlockedRef.current = false;
+    }
+  }, [isHiddenMode]);
 
   const resetAudioElement = (audio: HTMLAudioElement | null) => {
     if (!audio) return;
@@ -971,6 +978,36 @@ export default function Home() {
       audio.load();
     } catch {
       // 一部ブラウザではloadで例外が発生する場合があるが無視して問題ない
+    }
+  };
+
+  const unlockSimultaneousAudioPlayback = async () => {
+    if (isSimultaneousAudioUnlockedRef.current) {
+      return;
+    }
+
+    const audioElement = simultaneousModeAudioRef.current;
+    if (!audioElement) {
+      return;
+    }
+
+    let unlocked = false;
+    try {
+      audioElement.muted = true;
+      if (!audioElement.src) {
+        audioElement.src = '/interpreter-start.mp3';
+      }
+      await audioElement.play();
+      unlocked = true;
+    } catch (error) {
+      console.warn('同時通訳オーディオの事前初期化エラー:', error);
+    } finally {
+      resetAudioElement(audioElement);
+      audioElement.muted = false;
+      if (unlocked) {
+        isSimultaneousAudioUnlockedRef.current = true;
+        console.log('同時通訳オーディオの事前初期化に成功');
+      }
     }
   };
 
@@ -1803,6 +1840,7 @@ const resetInterpreterSession = ({
 // 隠しモード終了処理
 const exitHiddenMode = () => {
   setIsHiddenMode(false);
+  isSimultaneousAudioUnlockedRef.current = false;
   resetInterpreterSession({
     resetLanguage: true,
     resetButtons: true,
@@ -1999,6 +2037,8 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       return;
     }
     
+    void unlockSimultaneousAudioPlayback();
+    
     // モバイルでヘルプを消す
     if (isMobile) {
       setShowHelpPopups(false);
@@ -2073,6 +2113,8 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       console.log('隠しモードではないため、マイク機能は無効です');
       return;
     }
+    
+    void unlockSimultaneousAudioPlayback();
     
     // モバイルでヘルプを消す
     if (isMobile) {
@@ -5538,6 +5580,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     const handleHiddenModeStart = () => {
                         isPlayingSoundRef.current = false;
                         setIsHiddenMode(true);
+                        isSimultaneousAudioUnlockedRef.current = false;
                         clickCountRef.current = 0;
                         if (clickTimerRef.current) {
                           clearTimeout(clickTimerRef.current);
