@@ -492,31 +492,32 @@ export default function Home() {
         setLastRateFetchedAt(null);
       }
 
-      try {
-        const response = await fetch('https://api.exchangerate.host/latest?base=HKD&symbols=JPY', {
-          signal,
-        });
-        if (!response.ok) {
-          throw new Error(`failed to fetch exchange rate: ${response.status}`);
-        }
-        const data = await response.json();
-        if (signal?.aborted) {
-          return;
-        }
-        const rate = data?.rates?.JPY;
-        if (typeof rate === 'number' && isFinite(rate)) {
-          const inverted = rate !== 0 ? 1 / rate : 0;
+        try {
+          const response = await fetch('https://open.er-api.com/v6/latest/HKD', { signal });
+          if (!response.ok) {
+            throw new Error(`failed to fetch exchange rate: ${response.status}`);
+          }
+          const data = await response.json();
+          if (signal?.aborted) {
+            return;
+          }
+
+          const rate = data?.rates?.JPY;
+          if (data?.result !== 'success' || typeof rate !== 'number' || !isFinite(rate) || rate <= 0) {
+            throw new Error(`unexpected exchange rate payload: ${JSON.stringify(data).slice(0, 200)}`);
+          }
+
+          const inverted = 1 / rate;
           setExchangeRate({
             hkdToJpy: rate,
             jpyToHkd: inverted,
           });
           setLastRateFetchedAt(Date.now());
-        }
-      } catch (error) {
-        if ((error as any)?.name !== 'AbortError') {
-          console.error('為替レート取得エラー:', error);
-        }
-      } finally {
+        } catch (error) {
+          if ((error as any)?.name !== 'AbortError') {
+            console.error('為替レート取得エラー:', error);
+          }
+        } finally {
         if (!signal?.aborted) {
           setIsFetchingRate(false);
         }
