@@ -240,13 +240,15 @@ async function generateExampleSentence(word: string, originalJapanese?: string |
       full: '例文生成エラー'
     };
   }
-  
-  // 元の日本語テキストがある場合（翻訳された場合）、例文生成をスキップして元の日本語を返す
-  if (originalJapanese) {
+
+  const normalizedWord = normalizeText(word);
+  const normalizedOriginal = originalJapanese ? normalizeText(originalJapanese) : '';
+
+  if (normalizedWord.length > 120 || normalizedOriginal.length > 180) {
     return {
-      cantonese: word, // 翻訳された広東語テキスト
-      japanese: originalJapanese, // 元の日本語テキスト
-      full: `${word} (${originalJapanese})`
+      cantonese: '',
+      japanese: '',
+      full: ''
     };
   }
   
@@ -266,7 +268,9 @@ async function generateExampleSentence(word: string, originalJapanese?: string |
           },
           {
             role: "user",
-            content: `Generate an example sentence using this Cantonese word or phrase: ${word}`
+            content: originalJapanese
+              ? `Generate an example sentence using the following Cantonese phrase. Use the original Japanese text as context if helpful.\n\nCantonese phrase: ${normalizedWord}\nOriginal Japanese: ${normalizedOriginal}\n\nRemember to reply in the format: [Cantonese sentence] (Japanese translation)`
+              : `Generate an example sentence using this Cantonese word or phrase: ${normalizedWord}\nRemember to reply in the format: [Cantonese sentence] (Japanese translation)`
           }
         ],
         max_tokens: 200,

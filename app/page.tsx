@@ -424,6 +424,11 @@ export default function Home() {
   
   // コピー成功メッセージ表示用
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
+  const cleanedExampleText = result?.exampleCantonese?.trim() ?? '';
+  const shouldShowExampleAudio =
+    cleanedExampleText.length > 0 && cleanedExampleText.length <= 100 && Boolean(result?.exampleAudioBase64);
+  const exampleJapaneseText = result?.exampleJapanese?.trim() ?? '';
+  const cleanedJapaneseTranslation = result?.japaneseTranslation?.trim() ?? '';
 
   // 総ボタン数（categories.json から動的集計、管理画面と同期）
   const totalButtons = useMemo(() => {
@@ -3711,6 +3716,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const toneButtonKeyCounterRef = useRef(0);
+  const lastImportWasOcrRef = useRef(false);
 
   const Spinner = ({
     size = isMobile ? 18 : 20,
@@ -3737,6 +3743,15 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       />
     );
   };
+
+  const sanitizeImportedText = useCallback((raw: string): string => {
+    if (!raw) return '';
+    let normalized = raw.normalize('NFC').replace(/\r\n/g, '\n');
+    normalized = normalized.replace(/[^\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}A-Za-z0-9０-９、。，．！？：；（）「」『』【】《》〈〉—…・¥￥\s]/gu, '');
+    normalized = normalized.replace(/[ ]{2,}/g, ' ');
+    normalized = normalized.replace(/\n{3,}/g, '\n\n');
+    return normalized.trim();
+  }, []);
 
   // iOS風アウトラインアイコン
   const FolderIcon = ({ size = 20, yOffset = 0 }: { size?: number; yOffset?: number }) => (
@@ -4053,6 +4068,88 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     | { key: string; type: 'decimal'; label: string }
     | { key: string; type: 'equal'; label: string }
     | { key: string; type: 'speak'; label: string };
+
+  const cleanExtractedText = (input: string): string => {
+    if (!input) return '';
+
+    const allowChar = /[0-9０-９A-Za-zＡ-Ｚａ-ｚ\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\u3000-\u303F\u3040-\u30FF\u31F0-\u31FF\uFF00-\uFFEF。，、．！？・：；「」『』（）［］｛｝【】《》〈〉『』「」［］｛｝（）ー—―〜～…‥・／％％￥¥＄＃＆＠＝＋－–—_·｡､，、！?？：；（）［］｛｝“”""''﹁﹂﹃﹄\u2010-\u203B]/;
+
+    const normalized = input
+      .normalize('NFC')
+      .replace(/\r\n|\r|\n/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!normalized) return '';
+
+    let reconstructed = '';
+    for (const ch of normalized) {
+      reconstructed += allowChar.test(ch) ? ch : ' ';
+    }
+
+    reconstructed = reconstructed.replace(/\s+/g, ' ').trim();
+    if (!reconstructed) return '';
+
+    const tokens = reconstructed.split(' ').filter(Boolean);
+    const filteredTokens = tokens.filter((token) => {
+      if (!token) return false;
+      if (/^[，。、．！？・：；「」『』（）［］｛｝【】《》〈〉…―ー〜～・]+$/.test(token)) return true;
+      if (/^[0-9０-９]+([.,．][0-9０-９]+)?$/.test(token)) return true;
+
+      const cjkCount = (token.match(/[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/g) || []).length;
+      const kanaCount = (token.match(/[\u3040-\u30FF\u31F0-\u31FF]/g) || []).length;
+      const fullWidthCount = (token.match(/[\uFF00-\uFFEF]/g) || []).length;
+      const letterCount = (token.match(/[A-Za-zＡ-Ｚａ-ｚ]/g) || []).length;
+
+      const effectiveLength =
+        token.replace(/[，。、．！？・：；「」『』（）［］｛｝【】《》〈〉…―ー〜～・]/g, '').length || token.length;
+
+      if (cjkCount + kanaCount + fullWidthCount >= Math.max(1, Math.ceil(effectiveLength * 0.4))) {
+        return true;
+      }
+
+      if (letterCount >= 3 && /^[A-Za-zＡ-Ｚａ-ｚ]+$/.test(token)) {
+        return true;
+      }
+
+      if ((letterCount > 0 && (cjkCount + kanaCount + fullWidthCount) > 0)) {
+        return true;
+      }
+
+      return false;
+    });
+
+    if (filteredTokens.length === 0) {
+      return reconstructed;
+    }
+
+    let cleaned = filteredTokens.join(' ');
+    cleaned = cleaned
+      .replace(/\s+([，。、．！？・：；）」』］｝】》〉])/g, '$1')
+      .replace(/([（「『［｛【《〈])\s+/g, '$1')
+      .trim();
+    return cleaned;
+  };
+
+  const applyImportedText = (rawText: string) => {
+    if (!rawText) return;
+
+    const cleaned = cleanExtractedText(rawText);
+    const candidate = cleaned || rawText.trim();
+
+    if (!candidate) return;
+
+    if (candidate.length > 1000) {
+      const confirmMsg = `読み取ったテキストが1,000文字を超えています（${candidate.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
+      if (confirm(confirmMsg)) {
+        setSearchQuery(candidate.slice(0, 1000));
+        alert('最初の1,000文字を入力欄に設定しました。');
+      }
+      return;
+    }
+
+    setSearchQuery(candidate);
+  };
 
   // TXT読み込み
   const readTxt = (file: File): Promise<string> => {
@@ -4827,14 +4924,18 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         resultData.audioBase64 = audioData.audioContent;
       }
 
-      // 例文音声を生成
-      if (data.exampleCantonese && data.exampleCantonese !== '例文生成エラーが発生しました') {
+      const exampleTextForAudio = data.exampleCantonese?.trim() ?? '';
+      if (
+        exampleTextForAudio &&
+        exampleTextForAudio !== '例文生成エラーが発生しました' &&
+        exampleTextForAudio.length <= 100
+      ) {
         const exampleAudioResponse = await fetch('/api/generate-speech', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ text: data.exampleCantonese }),
+          body: JSON.stringify({ text: exampleTextForAudio }),
         });
 
         if (exampleAudioResponse.ok) {
@@ -4843,7 +4944,19 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         }
       }
 
-      setResult(resultData);
+        setResult(resultData);
+
+        if (lastImportWasOcrRef.current) {
+          const cleanedForInput =
+            resultData.translatedText?.trim() ||
+            resultData.japaneseTranslation?.trim() ||
+            query;
+          if (cleanedForInput) {
+            const truncated = cleanedForInput.slice(0, 1000);
+            setSearchQuery(truncated);
+          }
+          lastImportWasOcrRef.current = false;
+        }
       
       // 長文（50文字超）の場合は粤ピン・カタカナをデフォルトで非表示
       const textLength = (resultData.translatedText || query).length;
@@ -4942,12 +5055,17 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           }
 
           // 例文音声を生成（例文が存在する場合）
-          if (resultData.exampleCantonese && resultData.exampleCantonese !== '例文生成エラーが発生しました' && resultData.exampleCantonese.trim() !== '') {
+          const exampleTextForAudioLearning = resultData.exampleCantonese?.trim() ?? '';
+          if (
+            exampleTextForAudioLearning &&
+            exampleTextForAudioLearning !== '例文生成エラーが発生しました' &&
+            exampleTextForAudioLearning.length <= 100
+          ) {
             try {
             const exampleAudioResponse = await fetch('/api/generate-speech', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text: resultData.exampleCantonese }),
+              body: JSON.stringify({ text: exampleTextForAudioLearning }),
             });
 
             if (exampleAudioResponse.ok) {
@@ -7087,6 +7205,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   setIsImporting(true);
                   setImportProgress(null);
                   setImportMessage('読み取り中...');
+                  lastImportWasOcrRef.current = true;
                   
                   const fileName = file.name.toLowerCase();
                   const fileType = file.type;
@@ -7095,19 +7214,20 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   if (fileType.startsWith('image/')) {
                     setImportMessage('OCR実行中（広東語）...');
                     const text = await runOcr(file, (p) => setImportProgress(p));
-                    if (!text || text.trim().length === 0) {
+                    const sanitized = sanitizeImportedText(text);
+                    if (!sanitized) {
                       alert('画像からテキストを読み取れませんでした。');
-                    } else {
-                      // 文字数制限チェック（最大1000文字）
-                      if (text.length > 1000) {
-                        const confirmMsg = `OCRで読み取ったテキストが1,000文字を超えています（${text.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
-                        if (confirm(confirmMsg)) {
-                          setSearchQuery(text.substring(0, 1000));
-                          alert(`最初の1,000文字を入力欄に設定しました。`);
-                        }
+                      lastImportWasOcrRef.current = false;
+                    } else if (sanitized.length > 1000) {
+                      const confirmMsg = `OCRで読み取ったテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
+                      if (confirm(confirmMsg)) {
+                        setSearchQuery(sanitized.substring(0, 1000));
+                        alert(`最初の1,000文字を入力欄に設定しました。`);
                       } else {
-                        setSearchQuery(text);
+                        lastImportWasOcrRef.current = false;
                       }
+                    } else {
+                      setSearchQuery(sanitized);
                     }
                   }
                   // PDFファイルの場合（自動テキスト抽出→OCR）
@@ -7159,43 +7279,50 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                         }
                         
                         text = ocrText.trim();
-                        
-                        if (!text || text.length === 0) {
+                        const sanitized = sanitizeImportedText(text);
+                        if (!sanitized) {
                           alert('PDFからテキストを読み取れませんでした。');
-                        } else {
-                          // 文字数制限チェック（最大1000文字）
-                          if (text.length > 1000) {
-                            const confirmMsg = `PDFから読み取ったテキストが1,000文字を超えています（${text.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
-                            if (confirm(confirmMsg)) {
-                              setSearchQuery(text.substring(0, 1000));
-                              alert(`最初の1,000文字を入力欄に設定しました。`);
-                            }
+                          lastImportWasOcrRef.current = false;
+                        } else if (sanitized.length > 1000) {
+                          const confirmMsg = `PDFから読み取ったテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
+                          if (confirm(confirmMsg)) {
+                            setSearchQuery(sanitized.substring(0, 1000));
+                            alert(`最初の1,000文字を入力欄に設定しました。`);
                           } else {
-                            setSearchQuery(text);
+                            lastImportWasOcrRef.current = false;
                           }
+                        } else {
+                          setSearchQuery(sanitized);
                         }
                       } catch (ocrErr: any) {
                         console.error('PDF OCRエラー:', ocrErr);
                         alert('PDFのOCR処理中にエラーが発生しました: ' + (ocrErr?.message || String(ocrErr)));
                       }
                     } else {
-                      // 文字数制限チェック（最大1000文字）
-                      if (text.length > 1000) {
-                        const confirmMsg = `PDFから抽出したテキストが1,000文字を超えています（${text.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
+                      const sanitized = sanitizeImportedText(text);
+                      if (!sanitized) {
+                        alert('PDFからテキストを読み取れませんでした。');
+                        lastImportWasOcrRef.current = false;
+                      } else if (sanitized.length > 1000) {
+                        const confirmMsg = `PDFから抽出したテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
                         if (confirm(confirmMsg)) {
-                          setSearchQuery(text.substring(0, 1000));
+                          setSearchQuery(sanitized.substring(0, 1000));
                           alert(`最初の1,000文字を入力欄に設定しました。`);
+                        } else {
+                          lastImportWasOcrRef.current = false;
                         }
                       } else {
-                        setSearchQuery(text);
+                        setSearchQuery(sanitized);
                       }
                     }
                   } else {
                     alert('PDFまたは画像ファイルを選択してください。');
+                    lastImportWasOcrRef.current = false;
                   }
                 } catch (err: any) {
                   console.error(err);
                   alert('読み取り中にエラーが発生しました: ' + (err?.message || String(err)));
+                  lastImportWasOcrRef.current = false;
                 } finally {
                   setIsImporting(false);
                   setImportProgress(null);
@@ -7741,10 +7868,11 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 </>
               )}
               
-              {result.japaneseTranslation && (
-                <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', marginTop: '0.75rem' }}>
-                  翻訳： {result.japaneseTranslation}
-                    </p>
+              {cleanedJapaneseTranslation && (
+                <div style={{ fontSize: isMobile ? '0.875rem' : '1rem', marginTop: '0.75rem' }}>
+                  <strong style={{ display: 'block', marginBottom: '0.25rem' }}>翻訳：</strong>
+                  <div style={{ lineHeight: 1.6 }}>{cleanedJapaneseTranslation}</div>
+                </div>
               )}
               
               {/* 単語音声プレーヤー */}
@@ -7843,18 +7971,17 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               )}
 
               {/* 例文音声プレーヤー */}
-              {result.exampleAudioBase64 && result.exampleCantonese && (
+              {shouldShowExampleAudio && (
                 <div style={{ marginTop: '0.5rem' }}>
-                  <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
-                    例文音声:
-                  </p>
-                  <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', marginBottom: '0.25rem' }}>
-                    {result.exampleCantonese}
-                  </p>
-                  {result.exampleJapanese && (
-                    <p style={{ fontSize: isMobile ? '0.8rem' : '0.95rem', marginBottom: '0.5rem', color: '#4b5563' }}>
-                      日本語訳： {result.exampleJapanese}
-                    </p>
+                  <div style={{ fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>例文音声：</div>
+                  <div style={{ fontSize: isMobile ? '0.875rem' : '1rem', marginBottom: '0.25rem', lineHeight: 1.6 }}>
+                    {cleanedExampleText}
+                  </div>
+                  {exampleJapaneseText && (
+                    <div style={{ fontSize: isMobile ? '0.8rem' : '0.95rem', marginBottom: '0.5rem', color: '#4b5563' }}>
+                      <strong style={{ display: 'block', marginBottom: '0.25rem' }}>日本語訳：</strong>
+                      <div style={{ lineHeight: 1.6 }}>{exampleJapaneseText}</div>
+                    </div>
                   )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <audio 
@@ -7901,8 +8028,8 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     <button
                       onClick={async () => {
                         try {
-                          if (result.exampleCantonese) {
-                            await navigator.clipboard.writeText(result.exampleCantonese);
+                          if (cleanedExampleText) {
+                            await navigator.clipboard.writeText(cleanedExampleText);
                             setCopySuccess('例文');
                             setTimeout(() => setCopySuccess(null), 2000);
                           }
