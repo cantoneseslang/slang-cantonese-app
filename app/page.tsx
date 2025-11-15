@@ -540,6 +540,20 @@ export default function Home() {
     };
   }, [isNumbersCategory, fetchExchangeRate]);
 
+  useEffect(() => {
+    if (!isNumbersCategory) {
+      return;
+    }
+    if (activeConversionPanel !== 'currency') {
+      return;
+    }
+    if (exchangeRate || isFetchingRate) {
+      return;
+    }
+
+    fetchExchangeRate();
+  }, [activeConversionPanel, exchangeRate, fetchExchangeRate, isFetchingRate, isNumbersCategory]);
+
   const parsedCalculatorDisplayValue = useMemo(() => {
     const sanitized = calculatorDisplay.replace(/,/g, '');
     const numeric = Number(sanitized);
@@ -3802,7 +3816,8 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   const handleSwapCurrencyBase = useCallback(() => {
     setActiveConversionPanel('currency');
     setCurrencyBase((prev) => (prev === 'HKD' ? 'JPY' : 'HKD'));
-  }, []);
+    fetchExchangeRate({ force: true });
+  }, [fetchExchangeRate]);
 
   const handleCycleConversionBase = useCallback(() => {
     if (!activeConversionPanel) {
