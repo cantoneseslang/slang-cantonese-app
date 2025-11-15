@@ -868,8 +868,8 @@ export default function Home() {
 
     if (activeConversionPanel === 'currency' && currencyResults) {
       const currencyLabelMap: Record<CurrencyBase, { primary: string; secondary: string }> = {
-        HKD: { primary: '港幣', secondary: 'HKD' },
-        JPY: { primary: '日圓', secondary: 'JPY' },
+        HKD: { primary: '香港ドル', secondary: 'HKD' },
+        JPY: { primary: '日本円', secondary: 'JPY' },
       };
       const baseMeta = currencyLabelMap[currencyResults.base];
       const targetCurrency = currencyResults.base === 'HKD' ? 'JPY' : 'HKD';
