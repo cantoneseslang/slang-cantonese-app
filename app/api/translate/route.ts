@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // DeepSeek API設定
-const DEEPSEEK_API_KEY = 'sk-4762a303780f4233a5d1703c9b627a71';
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
+
+const normalizeText = (text: string): string =>
+  text
+    .normalize('NFC')
+    .replace(/\r\n/g, '\n')
+    .trim();
 
 // OPTIONSメソッドをサポート（CORS対応）
 export async function OPTIONS(request: NextRequest) {
@@ -18,6 +24,9 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!DEEPSEEK_API_KEY) {
+      throw new Error('DeepSeek API key is not configured');
+    }
     const body = await request.json();
     const { text, language } = body;
     
@@ -32,49 +41,37 @@ export async function POST(request: NextRequest) {
       });
     }
     
+    const normalizedText = normalizeText(text);
+
     // 言語に応じて翻訳先を決定（デフォルトは広東語）
-    const systemPrompt = language === 'mandarin' 
-      ? "You are a professional Japanese-to-Mandarin Chinese translator. Translate Japanese text DIRECTLY to Mandarin Chinese (Simplified Chinese) in ONE STEP. NEVER use Cantonese or Traditional Chinese as an intermediate step."
-      : "You are a professional translator. Translate the given Japanese text to Cantonese (traditional Chinese). Only provide the translation without any explanations or additional text. Use traditional Chinese characters. Be concise and fast.";
-    
-    // 北京語モードの場合、few-shot examplesを追加して直接翻訳を強制
-    const messages = language === 'mandarin' 
-      ? [
-          {
-            role: "system",
-            content: systemPrompt
-          },
-          {
-            role: "user",
-            content: "Translate: こんにちは"
-          },
-          {
-            role: "assistant",
-            content: "你好"
-          },
-          {
-            role: "user",
-            content: "Translate: ありがとうございます"
-          },
-          {
-            role: "assistant",
-            content: "谢谢"
-          },
-          {
-            role: "user",
-            content: `Translate: ${text}`
-          }
-        ]
-      : [
-          {
-            role: "system",
-            content: systemPrompt
-          },
-          {
-            role: "user",
-            content: `Translate this Japanese text to Cantonese: ${text}`
-          }
-        ];
+    const messages =
+      language === 'mandarin'
+        ? [
+            {
+              role: 'system',
+              content: `あなたはプロの翻訳者です。以下のルールに従って日本語を中国語（標準語・簡体字）に翻訳してください：
+1. 意味を損なわず自然な口語表現にする
+2. 不要な注釈や説明を追加しない
+3. 訳文のみを簡潔に返す`,
+            },
+            {
+              role: 'user',
+              content: `以下の日本語テキストを自然な中国語（簡体字）に翻訳してください：\n\n${normalizedText}`,
+            },
+          ]
+        : [
+            {
+              role: 'system',
+              content: `あなたはプロの翻訳者です。以下のルールに従って日本語を広東語（繁体字）に翻訳してください：
+1. 意味を損なわず自然な口語表現にする
+2. 必要に応じて広東語特有の語彙を使用
+3. 訳文のみを出力し、説明や注釈は追加しない`,
+            },
+            {
+              role: 'user',
+              content: `以下の日本語テキストを自然な広東語に翻訳してください：\n\n${normalizedText}`,
+            },
+          ];
     
     const response = await fetch(DEEPSEEK_API_URL, {
       method: 'POST',
@@ -85,9 +82,9 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         model: "deepseek-chat",
         messages: messages,
-        max_tokens: 500,
-        temperature: 0.0, // 温度を0に設定して最も確定的な翻訳を強制（中間ステップを完全に排除）
-        top_p: 0.1, // top_pを低く設定して、より確定的な出力を促す
+        max_tokens: 2000,
+        temperature: 0.3,
+        top_p: 0.8,
         stream: false // ストリーミング無効で高速化
       })
     });
@@ -110,49 +107,22 @@ export async function POST(request: NextRequest) {
     
     const jsonResponse = await response.json();
     let translated = jsonResponse.choices[0]?.message?.content?.trim() || '';
-    
-    // デバッグログ（北京語モードの場合）
-    if (language === 'mandarin') {
-      console.log('🔍 北京語翻訳API 生レスポンス:', translated.substring(0, 200));
-    }
-    
-    // 北京語モードの場合、レスポンスをクリーンアップ
-    if (language === 'mandarin') {
-      // 改行で分割して、最初の有効な行を取得（説明文をスキップ）
-      const lines = translated.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
-      
-      // 繁体字が含まれている行を検出して削除
-      const simplifiedLines = lines.filter((line: string) => {
-        // 繁体字のパターンをチェック（簡体字と繁体字の違いを検出）
-        // 一般的な繁体字文字をチェック
-        const hasTraditionalChars = /[繁體廣東語話]/g.test(line);
-        if (hasTraditionalChars) {
-          console.warn('⚠️ 繁体字が検出されました:', line);
-          return false;
-        }
-        return true;
-      });
-      
-      // 簡体字のみの行を取得
-      if (simplifiedLines.length > 0) {
-        translated = simplifiedLines[0]; // 最初の有効な行を使用
-      }
-      
-      // 括弧で囲まれた説明文を削除
-      translated = translated.replace(/^[（(].*?[）)]\s*/g, '');
-      translated = translated.replace(/[（(].*?[）)]/g, '');
-      
-      // 引用符や角括弧を削除
-      translated = translated.replace(/^["'「」『』\[\]\s]+|["'「」『』\[\]\s]+$/g, '');
-      
-      // 説明文のパターンを削除
-      translated = translated.replace(/^(我將|我會|I will|I'll|I'm|翻訳|Translation|説明|説明文)/i, '');
-      
-      // 最終的なクリーンアップ
-      translated = translated.trim();
-      
-      console.log('✅ 北京語翻訳API 最終結果:', translated.substring(0, 200));
-    }
+
+    translated = translated
+      .replace(/^["'「」『』【】（）()\[\]]+/, '')
+      .replace(/["'「」『』【】（）()\[\]]+$/, '')
+      .replace(/\n+/g, ' ')
+      .trim();
+
+    console.log('🔧 translate API リクエスト:', {
+      language,
+      originalLength: normalizedText.length,
+      first50Chars: normalizedText.substring(0, 50),
+    });
+    console.log('🔧 translate API レスポンス:', {
+      rawResponse: jsonResponse.choices[0]?.message?.content,
+      cleanedResponse: translated,
+    });
     
     return NextResponse.json({
       translated: translated

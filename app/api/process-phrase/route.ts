@@ -8,12 +8,22 @@ const jyutpingDataPath = path.join(process.cwd(), 'public/google_drive_data.csv'
 const katakanaDataPath = path.join(process.cwd(), 'public/katakana_conversion_data.csv');
 
 // DeepSeek API設定
-const DEEPSEEK_API_KEY = 'sk-4762a303780f4233a5d1703c9b627a71';
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
+
+if (!DEEPSEEK_API_KEY) {
+  console.error('DeepSeek API key is not configured. Please set DEEPSEEK_API_KEY in environment variables.');
+}
 
 let jyutpingDict: Record<string, string[]> = {};
 let katakanaDict: Record<string, string> = {};
 let dataLoaded = false;
+
+const normalizeText = (text: string): string =>
+  text
+    .normalize('NFC')
+    .replace(/\r\n/g, '\n')
+    .trim();
 
 function loadData() {
   if (dataLoaded) return;
@@ -75,87 +85,68 @@ function findAllJyutpingsAndKatakanaForPhrase(phrase: string) {
 }
 
 async function translateJapaneseToCantonese(japaneseText: string): Promise<string> {
+  if (!DEEPSEEK_API_KEY) {
+    throw new Error('DeepSeek API key is not configured');
+  }
+
+  const normalized = normalizeText(japaneseText);
+
   try {
     const response = await fetch(DEEPSEEK_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+        Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "deepseek-chat",
+        model: 'deepseek-chat',
         messages: [
           {
-            role: "system",
-            content: "You are a professional translator specializing in Japanese to Cantonese translation. Translate the given Japanese text into natural, conversational Cantonese using Traditional Chinese characters. Provide ONLY the Cantonese translation without any explanations, notes, or additional text."
+            role: 'system',
+            content: `あなたはプロの翻訳者です。以下のルールに従って日本語を広東語（繁体字）に翻訳してください：
+1. 意味を損なわず自然な口語表現にする
+2. 必要に応じて広東語特有の語彙を使用
+3. 訳文のみを出力し、説明や注釈は追加しない`,
           },
           {
-            role: "user",
-            content: `次の日本語文章を広東語に翻訳して\n\n${japaneseText}`
-          }
+            role: 'user',
+            content: `以下の日本語テキストを自然な広東語に翻訳してください：\n\n${normalized}`,
+          },
         ],
-        max_tokens: 3000,
-        temperature: 0.3
-      })
+        max_tokens: 2000,
+        temperature: 0.3,
+        top_p: 0.8,
+      }),
     });
-    
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('日本語→広東語翻訳 API error:', response.status, errorText);
+      throw new Error(`API error: ${response.status}`);
+    }
+
     const jsonResponse = await response.json();
-    let translatedText = jsonResponse.choices[0].message.content.trim();
-    
-    console.log('📝 DeepSeek生レスポンス:', translatedText.substring(0, 200));
-    
-    // 説明文や括弧付きの説明を削除
-    // 例: "(我將嘗試把這首富有詩意的日文詩翻譯成廣東話，盡量保留原作的意境與韻味)" のような説明文を削除
-    translatedText = translatedText.replace(/^[（(].*?[）)]\s*/g, ''); // 括弧で囲まれた説明文を削除
-    
-    // 改行で区切られた場合、最初の空行以降が説明文の可能性があるので、最初の空行までの部分を取得
-    const lines = translatedText.split('\n');
-    let resultLines: string[] = [];
-    let foundTranslation = false;
-    
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-      // 空行をスキップ
-      if (!trimmedLine) {
-        if (foundTranslation) break; // 翻訳が見つかった後の空行は終了
-        continue;
-      }
-      // 説明文のパターンを検出（括弧で始まる、または英語/日本語の説明）
-      if (/^[（(]/.test(trimmedLine) || /^(我將|我會|I will|I'll|I'm|翻訳|Translation)/i.test(trimmedLine)) {
-        continue; // 説明文をスキップ
-      }
-      // 広東語の文字（繁体字）が含まれている行を翻訳として採用
-      if (/[\u4E00-\u9FFF]/.test(trimmedLine)) {
-        resultLines.push(trimmedLine);
-        foundTranslation = true;
-      }
-    }
-    
-    // 結果が得られない場合は、元のテキストから説明文以外を抽出
-    if (resultLines.length === 0) {
-      // 括弧で囲まれた部分を削除
-      translatedText = translatedText.replace(/[（(][^）)]*[）)]/g, '');
-      // 先頭・末尾の引用符や角括弧を削除
-      translatedText = translatedText.replace(/^["'「」『』\[\]\s]+|["'「」『』\[\]\s]+$/g, '');
-      resultLines = translatedText.split('\n').filter((line: string) => {
-        const trimmed = line.trim();
-        return trimmed && /[\u4E00-\u9FFF]/.test(trimmed);
-      });
-    }
-    
-    const finalTranslation = resultLines.join('\n').trim();
-    
-    // 翻訳結果が空または短すぎる場合はエラー
-    if (!finalTranslation || finalTranslation.length < 3) {
-      console.error('❌ 翻訳結果が空:', { original: translatedText.substring(0, 100) });
-      throw new Error('翻訳結果が空または不十分です');
-    }
-    
-    console.log('✅ 最終翻訳結果:', finalTranslation.substring(0, 100));
-    return finalTranslation;
+    let translatedText = jsonResponse.choices?.[0]?.message?.content?.trim() || '';
+
+    translatedText = translatedText
+      .replace(/^["'「」『』【】（）()\[\]]+/, '')
+      .replace(/["'「」『』【】（）()\[\]]+$/, '')
+      .replace(/\n+/g, ' ')
+      .trim();
+
+    console.log('🔧 日本語→広東語 翻訳リクエスト:', {
+      originalLength: normalized.length,
+      first50Chars: normalized.substring(0, 50),
+    });
+    console.log('🔧 日本語→広東語 翻訳レスポンス:', {
+      rawResponse: jsonResponse.choices?.[0]?.message?.content,
+      cleanedResponse: translatedText,
+    });
+
+    return translatedText;
   } catch (error) {
-    console.error('Translation error:', error);
-    throw error;
+    console.error('日本語→広東語 translation error:', error);
+    throw new Error('翻訳に失敗しました');
   }
 }
 
@@ -174,56 +165,70 @@ function isJapaneseText(text: string): boolean {
   return false;
 }
 
-async function translateCantoneseToJapanese(cantoneseText: string): Promise<string> {                                                              
-  if (!cantoneseText || cantoneseText.trim() === '') {
-    return '';
+async function translateCantoneseToJapanese(cantoneseText: string): Promise<string> {
+  if (!DEEPSEEK_API_KEY) {
+    throw new Error('DeepSeek API key is not configured');
   }
+  const normalized = normalizeText(cantoneseText);
 
   try {
     const response = await fetch(DEEPSEEK_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+        Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
       },
       body: JSON.stringify({
         model: 'deepseek-chat',
         messages: [
           {
             role: 'system',
-            content: 'You are a professional translator who translates Cantonese (Traditional Chinese) into natural Japanese. Provide only the Japanese translation without any additional explanations.',
+            content: `あなたはプロの翻訳者です。以下のルールに従って広東語を日本語に翻訳してください：
+1. 広東語の口語表現を適切な日本語の口語に変換
+2. 文化や習慣の違いを考慮して自然な日本語に
+3. 敬語は必要に応じて使用
+4. 翻訳結果のみを出力し、説明は追加しない`,
           },
           {
             role: 'user',
-            content:
-              `次の広東語（繁体字中国語）の文章を日本語に翻訳してください。\n\n${cantoneseText}\n\n日本語に翻訳して`,
+            content: `以下の広東語テキストを自然な日本語に翻訳してください：\n\n${normalized}`,
           },
         ],
-        max_tokens: 1200,
-        temperature: 0.2,
-        top_p: 0.9,
+        max_tokens: 2000,
+        temperature: 0.3,
+        top_p: 0.8,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Cantonese→Japanese translation API error:', response.status, errorText);
-      return '';
+      console.error('広東語→日本語翻訳 API error:', response.status, errorText);
+      throw new Error(`API error: ${response.status}`);
     }
 
     const jsonResponse = await response.json();
-    let translatedText = jsonResponse.choices?.[0]?.message?.content ?? '';
-    if (typeof translatedText !== 'string') {
-      return '';
-    }
+    let translatedText = jsonResponse.choices?.[0]?.message?.content?.trim() || '';
 
-    translatedText = translatedText.trim();
-    translatedText = translatedText.replace(/^[「『\s]+|[」』\s]+$/g, '');
+    translatedText = translatedText
+      .replace(/^["'「」『』【】（）()\[\]]+/, '')
+      .replace(/["'「」『』【】（）()\[\]]+$/, '')
+      .replace(/\n+/g, ' ')
+      .trim();
+
+    console.log('🔧 広東語→日本語 翻訳リクエスト:', {
+      originalLength: normalized.length,
+      first50Chars: normalized.substring(0, 50),
+      containsJapanese: /[\u3040-\u309F\u30A0-\u30FF]/.test(normalized),
+    });
+    console.log('🔧 広東語→日本語 翻訳レスポンス:', {
+      rawResponse: jsonResponse.choices?.[0]?.message?.content,
+      cleanedResponse: translatedText,
+    });
 
     return translatedText;
   } catch (error) {
-    console.error('Cantonese→Japanese translation error:', error);
-    return '';
+    console.error('広東語→日本語 translation error:', error);
+    throw new Error('翻訳に失敗しました');
   }
 }
 
@@ -431,17 +436,16 @@ export async function POST(request: NextRequest) {
     // 例文生成（翻訳された広東語テキストを使用、元の日本語テキストも渡す）
     const exampleData = await generateExampleSentence(cantonesePhrase, originalJapanese);
 
-    let japaneseTranslation = originalJapanese;
-    if (!japaneseTranslation) {
-      const translated = await translateCantoneseToJapanese(cantonesePhrase);
-      japaneseTranslation = translated && translated.trim().length > 0 ? translated : '翻訳に失敗しました';
+    let japaneseTranslation = await translateCantoneseToJapanese(cantonesePhrase);
+    if (!japaneseTranslation || !japaneseTranslation.trim()) {
+      japaneseTranslation = '翻訳に失敗しました';
     }
 
-    let exampleJapanese = originalJapanese || exampleData.japanese;
-    if ((!exampleJapanese || exampleJapanese.trim() === '' || exampleJapanese.trim() === exampleData.cantonese.trim()) && exampleData.cantonese && !exampleData.cantonese.includes('エラー')) {
+    let exampleJapanese = '';
+    if (exampleData.cantonese && !exampleData.cantonese.includes('エラー')) {
       const translatedExample = await translateCantoneseToJapanese(exampleData.cantonese);
       if (translatedExample && translatedExample.trim()) {
-        exampleJapanese = translatedExample;
+        exampleJapanese = translatedExample.trim();
       }
     }
     if (!exampleJapanese || !exampleJapanese.trim()) {
