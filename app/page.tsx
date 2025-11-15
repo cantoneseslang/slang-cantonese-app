@@ -802,16 +802,6 @@ export default function Home() {
       setCalculatorHistory(`${formattedFirst} ${operatorToUse} ${formattedSecond} = ${formattedResult}`);
   };
 
-  const handleCalculatorToggleSign = () => {
-    setCalculatorError(null);
-    setCalculatorDisplay((prev) => {
-      if (prev === '0' || prev === 'Error') {
-        return prev;
-      }
-      return prev.startsWith('-') ? prev.slice(1) : `-${prev}`;
-    });
-  };
-
   const handleCalculatorPercent = () => {
     setCalculatorError(null);
     const currentValue = parsedCalculatorDisplayValue;
@@ -822,6 +812,10 @@ export default function Home() {
     const percentValue = currentValue / 100;
     setCalculatorDisplay(String(percentValue));
     setCalculatorOverwrite(true);
+  };
+
+  const handleReturnToCalculator = () => {
+    setActiveConversionPanel(null);
   };
 
   const handleCalculatorDelete = () => {
@@ -1138,7 +1132,7 @@ export default function Home() {
       [
         { key: 'function-clear', type: 'function', action: 'clear', label: clearButtonLabel },
         { key: 'function-delete', type: 'function', action: 'delete', label: '⌫' },
-        { key: 'function-toggle', type: 'function', action: 'toggleSign', label: '+/-' },
+          { key: 'function-return', type: 'function', action: 'returnToCalculator', label: '計算機' },
         { key: 'operator-divide', type: 'operator', operator: '÷', label: '÷' },
         { key: 'unit-weight-catty', type: 'conversion', shortcutKey: 'weight-catty' },
       ],
@@ -4020,7 +4014,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   }, []);
 
   type ConversionShortcutKey = keyof typeof conversionShortcutMap;
-  type CalculatorFunctionAction = 'clear' | 'delete' | 'percent' | 'toggleSign';
+  type CalculatorFunctionAction = 'clear' | 'delete' | 'percent' | 'returnToCalculator';
 
   type CalculatorGridItem =
     | { key: string; type: 'conversion'; shortcutKey: ConversionShortcutKey }
@@ -7515,7 +7509,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                               clear: handleCalculatorClear,
                               delete: handleCalculatorDelete,
                               percent: handleCalculatorPercent,
-                              toggleSign: handleCalculatorToggleSign,
+                              returnToCalculator: handleReturnToCalculator,
                             };
                             const disabled = false;
                           return renderCalculatorButton(item.label, actionHandlers[item.action], {
