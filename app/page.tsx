@@ -4947,14 +4947,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         setResult(resultData);
 
         if (lastImportWasOcrRef.current) {
-          const cleanedForInput =
-            resultData.translatedText?.trim() ||
-            resultData.japaneseTranslation?.trim() ||
-            query;
-          if (cleanedForInput) {
-            const truncated = cleanedForInput.slice(0, 1000);
-            setSearchQuery(truncated);
-          }
+          setSearchQuery('');
           lastImportWasOcrRef.current = false;
         }
       
@@ -4998,7 +4991,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     if (isLearningMode) {
       // 学習モード：例文も表示、音声プレイヤーを表示
       setForceShowResult(true); // 結果パネルを表示する
-      setSearchQuery(word.chinese);
+      setSearchQuery('');
       
       // 学習モードでは常に例文生成と音声生成を実行
       setLoading(true);
@@ -7219,15 +7212,16 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                       alert('画像からテキストを読み取れませんでした。');
                       lastImportWasOcrRef.current = false;
                     } else if (sanitized.length > 1000) {
-                      const confirmMsg = `OCRで読み取ったテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
+                      const confirmMsg = `OCRで読み取ったテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを翻訳に使用しますか？`;
                       if (confirm(confirmMsg)) {
-                        setSearchQuery(sanitized.substring(0, 1000));
-                        alert(`最初の1,000文字を入力欄に設定しました。`);
+                        setSearchQuery('');
+                        void handleSearch(sanitized.substring(0, 1000));
                       } else {
                         lastImportWasOcrRef.current = false;
                       }
                     } else {
-                      setSearchQuery(sanitized);
+                      setSearchQuery('');
+                      void handleSearch(sanitized);
                     }
                   }
                   // PDFファイルの場合（自動テキスト抽出→OCR）
@@ -7284,15 +7278,16 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                           alert('PDFからテキストを読み取れませんでした。');
                           lastImportWasOcrRef.current = false;
                         } else if (sanitized.length > 1000) {
-                          const confirmMsg = `PDFから読み取ったテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
+                          const confirmMsg = `PDFから読み取ったテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを翻訳に使用しますか？`;
                           if (confirm(confirmMsg)) {
-                            setSearchQuery(sanitized.substring(0, 1000));
-                            alert(`最初の1,000文字を入力欄に設定しました。`);
+                            setSearchQuery('');
+                            void handleSearch(sanitized.substring(0, 1000));
                           } else {
                             lastImportWasOcrRef.current = false;
                           }
                         } else {
-                          setSearchQuery(sanitized);
+                          setSearchQuery('');
+                          void handleSearch(sanitized);
                         }
                       } catch (ocrErr: any) {
                         console.error('PDF OCRエラー:', ocrErr);
@@ -7304,15 +7299,16 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                         alert('PDFからテキストを読み取れませんでした。');
                         lastImportWasOcrRef.current = false;
                       } else if (sanitized.length > 1000) {
-                        const confirmMsg = `PDFから抽出したテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
+                        const confirmMsg = `PDFから抽出したテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを翻訳に使用しますか？`;
                         if (confirm(confirmMsg)) {
-                          setSearchQuery(sanitized.substring(0, 1000));
-                          alert(`最初の1,000文字を入力欄に設定しました。`);
+                          setSearchQuery('');
+                          void handleSearch(sanitized.substring(0, 1000));
                         } else {
                           lastImportWasOcrRef.current = false;
                         }
                       } else {
-                        setSearchQuery(sanitized);
+                        setSearchQuery('');
+                        void handleSearch(sanitized);
                       }
                     }
                   } else {
