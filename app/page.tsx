@@ -252,6 +252,8 @@ const convertNumberToCantoneseReading = (raw: string): string => {
     '8': '八',
     '9': '九',
   };
+  const smallUnits = ['', '十', '百', '千'];
+  const bigUnits = ['', '萬', '億', '兆'];
 
   let sanitized = raw.replace(/,/g, '').trim();
   if (!sanitized) return '';
@@ -262,26 +264,107 @@ const convertNumberToCantoneseReading = (raw: string): string => {
   }
 
   if (!sanitized || sanitized === '.' || sanitized === '-.') {
-    return isNegative ? '負 零' : '零';
+    return isNegative ? '負零' : '零';
   }
 
   const [integerPartRaw, decimalPart] = sanitized.split('.');
-
-  const convertDigits = (digits: string) =>
-    digits
-      .split('')
-      .map((ch) => digitMap[ch] ?? ch)
-      .join(' ');
-
   const integerPart = integerPartRaw.replace(/^0+/, '') || '0';
-  let converted = convertDigits(integerPart);
+
+  const convertGroup = (groupRaw: string): string => {
+    const digits = groupRaw.split('');
+    const length = digits.length;
+    let result = '';
+    let zeroPending = false;
+
+    for (let i = 0; i < length; i += 1) {
+      const ch = digits[i];
+      const digit = Number(ch);
+      const unitIndex = length - i - 1;
+
+      if (digit === 0) {
+        if (i < length - 1 && digits.slice(i + 1).some((d) => d !== '0')) {
+          zeroPending = result !== '';
+        }
+        continue;
+      }
+
+      if (zeroPending) {
+        result += '零';
+        zeroPending = false;
+      }
+
+      const isLeadingTen =
+        digit === 1 &&
+        unitIndex === 1 &&
+        result === '' &&
+        digits.slice(0, i).every((d) => d === '0') &&
+        length === 2;
+
+      if (!isLeadingTen) {
+        result += digitMap[ch] ?? ch;
+      }
+
+      if (unitIndex > 0) {
+        result += smallUnits[unitIndex];
+      }
+    }
+
+    return result;
+  };
+
+  const groups: string[] = [];
+  let remaining = integerPart;
+  while (remaining.length > 4) {
+    groups.unshift(remaining.slice(-4));
+    remaining = remaining.slice(0, -4);
+  }
+  groups.unshift(remaining);
+
+  let converted = '';
+  for (let i = 0; i < groups.length; i += 1) {
+    const group = groups[i];
+    const groupValue = Number(group);
+    const unitIndex = groups.length - i - 1;
+
+    if (groupValue === 0) {
+      if (
+        converted &&
+        !converted.endsWith('零') &&
+        groups.slice(i + 1).some((g) => Number(g) !== 0)
+      ) {
+        converted += '零';
+      }
+      continue;
+    }
+
+    const groupConverted = convertGroup(group);
+    if (groupConverted) {
+      if (
+        converted &&
+        !converted.endsWith('零') &&
+        groupValue < 1000 &&
+        groupValue > 0
+      ) {
+        converted += '零';
+      }
+      converted += groupConverted + bigUnits[unitIndex];
+    }
+  }
+
+  if (!converted) {
+    converted = '零';
+  }
 
   if (decimalPart !== undefined && decimalPart !== '') {
-    converted += ' 點 ' + convertDigits(decimalPart);
+    const decimalConverted = decimalPart
+      .split('')
+      .map((ch) => digitMap[ch] ?? ch)
+      .join('');
+    converted += '點' + decimalConverted;
   }
 
   if (isNegative) {
-    converted = '負 ' + converted;
+    converted = '負' + converted;
   }
 
   return converted;
