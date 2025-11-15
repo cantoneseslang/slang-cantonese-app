@@ -3589,6 +3589,11 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
 
   const openConversionPanel = useCallback(
     (panel: ConversionPanel) => {
+      if (activeConversionPanel === panel) {
+        setActiveConversionPanel(null);
+        return;
+      }
+
       setActiveConversionPanel(panel);
       if (panel === 'currency') {
         if (currencyBase !== 'HKD') {
@@ -3609,7 +3614,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         setDistanceBase('foot');
       }
     },
-    [areaBase, currencyBase, distanceBase, fetchExchangeRate, lengthBase, weightBase]
+    [activeConversionPanel, areaBase, currencyBase, distanceBase, fetchExchangeRate, lengthBase, weightBase]
   );
 
   const cycleConversionPanel = useCallback(() => {
