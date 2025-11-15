@@ -43,6 +43,15 @@ button[title="カメラ/OCRで読み取り"] svg {
   }
 }
 
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* タイトルタイル回転アニメーション */
 @keyframes tileFlip {
   0% {

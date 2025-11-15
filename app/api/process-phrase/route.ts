@@ -174,33 +174,44 @@ function isJapaneseText(text: string): boolean {
   return false;
 }
 
-async function translateCantoneseToJapanese(cantoneseText: string): Promise<string> {
+async function translateCantoneseToJapanese(cantoneseText: string, attempt = 1): Promise<string> {                                                              
   if (!cantoneseText || cantoneseText.trim() === '') {
     return '';
   }
+
+  const baseSystemPrompt =
+    'You are a professional translator. Convert Traditional Chinese (Cantonese) text into natural Japanese. ' +
+    'The output must consist solely of Japanese characters (kanji, hiragana, katakana) and necessary punctuation. ' +
+    'Do not include explanations, transliterations, or English letters.';
+
+  const reinforcementPrompt =
+    '必ず自然な日本語で翻訳し、平仮名または片仮名を含めてください。日本語以外の文字（英字や意味不明な記号）は出力しないでください。';
 
   try {
     const response = await fetch(DEEPSEEK_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
       },
       body: JSON.stringify({
         model: 'deepseek-chat',
         messages: [
           {
             role: 'system',
-            content: 'You are a professional translator specializing in Cantonese (Traditional Chinese) to Japanese translation. Translate the given Cantonese text into natural Japanese. Provide ONLY the Japanese translation without any explanations or additional text.'
+            content: attempt === 1 ? baseSystemPrompt : `${baseSystemPrompt} ${reinforcementPrompt}`,
           },
           {
             role: 'user',
-            content: `次の広東語（繁体字中国語）の文章を自然な日本語に翻訳してください。\n\n${cantoneseText}`
-          }
+            content:
+              `次の広東語（繁体字中国語）の文章を自然な日本語に翻訳してください。\n` +
+              `${attempt === 1 ? '' : `${reinforcementPrompt}\n`}\n${cantoneseText}`,
+          },
         ],
-        max_tokens: 1500,
-        temperature: 0.2
-      })
+        max_tokens: 1200,
+        temperature: 0.1,
+        top_p: 0.3,
+      }),
     });
 
     if (!response.ok) {
@@ -223,8 +234,27 @@ async function translateCantoneseToJapanese(cantoneseText: string): Promise<stri
 
     const japaneseRegex = /[\u3040-\u30FF]/;
     const candidateLine = lines.find((line: string) => japaneseRegex.test(line)) || translatedText;
+    const cleanedCandidate = candidateLine
+      .replace(/^[（(].*?[）)]\s*/g, '')
+      .replace(/^["'「」『』\[\]\s]+|["'「」『』\[\]\s]+$/g, '')
+      .trim();
 
-    return candidateLine.trim();
+    const hasKana = japaneseRegex.test(cleanedCandidate);
+    const hasAlphabet = /[A-Za-z]/.test(cleanedCandidate);
+
+    if (!hasKana || hasAlphabet) {
+      console.warn('⚠️ 日本語翻訳の品質が低い可能性:', {
+        attempt,
+        preview: cleanedCandidate.substring(0, 120),
+      });
+      if (attempt < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        return translateCantoneseToJapanese(cantoneseText, attempt + 1);
+      }
+      return '';
+    }
+
+    return cleanedCandidate;
   } catch (error) {
     console.error('Cantonese→Japanese translation error:', error);
     return '';
@@ -437,15 +467,19 @@ export async function POST(request: NextRequest) {
 
     let japaneseTranslation = originalJapanese;
     if (!japaneseTranslation) {
-      japaneseTranslation = await translateCantoneseToJapanese(cantonesePhrase);
+      const translated = await translateCantoneseToJapanese(cantonesePhrase);
+      japaneseTranslation = translated && translated.trim().length > 0 ? translated : '翻訳に失敗しました';
     }
 
     let exampleJapanese = originalJapanese || exampleData.japanese;
     if ((!exampleJapanese || exampleJapanese.trim() === '' || exampleJapanese.trim() === exampleData.cantonese.trim()) && exampleData.cantonese && !exampleData.cantonese.includes('エラー')) {
       const translatedExample = await translateCantoneseToJapanese(exampleData.cantonese);
-      if (translatedExample) {
+      if (translatedExample && translatedExample.trim()) {
         exampleJapanese = translatedExample;
       }
+    }
+    if (!exampleJapanese || !exampleJapanese.trim()) {
+      exampleJapanese = '翻訳に失敗しました';
     }
 
     return NextResponse.json({

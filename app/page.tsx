@@ -3712,6 +3712,32 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const toneButtonKeyCounterRef = useRef(0);
 
+  const Spinner = ({
+    size = isMobile ? 18 : 20,
+    borderColor = '#3b82f6',
+    trackColor = 'rgba(59,130,246,0.25)',
+    borderWidth,
+  }: {
+    size?: number;
+    borderColor?: string;
+    trackColor?: string;
+    borderWidth?: number;
+  }) => {
+    const computedBorderWidth = borderWidth ?? Math.max(2, Math.round(size / 6));
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: '50%',
+          border: `${computedBorderWidth}px solid ${trackColor}`,
+          borderTopColor: borderColor,
+          animation: 'spin 0.8s linear infinite',
+        }}
+      />
+    );
+  };
+
   // iOS風アウトラインアイコン
   const FolderIcon = ({ size = 20, yOffset = 0 }: { size?: number; yOffset?: number }) => (
     <svg
@@ -6876,23 +6902,46 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
             padding: isMobile ? '0 1rem' : '0 1.5rem'
           }}>
             {/* 入力欄の小見出し（説明） */}
-            <div style={{
-              fontSize: isMobile ? '0.75rem' : '0.875rem',
-              color: '#6b7280',
-              margin: '0 0 0.375rem 0',
-              lineHeight: 1.6
-            }}>
-              <div>・広東語の発音、意味を調べたい時、広東語を入力して🟦ボタン</div>
-              <div>・日本語を広東語に翻訳したい時、日本語を入力して🟩ボタン</div>
-              <div style={{ 
-                fontSize: isMobile ? '0.85rem' : '0.8rem', 
-                color: searchQuery.length > 900 ? '#ef4444' : '#9ca3af', 
-                marginTop: '0.25rem',
-                fontWeight: searchQuery.length > 900 ? '600' : '400'
-              }}>
-                入力可能文字数: {searchQuery.length} / 1,000文字
+              <div
+                style={{
+                  fontSize: isMobile ? '0.75rem' : '0.875rem',
+                  color: '#6b7280',
+                  margin: '0 0 0.375rem 0',
+                  lineHeight: 1.6,
+                }}
+              >
+                <div>・広東語の発音、意味を調べたい時、広東語を入力して🟦ボタン</div>
+                <div>・日本語を広東語に翻訳したい時、日本語を入力して🟩ボタン</div>
+                <div
+                  style={{
+                    marginTop: '0.35rem',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: isMobile ? 'flex-start' : 'center',
+                    gap: '0.75rem',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: isMobile ? '0.85rem' : '0.8rem',
+                      color: searchQuery.length > 900 ? '#ef4444' : '#9ca3af',
+                      fontWeight: searchQuery.length > 900 ? '600' : '500',
+                    }}
+                  >
+                    入力可能文字数: {searchQuery.length} / 1,000文字
+                  </div>
+                  <div
+                    style={{
+                      fontSize: isMobile ? '0.8rem' : '0.85rem',
+                      color: '#ef4444',
+                      fontWeight: 600,
+                      whiteSpace: isMobile ? 'normal' : 'nowrap',
+                    }}
+                  >
+                    下の青い🟦「広東語発音」ボタンを押してください
+                  </div>
+                </div>
               </div>
-            </div>
             {/* 
               ⚠️ IMPORTANT: フォルダアイコンの中央配置設定
               - ラッパdiv / 入力欄 / アイコンラッパの高さは完全に一致させる
@@ -6956,18 +7005,22 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               }}
             />
               {/* 右端フォルダアイコン */}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                title="ファイルから読み取り (PDF/TXT)"
+                <button
+                  onClick={() => {
+                    if (isImporting) return;
+                    fileInputRef.current?.click();
+                  }}
+                  disabled={isImporting}
+                  title="ファイルから読み取り (PDF/TXT)"
                   aria-label="ファイルから読み取り (PDF/TXT)"
-                style={{
+                  style={{
                     position: 'absolute',
                     right: isMobile ? '0.5rem' : '0.75rem',
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    background: 'transparent',
+                    background: isImporting ? 'rgba(229,231,235,0.6)' : 'transparent',
                     border: 'none',
-                    cursor: 'pointer',
+                    cursor: isImporting ? 'not-allowed' : 'pointer',
                     padding: 0,
                     margin: 0,
                     lineHeight: 0,
@@ -6981,24 +7034,42 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     justifyContent: 'center',
                     flexShrink: 0,
                     boxShadow: 'none',
-                    zIndex: 3
-                }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = '#111827'; e.currentTarget.style.background = '#f3f4f6'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.background = 'transparent'; }}
-                  onFocus={(e) => { 
+                    zIndex: 3,
+                    opacity: isImporting ? 0.7 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (isImporting) return;
+                    e.currentTarget.style.color = '#111827';
+                    e.currentTarget.style.background = '#f3f4f6';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (isImporting) return;
+                    e.currentTarget.style.color = '#6b7280';
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                  onFocus={(e) => {
+                    if (isImporting) return;
                     const button = e.currentTarget as HTMLButtonElement;
                     button.style.outline = '2px solid rgba(0,122,255,0.25)';
                     button.style.outlineOffset = '2px';
                     button.style.background = '#f3f4f6';
                   }}
-                  onBlur={(e) => { 
+                  onBlur={(e) => {
                     const button = e.currentTarget as HTMLButtonElement;
                     button.style.outline = 'none';
-                    button.style.background = 'transparent';
+                    button.style.background = isImporting ? 'rgba(229,231,235,0.6)' : 'transparent';
                   }}
-                  >
-                  <FolderIcon size={isMobile ? 28 : 32} yOffset={0} />
-                  </button>
+                >
+                  {isImporting ? (
+                    <Spinner
+                      size={isMobile ? 22 : 26}
+                      borderColor="#2563eb"
+                      trackColor="rgba(37,99,235,0.25)"
+                    />
+                  ) : (
+                    <FolderIcon size={isMobile ? 28 : 32} yOffset={0} />
+                  )}
+                </button>
             </div>
 
             {/* 非表示input: PDF/画像（OCR対応、自動実行、HEIC対応） */}
@@ -7131,6 +7202,28 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 }
               }}
             />
+              
+              {isImporting && (
+                <div
+                  style={{
+                    marginTop: '0.65rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontSize: isMobile ? '0.8rem' : '0.875rem',
+                    fontWeight: 600,
+                    color: '#2563eb',
+                  }}
+                >
+                  <Spinner
+                    size={isMobile ? 18 : 20}
+                    borderColor="#2563eb"
+                    trackColor="rgba(37,99,235,0.25)"
+                  />
+                  <span>{importMessage ?? 'ファイルを処理しています...'}</span>
+                </div>
+              )}
+
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button
                 type="button"
@@ -7178,7 +7271,26 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   }
                 }}
               >
-                {blueLoading ? '検索中...' : '広東語発音'}
+                {blueLoading ? (
+                  <span
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <Spinner
+                      size={isMobile ? 18 : 20}
+                      borderColor="#ffffff"
+                      trackColor="rgba(255,255,255,0.35)"
+                      borderWidth={2}
+                    />
+                    <span>検索中...</span>
+                  </span>
+                ) : (
+                  '広東語発音'
+                )}
               </button>
               <button
                 type="button"
@@ -7226,7 +7338,26 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   }
                 }}
               >
-                日訳+広東語発音
+                {greenLoading ? (
+                  <span
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <Spinner
+                      size={isMobile ? 18 : 20}
+                      borderColor="#ffffff"
+                      trackColor="rgba(255,255,255,0.35)"
+                      borderWidth={2}
+                    />
+                    <span>変換中...</span>
+                  </span>
+                ) : (
+                  '日訳+広東語発音'
+                )}
               </button>
             </div>
           </div>
