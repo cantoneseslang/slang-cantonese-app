@@ -286,6 +286,72 @@
     ]
   },
   {
+    "id": "numbers",
+    "name": "🔢 数字",
+    "words": [
+      {
+        "chinese": "零",
+        "japanese": "0"
+      },
+      {
+        "chinese": "一",
+        "japanese": "1"
+      },
+      {
+        "chinese": "二",
+        "japanese": "2"
+      },
+      {
+        "chinese": "三",
+        "japanese": "3"
+      },
+      {
+        "chinese": "四",
+        "japanese": "4"
+      },
+      {
+        "chinese": "五",
+        "japanese": "5"
+      },
+      {
+        "chinese": "六",
+        "japanese": "6"
+      },
+      {
+        "chinese": "七",
+        "japanese": "7"
+      },
+      {
+        "chinese": "八",
+        "japanese": "8"
+      },
+      {
+        "chinese": "九",
+        "japanese": "9"
+      },
+      {
+        "chinese": "十",
+        "japanese": "10"
+      },
+      {
+        "chinese": "零一二三四五六七八九十",
+        "japanese": "0〜10"
+      },
+      {
+        "chinese": "一百",
+        "japanese": "100"
+      },
+      {
+        "chinese": "一千",
+        "japanese": "1000"
+      },
+      {
+        "chinese": "一萬",
+        "japanese": "10000"
+      }
+    ]
+  },
+  {
     "id": "kowloon_walled_city_characters",
     "name": "決戦九龍城砦",
     "style": "color: #FF3366; font-weight: bold; text-shadow: 0 0 5px #FF3366, 0 0 10px #FF8866, 0 0 15px #FFC0CB;",
@@ -771,72 +837,6 @@
       {
         "chinese": "阿華田",
         "japanese": "オバルチン"
-      }
-    ]
-  },
-  {
-    "id": "numbers",
-    "name": "🔢 数字",
-    "words": [
-      {
-        "chinese": "零",
-        "japanese": "0"
-      },
-      {
-        "chinese": "一",
-        "japanese": "1"
-      },
-      {
-        "chinese": "二",
-        "japanese": "2"
-      },
-      {
-        "chinese": "三",
-        "japanese": "3"
-      },
-      {
-        "chinese": "四",
-        "japanese": "4"
-      },
-      {
-        "chinese": "五",
-        "japanese": "5"
-      },
-      {
-        "chinese": "六",
-        "japanese": "6"
-      },
-      {
-        "chinese": "七",
-        "japanese": "7"
-      },
-      {
-        "chinese": "八",
-        "japanese": "8"
-      },
-      {
-        "chinese": "九",
-        "japanese": "9"
-      },
-      {
-        "chinese": "十",
-        "japanese": "10"
-      },
-      {
-        "chinese": "零一二三四五六七八九十",
-        "japanese": "0〜10"
-      },
-      {
-        "chinese": "一百",
-        "japanese": "100"
-      },
-      {
-        "chinese": "一千",
-        "japanese": "1000"
-      },
-      {
-        "chinese": "一萬",
-        "japanese": "10000"
       }
     ]
   },
