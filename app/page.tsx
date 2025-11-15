@@ -61,14 +61,152 @@ interface PracticeGroup {
 type InterpreterVoiceOption = 'female' | 'male';
 type CalculatorOperator = '+' | '-' | '×' | '÷';
 type CurrencyBase = 'HKD' | 'JPY';
-type WeightBase = 'kg' | 'catty' | 'lb' | 'gram';
-type LengthBase = 'cm' | 'foot' | 'inch' | 'meter';
-type ConversionPanel = 'currency' | 'weight' | 'length';
+type WeightBase = 'kg' | 'catty' | 'tael' | 'gram' | 'lb' | 'oz';
+type LengthBase = 'inch' | 'yard' | 'meter' | 'centimeter' | 'millimeter';
+type AreaBase = 'squareInch' | 'squareFoot' | 'squareMeter' | 'tsubo' | 'tatami';
+type DistanceBase = 'foot' | 'mile' | 'kilometer';
+type ConversionPanel = 'currency' | 'weight' | 'lengthImperial' | 'area' | 'distance';
 
 const HK_CATTI_IN_KG = 0.60478982;
 const POUND_IN_KG = 0.45359237;
 const FOOT_IN_CM = 30.48;
 const INCH_IN_CM = 2.54;
+const OUNCE_IN_KG = 0.028349523125;
+const TAEL_IN_KG = 0.037799411375;
+const INCH_IN_METERS = 0.0254;
+const FOOT_IN_METERS = 0.3048;
+const YARD_IN_METERS = 0.9144;
+const MILE_IN_METERS = 1609.344;
+const KILOMETER_IN_METERS = 1000;
+const SQUARE_INCH_IN_M2 = INCH_IN_METERS * INCH_IN_METERS;
+const SQUARE_FOOT_IN_M2 = FOOT_IN_METERS * FOOT_IN_METERS;
+const TSUBO_IN_M2 = 3.305785;
+const TATAMI_IN_M2 = 1.653;
+
+const LENGTH_UNIT_TO_METERS: Record<LengthBase, number> = {
+  inch: INCH_IN_METERS,
+  yard: YARD_IN_METERS,
+  meter: 1,
+  centimeter: 0.01,
+  millimeter: 0.001,
+};
+
+const LENGTH_BUTTONS: Array<{ unit: LengthBase; primary: string; secondary: string }> = [
+  { unit: 'meter', primary: '公尺', secondary: 'm' },
+  { unit: 'centimeter', primary: '公分', secondary: 'cm' },
+  { unit: 'millimeter', primary: '公釐', secondary: 'mm' },
+  { unit: 'inch', primary: '吋', secondary: 'in' },
+  { unit: 'yard', primary: '碼', secondary: 'yard' },
+];
+
+const LENGTH_LABEL_MAP = LENGTH_BUTTONS.reduce<Record<LengthBase, { primary: string; secondary: string }>>(
+  (acc, item) => {
+    acc[item.unit] = { primary: item.primary, secondary: item.secondary };
+    return acc;
+  },
+  {} as Record<LengthBase, { primary: string; secondary: string }>
+);
+
+const LENGTH_UNIT_FRACTIONS: Record<LengthBase, number> = {
+  meter: 4,
+  centimeter: 2,
+  millimeter: 1,
+  inch: 4,
+  yard: 4,
+};
+
+const AREA_UNIT_TO_M2: Record<AreaBase, number> = {
+  squareInch: SQUARE_INCH_IN_M2,
+  squareFoot: SQUARE_FOOT_IN_M2,
+  squareMeter: 1,
+  tsubo: TSUBO_IN_M2,
+  tatami: TATAMI_IN_M2,
+};
+
+const AREA_BUTTONS: Array<{ unit: AreaBase; primary: string; secondary: string }> = [
+  { unit: 'squareInch', primary: '平方吋', secondary: 'in²' },
+  { unit: 'squareFoot', primary: '平方呎', secondary: 'ft²' },
+  { unit: 'squareMeter', primary: '平方米', secondary: 'm²' },
+  { unit: 'tsubo', primary: '日坪', secondary: 'tsubo' },
+  { unit: 'tatami', primary: '日畳', secondary: 'tatami' },
+];
+
+const AREA_LABEL_MAP = AREA_BUTTONS.reduce<Record<AreaBase, { primary: string; secondary: string }>>(
+  (acc, item) => {
+    acc[item.unit] = { primary: item.primary, secondary: item.secondary };
+    return acc;
+  },
+  {} as Record<AreaBase, { primary: string; secondary: string }>
+);
+
+const AREA_UNIT_FRACTIONS: Record<AreaBase, number> = {
+  squareInch: 4,
+  squareFoot: 4,
+  squareMeter: 4,
+  tsubo: 4,
+  tatami: 4,
+};
+
+const DISTANCE_UNIT_TO_METERS: Record<DistanceBase, number> = {
+  foot: FOOT_IN_METERS,
+  mile: MILE_IN_METERS,
+  kilometer: KILOMETER_IN_METERS,
+};
+
+const DISTANCE_BUTTONS: Array<{ unit: DistanceBase; primary: string; secondary: string }> = [
+  { unit: 'foot', primary: '英呎', secondary: 'ft' },
+  { unit: 'mile', primary: '英里', secondary: 'mi' },
+  { unit: 'kilometer', primary: '公里', secondary: 'km' },
+];
+
+const DISTANCE_LABEL_MAP = DISTANCE_BUTTONS.reduce<Record<DistanceBase, { primary: string; secondary: string }>>(
+  (acc, item) => {
+    acc[item.unit] = { primary: item.primary, secondary: item.secondary };
+    return acc;
+  },
+  {} as Record<DistanceBase, { primary: string; secondary: string }>
+);
+
+const DISTANCE_UNIT_FRACTIONS: Record<DistanceBase, number> = {
+  foot: 4,
+  mile: 6,
+  kilometer: 4,
+};
+
+const WEIGHT_UNIT_TO_KG: Record<WeightBase, number> = {
+  kg: 1,
+  catty: HK_CATTI_IN_KG,
+  tael: TAEL_IN_KG,
+  gram: 0.001,
+  lb: POUND_IN_KG,
+  oz: OUNCE_IN_KG,
+};
+
+const WEIGHT_BUTTONS: Array<{ unit: WeightBase; primary: string; secondary: string }> = [
+  { unit: 'kg', primary: '公斤', secondary: 'kg' },
+  { unit: 'catty', primary: '斤', secondary: 'catty' },
+  { unit: 'tael', primary: '兩', secondary: 'tael' },
+  { unit: 'gram', primary: '克', secondary: 'g' },
+  { unit: 'lb', primary: '磅', secondary: 'pound' },
+  { unit: 'oz', primary: '安士', secondary: 'oz' },
+];
+
+const WEIGHT_LABEL_MAP = WEIGHT_BUTTONS.reduce<Record<WeightBase, { primary: string; secondary: string }>>(
+  (acc, item) => {
+    acc[item.unit] = { primary: item.primary, secondary: item.secondary };
+    return acc;
+  },
+  {} as Record<WeightBase, { primary: string; secondary: string }>
+);
+
+const WEIGHT_UNIT_FRACTIONS: Record<WeightBase, number> = {
+  kg: 3,
+  catty: 3,
+  tael: 3,
+  gram: 0,
+  lb: 3,
+  oz: 3,
+};
 
 const formatCalculatorDisplayValue = (value: string): string => {
   if (!value) {
@@ -263,12 +401,11 @@ export default function Home() {
   const [exchangeRate, setExchangeRate] = useState<{ hkdToJpy: number; jpyToHkd: number } | null>(null);
   const [lastRateFetchedAt, setLastRateFetchedAt] = useState<number | null>(null);
   const [isFetchingRate, setIsFetchingRate] = useState(false);
-  const [currencyInput, setCurrencyInput] = useState('100');
   const [currencyBase, setCurrencyBase] = useState<CurrencyBase>('HKD');
-  const [weightInput, setWeightInput] = useState('1');
-  const [weightBase, setWeightBase] = useState<WeightBase>('kg');
-  const [lengthInput, setLengthInput] = useState('100');
-  const [lengthBase, setLengthBase] = useState<LengthBase>('cm');
+  const [weightBase, setWeightBase] = useState<WeightBase>('lb');
+  const [lengthBase, setLengthBase] = useState<LengthBase>('inch');
+  const [areaBase, setAreaBase] = useState<AreaBase>('squareInch');
+  const [distanceBase, setDistanceBase] = useState<DistanceBase>('foot');
 
   // 設定画面の状態
   const [showSettings, setShowSettings] = useState(false);
@@ -336,27 +473,38 @@ export default function Home() {
     }
   }, [isNumbersCategory]);
 
-  useEffect(() => {
-    if (!isNumbersCategory || activeConversionPanel !== 'currency') {
-      return;
-    }
-    const now = Date.now();
-    if (exchangeRate && lastRateFetchedAt && now - lastRateFetchedAt < 1000 * 60 * 30) {
-      return;
-    }
+  const fetchExchangeRate = useCallback(
+    async ({ force = false, signal }: { force?: boolean; signal?: AbortSignal } = {}) => {
+      if (!force) {
+        const now = Date.now();
+        if (exchangeRate && lastRateFetchedAt && now - lastRateFetchedAt < 1000 * 60 * 30) {
+          return;
+        }
+      }
 
-    let isMounted = true;
+      if (signal?.aborted) {
+        return;
+      }
 
-    const fetchRate = async () => {
+      setIsFetchingRate(true);
+      if (force) {
+        setExchangeRate(null);
+        setLastRateFetchedAt(null);
+      }
+
       try {
-        setIsFetchingRate(true);
-        const response = await fetch('https://api.exchangerate.host/latest?base=HKD&symbols=JPY');
+        const response = await fetch('https://api.exchangerate.host/latest?base=HKD&symbols=JPY', {
+          signal,
+        });
         if (!response.ok) {
           throw new Error(`failed to fetch exchange rate: ${response.status}`);
         }
         const data = await response.json();
+        if (signal?.aborted) {
+          return;
+        }
         const rate = data?.rates?.JPY;
-        if (typeof rate === 'number' && isFinite(rate) && isMounted) {
+        if (typeof rate === 'number' && isFinite(rate)) {
           const inverted = rate !== 0 ? 1 / rate : 0;
           setExchangeRate({
             hkdToJpy: rate,
@@ -365,20 +513,32 @@ export default function Home() {
           setLastRateFetchedAt(Date.now());
         }
       } catch (error) {
-        console.error('為替レート取得エラー:', error);
+        if ((error as any)?.name !== 'AbortError') {
+          console.error('為替レート取得エラー:', error);
+        }
       } finally {
-        if (isMounted) {
+        if (!signal?.aborted) {
           setIsFetchingRate(false);
         }
       }
-    };
+    },
+    [exchangeRate, lastRateFetchedAt]
+  );
 
-    fetchRate();
+  useEffect(() => {
+    if (!isNumbersCategory) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    fetchExchangeRate({ signal: controller.signal });
 
     return () => {
-      isMounted = false;
+      controller.abort();
+      setIsFetchingRate(false);
     };
-  }, [isNumbersCategory, activeConversionPanel, exchangeRate, lastRateFetchedAt]);
+  }, [isNumbersCategory, fetchExchangeRate]);
 
   const parsedCalculatorDisplayValue = useMemo(() => {
     const sanitized = calculatorDisplay.replace(/,/g, '');
@@ -567,12 +727,6 @@ export default function Home() {
 
   const calculatorDisplayValue = formattedCalculatorDisplay;
 
-  const parseNumber = (value: string) => {
-    const sanitized = value.replace(/,/g, '');
-    const numeric = Number(sanitized);
-    return Number.isFinite(numeric) ? numeric : NaN;
-  };
-
   const formatConversionNumber = useCallback(
     (value: number, fractionDigits = 2) =>
       new Intl.NumberFormat('ja-JP', {
@@ -583,15 +737,16 @@ export default function Home() {
   );
 
   const currencyResults = useMemo(() => {
-    const numericValue = parseNumber(currencyInput);
-    if (!Number.isFinite(numericValue)) {
+    if (!Number.isFinite(parsedCalculatorDisplayValue)) {
       return null;
     }
+
+    const baseValue = parsedCalculatorDisplayValue;
 
     if (!exchangeRate) {
       return {
         base: currencyBase,
-        baseValue: numericValue,
+        baseValue,
         targetValue: null,
       };
     }
@@ -599,240 +754,236 @@ export default function Home() {
     if (currencyBase === 'HKD') {
       return {
         base: 'HKD' as const,
-        baseValue: numericValue,
-        targetValue: numericValue * exchangeRate.hkdToJpy,
+        baseValue,
+        targetValue: baseValue * exchangeRate.hkdToJpy,
       };
     }
 
     return {
       base: 'JPY' as const,
-      baseValue: numericValue,
-      targetValue: numericValue * exchangeRate.jpyToHkd,
+      baseValue,
+      targetValue: baseValue * exchangeRate.jpyToHkd,
     };
-  }, [currencyInput, currencyBase, exchangeRate]);
+  }, [currencyBase, exchangeRate, parsedCalculatorDisplayValue]);
 
   const weightResults = useMemo(() => {
-    const numericValue = parseNumber(weightInput);
-    if (!Number.isFinite(numericValue)) {
+    if (!Number.isFinite(parsedCalculatorDisplayValue)) {
       return null;
     }
 
-    let valueInKg = 0;
-    switch (weightBase) {
-      case 'kg':
-        valueInKg = numericValue;
-        break;
-      case 'catty':
-        valueInKg = numericValue * HK_CATTI_IN_KG;
-        break;
-      case 'lb':
-        valueInKg = numericValue * POUND_IN_KG;
-        break;
-      case 'gram':
-        valueInKg = numericValue / 1000;
-        break;
-      default:
-        valueInKg = numericValue;
-    }
+    const numericValue = parsedCalculatorDisplayValue;
+    const factor = WEIGHT_UNIT_TO_KG[weightBase] ?? 1;
+    const valueInKg = numericValue * factor;
 
     return {
       kg: valueInKg,
       catty: valueInKg / HK_CATTI_IN_KG,
+      tael: valueInKg / TAEL_IN_KG,
+      gram: valueInKg / WEIGHT_UNIT_TO_KG.gram,
       lb: valueInKg / POUND_IN_KG,
-      gram: valueInKg * 1000,
+      oz: valueInKg / OUNCE_IN_KG,
     };
-  }, [weightInput, weightBase]);
+  }, [parsedCalculatorDisplayValue, weightBase]);
 
-  const lengthResults = useMemo(() => {
-    const numericValue = parseNumber(lengthInput);
-    if (!Number.isFinite(numericValue)) {
+  const lengthImperialResults = useMemo(() => {
+    if (!Number.isFinite(parsedCalculatorDisplayValue)) {
       return null;
     }
 
-    let valueInCm = 0;
-    switch (lengthBase) {
-      case 'cm':
-        valueInCm = numericValue;
-        break;
-      case 'meter':
-        valueInCm = numericValue * 100;
-        break;
-      case 'foot':
-        valueInCm = numericValue * FOOT_IN_CM;
-        break;
-      case 'inch':
-        valueInCm = numericValue * INCH_IN_CM;
-        break;
-      default:
-        valueInCm = numericValue;
-    }
+    const numericValue = parsedCalculatorDisplayValue;
+    const factor = LENGTH_UNIT_TO_METERS[lengthBase] ?? 1;
+    const valueInMeters = numericValue * factor;
 
     return {
-      cm: valueInCm,
-      meter: valueInCm / 100,
-      foot: valueInCm / FOOT_IN_CM,
-      inch: valueInCm / INCH_IN_CM,
+      meter: valueInMeters,
+      centimeter: valueInMeters * 100,
+      millimeter: valueInMeters * 1000,
+      inch: valueInMeters / INCH_IN_METERS,
+      yard: valueInMeters / YARD_IN_METERS,
     };
-  }, [lengthInput, lengthBase]);
+  }, [lengthBase, parsedCalculatorDisplayValue]);
+
+  const areaResults = useMemo(() => {
+    if (!Number.isFinite(parsedCalculatorDisplayValue)) {
+      return null;
+    }
+
+    const numericValue = parsedCalculatorDisplayValue;
+    const factor = AREA_UNIT_TO_M2[areaBase] ?? 1;
+    const valueInSquareMeters = numericValue * factor;
+
+    return {
+      squareInch: valueInSquareMeters / SQUARE_INCH_IN_M2,
+      squareFoot: valueInSquareMeters / SQUARE_FOOT_IN_M2,
+      squareMeter: valueInSquareMeters,
+      tsubo: valueInSquareMeters / TSUBO_IN_M2,
+      tatami: valueInSquareMeters / TATAMI_IN_M2,
+    };
+  }, [areaBase, parsedCalculatorDisplayValue]);
+
+  const distanceResults = useMemo(() => {
+    if (!Number.isFinite(parsedCalculatorDisplayValue)) {
+      return null;
+    }
+
+    const numericValue = parsedCalculatorDisplayValue;
+    const factor = DISTANCE_UNIT_TO_METERS[distanceBase] ?? 1;
+    const valueInMeters = numericValue * factor;
+
+    return {
+      foot: valueInMeters / FOOT_IN_METERS,
+      mile: valueInMeters / MILE_IN_METERS,
+      kilometer: valueInMeters / KILOMETER_IN_METERS,
+    };
+  }, [distanceBase, parsedCalculatorDisplayValue]);
 
   const displayInfo = useMemo(() => {
-    const defaultInfo = {
+    const baseInfo = {
       primaryValue: calculatorDisplayValue,
       primaryLabel: '',
-      secondaryValue: '',
-      secondaryLabel: '',
+      primarySubLabel: '',
+      outputs: [] as Array<{ label: string; subLabel?: string; value: string }>,
       detail: '',
+      swapMode: null as 'currency' | 'cycle' | null,
     };
 
+    if (!activeConversionPanel) {
+      return baseInfo;
+    }
+
     if (activeConversionPanel === 'currency' && currencyResults) {
-      const currencyLabelMap: Record<CurrencyBase, string> = {
-        HKD: '港幣',
-        JPY: '日圓',
+      const currencyLabelMap: Record<CurrencyBase, { primary: string; secondary: string }> = {
+        HKD: { primary: '港幣', secondary: 'HKD' },
+        JPY: { primary: '日圓', secondary: 'JPY' },
       };
-      const primaryLabel = currencyLabelMap[currencyResults.base] ?? currencyResults.base;
-      const secondaryCurrency = currencyResults.base === 'HKD' ? 'JPY' : 'HKD';
-      const secondaryLabel = currencyLabelMap[secondaryCurrency] ?? secondaryCurrency;
-      const primaryValue = formatConversionNumber(currencyResults.baseValue, 2);
-      const secondaryValue =
-        currencyResults.targetValue != null
-          ? formatConversionNumber(currencyResults.targetValue, 2)
-          : '---';
-      const detail =
+      const baseMeta = currencyLabelMap[currencyResults.base];
+      const targetCurrency = currencyResults.base === 'HKD' ? 'JPY' : 'HKD';
+      const targetMeta = currencyLabelMap[targetCurrency as CurrencyBase];
+
+      baseInfo.primaryLabel = baseMeta?.primary ?? currencyResults.base;
+      baseInfo.primarySubLabel = baseMeta?.secondary ?? currencyResults.base;
+      baseInfo.primaryValue = formatConversionNumber(currencyResults.baseValue, 2);
+      baseInfo.outputs = [
+        {
+          label: targetMeta?.primary ?? targetCurrency,
+          subLabel: targetMeta?.secondary ?? targetCurrency,
+          value:
+            currencyResults.targetValue != null ? formatConversionNumber(currencyResults.targetValue, 2) : '---',
+        },
+      ];
+      baseInfo.detail =
         exchangeRate != null
           ? currencyResults.base === 'HKD'
-            ? `1 ${currencyLabelMap.HKD} = ${formatConversionNumber(exchangeRate.hkdToJpy, 4)} ${currencyLabelMap.JPY}`
-            : `1 ${currencyLabelMap.JPY} = ${formatConversionNumber(exchangeRate.jpyToHkd, 4)} ${currencyLabelMap.HKD}`
+            ? `1 ${currencyLabelMap.HKD.primary} = ${formatConversionNumber(exchangeRate.hkdToJpy, 4)} ${currencyLabelMap.JPY.primary}`
+            : `1 ${currencyLabelMap.JPY.primary} = ${formatConversionNumber(exchangeRate.jpyToHkd, 4)} ${currencyLabelMap.HKD.primary}`
           : '';
-
-      return {
-        primaryValue,
-        primaryLabel,
-        secondaryValue,
-        secondaryLabel,
-        detail,
-      };
+      baseInfo.swapMode = 'currency';
+      return baseInfo;
     }
 
     if (activeConversionPanel === 'weight' && weightResults) {
-      const labelMap: Record<WeightBase, string> = {
-        kg: '公斤',
-        catty: '斤',
-        lb: '磅',
-        gram: '克',
-      };
-      const baseValue =
-        weightBase === 'kg'
-          ? weightResults.kg
-          : weightBase === 'catty'
-          ? weightResults.catty
-          : weightBase === 'lb'
-          ? weightResults.lb
-          : weightResults.gram;
+      const baseMeta = WEIGHT_LABEL_MAP[weightBase];
+      const baseValue = weightResults[weightBase];
 
-      let secondaryLabel = '';
-      let secondaryValue = '';
-      if (weightBase === 'kg') {
-        secondaryLabel = '斤';
-        secondaryValue = formatConversionNumber(weightResults.catty, 3);
-      } else if (weightBase === 'catty') {
-        secondaryLabel = '公斤';
-        secondaryValue = formatConversionNumber(weightResults.kg, 3);
-      } else if (weightBase === 'lb') {
-        secondaryLabel = '公斤';
-        secondaryValue = formatConversionNumber(weightResults.kg, 3);
-      } else if (weightBase === 'gram') {
-        secondaryLabel = '公斤';
-        secondaryValue = formatConversionNumber(weightResults.kg, 3);
-      }
-
-      const detailParts: string[] = [];
-      if (weightBase !== 'kg') {
-        detailParts.push(`公斤 ${formatConversionNumber(weightResults.kg, 3)}`);
-      }
-      if (weightBase !== 'catty') {
-        detailParts.push(`斤 ${formatConversionNumber(weightResults.catty, 3)}`);
-      }
-      if (weightBase !== 'lb') {
-        detailParts.push(`磅 ${formatConversionNumber(weightResults.lb, 3)}`);
-      }
-      if (weightBase !== 'gram') {
-        detailParts.push(`克 ${formatConversionNumber(weightResults.gram, 0)}`);
-      }
-
-      return {
-        primaryValue: formatConversionNumber(baseValue, 3),
-        primaryLabel: labelMap[weightBase],
-        secondaryValue,
-        secondaryLabel,
-        detail: detailParts.join(' ／ '),
-      };
+      baseInfo.primaryLabel = baseMeta?.primary ?? '';
+      baseInfo.primarySubLabel = baseMeta?.secondary ?? '';
+      baseInfo.primaryValue = formatConversionNumber(
+        baseValue,
+        WEIGHT_UNIT_FRACTIONS[weightBase] ?? 3
+      );
+      baseInfo.outputs = WEIGHT_BUTTONS.filter(({ unit }) => unit !== weightBase).map(
+        ({ unit, primary, secondary }) => ({
+          label: primary,
+          subLabel: secondary,
+          value: formatConversionNumber(weightResults[unit], WEIGHT_UNIT_FRACTIONS[unit] ?? 3),
+        })
+      );
+      baseInfo.swapMode = 'cycle';
+      return baseInfo;
     }
 
-    if (activeConversionPanel === 'length' && lengthResults) {
-      const labelMap: Record<LengthBase, string> = {
-        cm: '公分',
-        meter: '公尺',
-        foot: '呎',
-        inch: '吋',
-      };
+    if (activeConversionPanel === 'lengthImperial' && lengthImperialResults) {
+      const baseMeta = LENGTH_LABEL_MAP[lengthBase];
+      const baseValue = lengthImperialResults[lengthBase];
 
-      const baseValue =
-        lengthBase === 'cm'
-          ? lengthResults.cm
-          : lengthBase === 'meter'
-          ? lengthResults.meter
-          : lengthBase === 'foot'
-          ? lengthResults.foot
-          : lengthResults.inch;
-
-      let secondaryLabel = '';
-      let secondaryValue = '';
-      if (lengthBase === 'cm') {
-        secondaryLabel = '呎';
-        secondaryValue = formatConversionNumber(lengthResults.foot, 3);
-      } else if (lengthBase === 'meter') {
-        secondaryLabel = '呎';
-        secondaryValue = formatConversionNumber(lengthResults.foot, 3);
-      } else if (lengthBase === 'foot') {
-        secondaryLabel = '公分';
-        secondaryValue = formatConversionNumber(lengthResults.cm, 2);
-      } else if (lengthBase === 'inch') {
-        secondaryLabel = '公分';
-        secondaryValue = formatConversionNumber(lengthResults.cm, 2);
-      }
-
-      const detailParts: string[] = [];
-      if (lengthBase !== 'cm') {
-        detailParts.push(`公分 ${formatConversionNumber(lengthResults.cm, 2)}`);
-      }
-      if (lengthBase !== 'meter') {
-        detailParts.push(`公尺 ${formatConversionNumber(lengthResults.meter, 3)}`);
-      }
-      if (lengthBase !== 'foot') {
-        detailParts.push(`呎 ${formatConversionNumber(lengthResults.foot, 3)}`);
-      }
-      if (lengthBase !== 'inch') {
-        detailParts.push(`吋 ${formatConversionNumber(lengthResults.inch, 3)}`);
-      }
-
-      return {
-        primaryValue: formatConversionNumber(baseValue, 3),
-        primaryLabel: labelMap[lengthBase],
-        secondaryValue,
-        secondaryLabel,
-        detail: detailParts.join(' ／ '),
-      };
+      baseInfo.primaryLabel = baseMeta?.primary ?? '';
+      baseInfo.primarySubLabel = baseMeta?.secondary ?? '';
+      baseInfo.primaryValue = formatConversionNumber(
+        baseValue,
+        LENGTH_UNIT_FRACTIONS[lengthBase] ?? 3
+      );
+      baseInfo.outputs = LENGTH_BUTTONS.filter(({ unit }) => unit !== lengthBase).map(
+        ({ unit, primary, secondary }) => ({
+          label: primary,
+          subLabel: secondary,
+          value: formatConversionNumber(
+            lengthImperialResults[unit],
+            LENGTH_UNIT_FRACTIONS[unit] ?? 3
+          ),
+        })
+      );
+      baseInfo.swapMode = 'cycle';
+      return baseInfo;
     }
 
-    return defaultInfo;
+    if (activeConversionPanel === 'area' && areaResults) {
+      const baseMeta = AREA_LABEL_MAP[areaBase];
+      const baseValue = areaResults[areaBase];
+
+      baseInfo.primaryLabel = baseMeta?.primary ?? '';
+      baseInfo.primarySubLabel = baseMeta?.secondary ?? '';
+      baseInfo.primaryValue = formatConversionNumber(
+        baseValue,
+        AREA_UNIT_FRACTIONS[areaBase] ?? 4
+      );
+      baseInfo.outputs = AREA_BUTTONS.filter(({ unit }) => unit !== areaBase).map(
+        ({ unit, primary, secondary }) => ({
+          label: primary,
+          subLabel: secondary,
+          value: formatConversionNumber(areaResults[unit], AREA_UNIT_FRACTIONS[unit] ?? 4),
+        })
+      );
+      baseInfo.swapMode = 'cycle';
+      return baseInfo;
+    }
+
+    if (activeConversionPanel === 'distance' && distanceResults) {
+      const baseMeta = DISTANCE_LABEL_MAP[distanceBase];
+      const baseValue = distanceResults[distanceBase];
+
+      baseInfo.primaryLabel = baseMeta?.primary ?? '';
+      baseInfo.primarySubLabel = baseMeta?.secondary ?? '';
+      baseInfo.primaryValue = formatConversionNumber(
+        baseValue,
+        DISTANCE_UNIT_FRACTIONS[distanceBase] ?? 4
+      );
+      baseInfo.outputs = DISTANCE_BUTTONS.filter(({ unit }) => unit !== distanceBase).map(
+        ({ unit, primary, secondary }) => ({
+          label: primary,
+          subLabel: secondary,
+          value: formatConversionNumber(
+            distanceResults[unit],
+            DISTANCE_UNIT_FRACTIONS[unit] ?? 4
+          ),
+        })
+      );
+      baseInfo.swapMode = 'cycle';
+      return baseInfo;
+    }
+
+    return baseInfo;
   }, [
     activeConversionPanel,
+    areaBase,
+    areaResults,
     calculatorDisplayValue,
     currencyResults,
+    distanceBase,
+    distanceResults,
     exchangeRate,
     formatConversionNumber,
     lengthBase,
-    lengthResults,
+    lengthImperialResults,
     weightBase,
     weightResults,
   ]);
@@ -842,60 +993,60 @@ export default function Home() {
   const calculatorGridLayout = useMemo<CalculatorGridItem[][]>(
     () => [
       [
-        { key: 'conversion-currency-hkd', type: 'conversion', shortcutKey: 'currency-hkd' },
-        { key: 'conversion-currency-jpy', type: 'conversion', shortcutKey: 'currency-jpy' },
-        { key: 'conversion-weight-kg', type: 'conversion', shortcutKey: 'weight-kg' },
-        { key: 'conversion-weight-catty', type: 'conversion', shortcutKey: 'weight-catty' },
-        { key: 'conversion-weight-lb', type: 'conversion', shortcutKey: 'weight-lb' },
+        { key: 'unit-length-meter', type: 'conversion', shortcutKey: 'length-meter' },
+        { key: 'unit-length-centimeter', type: 'conversion', shortcutKey: 'length-centimeter' },
+        { key: 'unit-length-millimeter', type: 'conversion', shortcutKey: 'length-millimeter' },
+        { key: 'unit-length-inch', type: 'conversion', shortcutKey: 'length-inch' },
+        { key: 'unit-length-yard', type: 'conversion', shortcutKey: 'length-yard' },
       ],
       [
-        { key: 'conversion-weight-gram', type: 'conversion', shortcutKey: 'weight-gram' },
-        { key: 'conversion-length-cm', type: 'conversion', shortcutKey: 'length-cm' },
-        { key: 'conversion-length-meter', type: 'conversion', shortcutKey: 'length-meter' },
-        { key: 'conversion-length-foot', type: 'conversion', shortcutKey: 'length-foot' },
-        { key: 'conversion-length-inch', type: 'conversion', shortcutKey: 'length-inch' },
+        { key: 'unit-area-squareInch', type: 'conversion', shortcutKey: 'area-squareInch' },
+        { key: 'unit-area-squareFoot', type: 'conversion', shortcutKey: 'area-squareFoot' },
+        { key: 'unit-area-squareMeter', type: 'conversion', shortcutKey: 'area-squareMeter' },
+        { key: 'unit-area-tsubo', type: 'conversion', shortcutKey: 'area-tsubo' },
+        { key: 'unit-area-tatami', type: 'conversion', shortcutKey: 'area-tatami' },
       ],
       [
-        { key: 'panel-currency-main', type: 'panel', panel: 'currency', label: '貨幣' },
-        { key: 'panel-weight-main', type: 'panel', panel: 'weight', label: '重量' },
-        { key: 'panel-length-main', type: 'panel', panel: 'length', label: '長さ' },
-        { key: 'panel-cycle-main', type: 'cycle', label: '切替' },
-        { key: 'panel-close-main', type: 'close', label: '閉じる' },
+        { key: 'unit-distance-foot', type: 'conversion', shortcutKey: 'distance-foot' },
+        { key: 'unit-distance-mile', type: 'conversion', shortcutKey: 'distance-mile' },
+        { key: 'unit-distance-kilometer', type: 'conversion', shortcutKey: 'distance-kilometer' },
+        { key: 'panel-currency-main', type: 'panel', panel: 'currency', label: '貨幣\nrate' },
+        { key: 'unit-weight-kg', type: 'conversion', shortcutKey: 'weight-kg' },
       ],
       [
         { key: 'function-clear', type: 'function', action: 'clear', label: clearButtonLabel },
         { key: 'function-delete', type: 'function', action: 'delete', label: '⌫' },
-        { key: 'function-percent', type: 'function', action: 'percent', label: '%' },
         { key: 'function-toggle', type: 'function', action: 'toggleSign', label: '+/-' },
         { key: 'operator-divide', type: 'operator', operator: '÷', label: '÷' },
+        { key: 'unit-weight-catty', type: 'conversion', shortcutKey: 'weight-catty' },
       ],
       [
         { key: 'digit-7', type: 'digit', digit: '7' },
         { key: 'digit-8', type: 'digit', digit: '8' },
         { key: 'digit-9', type: 'digit', digit: '9' },
-        { key: 'panel-currency-shortcut', type: 'panel', panel: 'currency', label: '貨幣' },
         { key: 'operator-multiply', type: 'operator', operator: '×', label: '×' },
+        { key: 'unit-weight-tael', type: 'conversion', shortcutKey: 'weight-tael' },
       ],
       [
         { key: 'digit-4', type: 'digit', digit: '4' },
         { key: 'digit-5', type: 'digit', digit: '5' },
         { key: 'digit-6', type: 'digit', digit: '6' },
-        { key: 'panel-weight-shortcut', type: 'panel', panel: 'weight', label: '重量' },
         { key: 'operator-minus', type: 'operator', operator: '-', label: '－' },
+        { key: 'unit-weight-gram', type: 'conversion', shortcutKey: 'weight-gram' },
       ],
       [
         { key: 'digit-1', type: 'digit', digit: '1' },
         { key: 'digit-2', type: 'digit', digit: '2' },
         { key: 'digit-3', type: 'digit', digit: '3' },
-        { key: 'panel-length-shortcut', type: 'panel', panel: 'length', label: '長さ' },
         { key: 'operator-plus', type: 'operator', operator: '+', label: '＋' },
+        { key: 'unit-weight-lb', type: 'conversion', shortcutKey: 'weight-lb' },
       ],
       [
         { key: 'speak', type: 'speak', label: '發音' },
         { key: 'digit-0', type: 'digit', digit: '0' },
         { key: 'decimal', type: 'decimal', label: '.' },
-        { key: 'panel-close-shortcut', type: 'close', label: '隠す' },
         { key: 'equal', type: 'equal', label: '=' },
+        { key: 'unit-weight-oz', type: 'conversion', shortcutKey: 'weight-oz' },
       ],
     ],
     [clearButtonLabel]
@@ -1174,15 +1325,14 @@ export default function Home() {
 
     const sanitizedCalculatorValue = calculatorDisplay.replace(/,/g, '');
 
-    if (
-      activeConversionPanel &&
-      displayInfo.secondaryValue &&
-      displayInfo.secondaryValue !== '---'
-    ) {
-      const secondaryNumeric = displayInfo.secondaryValue.replace(/[^\d.\-]/g, '');
-      if (secondaryNumeric) {
-        numericForSpeech = convertNumberToCantoneseReading(secondaryNumeric);
-        unitForSpeech = displayInfo.secondaryLabel ?? '';
+    if (activeConversionPanel && displayInfo.outputs.length > 0) {
+      const firstOutput = displayInfo.outputs[0];
+      if (firstOutput.value && firstOutput.value !== '---') {
+        const secondaryNumeric = firstOutput.value.replace(/[^\d.\-]/g, '');
+        if (secondaryNumeric) {
+          numericForSpeech = convertNumberToCantoneseReading(secondaryNumeric);
+          unitForSpeech = firstOutput.label ?? '';
+        }
       }
     }
 
@@ -1378,7 +1528,6 @@ export default function Home() {
       });
     };
   }, []);
-
   // 音声認識の初期化（Web Speech API）
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1851,7 +2000,6 @@ const exitHiddenMode = () => {
     reason: 'exit-hidden-mode',
   });
 };
-
 const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') => {
   if (translationLanguage === newLanguage) {
     return;
@@ -2161,7 +2309,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 if (finalTranscript) {
                   const trimmedFinal = finalTranscript.trim();
                   
-                  // 直前のfinalテキストと完全一致する場合はスキップ（重複防止）
+                  // 直前のfinalテキストと完全一致する場合はスキップ
                   if (trimmedFinal === lastProcessedFinalTextRef.current) {
                     setInterimText('');
                     return;
@@ -2485,7 +2633,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       setSaving(false);
     }
   };
-
   // ユーザーの会員種別を取得と初期値設定
   useEffect(() => {
     const initializeUserMetadata = async () => {
@@ -2615,7 +2762,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     loadFavorites();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
-
   // お気に入りの追加/削除
   const toggleFavorite = async (word: Word, categoryId: string) => {
     if (!user) {
@@ -3112,7 +3258,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         return '🥉';
     }
   };
-
   // 会員種別の色取得
   const getMembershipColor = (type: 'free' | 'subscription' | 'lifetime') => {
     switch (type) {
@@ -3324,47 +3469,59 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
 
   const handleQuickConversionClick = useCallback(
     (button: QuickConversionButton) => {
-      if (button.panel === 'currency') {
-        const shouldToggle = activeConversionPanel === 'currency' && currencyBase === button.unit;
-        setCurrencyBase(button.unit);
-        setActiveConversionPanel(shouldToggle ? null : 'currency');
-        return;
-      }
-
       if (button.panel === 'weight') {
-        const shouldToggle = activeConversionPanel === 'weight' && weightBase === button.unit;
         setWeightBase(button.unit);
-        setActiveConversionPanel(shouldToggle ? null : 'weight');
+        setActiveConversionPanel('weight');
         return;
       }
 
-      if (button.panel === 'length') {
-        const shouldToggle = activeConversionPanel === 'length' && lengthBase === button.unit;
+      if (button.panel === 'lengthImperial') {
         setLengthBase(button.unit);
-        setActiveConversionPanel(shouldToggle ? null : 'length');
+        setActiveConversionPanel('lengthImperial');
+        return;
+      }
+
+      if (button.panel === 'area') {
+        setAreaBase(button.unit);
+        setActiveConversionPanel('area');
+        return;
+      }
+
+      if (button.panel === 'distance') {
+        setDistanceBase(button.unit);
+        setActiveConversionPanel('distance');
       }
     },
-    [activeConversionPanel, currencyBase, weightBase, lengthBase]
+    [setActiveConversionPanel, setWeightBase, setLengthBase, setAreaBase, setDistanceBase]
   );
 
   const openConversionPanel = useCallback(
     (panel: ConversionPanel) => {
       setActiveConversionPanel(panel);
-      if (panel === 'currency' && currencyBase !== 'HKD') {
-        setCurrencyBase('HKD');
+      if (panel === 'currency') {
+        if (currencyBase !== 'HKD') {
+          setCurrencyBase('HKD');
+        }
+        fetchExchangeRate();
       }
-      if (panel === 'weight' && weightBase !== 'kg') {
-        setWeightBase('kg');
+      if (panel === 'weight' && weightBase !== 'lb') {
+        setWeightBase('lb');
       }
-      if (panel === 'length' && lengthBase !== 'cm') {
-        setLengthBase('cm');
+      if (panel === 'lengthImperial' && lengthBase !== 'inch') {
+        setLengthBase('inch');
+      }
+      if (panel === 'area' && areaBase !== 'squareInch') {
+        setAreaBase('squareInch');
+      }
+      if (panel === 'distance' && distanceBase !== 'foot') {
+        setDistanceBase('foot');
       }
     },
-    [currencyBase, weightBase, lengthBase]
+    [areaBase, currencyBase, distanceBase, fetchExchangeRate, lengthBase, weightBase]
   );
 
   const cycleConversionPanel = useCallback(() => {
-    const order: ConversionPanel[] = ['currency', 'weight', 'length'];
+    const order: ConversionPanel[] = ['lengthImperial', 'area', 'distance', 'weight', 'currency'];
     const currentIndex = activeConversionPanel ? order.indexOf(activeConversionPanel) : -1;
     const nextPanel = order[(currentIndex + 1) % order.length];
     openConversionPanel(nextPanel);
@@ -3400,7 +3557,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     return `${size}rem`;
   };
   const [isMobile, setIsMobile] = useState(false);
-  
   // モバイルでボタンが表示された時と言語切り替え時にヘルプを表示
   useEffect(() => {
     if (isMobile && buttonsAnimated && showButtons) {
@@ -3552,7 +3708,10 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         },
       }[variant];
 
-      const buttonKey = keyOverride ?? `${label}-${variant}`;
+        const labelLines = label.split('\n');
+        const hasMultiLine = labelLines.length > 1;
+
+        const buttonKey = keyOverride ?? `${label}-${variant}`;
 
       return (
         <button
@@ -3608,38 +3767,136 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
             }
           }}
         >
-          {label}
+            {hasMultiLine ? (
+              <span
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  lineHeight: 1.05,
+                  gap: '0.15rem',
+                }}
+              >
+                {labelLines.map((line, index) => (
+                  <span
+                    key={`${buttonKey}-line-${index}`}
+                    style={{
+                      fontSize: index === 0 ? '1em' : '0.58em',
+                      opacity: index === 0 ? 0.95 : 0.75,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {line}
+                  </span>
+                ))}
+              </span>
+            ) : (
+              label
+            )}
         </button>
       );
     },
     [isMobile, playHapticAndSound]
   );
 
-  const handleRefreshExchangeRate = useCallback(() => {
-    setExchangeRate(null);
-    setLastRateFetchedAt(null);
+  const handleSwapCurrencyBase = useCallback(() => {
+    setActiveConversionPanel('currency');
+    setCurrencyBase((prev) => (prev === 'HKD' ? 'JPY' : 'HKD'));
   }, []);
 
-  type QuickConversionButton =
-    | { key: string; label: string; panel: 'currency'; unit: CurrencyBase }
-    | { key: string; label: string; panel: 'weight'; unit: WeightBase }
-    | { key: string; label: string; panel: 'length'; unit: LengthBase };
+  const handleCycleConversionBase = useCallback(() => {
+    if (!activeConversionPanel) {
+      return;
+    }
 
-  const conversionShortcutMap = useMemo<Record<string, QuickConversionButton>>(
-    () => ({
-      'currency-hkd': { key: 'currency-hkd', label: '港幣', panel: 'currency', unit: 'HKD' },
-      'currency-jpy': { key: 'currency-jpy', label: '日圓', panel: 'currency', unit: 'JPY' },
-      'weight-kg': { key: 'weight-kg', label: '公斤', panel: 'weight', unit: 'kg' },
-      'weight-catty': { key: 'weight-catty', label: '斤', panel: 'weight', unit: 'catty' },
-      'weight-lb': { key: 'weight-lb', label: '磅', panel: 'weight', unit: 'lb' },
-      'weight-gram': { key: 'weight-gram', label: '克', panel: 'weight', unit: 'gram' },
-      'length-cm': { key: 'length-cm', label: '公分', panel: 'length', unit: 'cm' },
-      'length-meter': { key: 'length-meter', label: '公尺', panel: 'length', unit: 'meter' },
-      'length-foot': { key: 'length-foot', label: '呎', panel: 'length', unit: 'foot' },
-      'length-inch': { key: 'length-inch', label: '吋', panel: 'length', unit: 'inch' },
-    }),
-    []
-  );
+    if (activeConversionPanel === 'currency') {
+      handleSwapCurrencyBase();
+      return;
+    }
+
+    if (activeConversionPanel === 'weight') {
+      const order = WEIGHT_BUTTONS.map((btn) => btn.unit);
+      const currentIndex = order.indexOf(weightBase);
+      const nextUnit = order[(currentIndex + 1) % order.length];
+      setWeightBase(nextUnit);
+      setActiveConversionPanel('weight');
+      return;
+    }
+
+    if (activeConversionPanel === 'lengthImperial') {
+      const order = LENGTH_BUTTONS.map((btn) => btn.unit);
+      const currentIndex = order.indexOf(lengthBase);
+      const nextUnit = order[(currentIndex + 1) % order.length];
+      setLengthBase(nextUnit);
+      setActiveConversionPanel('lengthImperial');
+      return;
+    }
+
+    if (activeConversionPanel === 'area') {
+      const order = AREA_BUTTONS.map((btn) => btn.unit);
+      const currentIndex = order.indexOf(areaBase);
+      const nextUnit = order[(currentIndex + 1) % order.length];
+      setAreaBase(nextUnit);
+      setActiveConversionPanel('area');
+      return;
+    }
+
+    if (activeConversionPanel === 'distance') {
+      const order = DISTANCE_BUTTONS.map((btn) => btn.unit);
+      const currentIndex = order.indexOf(distanceBase);
+      const nextUnit = order[(currentIndex + 1) % order.length];
+      setDistanceBase(nextUnit);
+      setActiveConversionPanel('distance');
+    }
+  }, [activeConversionPanel, areaBase, distanceBase, handleSwapCurrencyBase, lengthBase, weightBase]);
+
+  type QuickConversionButton =
+    | { key: string; label: string; panel: 'weight'; unit: WeightBase }
+    | { key: string; label: string; panel: 'lengthImperial'; unit: LengthBase }
+    | { key: string; label: string; panel: 'area'; unit: AreaBase }
+    | { key: string; label: string; panel: 'distance'; unit: DistanceBase };
+
+  const conversionShortcutMap = useMemo<Record<string, QuickConversionButton>>(() => {
+    const entries: Record<string, QuickConversionButton> = {};
+
+    WEIGHT_BUTTONS.forEach(({ unit, primary, secondary }) => {
+      entries[`weight-${unit}`] = {
+        key: `weight-${unit}`,
+        label: secondary ? `${primary}\n${secondary}` : primary,
+        panel: 'weight',
+        unit,
+      };
+    });
+
+    LENGTH_BUTTONS.forEach(({ unit, primary, secondary }) => {
+      entries[`length-${unit}`] = {
+        key: `length-${unit}`,
+        label: secondary ? `${primary}\n${secondary}` : primary,
+        panel: 'lengthImperial',
+        unit,
+      };
+    });
+
+    AREA_BUTTONS.forEach(({ unit, primary, secondary }) => {
+      entries[`area-${unit}`] = {
+        key: `area-${unit}`,
+        label: secondary ? `${primary}\n${secondary}` : primary,
+        panel: 'area',
+        unit,
+      };
+    });
+
+    DISTANCE_BUTTONS.forEach(({ unit, primary, secondary }) => {
+      entries[`distance-${unit}`] = {
+        key: `distance-${unit}`,
+        label: secondary ? `${primary}\n${secondary}` : primary,
+        panel: 'distance',
+        unit,
+      };
+    });
+
+    return entries;
+  }, []);
 
   type ConversionShortcutKey = keyof typeof conversionShortcutMap;
   type CalculatorFunctionAction = 'clear' | 'delete' | 'percent' | 'toggleSign';
@@ -3655,382 +3912,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     | { key: string; type: 'decimal'; label: string }
     | { key: string; type: 'equal'; label: string }
     | { key: string; type: 'speak'; label: string };
-
-  const renderConversionPanel = () => {
-    if (!activeConversionPanel) {
-      return null;
-    }
-
-    if (activeConversionPanel === 'currency') {
-      const baseIsHKD = currencyBase === 'HKD';
-      const lastUpdatedText = lastRateFetchedAt
-        ? new Date(lastRateFetchedAt).toLocaleString('ja-JP', {
-            hour: '2-digit',
-            minute: '2-digit',
-          })
-        : '未取得';
-
-      return (
-        <div
-          style={{
-            background: '#111c2f',
-            borderRadius: '16px',
-            padding: isMobile ? '0.95rem' : '1.15rem',
-            border: '1px solid rgba(148,163,184,0.25)',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
-            color: '#cbd5f5',
-          }}
-        >
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.85rem', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => setCurrencyBase('HKD')}
-              style={{
-                flex: isMobile ? '1 1 120px' : '0 0 auto',
-                padding: '0.6rem 1rem',
-                borderRadius: '999px',
-                border: baseIsHKD ? '1px solid #60a5fa' : '1px solid rgba(96,165,250,0.35)',
-                background: baseIsHKD ? 'linear-gradient(145deg, #2563eb, #1d4ed8)' : '#1c2845',
-                color: '#f8fafc',
-                fontWeight: 700,
-                cursor: 'pointer',
-                touchAction: 'manipulation',
-              }}
-            >
-              HKD → JPY
-            </button>
-            <button
-              onClick={() => setCurrencyBase('JPY')}
-              style={{
-                flex: isMobile ? '1 1 120px' : '0 0 auto',
-                padding: '0.6rem 1rem',
-                borderRadius: '999px',
-                border: !baseIsHKD ? '1px solid #60a5fa' : '1px solid rgba(96,165,250,0.35)',
-                background: !baseIsHKD ? 'linear-gradient(145deg, #2563eb, #1d4ed8)' : '#1c2845',
-                color: '#f8fafc',
-                fontWeight: 700,
-                cursor: 'pointer',
-                touchAction: 'manipulation',
-              }}
-            >
-              JPY → HKD
-            </button>
-            <button
-              onClick={handleRefreshExchangeRate}
-              style={{
-                flex: isMobile ? '1 1 120px' : '0 0 auto',
-                padding: '0.6rem 1rem',
-                borderRadius: '999px',
-                border: '1px solid rgba(96,165,250,0.35)',
-                background: '#1c2845',
-                color: '#93c5fd',
-                fontWeight: 600,
-                cursor: 'pointer',
-                touchAction: 'manipulation',
-              }}
-            >
-              レート更新
-            </button>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: isMobile ? 'column' : 'row',
-              gap: '1rem',
-              alignItems: isMobile ? 'stretch' : 'flex-end',
-            }}
-          >
-            <div style={{ flex: '1 1 200px' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#bfdbfe' }}>
-                {baseIsHKD ? '香港ドル (HKD)' : '日本円 (JPY)'}
-              </label>
-              <input
-                type="number"
-                value={currencyInput}
-                onChange={(e) => setCurrencyInput(e.target.value)}
-                style={{
-                  width: '100%',
-                  marginTop: '0.35rem',
-                  padding: '0.65rem 0.75rem',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(96,165,250,0.35)',
-                  fontSize: '1.05rem',
-                  background: '#0f172a',
-                  color: '#e2e8f0',
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
-                }}
-              />
-            </div>
-            <div style={{ flex: '1 1 200px' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#bfdbfe' }}>
-                {baseIsHKD ? '日本円 (JPY)' : '香港ドル (HKD)'}
-              </label>
-              <div
-                style={{
-                  marginTop: '0.35rem',
-                  padding: '0.75rem 0.9rem',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(96,165,250,0.35)',
-                  background: '#0f172a',
-                  fontSize: '1.2rem',
-                  fontWeight: 700,
-                  minHeight: '3.1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: '#e2e8f0',
-                }}
-              >
-                {currencyResults?.targetValue != null
-                  ? `${formatConversionNumber(currencyResults.targetValue, 2)}`
-                  : exchangeRate
-                  ? '0.00'
-                  : 'レート未取得'}
-              </div>
-            </div>
-          </div>
-          <div style={{ marginTop: '0.85rem', fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.6 }}>
-            <div>現在のレート: {exchangeRate ? `1 HKD = ${formatConversionNumber(exchangeRate.hkdToJpy, 4)} JPY` : '---'}</div>
-            <div>取得時刻: {isFetchingRate ? '更新中...' : lastUpdatedText}</div>
-          </div>
-        </div>
-      );
-    }
-
-    if (activeConversionPanel === 'weight') {
-      const weightUnits: Array<{ value: WeightBase; label: string }> = [
-        { value: 'kg', label: '公斤 (kg)' },
-        { value: 'catty', label: '斤 (catty)' },
-        { value: 'lb', label: '磅 (lb)' },
-        { value: 'gram', label: '克 (gram)' },
-      ];
-
-      return (
-        <div
-          style={{
-            background: '#1b2435',
-            borderRadius: '16px',
-            padding: isMobile ? '0.95rem' : '1.15rem',
-            border: '1px solid rgba(248,188,77,0.3)',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
-            color: '#fde68a',
-          }}
-        >
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.85rem', flexWrap: 'wrap' }}>
-            {weightUnits.map(({ value, label }) => {
-              const active = weightBase === value;
-              return (
-                <button
-                  key={value}
-                  onClick={() => setWeightBase(value)}
-                  style={{
-                    flex: isMobile ? '1 1 120px' : '0 0 auto',
-                    padding: '0.6rem 1rem',
-                    borderRadius: '999px',
-                    border: active ? '1px solid #fbbf24' : '1px solid rgba(248,188,77,0.35)',
-                    background: active ? 'linear-gradient(145deg, #fbbf24, #d97706)' : '#2a3144',
-                    color: '#fefce8',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    touchAction: 'manipulation',
-                  }}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: isMobile ? 'column' : 'row',
-              gap: '1rem',
-              alignItems: isMobile ? 'stretch' : 'flex-end',
-            }}
-          >
-            <div style={{ flex: '1 1 200px' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fde68a' }}>
-                入力値
-              </label>
-              <input
-                type="number"
-                value={weightInput}
-                onChange={(e) => setWeightInput(e.target.value)}
-                style={{
-                  width: '100%',
-                  marginTop: '0.35rem',
-                  padding: '0.65rem 0.75rem',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(248,188,77,0.35)',
-                  fontSize: '1.05rem',
-                  background: '#111827',
-                  color: '#fde68a',
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
-                }}
-              />
-            </div>
-            <div style={{ flex: '1 1 200px' }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fde68a', marginBottom: '0.35rem' }}>
-                結果
-              </div>
-              {weightResults ? (
-                <div
-                  style={{
-                    display: 'grid',
-                    gap: '0.4rem',
-                    background: '#111827',
-                    borderRadius: '12px',
-                    padding: '0.8rem',
-                    border: '1px solid rgba(248,188,77,0.25)',
-                  }}
-                >
-                  <div style={{ fontSize: '0.85rem', color: '#fde68a' }}>
-                    公斤 (kg): <strong>{formatConversionNumber(weightResults.kg, 3)}</strong>
-                  </div>
-                  <div style={{ fontSize: '0.85rem', color: '#fde68a' }}>
-                    斤 (catty): <strong>{formatConversionNumber(weightResults.catty, 3)}</strong>
-                  </div>
-                  <div style={{ fontSize: '0.85rem', color: '#fde68a' }}>
-                    磅 (lb): <strong>{formatConversionNumber(weightResults.lb, 3)}</strong>
-                  </div>
-                  <div style={{ fontSize: '0.85rem', color: '#fde68a' }}>
-                    克 (gram): <strong>{formatConversionNumber(weightResults.gram, 0)}</strong>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  style={{
-                    padding: '0.75rem',
-                    borderRadius: '12px',
-                    background: '#111827',
-                    border: '1px dashed rgba(248,188,77,0.35)',
-                    color: '#fde68a',
-                  }}
-                >
-                  数値を入力してください。
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    const lengthUnits: Array<{ value: LengthBase; label: string }> = [
-      { value: 'cm', label: '公分 (cm)' },
-      { value: 'meter', label: '公尺 (m)' },
-      { value: 'foot', label: '呎 (ft)' },
-      { value: 'inch', label: '吋 (inch)' },
-    ];
-
-    return (
-      <div
-        style={{
-          background: '#141d35',
-          borderRadius: '16px',
-          padding: isMobile ? '0.95rem' : '1.15rem',
-          border: '1px solid rgba(129,140,248,0.35)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
-          color: '#c7d2fe',
-        }}
-      >
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.85rem', flexWrap: 'wrap' }}>
-          {lengthUnits.map(({ value, label }) => {
-            const active = lengthBase === value;
-            return (
-              <button
-                key={value}
-                onClick={() => setLengthBase(value)}
-                style={{
-                  flex: isMobile ? '1 1 120px' : '0 0 auto',
-                  padding: '0.6rem 1rem',
-                  borderRadius: '999px',
-                  border: active ? '1px solid #818cf8' : '1px solid rgba(129,140,248,0.35)',
-                  background: active ? 'linear-gradient(145deg, #6366f1, #4338ca)' : '#1f2947',
-                  color: '#eef2ff',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  touchAction: 'manipulation',
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: '1rem',
-            alignItems: isMobile ? 'stretch' : 'flex-end',
-          }}
-        >
-          <div style={{ flex: '1 1 200px' }}>
-            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#c7d2fe' }}>
-              入力値
-            </label>
-            <input
-              type="number"
-              value={lengthInput}
-              onChange={(e) => setLengthInput(e.target.value)}
-              style={{
-                width: '100%',
-                marginTop: '0.35rem',
-                padding: '0.65rem 0.75rem',
-                borderRadius: '12px',
-                border: '1px solid rgba(129,140,248,0.35)',
-                fontSize: '1.05rem',
-                background: '#0f172a',
-                color: '#c7d2fe',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
-              }}
-            />
-          </div>
-          <div style={{ flex: '1 1 200px' }}>
-            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#c7d2fe', marginBottom: '0.35rem' }}>
-              結果
-            </div>
-            {lengthResults ? (
-              <div
-                style={{
-                  display: 'grid',
-                  gap: '0.4rem',
-                  background: '#0f172a',
-                  borderRadius: '12px',
-                  padding: '0.8rem',
-                  border: '1px solid rgba(129,140,248,0.25)',
-                }}
-              >
-                <div style={{ fontSize: '0.85rem', color: '#c7d2fe' }}>
-                  公分 (cm): <strong>{formatConversionNumber(lengthResults.cm, 2)}</strong>
-                </div>
-                <div style={{ fontSize: '0.85rem', color: '#c7d2fe' }}>
-                  公尺 (m): <strong>{formatConversionNumber(lengthResults.meter, 3)}</strong>
-                </div>
-                <div style={{ fontSize: '0.85rem', color: '#c7d2fe' }}>
-                  呎 (ft): <strong>{formatConversionNumber(lengthResults.foot, 3)}</strong>
-                </div>
-                <div style={{ fontSize: '0.85rem', color: '#c7d2fe' }}>
-                  吋 (inch): <strong>{formatConversionNumber(lengthResults.inch, 3)}</strong>
-                </div>
-              </div>
-            ) : (
-              <div
-                style={{
-                  padding: '0.75rem',
-                  borderRadius: '12px',
-                  background: '#0f172a',
-                  border: '1px dashed rgba(129,140,248,0.35)',
-                  color: '#c7d2fe',
-                }}
-              >
-                数値を入力してください。
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   // TXT読み込み
   const readTxt = (file: File): Promise<string> => {
@@ -4114,7 +3995,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     
     return normalized.length > 4000 ? normalized.slice(0, 4000) : normalized;
   };
-
   // HEIC形式をJPEG/PNGに変換
   const convertHeicToJpeg = async (file: File): Promise<File> => {
     try {
@@ -4140,7 +4020,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       throw new Error('HEIC形式の変換に失敗しました。');
     }
   };
-
   // 画像OCR（Tesseract.js）- 広東語・中国語・日本語対応
   const runOcr = async (file: File, onProgress?: (p: number) => void): Promise<string> => {
     let imageFile = file;
@@ -4571,7 +4450,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 5);
     }
   };
-
   // カテゴリーバーのスクロール状態を初期化
   useEffect(() => {
     const checkScroll = () => {
@@ -4840,7 +4718,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       setLoading(false);
     }
   };
-
   const handleWordClick = async (word: Word) => {
     playHapticAndSound(); // 振動と音を再生
     // すべてのモードで押下ログを送信
@@ -5254,7 +5131,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       normalModeAudioGainNodeRef.current.gain.value = normalModeAudioVolume;
     }
   }, [normalModeAudioVolume]);
-
   return (
     <div 
       style={{ 
@@ -5618,7 +5494,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
             }}>
               ボタンを押すだけでスパッと発音！
             </div>
-            {/* 参照行は不要のため削除 */}
           </div>
 
           {/* ラベル: カテゴリー選択 */}
@@ -6633,7 +6508,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                       </div>
                     )}
                   </div>
-
                   {/* パスワード */}
                   <div>
                     <label style={{ display: 'block', fontSize: 11, color: '#6b7280', marginBottom: 4 }}>パスワード</label>
@@ -7256,7 +7130,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               {error}
             </div>
           )}
-
           {/* 数字カテゴリー専用ツール */}
           {isNumbersCategory && (
             <div
@@ -7308,54 +7181,165 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                       alignItems: 'flex-end',
                       gap: '0.35rem',
                     }}
-                  >
-                    <div
-                      style={{
-                        fontSize: isMobile ? '2rem' : '2.4rem',
-                        fontWeight: 700,
-                        lineHeight: 1.1,
-                        letterSpacing: '0.03em',
-                        wordBreak: 'break-word',
-                      }}
                     >
-                      {displayInfo.primaryValue}
-                      {displayInfo.primaryLabel && (
-                        <span style={{ fontSize: '0.7em', marginLeft: '0.35rem', opacity: 0.8 }}>
-                          {displayInfo.primaryLabel}
-                        </span>
-                      )}
-                    </div>
-                    {activeConversionPanel && displayInfo.secondaryValue && (
                       <div
                         style={{
-                          fontSize: isMobile ? '1.4rem' : '1.65rem',
-                          fontWeight: 600,
-                          color: '#cbd5f5',
-                          lineHeight: 1.2,
+                          fontSize: isMobile ? '2rem' : '2.4rem',
+                          fontWeight: 700,
+                          lineHeight: 1.1,
+                          letterSpacing: '0.03em',
+                          wordBreak: 'break-word',
                           display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.45rem',
+                          alignItems: 'baseline',
+                          gap: '0.4rem',
                         }}
                       >
-                        <span style={{ opacity: 0.65 }}>⇄</span>
-                        <span>{displayInfo.secondaryValue}</span>
-                        {displayInfo.secondaryLabel && (
-                          <span style={{ fontSize: '0.75em', opacity: 0.85 }}>{displayInfo.secondaryLabel}</span>
+                        <span>{displayInfo.primaryValue}</span>
+                        {(displayInfo.primaryLabel || displayInfo.primarySubLabel) && (
+                          <span
+                            style={{
+                              fontSize: '0.7em',
+                              display: 'flex',
+                              gap: '0.35rem',
+                              opacity: 0.8,
+                              alignItems: 'baseline',
+                            }}
+                          >
+                            {displayInfo.primaryLabel}
+                            {displayInfo.primarySubLabel && (
+                              <span style={{ fontSize: '0.8em', opacity: 0.7 }}>{displayInfo.primarySubLabel}</span>
+                            )}
+                          </span>
                         )}
                       </div>
-                    )}
-                    {displayInfo.detail && (
-                      <div
-                        style={{
-                          fontSize: '0.8rem',
-                          opacity: 0.65,
-                          textAlign: 'right',
-                        }}
-                      >
-                        {displayInfo.detail}
-                      </div>
-                    )}
-                  </div>
+                      {activeConversionPanel && displayInfo.outputs.length > 0 && (
+                        <div
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                            alignItems: 'flex-start',
+                            gap: '0.55rem',
+                          }}
+                        >
+                          {displayInfo.swapMode && (
+                            <button
+                              type="button"
+                              onClick={
+                                displayInfo.swapMode === 'currency'
+                                  ? handleSwapCurrencyBase
+                                  : handleCycleConversionBase
+                              }
+                              disabled={displayInfo.swapMode === 'currency' && isFetchingRate}
+                              aria-label="単位の入れ替え"
+                              style={{
+                                padding: isMobile ? '0.45rem' : '0.6rem',
+                                borderRadius: '999px',
+                                border:
+                                  displayInfo.swapMode === 'currency'
+                                    ? '1px solid rgba(96,165,250,0.35)'
+                                    : '1px solid rgba(249,115,22,0.35)',
+                                background:
+                                  displayInfo.swapMode === 'currency'
+                                    ? (isFetchingRate
+                                        ? 'rgba(30,41,59,0.85)'
+                                        : 'linear-gradient(145deg, #2563eb, #1d4ed8)')
+                                    : 'linear-gradient(145deg, #f97316, #ea580c)',
+                                color: '#e0f2fe',
+                                fontWeight: 700,
+                                fontSize: isMobile ? '1rem' : '1.15rem',
+                                minWidth: isMobile ? 44 : 50,
+                                height: isMobile ? 44 : 50,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow:
+                                  displayInfo.swapMode === 'currency'
+                                    ? isFetchingRate
+                                      ? 'none'
+                                      : '0 6px 18px rgba(29,78,216,0.35)'
+                                    : '0 6px 18px rgba(234,88,12,0.35)',
+                                cursor:
+                                  displayInfo.swapMode === 'currency' && isFetchingRate ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                opacity: displayInfo.swapMode === 'currency' && isFetchingRate ? 0.6 : 1,
+                              }}
+                              onMouseEnter={(e) => {
+                                const isDisabled = displayInfo.swapMode === 'currency' && isFetchingRate;
+                                if (isDisabled) return;
+                                e.currentTarget.style.boxShadow =
+                                  displayInfo.swapMode === 'currency'
+                                    ? '0 8px 20px rgba(29,78,216,0.45)'
+                                    : '0 8px 20px rgba(234,88,12,0.45)';
+                                e.currentTarget.style.transform = 'translateY(-2px)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.boxShadow =
+                                  displayInfo.swapMode === 'currency'
+                                    ? isFetchingRate
+                                      ? 'none'
+                                      : '0 6px 18px rgba(29,78,216,0.35)'
+                                    : '0 6px 18px rgba(234,88,12,0.35)';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                              }}
+                            >
+                              ⇄
+                            </button>
+                          )}
+                          <div
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '0.35rem',
+                              alignItems: 'flex-end',
+                              width: '100%',
+                            }}
+                          >
+                            {displayInfo.outputs.map((output) => (
+                              <div
+                                key={`${output.label}-${output.subLabel ?? ''}`}
+                                style={{
+                                  fontSize: isMobile ? '1.35rem' : '1.6rem',
+                                  fontWeight: 600,
+                                  color: '#cbd5f5',
+                                  lineHeight: 1.2,
+                                  display: 'flex',
+                                  alignItems: 'baseline',
+                                  gap: '0.45rem',
+                                }}
+                              >
+                                <span>{output.value}</span>
+                                <span
+                                  style={{
+                                    fontSize: '0.75em',
+                                    opacity: 0.85,
+                                    display: 'flex',
+                                    gap: '0.4rem',
+                                    alignItems: 'baseline',
+                                  }}
+                                >
+                                  {output.label}
+                                  {output.subLabel && (
+                                    <span style={{ fontSize: '0.8em', opacity: 0.65 }}>{output.subLabel}</span>
+                                  )}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {displayInfo.detail && (
+                        <div
+                          style={{
+                            fontSize: '0.8rem',
+                            opacity: 0.65,
+                            textAlign: 'right',
+                          }}
+                        >
+                          {displayInfo.detail}
+                        </div>
+                      )}
+                    </div>
                 </div>
 
                 <div
@@ -7371,13 +7355,14 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     row.map((item, columnIndex) => {
                       const key = `${item.key}-${rowIndex}-${columnIndex}`;
                       switch (item.type) {
-                        case 'conversion': {
-                          const shortcut = conversionShortcutMap[item.shortcutKey];
-                          const isActive =
-                            activeConversionPanel === shortcut.panel &&
-                            ((shortcut.panel === 'currency' && currencyBase === shortcut.unit) ||
-                              (shortcut.panel === 'weight' && weightBase === shortcut.unit) ||
-                              (shortcut.panel === 'length' && lengthBase === shortcut.unit));
+                          case 'conversion': {
+                            const shortcut = conversionShortcutMap[item.shortcutKey];
+                            const isActive =
+                              activeConversionPanel === shortcut.panel &&
+                              ((shortcut.panel === 'weight' && weightBase === shortcut.unit) ||
+                                (shortcut.panel === 'lengthImperial' && lengthBase === shortcut.unit) ||
+                                (shortcut.panel === 'area' && areaBase === shortcut.unit) ||
+                                (shortcut.panel === 'distance' && distanceBase === shortcut.unit));
 
                           return renderCalculatorButton(
                             shortcut.label,
@@ -7404,21 +7389,18 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                             variant: 'cycle',
                             keyOverride: key,
                           });
-                        case 'close':
-                          return renderCalculatorButton(item.label, closeConversionPanel, {
-                            variant: 'close',
-                            keyOverride: key,
-                          });
                         case 'function': {
-                          const actionHandlers: Record<CalculatorFunctionAction, () => void> = {
-                            clear: handleCalculatorClear,
-                            delete: handleCalculatorDelete,
-                            percent: handleCalculatorPercent,
-                            toggleSign: handleCalculatorToggleSign,
-                          };
+                            const actionHandlers: Record<CalculatorFunctionAction, () => void> = {
+                              clear: handleCalculatorClear,
+                              delete: handleCalculatorDelete,
+                              percent: handleCalculatorPercent,
+                              toggleSign: handleCalculatorToggleSign,
+                            };
+                            const disabled = false;
                           return renderCalculatorButton(item.label, actionHandlers[item.action], {
                             variant: 'function',
                             keyOverride: key,
+                            disabled,
                           });
                         }
                         case 'digit':
@@ -7451,10 +7433,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   )}
                 </div>
               </div>
-
-              {activeConversionPanel && (
-                <div style={{ marginTop: '1.2rem' }}>{renderConversionPanel()}</div>
-              )}
             </div>
           )}
 
@@ -7463,7 +7441,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
             ref={normalModeAudioRef}
             style={{ display: 'none' }}
           />
-
           {/* 結果エリア（学習モード または 入力欄からの検索時に表示） */}
           {(result && (isLearningMode || forceShowResult)) && (
             <div style={{ 
@@ -7719,7 +7696,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               )}
             </div>
           )}
-
           {/* practiceGroups表示（pronunciation用） */}
           {currentCategory && currentCategory.introContent && currentCategory.practiceGroups && (
             <div style={{ 
@@ -8254,7 +8230,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               })}
             </div>
           )}
-
           {/* 通常の単語ボタングリッド */}
           {currentWords.length > 0 && (
             <div style={{ 
@@ -8882,7 +8857,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   </div>
                           </div>
                         )}
-                        
         <SettingsPortal
           isMobile={isMobile}
           showSettings={showSettings}
