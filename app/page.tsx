@@ -1322,40 +1322,30 @@ export default function Home() {
     }
   };
 
-  const handleSpeakCalculatorResult = useCallback(async () => {
+    const handleSpeakCalculatorResult = useCallback(async () => {
     if (calculatorError || calculatorDisplay === 'Error' || calculatorDisplay === '') {
       return;
     }
 
-    calculatorSpeechCycleRef.current = (calculatorSpeechCycleRef.current % 3) + 1;
-    const cycle = calculatorSpeechCycleRef.current;
-    if (cycle === 3) {
-      calculatorSpeechCycleRef.current = 0;
-    }
-
-    const language = cycle === 3 ? 'mandarin' : 'cantonese';
+      const language: 'cantonese' = 'cantonese';
 
     let numericForSpeech = '';
     let unitForSpeech = '';
 
-    const sanitizedCalculatorValue = calculatorDisplay.replace(/,/g, '');
+      const primaryValueRaw = displayInfo.primaryValue?.replace(/[^\d.\-]/g, '');
+      if (primaryValueRaw) {
+        numericForSpeech = convertNumberToCantoneseReading(primaryValueRaw);
+    }
 
-    if (activeConversionPanel && displayInfo.outputs.length > 0) {
-      const firstOutput = displayInfo.outputs[0];
-      if (firstOutput.value && firstOutput.value !== '---') {
-        const secondaryNumeric = firstOutput.value.replace(/[^\d.\-]/g, '');
-        if (secondaryNumeric) {
-          numericForSpeech = convertNumberToCantoneseReading(secondaryNumeric);
-          unitForSpeech = firstOutput.label ?? '';
-        }
+      if (displayInfo.primaryLabel) {
+        unitForSpeech = displayInfo.primaryLabel;
       }
-    }
 
-    if (!numericForSpeech) {
-      const primaryNumeric = sanitizedCalculatorValue.replace(/[^\d.\-]/g, '') || '0';
-      numericForSpeech = convertNumberToCantoneseReading(primaryNumeric);
-      unitForSpeech = displayInfo.primaryLabel ?? '';
-    }
+      if (!numericForSpeech) {
+        const sanitizedCalculatorValue = calculatorDisplay.replace(/,/g, '');
+        const fallbackNumeric = sanitizedCalculatorValue.replace(/[^\d.\-]/g, '') || '0';
+        numericForSpeech = convertNumberToCantoneseReading(fallbackNumeric);
+      }
 
     if (!numericForSpeech) {
       return;
@@ -3611,7 +3601,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const toneButtonKeyCounterRef = useRef(0);
-  const calculatorSpeechCycleRef = useRef(0);
 
   // iOS風アウトラインアイコン
   const FolderIcon = ({ size = 20, yOffset = 0 }: { size?: number; yOffset?: number }) => (
