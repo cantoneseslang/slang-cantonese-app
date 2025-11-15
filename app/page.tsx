@@ -678,15 +678,32 @@ export default function Home() {
     setCalculatorRepeatOperator(null);
   }, []);
 
+  const updateHistoryForSecondOperand = useCallback(
+    (nextValue: string) => {
+      if (calculatorPendingOperator && calculatorStoredValue !== null) {
+        const formattedFirst = formatCalculatorDisplayValue(String(calculatorStoredValue));
+        const formattedSecond = formatCalculatorDisplayValue(nextValue);
+        setCalculatorHistory(`${formattedFirst} ${calculatorPendingOperator} ${formattedSecond}`);
+      } else if (!calculatorPendingOperator) {
+        setCalculatorHistory('');
+      }
+    },
+    [calculatorPendingOperator, calculatorStoredValue]
+  );
+
   const handleCalculatorDigit = (digit: string) => {
     setCalculatorError(null);
     setCalculatorDisplay((prev) => {
       if (calculatorOverwrite || prev === '0' || prev === '-0') {
         setCalculatorOverwrite(false);
-        return prev === '-0' ? `-${digit}` : digit;
+        const nextValue = prev === '-0' ? `-${digit}` : digit;
+        updateHistoryForSecondOperand(nextValue);
+        return nextValue;
       }
       setCalculatorOverwrite(false);
-      return prev + digit;
+      const nextValue = prev + digit;
+      updateHistoryForSecondOperand(nextValue);
+      return nextValue;
     });
   };
 
@@ -695,12 +712,16 @@ export default function Home() {
     setCalculatorDisplay((prev) => {
       if (calculatorOverwrite) {
         setCalculatorOverwrite(false);
-        return '0.';
+          const nextValue = '0.';
+          updateHistoryForSecondOperand(nextValue);
+          return nextValue;
       }
       if (prev.includes('.')) {
         return prev;
       }
-      return `${prev}.`;
+        const nextValue = `${prev}.`;
+        updateHistoryForSecondOperand(nextValue);
+        return nextValue;
     });
   };
 
@@ -764,7 +785,7 @@ export default function Home() {
       return;
     }
 
-    const computed = performCalculation(firstOperand, secondOperand, operatorToUse);
+      const computed = performCalculation(firstOperand, secondOperand, operatorToUse);
     if (computed === null || !Number.isFinite(computed)) {
       setCalculatorError('計算できません');
       resetCalculator();
@@ -775,7 +796,10 @@ export default function Home() {
     setCalculatorStoredValue(null);
     setCalculatorPendingOperator(null);
     setCalculatorOverwrite(true);
-    setCalculatorHistory('');
+      const formattedFirst = formatCalculatorDisplayValue(String(firstOperand));
+      const formattedSecond = formatCalculatorDisplayValue(String(secondOperand));
+      const formattedResult = formatCalculatorDisplayValue(String(computed));
+      setCalculatorHistory(`${formattedFirst} ${operatorToUse} ${formattedSecond} = ${formattedResult}`);
   };
 
   const handleCalculatorToggleSign = () => {
