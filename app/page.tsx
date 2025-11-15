@@ -424,6 +424,8 @@ export default function Home() {
   
   // コピー成功メッセージ表示用
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
+  const [isTranslatingAfterImport, setIsTranslatingAfterImport] = useState(false);
+  const [postImportMessage, setPostImportMessage] = useState<string | null>(null);
   const cleanedExampleText = result?.exampleCantonese?.trim() ?? '';
   const shouldShowExampleAudio =
     cleanedExampleText.length > 0 && cleanedExampleText.length <= 100 && Boolean(result?.exampleAudioBase64);
@@ -7202,6 +7204,17 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   
                   const fileName = file.name.toLowerCase();
                   const fileType = file.type;
+                  const executeTranslation = async (textForTranslation: string) => {
+                    try {
+                      setIsTranslatingAfterImport(true);
+                      setPostImportMessage('翻訳と音声生成変換中（広東語）...');
+                      setSearchQuery('');
+                      await handleSearch(textForTranslation);
+                    } finally {
+                      setIsTranslatingAfterImport(false);
+                      setPostImportMessage(null);
+                    }
+                  };
                   
                   // 画像ファイルの場合（自動OCR実行）
                   if (fileType.startsWith('image/')) {
@@ -7214,14 +7227,14 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     } else if (sanitized.length > 1000) {
                       const confirmMsg = `OCRで読み取ったテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを翻訳に使用しますか？`;
                       if (confirm(confirmMsg)) {
-                        setSearchQuery('');
-                        void handleSearch(sanitized.substring(0, 1000));
+                        await executeTranslation(sanitized.substring(0, 1000));
+                        return;
                       } else {
                         lastImportWasOcrRef.current = false;
                       }
                     } else {
-                      setSearchQuery('');
-                      void handleSearch(sanitized);
+                      await executeTranslation(sanitized);
+                      return;
                     }
                   }
                   // PDFファイルの場合（自動テキスト抽出→OCR）
@@ -7280,14 +7293,14 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                         } else if (sanitized.length > 1000) {
                           const confirmMsg = `PDFから読み取ったテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを翻訳に使用しますか？`;
                           if (confirm(confirmMsg)) {
-                            setSearchQuery('');
-                            void handleSearch(sanitized.substring(0, 1000));
+                            await executeTranslation(sanitized.substring(0, 1000));
+                            return;
                           } else {
                             lastImportWasOcrRef.current = false;
                           }
                         } else {
-                          setSearchQuery('');
-                          void handleSearch(sanitized);
+                          await executeTranslation(sanitized);
+                          return;
                         }
                       } catch (ocrErr: any) {
                         console.error('PDF OCRエラー:', ocrErr);
@@ -7301,14 +7314,14 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                       } else if (sanitized.length > 1000) {
                         const confirmMsg = `PDFから抽出したテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを翻訳に使用しますか？`;
                         if (confirm(confirmMsg)) {
-                          setSearchQuery('');
-                          void handleSearch(sanitized.substring(0, 1000));
+                          await executeTranslation(sanitized.substring(0, 1000));
+                          return;
                         } else {
                           lastImportWasOcrRef.current = false;
                         }
                       } else {
-                        setSearchQuery('');
-                        void handleSearch(sanitized);
+                        await executeTranslation(sanitized);
+                        return;
                       }
                     }
                   } else {
@@ -7346,6 +7359,26 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     trackColor="rgba(37,99,235,0.25)"
                   />
                   <span>{importMessage ?? 'ファイルを処理しています...'}</span>
+                </div>
+              )}
+              {isTranslatingAfterImport && (
+                <div
+                  style={{
+                    marginTop: '0.65rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontSize: isMobile ? '0.8rem' : '0.875rem',
+                    fontWeight: 600,
+                    color: '#2563eb',
+                  }}
+                >
+                  <Spinner
+                    size={isMobile ? 18 : 20}
+                    borderColor="#2563eb"
+                    trackColor="rgba(37,99,235,0.25)"
+                  />
+                  <span>{postImportMessage ?? '翻訳と音声生成変換中（広東語）...'}</span>
                 </div>
               )}
 
