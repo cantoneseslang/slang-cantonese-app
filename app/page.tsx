@@ -6930,16 +6930,18 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   >
                     入力可能文字数: {searchQuery.length} / 1,000文字
                   </div>
-                  <div
-                    style={{
-                      fontSize: isMobile ? '0.8rem' : '0.85rem',
-                      color: '#ef4444',
-                      fontWeight: 600,
-                      whiteSpace: isMobile ? 'normal' : 'nowrap',
-                    }}
-                  >
-                    下の青い🟦「広東語発音」ボタンを押してください
-                  </div>
+                    {searchQuery.trim().length > 0 && (
+                      <div
+                        style={{
+                          fontSize: isMobile ? '0.8rem' : '0.85rem',
+                          color: '#ef4444',
+                          fontWeight: 600,
+                          whiteSpace: isMobile ? 'normal' : 'nowrap',
+                        }}
+                      >
+                        下の青い🟦「広東語発音」ボタンを押してください
+                      </div>
+                    )}
                 </div>
               </div>
             {/* 
@@ -7091,7 +7093,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   
                   // 画像ファイルの場合（自動OCR実行）
                   if (fileType.startsWith('image/')) {
-                    setImportMessage('OCR実行中（中国語・広東語）...');
+                    setImportMessage('OCR実行中（広東語）...');
                     const text = await runOcr(file, (p) => setImportProgress(p));
                     if (!text || text.trim().length === 0) {
                       alert('画像からテキストを読み取れませんでした。');
@@ -7286,7 +7288,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                       trackColor="rgba(255,255,255,0.35)"
                       borderWidth={2}
                     />
-                    <span>検索中...</span>
+                    <span>音声生成変換中</span>
                   </span>
                 ) : (
                   '広東語発音'
@@ -7353,7 +7355,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                       trackColor="rgba(255,255,255,0.35)"
                       borderWidth={2}
                     />
-                    <span>変換中...</span>
+                    <span>音声生成変換中</span>
                   </span>
                 ) : (
                   '日訳+広東語発音'

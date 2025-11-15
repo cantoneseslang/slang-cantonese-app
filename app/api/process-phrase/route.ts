@@ -174,18 +174,10 @@ function isJapaneseText(text: string): boolean {
   return false;
 }
 
-async function translateCantoneseToJapanese(cantoneseText: string, attempt = 1): Promise<string> {                                                              
+async function translateCantoneseToJapanese(cantoneseText: string): Promise<string> {                                                              
   if (!cantoneseText || cantoneseText.trim() === '') {
     return '';
   }
-
-  const baseSystemPrompt =
-    'You are a professional translator. Convert Traditional Chinese (Cantonese) text into natural Japanese. ' +
-    'The output must consist solely of Japanese characters (kanji, hiragana, katakana) and necessary punctuation. ' +
-    'Do not include explanations, transliterations, or English letters.';
-
-  const reinforcementPrompt =
-    '必ず自然な日本語で翻訳し、平仮名または片仮名を含めてください。日本語以外の文字（英字や意味不明な記号）は出力しないでください。';
 
   try {
     const response = await fetch(DEEPSEEK_API_URL, {
@@ -199,18 +191,17 @@ async function translateCantoneseToJapanese(cantoneseText: string, attempt = 1):
         messages: [
           {
             role: 'system',
-            content: attempt === 1 ? baseSystemPrompt : `${baseSystemPrompt} ${reinforcementPrompt}`,
+            content: 'You are a professional translator who translates Cantonese (Traditional Chinese) into natural Japanese. Provide only the Japanese translation without any additional explanations.',
           },
           {
             role: 'user',
             content:
-              `次の広東語（繁体字中国語）の文章を自然な日本語に翻訳してください。\n` +
-              `${attempt === 1 ? '' : `${reinforcementPrompt}\n`}\n${cantoneseText}`,
+              `次の広東語（繁体字中国語）の文章を日本語に翻訳してください。\n\n${cantoneseText}\n\n日本語に翻訳して`,
           },
         ],
         max_tokens: 1200,
-        temperature: 0.1,
-        top_p: 0.3,
+        temperature: 0.2,
+        top_p: 0.9,
       }),
     });
 
@@ -221,40 +212,15 @@ async function translateCantoneseToJapanese(cantoneseText: string, attempt = 1):
     }
 
     const jsonResponse = await response.json();
-    let translatedText = jsonResponse.choices?.[0]?.message?.content?.trim() || '';
-
-    translatedText = translatedText.replace(/^[（(].*?[）)]\s*/g, '');
-    translatedText = translatedText.replace(/^["'「」『』\[\]\s]+|["'「」『』\[\]\s]+$/g, '');
-    translatedText = translatedText.replace(/^(翻訳結果|翻訳|Translation)[：:]\s*/i, '').trim();
-
-    const lines = translatedText
-      .split('\n')
-      .map((line: string) => line.trim())
-      .filter((line: string) => line.length > 0);
-
-    const japaneseRegex = /[\u3040-\u30FF]/;
-    const candidateLine = lines.find((line: string) => japaneseRegex.test(line)) || translatedText;
-    const cleanedCandidate = candidateLine
-      .replace(/^[（(].*?[）)]\s*/g, '')
-      .replace(/^["'「」『』\[\]\s]+|["'「」『』\[\]\s]+$/g, '')
-      .trim();
-
-    const hasKana = japaneseRegex.test(cleanedCandidate);
-    const hasAlphabet = /[A-Za-z]/.test(cleanedCandidate);
-
-    if (!hasKana || hasAlphabet) {
-      console.warn('⚠️ 日本語翻訳の品質が低い可能性:', {
-        attempt,
-        preview: cleanedCandidate.substring(0, 120),
-      });
-      if (attempt < 2) {
-        await new Promise((resolve) => setTimeout(resolve, 200));
-        return translateCantoneseToJapanese(cantoneseText, attempt + 1);
-      }
+    let translatedText = jsonResponse.choices?.[0]?.message?.content ?? '';
+    if (typeof translatedText !== 'string') {
       return '';
     }
 
-    return cleanedCandidate;
+    translatedText = translatedText.trim();
+    translatedText = translatedText.replace(/^[「『\s]+|[」』\s]+$/g, '');
+
+    return translatedText;
   } catch (error) {
     console.error('Cantonese→Japanese translation error:', error);
     return '';
