@@ -3557,27 +3557,31 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
 
   const handleQuickConversionClick = useCallback(
     (button: QuickConversionButton) => {
-      if (button.panel === 'weight') {
-        setWeightBase(button.unit);
-        setActiveConversionPanel('weight');
+    if (button.panel === 'weight') {
+      const shouldClose = activeConversionPanel === 'weight' && weightBase === button.unit;
+      setWeightBase(button.unit);
+      setActiveConversionPanel(shouldClose ? null : 'weight');
         return;
       }
 
       if (button.panel === 'lengthImperial') {
-        setLengthBase(button.unit);
-        setActiveConversionPanel('lengthImperial');
+      const shouldClose = activeConversionPanel === 'lengthImperial' && lengthBase === button.unit;
+      setLengthBase(button.unit);
+      setActiveConversionPanel(shouldClose ? null : 'lengthImperial');
         return;
       }
 
       if (button.panel === 'area') {
-        setAreaBase(button.unit);
-        setActiveConversionPanel('area');
+      const shouldClose = activeConversionPanel === 'area' && areaBase === button.unit;
+      setAreaBase(button.unit);
+      setActiveConversionPanel(shouldClose ? null : 'area');
         return;
       }
 
       if (button.panel === 'distance') {
-        setDistanceBase(button.unit);
-        setActiveConversionPanel('distance');
+      const shouldClose = activeConversionPanel === 'distance' && distanceBase === button.unit;
+      setDistanceBase(button.unit);
+      setActiveConversionPanel(shouldClose ? null : 'distance');
       }
     },
     [setActiveConversionPanel, setWeightBase, setLengthBase, setAreaBase, setDistanceBase]
