@@ -2775,9 +2775,43 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     const initializeUserMetadata = async () => {
       if (!user) return;
 
-      // 会員種別の設定
+      // 会員種別の設定（有効期限チェック付き）
       if (user.user_metadata?.membership_type) {
-        setMembershipType(user.user_metadata.membership_type);
+        const membershipType = user.user_metadata.membership_type;
+        const expiresAt = user.user_metadata?.subscription_expires_at;
+        
+        // サブスクリプション会員の場合、有効期限をチェック
+        if (membershipType === 'subscription' && expiresAt) {
+          const now = new Date();
+          const expirationDate = new Date(expiresAt);
+          
+          if (now >= expirationDate) {
+            // 有効期限切れ - ブロンズにダウングレード
+            console.log('⚠️ サブスクリプション有効期限切れ。ブロンズにダウングレードします。', {
+              expiresAt,
+              now: now.toISOString()
+            });
+            setMembershipType('free');
+            
+            // サーバー側も更新（バックグラウンド実行）
+            fetch('/api/stripe/manual-update-membership', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ plan: 'free' })
+            }).catch(err => console.error('会員種別更新エラー:', err));
+          } else {
+            // 有効期限内 - 正しい会員タイプを設定
+            console.log('✅ サブスクリプション有効期限内', {
+              expiresAt,
+              now: now.toISOString(),
+              remainingDays: Math.floor((expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+            });
+            setMembershipType(membershipType);
+          }
+        } else {
+          // ライフタイム会員またはブロンズ会員
+          setMembershipType(membershipType);
+        }
       } else {
         // 会員種別がない場合、デフォルト値を設定
         setMembershipType('free');
