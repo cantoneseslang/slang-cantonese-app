@@ -5235,11 +5235,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     // クリック音
     playClickSound();
 
-    // ノーマルモードの場合、緑色に変える
-    if (!isLearningMode) {
-      setActiveWordId(activeKey);
-    }
-
     // ボタン押下をトラッキング（pronunciationカテゴリー）
     try {
       await fetch('/api/track-button', {
@@ -5272,10 +5267,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       }
     } catch (err) {
       console.error('音声再生エラー:', err);
-      // エラー時もactiveWordIdをクリア
-      if (!isLearningMode) {
-        setActiveWordId(null);
-      }
     }
     // categoryIdの取得: noteカテゴリーが選択されている場合はselectedNoteCategoryを優先
     const categoryId = selectedNoteCategory || currentCategory?.id || 'pronunciation';
@@ -5323,11 +5314,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     if (button) {
       button.style.background = 'linear-gradient(145deg, #10b981, #059669)';
       button.style.color = 'white';
-    }
-    
-    // 個別ボタンの緑点灯を消す
-    if (!isLearningMode) {
-      setActiveWordId(null);
     }
     
     // テキスト全体を一度に送信（例: "3 9 4 0 5 2" または "7 8 6"）
