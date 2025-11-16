@@ -839,6 +839,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
                 : '#6b7280',
               textShadow: 'none',
               marginTop: '0.25rem',
+              whiteSpace: 'nowrap',
             }}
           >
             {membershipType === 'free' ? (
