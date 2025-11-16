@@ -57,7 +57,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{ username: string; membership_type: string }>({ username: '', membership_type: 'free' });
-  const [analyticsData, setAnalyticsData] = useState<Array<{ month: string; registrations: number; revenue: number }>>([]);
+  const [analyticsData, setAnalyticsData] = useState<Array<{ month: string; registrations: number; revenueJPY: number; revenueHKD: number }>>([]);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   useEffect(() => {
@@ -793,7 +793,7 @@ export default function AdminPage() {
                   yAxisId="right"
                   orientation="right"
                   style={{ fontSize: '0.75rem' }}
-                  label={{ value: '売上（円）', angle: 90, position: 'insideRight' }}
+                  label={{ value: '売上（円/HKD）', angle: 90, position: 'insideRight' }}
                 />
                 <Tooltip 
                   contentStyle={{
@@ -803,8 +803,11 @@ export default function AdminPage() {
                     fontSize: '0.875rem'
                   }}
                   formatter={(value: number, name: string) => {
-                    if (name === '売上') {
+                    if (name === '売上 (JPY)') {
                       return [`¥${value.toLocaleString()}`, name];
+                    }
+                    if (name === '売上 (HKD)') {
+                      return [`HK$${value.toLocaleString()}`, name];
                     }
                     return [`${value}人`, name];
                   }}
@@ -812,9 +815,16 @@ export default function AdminPage() {
                 <Legend />
                 <Bar 
                   yAxisId="right"
-                  dataKey="revenue" 
+                  dataKey="revenueJPY" 
                   fill="#8b5cf6" 
-                  name="売上"
+                  name="売上 (JPY)"
+                  radius={[8, 8, 0, 0]}
+                />
+                <Bar 
+                  yAxisId="right"
+                  dataKey="revenueHKD" 
+                  fill="#10b981" 
+                  name="売上 (HKD)"
                   radius={[8, 8, 0, 0]}
                 />
                 <Line 

@@ -49,13 +49,13 @@ export async function GET(request: NextRequest) {
 
     // 月別の会員登録数を集計（過去12ヶ月）
     const now = new Date();
-    const monthlyData: { [key: string]: { registrations: number; revenue: number } } = {};
+    const monthlyData: { [key: string]: { registrations: number; revenueJPY: number; revenueHKD: number } } = {};
     
     // 過去12ヶ月分の初期化
     for (let i = 11; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      monthlyData[key] = { registrations: 0, revenue: 0 };
+      monthlyData[key] = { registrations: 0, revenueJPY: 0, revenueHKD: 0 };
     }
 
     // 会員登録数を集計
@@ -92,7 +92,8 @@ export async function GET(request: NextRequest) {
 
       console.log(`📊 取得したPaymentIntents数: ${paymentIntents.data.length}`);
 
-      let totalRevenue = 0;
+      let totalRevenueJPY = 0;
+      let totalRevenueHKD = 0;
       let validPaymentCount = 0;
       let skippedPaymentCount = 0;
 
@@ -110,30 +111,31 @@ export async function GET(request: NextRequest) {
           const key = `${piDate.getFullYear()}-${String(piDate.getMonth() + 1).padStart(2, '0')}`;
           
           if (monthlyData[key] !== undefined) {
-            let amount = 0;
-            
-            // 通貨に応じて金額を変換（JPY建ての金額に統一）
+            // 通貨ごとに別々に集計
             if (pi.currency === 'jpy') {
               // JPYはそのまま
-              amount = pi.amount;
+              const amountJPY = pi.amount;
+              monthlyData[key].revenueJPY += amountJPY;
+              totalRevenueJPY += amountJPY;
+              console.log(`💴 JPY決済: ${pi.id}, customer: ${pi.customer}, ¥${amountJPY}, 日付: ${piDate.toLocaleDateString('ja-JP')}`);
             } else if (pi.currency === 'hkd') {
-              // HKDはセント単位なので100で割って、さらに為替レートで換算（簡易的に1 HKD = 20 JPY）
-              amount = (pi.amount / 100) * 20;
+              // HKDはセント単位なので100で割る
+              const amountHKD = pi.amount / 100;
+              monthlyData[key].revenueHKD += amountHKD;
+              totalRevenueHKD += amountHKD;
+              console.log(`💵 HKD決済: ${pi.id}, customer: ${pi.customer}, HK$${amountHKD}, 日付: ${piDate.toLocaleDateString('ja-JP')}`);
             } else {
-              // その他の通貨（セント単位）
-              amount = pi.amount / 100;
+              console.log(`⚠️ 未対応通貨: ${pi.currency}, ${pi.id}`);
             }
             
-            console.log(`💰 有効な支払い: ${pi.id}, customer: ${pi.customer}, ${pi.currency.toUpperCase()} ${pi.amount}, 換算後: ¥${amount}, 日付: ${piDate.toLocaleDateString('ja-JP')}`);
-            
-            monthlyData[key].revenue += amount;
-            totalRevenue += amount;
             validPaymentCount++;
           }
         }
       });
       
-      console.log(`📈 集計結果: 有効な決済 ${validPaymentCount}件, スキップ ${skippedPaymentCount}件, 合計売上: ¥${totalRevenue}`);
+      console.log(`📈 集計結果: 有効な決済 ${validPaymentCount}件, スキップ ${skippedPaymentCount}件`);
+      console.log(`💴 JPY合計: ¥${totalRevenueJPY}`);
+      console.log(`💵 HKD合計: HK$${totalRevenueHKD}`);
       console.log('📈 月別売上データ:', monthlyData);
     } catch (stripeError) {
       console.error('Stripe data fetch error:', stripeError);
@@ -148,7 +150,8 @@ export async function GET(request: NextRequest) {
         return {
           month: `${year}/${month}`,
           registrations: monthlyData[key].registrations,
-          revenue: Math.round(monthlyData[key].revenue), // 四捨五入
+          revenueJPY: Math.round(monthlyData[key].revenueJPY), // 四捨五入
+          revenueHKD: Math.round(monthlyData[key].revenueHKD), // 四捨五入
         };
       });
 
