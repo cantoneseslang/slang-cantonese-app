@@ -118,6 +118,8 @@ export async function POST(request: NextRequest) {
       },
       // クーポンコードがある場合は適用
       discounts: couponCode ? [{ coupon: couponCode }] : undefined,
+      // Stripe Checkoutページでプロモーションコード入力欄を表示
+      allow_promotion_codes: true,
       subscription_data: plan === 'subscription' ? {
         metadata: {
           user_id: userId,
