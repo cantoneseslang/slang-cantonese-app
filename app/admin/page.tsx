@@ -23,6 +23,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // 管理者ページは認証が必要なため、動的ページとして扱う
 export const dynamic = 'force-dynamic';
@@ -56,6 +57,8 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{ username: string; membership_type: string }>({ username: '', membership_type: 'free' });
+  const [analyticsData, setAnalyticsData] = useState<Array<{ month: string; registrations: number; revenue: number }>>([]);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   useEffect(() => {
     checkAdminAccess();
@@ -89,6 +92,7 @@ export default function AdminPage() {
       fetchUsers();
       fetchFavoritesCount();
       fetchButtonAnalytics();
+      fetchAnalytics();
     } catch (error) {
       console.error('管理者チェックエラー:', error);
       router.push('/login');
@@ -148,6 +152,24 @@ export default function AdminPage() {
       console.error('ボタン集計取得エラー', e);
     }
   }
+
+  const fetchAnalytics = async () => {
+    try {
+      setAnalyticsLoading(true);
+      const response = await fetch('/api/admin/analytics');
+      const data = await response.json();
+      
+      if (data.success) {
+        setAnalyticsData(data.data || []);
+      } else {
+        console.error('分析データ取得エラー:', data);
+      }
+    } catch (error) {
+      console.error('分析データ取得エラー:', error);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  };
 
   const handleEdit = (user: User) => {
     setEditingUser(user.id);
@@ -310,7 +332,7 @@ export default function AdminPage() {
               会員情報一覧
             </h2>
             <button
-              onClick={() => { fetchUsers(); fetchFavoritesCount(); fetchButtonAnalytics(); }}
+              onClick={() => { fetchUsers(); fetchFavoritesCount(); fetchButtonAnalytics(); fetchAnalytics(); }}
               style={{
                 padding: '0.5rem 1rem',
                 backgroundColor: '#3b82f6',
@@ -723,6 +745,92 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* 月別会員登録数・売上分析 */}
+        <div style={{
+          marginTop: '2rem',
+          padding: '1.5rem',
+          backgroundColor: '#f9fafb',
+          borderRadius: '12px'
+        }}>
+          <h3 style={{
+            fontSize: '1.25rem',
+            fontWeight: '600',
+            marginBottom: '1.5rem',
+            color: '#1f2937'
+          }}>
+            📈 月別会員登録数・売上分析
+          </h3>
+          {analyticsLoading ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '2rem',
+              color: '#6b7280'
+            }}>
+              読み込み中...
+            </div>
+          ) : analyticsData.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '2rem',
+              color: '#6b7280'
+            }}>
+              データがありません
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={400}>
+              <ComposedChart data={analyticsData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="month" 
+                  style={{ fontSize: '0.75rem' }}
+                />
+                <YAxis 
+                  yAxisId="left"
+                  style={{ fontSize: '0.75rem' }}
+                  label={{ value: '会員登録数（人）', angle: -90, position: 'insideLeft' }}
+                />
+                <YAxis 
+                  yAxisId="right"
+                  orientation="right"
+                  style={{ fontSize: '0.75rem' }}
+                  label={{ value: '売上（円）', angle: 90, position: 'insideRight' }}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem'
+                  }}
+                  formatter={(value: number, name: string) => {
+                    if (name === '売上') {
+                      return [`¥${value.toLocaleString()}`, name];
+                    }
+                    return [`${value}人`, name];
+                  }}
+                />
+                <Legend />
+                <Bar 
+                  yAxisId="right"
+                  dataKey="revenue" 
+                  fill="#8b5cf6" 
+                  name="売上"
+                  radius={[8, 8, 0, 0]}
+                />
+                <Line 
+                  yAxisId="left"
+                  type="monotone" 
+                  dataKey="registrations" 
+                  stroke="#3b82f6" 
+                  strokeWidth={3}
+                  name="会員登録数"
+                  dot={{ fill: '#3b82f6', r: 5 }}
+                  activeDot={{ r: 7 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          )}
+        </div>
 
       {/* ボタン利用分析 */}
       <div style={{
