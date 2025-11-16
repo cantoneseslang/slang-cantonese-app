@@ -7104,7 +7104,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   >
                     {membershipType === 'free' 
                       ? `入力可能文字数: ${searchQuery.length} / 1,000文字`
-                      : `入力可能文字数: ${searchQuery.length}文字（無制限）`
+                      : '入力可能文字数: （無制限）'
                     }
                   </div>
                 </div>
