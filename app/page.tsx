@@ -1233,6 +1233,87 @@ export default function Home() {
   const lastTranslatedTextRef = useRef<string>('');
   const lastProcessedFinalTextRef = useRef<string>('');
   const recognizedFinalTextRef = useRef<string>('');
+  
+  // 音声出力デバイスの管理
+  const [currentAudioOutputDevice, setCurrentAudioOutputDevice] = useState<string>('');
+  const audioElementsToUpdateRef = useRef<HTMLAudioElement[]>([]);
+
+  // 音声出力デバイスを設定する関数
+  const setAudioOutputDevice = async (deviceId: string, audioElement: HTMLAudioElement) => {
+    if (!audioElement) return;
+    
+    // setSinkIdがサポートされているか確認（Chrome/Edgeのみ）
+    if (typeof (audioElement as any).setSinkId === 'function') {
+      try {
+        await (audioElement as any).setSinkId(deviceId);
+        console.log(`🔊 音声出力デバイス設定成功: ${deviceId || 'デフォルト'}`);
+      } catch (err) {
+        console.error('音声出力デバイス設定エラー:', err);
+      }
+    }
+  };
+
+  // すべての音声要素に出力デバイスを適用
+  const updateAllAudioOutputs = async (deviceId: string) => {
+    const elements = [
+      simultaneousModeAudioRef.current,
+      normalModeAudioRef.current,
+      audioRef.current,
+      exampleAudioRef.current,
+    ].filter(Boolean) as HTMLAudioElement[];
+
+    for (const element of elements) {
+      await setAudioOutputDevice(deviceId, element);
+    }
+  };
+
+  // 音声出力デバイスの監視と自動切り替え
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices) return;
+
+    const updateAudioOutputDevices = async () => {
+      try {
+        // 利用可能なデバイスを取得
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
+        
+        console.log('🔊 利用可能な音声出力デバイス:', audioOutputs.map(d => ({
+          deviceId: d.deviceId,
+          label: d.label,
+          groupId: d.groupId
+        })));
+
+        // Bluetoothデバイスを優先的に選択
+        const bluetoothDevice = audioOutputs.find(d => 
+          d.label.toLowerCase().includes('bluetooth') ||
+          d.label.toLowerCase().includes('airpods') ||
+          d.label.toLowerCase().includes('wireless')
+        );
+
+        const preferredDeviceId = bluetoothDevice?.deviceId || '';
+        
+        console.log(`🎧 優先デバイス: ${bluetoothDevice ? bluetoothDevice.label : 'デフォルト（本体スピーカー）'}`);
+
+        if (preferredDeviceId !== currentAudioOutputDevice) {
+          setCurrentAudioOutputDevice(preferredDeviceId);
+          await updateAllAudioOutputs(preferredDeviceId);
+        }
+      } catch (err) {
+        console.error('音声出力デバイス取得エラー:', err);
+      }
+    };
+
+    // 初回実行
+    updateAudioOutputDevices();
+
+    // デバイス変更を監視
+    if (navigator.mediaDevices.addEventListener) {
+      navigator.mediaDevices.addEventListener('devicechange', updateAudioOutputDevices);
+      return () => {
+        navigator.mediaDevices.removeEventListener('devicechange', updateAudioOutputDevices);
+      };
+    }
+  }, [currentAudioOutputDevice]);
 
   useEffect(() => {
     if (!isHiddenMode) {
@@ -1285,7 +1366,7 @@ export default function Home() {
     }
   };
 
-  const prepareAudioPlayback = (
+  const prepareAudioPlayback = async (
     audio: HTMLAudioElement | null,
     dataUrl: string,
     errorLabel: string,
@@ -1293,6 +1374,12 @@ export default function Home() {
   ) => {
     if (!audio) return;
     resetAudioElement(audio);
+    
+    // 音声出力デバイスを設定（Bluetooth優先）
+    if (currentAudioOutputDevice) {
+      await setAudioOutputDevice(currentAudioOutputDevice, audio);
+    }
+    
     audio.onloadeddata = () => {
       audio
         .play()
@@ -1321,7 +1408,7 @@ export default function Home() {
     }
   };
 
-  const playNormalModeAudio = (
+  const playNormalModeAudio = async (
     audioBase64: string,
     {
       logPrefix,
@@ -1343,6 +1430,12 @@ export default function Home() {
     }
 
     resetAudioElement(audio);
+    
+    // 音声出力デバイスを設定（Bluetooth優先）
+    if (currentAudioOutputDevice) {
+      await setAudioOutputDevice(currentAudioOutputDevice, audio);
+    }
+    
     audio.playbackRate = 1.0;
 
     let useWebAudioAPI = false;
