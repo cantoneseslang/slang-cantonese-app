@@ -2834,6 +2834,23 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         console.error('通訳利用回数取得エラー:', err);
       }
       
+      // OCR利用回数の取得
+      try {
+        const ocrQuotaResponse = await fetch('/api/ocr/check-quota', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (ocrQuotaResponse.ok) {
+          const ocrQuotaData = await ocrQuotaResponse.json();
+          setOcrUsageCount(ocrQuotaData.usageCount || 0);
+          if (ocrQuotaData.limit > 0) {
+            setOcrUsageLimit(ocrQuotaData.limit);
+          }
+        }
+      } catch (err) {
+        console.error('OCR利用回数取得エラー:', err);
+      }
+      
       // デフォルトカテゴリーの設定
       if (user.user_metadata?.default_category_id) {
         console.log('📋 デフォルトカテゴリーを読み込み:', user.user_metadata.default_category_id);
@@ -3799,6 +3816,10 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   const [interpreterUsageLimit, setInterpreterUsageLimit] = useState<number>(100);
   const [isCheckingQuota, setIsCheckingQuota] = useState(false);
   const lastImportWasOcrRef = useRef(false);
+  
+  // OCR利用回数の状態
+  const [ocrUsageCount, setOcrUsageCount] = useState<number>(0);
+  const [ocrUsageLimit, setOcrUsageLimit] = useState<number>(10);
   
   // 会員別のOCR文字数制限
   const getMaxTextLength = () => {
@@ -7141,6 +7162,17 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                       : '入力可能文字数: （無制限）'
                     }
                   </div>
+                  {membershipType === 'free' && (
+                    <div
+                      style={{
+                        fontSize: isMobile ? '0.85rem' : '0.8rem',
+                        color: ocrUsageCount >= ocrUsageLimit * 0.8 ? '#ef4444' : '#9ca3af',
+                        fontWeight: ocrUsageCount >= ocrUsageLimit * 0.8 ? '600' : '500',
+                      }}
+                    >
+                      {`OCR使用回数: ${ocrUsageCount} / ${ocrUsageLimit}回`}
+                    </div>
+                  )}
                 </div>
               </div>
             {/* 
@@ -7284,6 +7316,18 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
+                
+                // ブロンズ会員のOCR回数制限チェック
+                if (membershipType === 'free') {
+                  if (ocrUsageCount >= ocrUsageLimit) {
+                    alert(`OCR機能の使用回数が上限（${ocrUsageLimit}回）に達しました。\nシルバーまたはゴールド会員になると無制限でご利用いただけます。`);
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = '';
+                    }
+                    return;
+                  }
+                }
+                
                 try {
                   setIsImporting(true);
                   setImportProgress(null);
@@ -7313,6 +7357,22 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                       alert('画像からテキストを読み取れませんでした。');
                       lastImportWasOcrRef.current = false;
                     } else {
+                      // OCR使用を記録
+                      try {
+                        await fetch('/api/ocr/track-usage', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            fileType: 'image',
+                            characterCount: sanitized.length
+                          }),
+                        });
+                        // 使用回数を更新
+                        setOcrUsageCount(prev => prev + 1);
+                      } catch (trackErr) {
+                        console.error('OCR使用記録エラー:', trackErr);
+                      }
+                      
                       const maxLength = getMaxTextLength();
                       if (membershipType === 'free' && sanitized.length > maxLength) {
                       const confirmMsg = `OCRで読み取ったテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを翻訳に使用しますか？`;
@@ -7382,6 +7442,22 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                           alert('PDFからテキストを読み取れませんでした。');
                           lastImportWasOcrRef.current = false;
                         } else {
+                          // OCR使用を記録（PDFのOCR処理）
+                          try {
+                            await fetch('/api/ocr/track-usage', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                fileType: 'pdf',
+                                characterCount: sanitized.length
+                              }),
+                            });
+                            // 使用回数を更新
+                            setOcrUsageCount(prev => prev + 1);
+                          } catch (trackErr) {
+                            console.error('OCR使用記録エラー:', trackErr);
+                          }
+                          
                           const maxLength = getMaxTextLength();
                           if (membershipType === 'free' && sanitized.length > maxLength) {
                           const confirmMsg = `PDFから読み取ったテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを翻訳に使用しますか？`;
@@ -7406,6 +7482,22 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                         alert('PDFからテキストを読み取れませんでした。');
                         lastImportWasOcrRef.current = false;
                       } else {
+                        // PDF読み取り使用を記録（テキスト抽出）
+                        try {
+                          await fetch('/api/ocr/track-usage', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              fileType: 'pdf',
+                              characterCount: sanitized.length
+                            }),
+                          });
+                          // 使用回数を更新
+                          setOcrUsageCount(prev => prev + 1);
+                        } catch (trackErr) {
+                          console.error('OCR使用記録エラー:', trackErr);
+                        }
+                        
                         const maxLength = getMaxTextLength();
                         if (membershipType === 'free' && sanitized.length > maxLength) {
                         const confirmMsg = `PDFから抽出したテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを翻訳に使用しますか？`;
