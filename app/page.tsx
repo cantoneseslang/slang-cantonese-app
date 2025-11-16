@@ -3625,6 +3625,13 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
 
   // Stripe決済処理（アップグレード/ダウングレード）
   const handleStripeCheckout = async (plan: 'free' | 'subscription' | 'lifetime') => {
+    // 【緊急対応】既に有料会員の場合、プラン変更を一時的に無効化
+    if (membershipType !== 'free' && plan !== 'free') {
+      alert('プラン変更機能は一時的に利用できません。\nお問い合わせからご連絡ください。');
+      setShowPricingModal(false);
+      return;
+    }
+    
     if (plan === 'free') {
     try {
       const { error } = await supabase.auth.updateUser({
