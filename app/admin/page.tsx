@@ -32,6 +32,7 @@ interface User {
   email: string;
   username: string | null;
   membership_type: string | null;
+  subscription_expires_at: string | null;
   has_password: boolean;
   last_sign_in_at: string | null;
   created_at: string;
@@ -387,6 +388,13 @@ export default function AdminPage() {
                       fontWeight: '600',
                       fontSize: '0.875rem',
                       color: '#374151'
+                    }}>有効期限</th>
+                    <th style={{
+                      padding: '0.75rem',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      fontSize: '0.875rem',
+                      color: '#374151'
                     }}>お気に入り数</th>
                     <th style={{
                       padding: '0.75rem',
@@ -509,6 +517,24 @@ export default function AdminPage() {
                           </select>
                         ) : (
                           <span>{getMembershipLabel(u.membership_type)}</span>
+                        )}
+                      </td>
+                      <td style={{
+                        padding: '0.75rem',
+                        fontSize: '0.875rem',
+                        color: u.subscription_expires_at ? 
+                          (new Date(u.subscription_expires_at) < new Date() ? '#ef4444' : '#10b981') 
+                          : '#6b7280'
+                      }}>
+                        {u.membership_type === 'subscription' && u.subscription_expires_at ? (
+                          <>
+                            {new Date(u.subscription_expires_at).toLocaleDateString('ja-JP')}
+                            {new Date(u.subscription_expires_at) < new Date() && ' (期限切れ)'}
+                          </>
+                        ) : u.membership_type === 'lifetime' ? (
+                          '無期限'
+                        ) : (
+                          '-'
                         )}
                       </td>
                       <td style={{

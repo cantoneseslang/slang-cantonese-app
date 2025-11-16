@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
       email: u.email,
       username: u.user_metadata?.username || null,
       membership_type: u.user_metadata?.membership_type || 'free',
+      subscription_expires_at: u.user_metadata?.subscription_expires_at || null,
       has_password: !!u.encrypted_password,
       last_sign_in_at: u.last_sign_in_at,
       created_at: u.created_at,
