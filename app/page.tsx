@@ -5235,6 +5235,10 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     // クリック音
     playClickSound();
 
+    // ボタンを緑色にハイライト（状態更新なしで直接スタイル変更）
+    button.style.background = 'linear-gradient(145deg, #10b981, #059669)';
+    button.style.color = 'white';
+
     // ボタン押下をトラッキング（pronunciationカテゴリー）
     try {
       await fetch('/api/track-button', {
@@ -5260,13 +5264,30 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         const audioData = await audioResponse.json();
         const audioBase64 = audioData.audioContent;
         if (audioBase64) {
-          playNormalModeAudio(audioBase64, { logPrefix: 'トーン音声' });
+          playNormalModeAudio(audioBase64, { 
+            logPrefix: 'トーン音声',
+            onEnded: () => {
+              // 音声終了後にボタンの色をリセット
+              button.style.background = '#ffffff';
+              button.style.color = '#111827';
+            }
+          });
         } else {
           console.error('トーン音声: 音声データが空です');
+          // エラー時もボタンの色をリセット
+          button.style.background = '#ffffff';
+          button.style.color = '#111827';
         }
+      } else {
+        // エラー時もボタンの色をリセット
+        button.style.background = '#ffffff';
+        button.style.color = '#111827';
       }
     } catch (err) {
       console.error('音声再生エラー:', err);
+      // エラー時もボタンの色をリセット
+      button.style.background = '#ffffff';
+      button.style.color = '#111827';
     }
     // categoryIdの取得: noteカテゴリーが選択されている場合はselectedNoteCategoryを優先
     const categoryId = selectedNoteCategory || currentCategory?.id || 'pronunciation';
