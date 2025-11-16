@@ -8194,12 +8194,10 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                         return;
                       }
                       const handler = (ev: Event) => {
-                        ev.preventDefault();
                         ev.stopPropagation();
                         handleToneAudioClick(ev);
                       };
                       buttonEl.addEventListener('click', handler);
-                      buttonEl.addEventListener('touchstart', handler, { passive: false });
                       buttonEl.dataset.toneBound = '1';
                     });
                     
@@ -8216,19 +8214,10 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                         
                         // クリックイベント
                         const clickHandler = (e: Event) => {
-                          e.preventDefault();
                           e.stopPropagation();
                           handleToneSequenceClick(e);
                         };
                         newBtn.addEventListener('click', clickHandler);
-                        
-                        // モバイル対応: タッチイベントも追加
-                        const touchHandler = (e: Event) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleToneSequenceClick(e);
-                        };
-                        newBtn.addEventListener('touchstart', touchHandler);
                         
                         // タッチアクションとスタイルを設定
                         (newBtn as HTMLElement).style.touchAction = 'manipulation';
