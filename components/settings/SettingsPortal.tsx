@@ -159,7 +159,11 @@ const SettingsPortal: React.FC<SettingsPortalProps> = ({
             : type === 'subscription'
             ? 'linear-gradient(145deg, #e8e8e8 0%, #c0c0c0 50%, #a8a8a8 100%)'
             : 'linear-gradient(145deg, #ffe066 0%, #ffd700 50%, #ffb700 100%)'
-          : 'linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%)',
+          : type === 'free'
+            ? 'linear-gradient(145deg, rgba(212,165,116,0.3) 0%, rgba(205,127,50,0.3) 50%, rgba(168,95,31,0.3) 100%)'
+            : type === 'subscription'
+            ? 'linear-gradient(145deg, rgba(232,232,232,0.5) 0%, rgba(192,192,192,0.5) 50%, rgba(168,168,168,0.5) 100%)'
+            : 'linear-gradient(145deg, rgba(255,224,102,0.3) 0%, rgba(255,215,0,0.3) 50%, rgba(255,183,0,0.3) 100%)',
         cursor: membershipType === type ? 'default' : 'pointer',
         display: 'flex',
         flexDirection: 'column',
