@@ -2369,9 +2369,16 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   };
 
   // マイクボタンのハンドラー（長押し方式）
-  const handleMicPress = () => {
+  const handleMicPress = async () => {
     if (!isHiddenMode) {
       console.log('隠しモードではないため、マイク機能は無効です');
+      return;
+    }
+    
+    // 通訳利用可能回数をチェック
+    if (membershipType === 'free' && interpreterUsageCount >= interpreterUsageLimit) {
+      alert(`無料プランの通訳利用回数（${interpreterUsageLimit}回）に達しました。\n引き続きご利用の場合はプランをアップグレードしてください。`);
+      setShowPricingModal(true);
       return;
     }
     
@@ -2608,7 +2615,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     }, 200);
   };
 
-  const handleMicRelease = () => {
+  const handleMicRelease = async () => {
     if (!isHiddenMode) {
       console.log('隠しモードではないため、マイク機能は無効です');
       return;
@@ -2622,6 +2629,21 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     
     console.log('音声認識を停止します（ボタン離された）');
     setIsRecording(false);
+    
+    // 通訳使用回数を記録（バックグラウンド）
+    if (user) {
+      try {
+        await fetch('/api/interpreter/track-usage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ language: translationLanguage }),
+        });
+        // カウントを即座に更新
+        setInterpreterUsageCount(prev => prev + 1);
+      } catch (err) {
+        console.error('通訳使用記録エラー:', err);
+      }
+    }
     
     // 最後のinterimテキストがあれば、確定して新しい行に追加
     if (interimText.trim()) {
@@ -2757,6 +2779,23 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       } else {
         // 会員種別がない場合、デフォルト値を設定
         setMembershipType('free');
+      }
+      
+      // 通訳利用回数の取得
+      try {
+        const quotaResponse = await fetch('/api/interpreter/check-quota', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (quotaResponse.ok) {
+          const quotaData = await quotaResponse.json();
+          setInterpreterUsageCount(quotaData.usageCount || 0);
+          if (quotaData.limit > 0) {
+            setInterpreterUsageLimit(quotaData.limit);
+          }
+        }
+      } catch (err) {
+        console.error('通訳利用回数取得エラー:', err);
       }
       
       // デフォルトカテゴリーの設定
@@ -3718,6 +3757,11 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const toneButtonKeyCounterRef = useRef(0);
+  
+  // 通訳利用回数の状態
+  const [interpreterUsageCount, setInterpreterUsageCount] = useState<number>(0);
+  const [interpreterUsageLimit, setInterpreterUsageLimit] = useState<number>(100);
+  const [isCheckingQuota, setIsCheckingQuota] = useState(false);
   const lastImportWasOcrRef = useRef(false);
 
   const Spinner = ({
@@ -5429,6 +5473,9 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           showButtons={showButtons}
           buttonsAnimated={buttonsAnimated}
           isMuted={isMuted}
+          interpreterUsageCount={interpreterUsageCount}
+          interpreterUsageLimit={interpreterUsageLimit}
+          membershipType={membershipType}
             />
       )}
 

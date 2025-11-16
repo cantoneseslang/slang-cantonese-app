@@ -38,6 +38,9 @@ interface HiddenModeOverlayProps {
   showButtons: boolean;
   buttonsAnimated: boolean;
   isMuted: boolean;
+  interpreterUsageCount: number;
+  interpreterUsageLimit: number;
+  membershipType: string;
 }
 
 const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
@@ -70,6 +73,9 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
   showButtons,
   buttonsAnimated,
   isMuted,
+  interpreterUsageCount,
+  interpreterUsageLimit,
+  membershipType,
 }) => {
   const translationAreaRef = React.useRef<HTMLDivElement | null>(null);
   const micButtonRef = React.useRef<HTMLDivElement | null>(null);
@@ -781,48 +787,82 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
       </button>
 
       {showTitle && (
-        <div
-          onClick={handleTitleClick}
-          ref={titleRef}
-          style={{
-            position: 'fixed',
-            bottom: isMobile ? 'calc(env(safe-area-inset-bottom) + 1.8rem)' : '3.75rem',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            textAlign: 'center',
-            animation: 'tileFlip 0.6s ease-out',
-            zIndex: 1003,
-            cursor: 'pointer',
-            userSelect: 'none',
-            WebkitUserSelect: 'none',
-            WebkitTouchCallout: 'none',
-          }}
-        >
+        <>
+          {/* 使用回数表示 */}
           <div
             style={{
-              fontSize: isMobile ? '1.5rem' : '2rem',
-              fontWeight: 800,
-              color: '#111827',
-              marginBottom: '0.5rem',
-              textShadow: 'none',
+              position: 'fixed',
+              bottom: isMobile 
+                ? `calc(env(safe-area-inset-bottom) + ${buttonBottomOffsetRem}rem + ${buttonDiameter}px + 1.5rem)`
+                : `calc(5rem + ${buttonDiameter}px + 1.5rem)`,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              textAlign: 'center',
+              zIndex: 1003,
+              animation: 'fadeInUp 0.8s ease-out',
             }}
           >
-            {translationLanguage === 'cantonese' ? 'カントン語通訳' : '中国語通訳'}
+            <div
+              style={{
+                fontSize: isMobile ? '0.875rem' : '1rem',
+                fontWeight: 600,
+                color: membershipType === 'free' && interpreterUsageCount >= interpreterUsageLimit
+                  ? '#ef4444'
+                  : '#6b7280',
+                textShadow: 'none',
+              }}
+            >
+              {membershipType === 'free' ? (
+                `通訳可能回数：${interpreterUsageCount} / ${interpreterUsageLimit}回`
+              ) : (
+                '通訳可能回数：無制限'
+              )}
+            </div>
           </div>
+
           <div
+            onClick={handleTitleClick}
+            ref={titleRef}
             style={{
-              fontSize: isMobile ? '0.875rem' : '1rem',
-              fontWeight: 700,
-              color: '#6b7280',
-              textShadow: 'none',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
+              position: 'fixed',
+              bottom: isMobile ? 'calc(env(safe-area-inset-bottom) + 1.8rem)' : '3.75rem',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              textAlign: 'center',
+              animation: 'tileFlip 0.6s ease-out',
+              zIndex: 1003,
+              cursor: 'pointer',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+              WebkitTouchCallout: 'none',
             }}
           >
-            ボタンを押すだけでスパッと通訳！
+            <div
+              style={{
+                fontSize: isMobile ? '1.5rem' : '2rem',
+                fontWeight: 800,
+                color: '#111827',
+                marginBottom: '0.5rem',
+                textShadow: 'none',
+              }}
+            >
+              {translationLanguage === 'cantonese' ? 'カントン語通訳' : '中国語通訳'}
+            </div>
+            <div
+              style={{
+                fontSize: isMobile ? '0.875rem' : '1rem',
+                fontWeight: 700,
+                color: '#6b7280',
+                textShadow: 'none',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              ボタンを押すだけでスパッと通訳！
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       <audio ref={titleAudioRef} src="/interpreter-start.mp3" preload="auto" style={{ display: 'none' }} />
