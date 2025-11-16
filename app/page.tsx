@@ -2630,19 +2630,21 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     console.log('音声認識を停止します（ボタン離された）');
     setIsRecording(false);
     
-    // 通訳使用回数を記録（バックグラウンド）
+    // 通訳使用回数を記録（バックグラウンドで非同期実行 - レイテンシーに影響しない）
     if (user) {
-      try {
-        await fetch('/api/interpreter/track-usage', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ language: translationLanguage }),
-        });
-        // カウントを即座に更新
-        setInterpreterUsageCount(prev => prev + 1);
-      } catch (err) {
+      // カウントを即座に更新（UIの応答性を優先）
+      setInterpreterUsageCount(prev => prev + 1);
+      
+      // API呼び出しはバックグラウンドで実行（awaitなし）
+      fetch('/api/interpreter/track-usage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: translationLanguage }),
+      }).catch(err => {
         console.error('通訳使用記録エラー:', err);
-      }
+        // エラー時はカウントをロールバック
+        setInterpreterUsageCount(prev => Math.max(0, prev - 1));
+      });
     }
     
     // 最後のinterimテキストがあれば、確定して新しい行に追加
