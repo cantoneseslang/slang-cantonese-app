@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
     plan = body.plan;
     currency = body.currency || 'jpy';
     const userId = body.userId;
+    const couponCode = body.couponCode;
 
     if (!plan || !userId) {
       return NextResponse.json(
@@ -115,6 +116,8 @@ export async function POST(request: NextRequest) {
         user_id: userId,
         plan: plan,
       },
+      // クーポンコードがある場合は適用
+      discounts: couponCode ? [{ coupon: couponCode }] : undefined,
       subscription_data: plan === 'subscription' ? {
         metadata: {
           user_id: userId,

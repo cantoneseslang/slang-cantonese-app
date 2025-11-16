@@ -519,6 +519,7 @@ export default function Home() {
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'subscription' | 'lifetime' | null>(null);
   const [isDowngrade, setIsDowngrade] = useState(false); // ダウングレードかどうか
   const [selectedCurrency, setSelectedCurrency] = useState<'jpy' | 'hkd'>('jpy'); // 通貨選択（デフォルト: JPY）
+  const [couponCode, setCouponCode] = useState(''); // クーポンコード
   const pricingModalScrollRef = useRef<HTMLDivElement>(null);
   const [showPricingModalTopArrow, setShowPricingModalTopArrow] = useState(false);
   const [showPricingModalBottomArrow, setShowPricingModalBottomArrow] = useState(false);
@@ -1645,6 +1646,7 @@ export default function Home() {
     setShowPricingModal(false);
     setSelectedPlan(null);
     setIsDowngrade(false);
+    setCouponCode(''); // クーポンコードをリセット
   }, []);
 
   const handleCurrencyChange = useCallback((currency: 'JPY' | 'HKD') => {
@@ -3647,6 +3649,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       setShowPricingModal(false);
       setSelectedPlan(null);
       setIsDowngrade(false);
+      setCouponCode(''); // クーポンコードをリセット
       
         alert('ブロンズ会員に変更しました！');
     } catch (err: any) {
@@ -3673,6 +3676,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           userId: user.id,
           email: user.email,
           currency: selectedCurrency,
+          couponCode: couponCode || undefined, // クーポンコードがある場合のみ送信
         }),
       });
 
@@ -9331,6 +9335,91 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     ))}
                   </ul>
                 </div>
+
+                {/* 通貨選択（有料プランのみ） */}
+                {selectedPlan !== 'free' && (
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <h3 style={{
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      marginBottom: '0.75rem',
+                      color: '#374151'
+                    }}>通貨選択</h3>
+                    <div style={{
+                      display: 'flex',
+                      gap: '0.5rem'
+                    }}>
+                      <button
+                        onClick={() => setSelectedCurrency('jpy')}
+                        style={{
+                          flex: 1,
+                          padding: '0.75rem',
+                          borderRadius: '8px',
+                          border: selectedCurrency === 'jpy' ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                          backgroundColor: selectedCurrency === 'jpy' ? '#eff6ff' : '#ffffff',
+                          color: selectedCurrency === 'jpy' ? '#3b82f6' : '#6b7280',
+                          fontWeight: selectedCurrency === 'jpy' ? '600' : '400',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        ¥ JPY（{selectedPlan === 'subscription' ? '¥1,980' : '¥19,800'}）
+                      </button>
+                      <button
+                        onClick={() => setSelectedCurrency('hkd')}
+                        style={{
+                          flex: 1,
+                          padding: '0.75rem',
+                          borderRadius: '8px',
+                          border: selectedCurrency === 'hkd' ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                          backgroundColor: selectedCurrency === 'hkd' ? '#eff6ff' : '#ffffff',
+                          color: selectedCurrency === 'hkd' ? '#3b82f6' : '#6b7280',
+                          fontWeight: selectedCurrency === 'hkd' ? '600' : '400',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        HK$ HKD（{selectedPlan === 'subscription' ? 'HK$100' : 'HK$1,000'}）
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* クーポンコード入力（有料プランのみ） */}
+                {selectedPlan !== 'free' && (
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <h3 style={{
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      marginBottom: '0.75rem',
+                      color: '#374151'
+                    }}>クーポンコード（任意）</h3>
+                    <input
+                      type="text"
+                      placeholder="クーポンコードを入力"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.trim().toUpperCase())}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb',
+                        fontSize: '1rem',
+                        outline: 'none',
+                        transition: 'border-color 0.2s'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                      onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+                    />
+                    <p style={{
+                      fontSize: '0.75rem',
+                      color: '#9ca3af',
+                      marginTop: '0.5rem'
+                    }}>
+                      テスター用やキャンペーン用のクーポンコードをお持ちの場合は入力してください
+                    </p>
+                  </div>
+                )}
                 </div>
 
               </div>
