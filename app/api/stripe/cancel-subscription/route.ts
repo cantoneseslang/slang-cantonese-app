@@ -8,7 +8,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { subscriptionId } = body;
+    const { subscriptionId, userId } = body;
 
     if (!subscriptionId) {
       return NextResponse.json(
@@ -17,24 +17,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // サブスクリプションを期間終了時にキャンセル
+    // サブスクリプションを期間終了時にキャンセル（既に支払った期間は有効）
     const subscription = await stripe.subscriptions.update(subscriptionId, {
       cancel_at_period_end: true,
     });
 
     console.log('✅ サブスクリプションをキャンセル予約:', {
       subscriptionId,
+      userId,
       cancelAt: subscription.cancel_at,
       currentPeriodEnd: subscription.current_period_end,
+      status: subscription.status
     });
 
     // 期間終了日を返す
     const expiresAt = new Date(subscription.current_period_end * 1000).toISOString();
 
+    // 注: membershipTypeは変更しない
+    // 期間終了時にwebhook (customer.subscription.deleted) で自動的にブロンズへ変更される
+
     return NextResponse.json({
       success: true,
       expiresAt,
-      message: '期間終了時にキャンセルされます'
+      currentPeriodEnd: subscription.current_period_end,
+      message: '期間終了時にキャンセルされます。それまでは現在のプランをご利用いただけます。'
     });
   } catch (error: any) {
     console.error('❌ Subscription cancel error:', error);

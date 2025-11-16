@@ -3656,6 +3656,9 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         const expiresDate = new Date(expiresAt);
         const formattedDate = `${expiresDate.getFullYear()}年${expiresDate.getMonth() + 1}月${expiresDate.getDate()}日`;
         alert(`サブスクリプションをキャンセルしました。\n${formattedDate}までは現在のプランをご利用いただけます。`);
+        
+        // UI上の表示は変更しない（期間終了まで有効）
+        // membershipTypeはそのままで、サブスクリプション期限切れ時に自動的にブロンズへ
       } else {
         // サブスクリプションがない場合は即座にブロンズに変更
         const { error } = await supabase.auth.updateUser({

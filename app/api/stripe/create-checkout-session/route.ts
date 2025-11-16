@@ -50,15 +50,15 @@ export async function POST(request: NextRequest) {
     // Supabaseクライアント作成
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
     
-    // 既存のサブスクリプションを確認
+    // 既存のサブスクリプションとカスタマーIDを確認
     const { data: { user: existingUser } } = await supabase.auth.admin.getUserById(userId);
     const existingSubscriptionId = existingUser?.user_metadata?.stripe_subscription_id;
-    const existingCustomerId = existingUser?.user_metadata?.stripe_customer_id;
+    let customerId = existingUser?.user_metadata?.stripe_customer_id;
 
     console.log('💳 既存サブスクリプション確認:', {
       userId,
       existingSubscriptionId,
-      existingCustomerId,
+      existingCustomerId: customerId,
       requestedPlan: plan
     });
 
@@ -82,6 +82,29 @@ export async function POST(request: NextRequest) {
         }
       } catch (err) {
         console.log('ℹ️ 既存サブスクリプションが見つからないか無効です。新規作成します。');
+      }
+    }
+
+    // 既存の顧客IDがない場合、メールアドレスで検索
+    if (!customerId && body.email) {
+      try {
+        const customers = await stripe.customers.list({
+          email: body.email,
+          limit: 1
+        });
+        if (customers.data.length > 0) {
+          customerId = customers.data[0].id;
+          console.log('✅ 既存の顧客を発見:', { customerId, email: body.email });
+          
+          // 顧客IDをuser_metadataに保存
+          await supabase.auth.admin.updateUserById(userId, {
+            user_metadata: {
+              stripe_customer_id: customerId
+            }
+          });
+        }
+      } catch (err) {
+        console.log('ℹ️ 既存顧客の検索に失敗。新規作成します。', err);
       }
     }
 
@@ -172,7 +195,9 @@ export async function POST(request: NextRequest) {
           checkout_session_id: 'PLACEHOLDER', // セッション作成後に更新する必要があるが、Stripeでは後から更新できないため、セッションIDを後で設定する
         },
       } : undefined,
-      customer_email: body.email || undefined,
+      // 既存の顧客IDがあればそれを使用、なければメールアドレスで新規作成
+      customer: customerId || undefined,
+      customer_email: customerId ? undefined : (body.email || undefined),
     };
 
     const session = await stripe.checkout.sessions.create(sessionParams);
