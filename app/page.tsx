@@ -7096,11 +7096,14 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   <div
                     style={{
                       fontSize: isMobile ? '0.85rem' : '0.8rem',
-                      color: searchQuery.length > 900 ? '#ef4444' : '#9ca3af',
-                      fontWeight: searchQuery.length > 900 ? '600' : '500',
+                      color: membershipType === 'free' && searchQuery.length > 900 ? '#ef4444' : '#9ca3af',
+                      fontWeight: membershipType === 'free' && searchQuery.length > 900 ? '600' : '500',
                     }}
                   >
-                    入力可能文字数: {searchQuery.length} / 1,000文字
+                    {membershipType === 'free' 
+                      ? `入力可能文字数: ${searchQuery.length} / 1,000文字`
+                      : `入力可能文字数: ${searchQuery.length}文字（無制限）`
+                    }
                   </div>
                     {searchQuery.trim().length > 0 && (
                       <div
