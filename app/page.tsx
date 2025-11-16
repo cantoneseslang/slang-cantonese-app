@@ -3629,7 +3629,9 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     try {
       const { error } = await supabase.auth.updateUser({
         data: {
-          membership_type: plan
+          membership_type: plan,
+          stripe_subscription_id: null, // サブスクリプションIDをクリア
+          stripe_customer_id: null // カスタマーIDをクリア
         }
       });
 

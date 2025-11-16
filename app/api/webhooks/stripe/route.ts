@@ -130,7 +130,10 @@ export async function POST(request: NextRequest) {
           currentMembershipType
         });
 
-        // 1. user_metadataを更新
+        // 1. user_metadataを更新（サブスクリプションIDとカスタマーIDも保存）
+        updateData.stripe_subscription_id = session.subscription;
+        updateData.stripe_customer_id = session.customer;
+        
         const { data: userData, error: userError } = await supabase.auth.admin.updateUserById(
           userId,
           { user_metadata: updateData }
@@ -386,7 +389,10 @@ export async function POST(request: NextRequest) {
         isSubscription: plan === 'subscription'
       });
 
-      // 1. user_metadataを更新
+      // 1. user_metadataを更新（サブスクリプションIDとカスタマーIDも保存）
+      updateData.stripe_subscription_id = session.subscription;
+      updateData.stripe_customer_id = session.customer;
+      
       const { data: userData, error: userError } = await supabase.auth.admin.updateUserById(
         userId,
         {

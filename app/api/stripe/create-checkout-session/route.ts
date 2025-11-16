@@ -47,9 +47,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Supabaseクライアント作成
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+    
+    // 既存のサブスクリプションを確認
+    const { data: { user: existingUser } } = await supabase.auth.admin.getUserById(userId);
+    const existingSubscriptionId = existingUser?.user_metadata?.stripe_subscription_id;
+    const existingCustomerId = existingUser?.user_metadata?.stripe_customer_id;
+
+    console.log('💳 既存サブスクリプション確認:', {
+      userId,
+      existingSubscriptionId,
+      existingCustomerId,
+      requestedPlan: plan
+    });
+
+    // 既存のサブスクリプションがある場合、二重課金を防ぐため処理をスキップ
+    if (existingSubscriptionId) {
+      try {
+        const existingSubscription = await stripe.subscriptions.retrieve(existingSubscriptionId);
+        if (existingSubscription.status === 'active' || existingSubscription.status === 'trialing') {
+          console.warn('⚠️ アクティブなサブスクリプションが既に存在します:', {
+            subscriptionId: existingSubscriptionId,
+            status: existingSubscription.status
+          });
+          return NextResponse.json(
+            { 
+              error: 'Active subscription already exists', 
+              details: 'サブスクリプションが既に存在します。プラン変更はお問い合わせください。',
+              subscriptionId: existingSubscriptionId
+            },
+            { status: 400 }
+          );
+        }
+      } catch (err) {
+        console.log('ℹ️ 既存サブスクリプションが見つからないか無効です。新規作成します。');
+      }
+    }
+
     // Supabaseから価格設定を取得
     const selectedCurrency = (currency === 'hkd' ? 'hkd' : 'jpy') as 'jpy' | 'hkd';
-    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
     
     const { data: pricingConfig, error: pricingError } = await supabase
       .from('stripe_pricing_config')
