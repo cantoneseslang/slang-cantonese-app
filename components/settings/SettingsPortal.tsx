@@ -145,12 +145,6 @@ const SettingsPortal: React.FC<SettingsPortalProps> = ({
   const renderMembershipButton = (type: MembershipType) => (
     <button
       onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        handleMembershipChange(type);
-      }}
-      onTouchStart={(e) => {
-        e.preventDefault();
         e.stopPropagation();
         handleMembershipChange(type);
       }}
@@ -293,7 +287,6 @@ const SettingsPortal: React.FC<SettingsPortalProps> = ({
                 type="button"
                 disabled={isDisabled}
                 onClick={(e) => {
-                  e.preventDefault();
                   e.stopPropagation();
                   if (!isActive) {
                     onInterpreterVoiceChange(language, option.value);
@@ -1226,12 +1219,6 @@ const SettingsPortal: React.FC<SettingsPortalProps> = ({
                   </div>
                   <button
                     onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      toggleClickSound();
-                    }}
-                    onTouchStart={(e) => {
-                      e.preventDefault();
                       e.stopPropagation();
                       toggleClickSound();
                     }}
@@ -1257,7 +1244,6 @@ const SettingsPortal: React.FC<SettingsPortalProps> = ({
                   </button>
                   <button
                     onClick={(e) => {
-                      e.preventDefault();
                       e.stopPropagation();
                       toggleLearningMode();
                     }}

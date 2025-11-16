@@ -6616,12 +6616,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   </div>
                   <button
                     onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      toggleClickSound();
-                    }}
-                    onTouchStart={(e) => {
-                      e.preventDefault();
                       e.stopPropagation();
                       toggleClickSound();
                     }}
