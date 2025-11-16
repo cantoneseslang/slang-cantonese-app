@@ -91,7 +91,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
 
   const baseMobileTopPx = 36 + 185 + 10; // 2.25rem + 185px + 0.625rem
   const baseMobileBottomPx =
-    24 + Math.round(buttonDiameter * 0.75) * 2 + 18; // 1.5rem + (0.75 * diameter * 2) + 1.125rem
+    24 + Math.round(buttonDiameter * 0.75) * 2 + 18 + 48; // 1.5rem + (0.75 * diameter * 2) + 1.125rem + 3rem (使用回数表示分)
 
   const [mobileLayout, setMobileLayout] = React.useState<{
     top: number;
@@ -235,7 +235,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
     <div
       style={{
         position: 'fixed',
-        bottom: `calc(5rem + ${buttonDiameter}px)`,
+        bottom: `calc(7.5rem + ${buttonDiameter}px)`,
         left: '50%',
         transform: 'translateX(-50%)',
         display: 'flex',
@@ -859,7 +859,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
         style={{
           position: 'fixed',
           bottom: isMobile
-            ? `calc(env(safe-area-inset-bottom) + ${buttonBottomOffsetRem}rem)`
+            ? `calc(env(safe-area-inset-bottom) + ${buttonBottomOffsetRem + 3}rem)`
             : '6rem',
           left: '50%',
           transform: 'translateX(-50%)',
