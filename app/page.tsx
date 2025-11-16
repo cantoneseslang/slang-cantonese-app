@@ -4195,10 +4195,11 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
 
     if (!candidate) return;
 
-    if (candidate.length > 1000) {
+    const maxLength = getMaxTextLength();
+    if (membershipType === 'free' && candidate.length > maxLength) {
       const confirmMsg = `読み取ったテキストが1,000文字を超えています（${candidate.length}文字）。\n最初の1,000文字のみを入力欄に設定しますか？`;
       if (confirm(confirmMsg)) {
-        setSearchQuery(candidate.slice(0, 1000));
+        setSearchQuery(candidate.slice(0, maxLength));
         alert('最初の1,000文字を入力欄に設定しました。');
       }
       return;
@@ -7106,18 +7107,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                       : `入力可能文字数: ${searchQuery.length}文字（無制限）`
                     }
                   </div>
-                    {searchQuery.trim().length > 0 && (
-                      <div
-                        style={{
-                          fontSize: isMobile ? '0.8rem' : '0.85rem',
-                          color: '#ef4444',
-                          fontWeight: 600,
-                          whiteSpace: isMobile ? 'normal' : 'nowrap',
-                        }}
-                      >
-                        下の青い🟦「広東語発音」ボタンを押してください
-                      </div>
-                    )}
                 </div>
               </div>
             {/* 
@@ -7289,17 +7278,20 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     if (!sanitized) {
                       alert('画像からテキストを読み取れませんでした。');
                       lastImportWasOcrRef.current = false;
-                    } else if (sanitized.length > 1000) {
-                      const confirmMsg = `OCRで読み取ったテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを翻訳に使用しますか？`;
-                      if (confirm(confirmMsg)) {
-                        await executeTranslation(sanitized.substring(0, 1000));
-                        return;
-                      } else {
-                        lastImportWasOcrRef.current = false;
-                      }
                     } else {
-                      await executeTranslation(sanitized);
-                      return;
+                      const maxLength = getMaxTextLength();
+                      if (membershipType === 'free' && sanitized.length > maxLength) {
+                        const confirmMsg = `OCRで読み取ったテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを翻訳に使用しますか？`;
+                        if (confirm(confirmMsg)) {
+                          await executeTranslation(sanitized.substring(0, maxLength));
+                          return;
+                        } else {
+                          lastImportWasOcrRef.current = false;
+                        }
+                      } else {
+                        await executeTranslation(sanitized);
+                        return;
+                      }
                     }
                   }
                   // PDFファイルの場合（自動テキスト抽出→OCR）
@@ -7355,17 +7347,20 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                         if (!sanitized) {
                           alert('PDFからテキストを読み取れませんでした。');
                           lastImportWasOcrRef.current = false;
-                        } else if (sanitized.length > 1000) {
-                          const confirmMsg = `PDFから読み取ったテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを翻訳に使用しますか？`;
-                          if (confirm(confirmMsg)) {
-                            await executeTranslation(sanitized.substring(0, 1000));
-                            return;
-                          } else {
-                            lastImportWasOcrRef.current = false;
-                          }
                         } else {
-                          await executeTranslation(sanitized);
-                          return;
+                          const maxLength = getMaxTextLength();
+                          if (membershipType === 'free' && sanitized.length > maxLength) {
+                            const confirmMsg = `PDFから読み取ったテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを翻訳に使用しますか？`;
+                            if (confirm(confirmMsg)) {
+                              await executeTranslation(sanitized.substring(0, maxLength));
+                              return;
+                            } else {
+                              lastImportWasOcrRef.current = false;
+                            }
+                          } else {
+                            await executeTranslation(sanitized);
+                            return;
+                          }
                         }
                       } catch (ocrErr: any) {
                         console.error('PDF OCRエラー:', ocrErr);
@@ -7376,17 +7371,20 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                       if (!sanitized) {
                         alert('PDFからテキストを読み取れませんでした。');
                         lastImportWasOcrRef.current = false;
-                      } else if (sanitized.length > 1000) {
-                        const confirmMsg = `PDFから抽出したテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを翻訳に使用しますか？`;
-                        if (confirm(confirmMsg)) {
-                          await executeTranslation(sanitized.substring(0, 1000));
-                          return;
-                        } else {
-                          lastImportWasOcrRef.current = false;
-                        }
                       } else {
-                        await executeTranslation(sanitized);
-                        return;
+                        const maxLength = getMaxTextLength();
+                        if (membershipType === 'free' && sanitized.length > maxLength) {
+                          const confirmMsg = `PDFから抽出したテキストが1,000文字を超えています（${sanitized.length}文字）。\n最初の1,000文字のみを翻訳に使用しますか？`;
+                          if (confirm(confirmMsg)) {
+                            await executeTranslation(sanitized.substring(0, maxLength));
+                            return;
+                          } else {
+                            lastImportWasOcrRef.current = false;
+                          }
+                        } else {
+                          await executeTranslation(sanitized);
+                          return;
+                        }
                       }
                     }
                   } else {
