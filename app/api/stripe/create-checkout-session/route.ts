@@ -82,19 +82,17 @@ export async function POST(request: NextRequest) {
               price_data: {
                 currency: selectedCurrency,
                 product_data: {
-                  name: plan === 'subscription' ? 'シルバー会員（月額）' : 'ゴールド会員（買い切り）',
+                  name: plan === 'subscription' ? 'シルバー会員（月額）' : 'ゴールド会員（年間一括割引）',
                   description: plan === 'subscription' 
                     ? '月額サブスクリプション（自動更新）' 
-                    : '買い切りプラン（永久使用）',
+                    : '年額サブスクリプション（自動更新）',
                 },
                 unit_amount: plan === 'subscription' 
-                  ? (selectedCurrency === 'hkd' ? 5000 : 980) // HKD: $50 (5000 cents), JPY: ¥980
-                  : (selectedCurrency === 'hkd' ? 49800 : 9800), // HKD: $498 (49,800 cents), JPY: ¥9,800
-                ...(plan === 'subscription' && {
-                  recurring: {
-                    interval: 'month',
-                  },
-                }),
+                  ? (selectedCurrency === 'hkd' ? 10000 : 1980) // HKD: $100 (10000 cents), JPY: ¥1,980
+                  : (selectedCurrency === 'hkd' ? 100000 : 19800), // HKD: $1,000 (100,000 cents), JPY: ¥19,800
+                recurring: plan === 'subscription' 
+                  ? { interval: 'month' } 
+                  : { interval: 'year' },
               },
               quantity: 1,
             },
@@ -106,7 +104,7 @@ export async function POST(request: NextRequest) {
               quantity: 1,
             },
           ],
-      mode: plan === 'subscription' ? 'subscription' : 'payment',
+      mode: 'subscription', // 両プランともサブスクリプション（月額または年額）
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: {

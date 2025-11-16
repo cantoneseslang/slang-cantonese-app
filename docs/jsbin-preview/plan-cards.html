@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>プランカード</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Noto Sans JP', 'Helvetica Neue', sans-serif;
+      background: linear-gradient(180deg, #f1f5f9 0%, #ffffff 100%);
+      padding: 48px 16px;
+      display: flex;
+      justify-content: center;
+      color: #1f2937;
+    }
+
+    main {
+      width: 100%;
+      max-width: 1080px;
+    }
+
+    .plan-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 28px;
+      align-items: stretch;
+    }
+
+    .plan-card {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 32px;
+      border-radius: 22px;
+      border: none;
+      color: inherit;
+      background: linear-gradient(145deg, #ffffff, #f5f5f7);
+      box-shadow: 0 18px 32px rgba(15, 23, 42, 0.14),
+                  0 10px 18px rgba(15, 23, 42, 0.10),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.85);
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                  box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .plan-card:hover {
+      transform: translateY(-6px) scale(1.015);
+      box-shadow: 0 26px 44px rgba(15, 23, 42, 0.20),
+                  0 12px 20px rgba(15, 23, 42, 0.14),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    }
+
+    .plan-card__icon {
+      font-size: 2.75rem;
+      filter: drop-shadow(0 6px 12px rgba(15, 23, 42, 0.10));
+    }
+
+    .plan-card__title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .plan-card__price {
+      font-size: 1.2rem;
+      color: #0f172a;
+      opacity: 0.9;
+    }
+
+    .plan-card__features {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 10px;
+      font-size: 0.95rem;
+    }
+
+    .plan-card__features li::before {
+      content: '・';
+      color: #334155;
+      margin-right: 0.35rem;
+    }
+
+    .plan-card__cta {
+      margin-top: auto;
+      padding: 0.65rem 1rem;
+      border-radius: 999px;
+      text-align: center;
+      font-weight: 600;
+      color: #0f172a;
+      background: rgba(148, 163, 184, 0.18);
+      transition: background 0.2s ease, color 0.2s ease;
+      text-decoration: none;
+    }
+
+    .plan-card__cta:hover {
+      background: rgba(30, 64, 175, 0.25);
+      color: #1e3a8a;
+    }
+
+    .plan-card--bronze {
+      border: 1px solid rgba(148, 124, 89, 0.28);
+      background: linear-gradient(145deg, #fefcf9, #f5ede3);
+    }
+
+    .plan-card--silver {
+      border: 1px solid rgba(152, 162, 179, 0.30);
+      background: linear-gradient(145deg, #f8fbff, #eef3f9);
+    }
+
+    .plan-card--gold {
+      border: 1px solid rgba(205, 164, 94, 0.36);
+      background: linear-gradient(145deg, #fff7e6, #fbe8c7);
+    }
+
+    .plan-category-info {
+      margin: 48px 0 0;
+      padding: 24px 28px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: 0 18px 32px rgba(15, 23, 42, 0.12),
+                  0 10px 18px rgba(15, 23, 42, 0.08);
+      line-height: 1.7;
+    }
+
+    .plan-category-info h3 {
+      margin: 0 0 12px;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .plan-category-info code {
+      font-family: 'SFMono-Regular', 'Consolas', monospace;
+      background: rgba(148, 163, 184, 0.16);
+      border-radius: 6px;
+      padding: 2px 6px;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 32px 12px;
+      }
+
+      .plan-card {
+        padding: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="plan-card-grid">
+      <article class="plan-card plan-card--bronze">
+        <div class="plan-card__icon">🥉</div>
+        <h2 class="plan-card__title">ブロンズ（無料）</h2>
+        <p class="plan-card__price">¥0 / month</p>
+        <ul class="plan-card__features">
+          <li>基本カテゴリーの単語ボタンを練習</li>
+          <li>ノーマルモードで音声を繰り返し再生</li>
+          <li>スラング式カタカナと粤ピン表記を確認</li>
+          <li>お気に入り登録（最大 10 件）</li>
+        </ul>
+        <a class="plan-card__cta" href="#">無料でスタート</a>
+      </article>
+
+      <article class="plan-card plan-card--silver">
+        <div class="plan-card__icon">🥈</div>
+        <h2 class="plan-card__title">シルバー（月額）</h2>
+        <p class="plan-card__price">¥980 / month</p>
+        <ul class="plan-card__features">
+          <li>全カテゴリーのボタン・例文が利用可能</li>
+          <li>学習モードで文脈に沿った例文と音声</li>
+          <li>画像／PDF からのテキスト抽出 + 音声生成</li>
+          <li>検索から単語生成 → 再変換で即学習</li>
+          <li>お気に入り登録 無制限</li>
+          <li>広告表示なし</li>
+        </ul>
+        <a class="plan-card__cta" href="#">シルバープランに申し込む</a>
+      </article>
+
+      <article class="plan-card plan-card--gold">
+        <div class="plan-card__icon">🏆</div>
+        <h2 class="plan-card__title">ゴールド（買い切り）</h2>
+        <p class="plan-card__price">¥29,800 / buyout</p>
+        <ul class="plan-card__features">
+          <li>シルバーのすべての機能 + バックアップ運用権</li>
+          <li>コンテンツ追加・アップデートを永久反映</li>
+          <li>法人・教育機関向けの拡張利用に対応</li>
+          <li>サポート優先対応、カスタムカテゴリ相談可</li>
+          <li>β機能の先行リリース参加権</li>
+        </ul>
+        <a class="plan-card__cta" href="#">買い切りで利用する</a>
+      </article>
+    </section>
+
+    <section class="plan-category-info">
+      <h3>カテゴリーの数字について</h3>
+      <p>
+        アプリ内で表示される各カテゴリー名の右上には、
+        <strong>そのカテゴリーに含まれるボタン数（＝収録フレーズ数）</strong>が表示されます。
+      </p>
+      <p>
+        例：<code>買い物（28）</code> と表示されていれば、そのカテゴリ内に 28 個の広東語ボタンが並んでいるという意味です。
+        数字を頼りに、学習したいシーンやボリュームを一目で把握できます。
+      </p>
+      <p>
+        現在の「スラング式カントン語音れん」には
+        <strong>全 45 カテゴリー / 1007 単語</strong>を収録。渡航や生活でよく使う場面をまんべんなくカバーしています。
+      </p>
+    </section>
+  </main>
+</body>
+</html>
+

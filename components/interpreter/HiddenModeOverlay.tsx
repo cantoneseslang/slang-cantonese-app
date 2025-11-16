@@ -845,7 +845,9 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             {membershipType === 'free' ? (
               `ブロンズ会員：通訳可能回数：${interpreterUsageCount} / ${interpreterUsageLimit}回`
             ) : (
-              'シルバー会員/ゴールド会員通訳回数：無制限'
+              <>
+                シルバー会員/ゴールド会員通訳回数：<strong>無制限</strong>
+              </>
             )}
           </div>
         </div>

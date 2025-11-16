@@ -3423,13 +3423,13 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   const getMembershipLabel = (type: 'free' | 'subscription' | 'lifetime') => {
     switch (type) {
       case 'free':
-        return 'ブロンズ会員';
+        return 'ブロンズ（無料）';
       case 'subscription':
-        return 'シルバー会員';
+        return 'シルバー（月額）';
       case 'lifetime':
-        return 'ゴールド会員';
+        return 'ゴールド（年間一括割引）';
       default:
-        return 'ブロンズ会員';
+        return 'ブロンズ（無料）';
     }
   };
 

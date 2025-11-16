@@ -75,12 +75,12 @@ interface SettingsPortalProps {
 
 const PLAN_PRICE_MAP: Record<Exclude<MembershipType, 'free'>, Record<CurrencyCode, string>> = {
   subscription: {
-    jpy: '¥980',
-    hkd: 'HKD$50',
+    jpy: '¥1,980',
+    hkd: 'HKD$100',
   },
   lifetime: {
-    jpy: '¥9,800',
-    hkd: 'HKD$498',
+    jpy: '¥19,800',
+    hkd: 'HKD$1,000',
   },
 };
 
@@ -1413,7 +1413,7 @@ const SettingsPortal: React.FC<SettingsPortalProps> = ({
                   {selectedPlan === 'free' ? '🥉' : selectedPlan === 'subscription' ? '🥈' : '🏆'}
                 </span>
                 <span>
-                  {selectedPlan === 'free' ? 'ブロンズ会員' : selectedPlan === 'subscription' ? 'シルバー会員' : 'ゴールド会員'}
+                  {selectedPlan === 'free' ? 'ブロンズ（無料）' : selectedPlan === 'subscription' ? 'シルバー（月額）' : 'ゴールド（年間一括割引）'}
                 </span>
               </h2>
               <button
@@ -1538,10 +1538,10 @@ const SettingsPortal: React.FC<SettingsPortalProps> = ({
                     marginTop: '0.5rem'
                   }}>
                     {selectedPlan === 'free' 
-                      ? '（お気に入り6個まで）' 
+                      ? '' 
                       : selectedPlan === 'subscription' 
                       ? '月額（自動更新）' 
-                      : '買い切り（永久使用）'}
+                      : '年額（自動更新）'}
                   </div>
                 </div>
 
@@ -1558,8 +1558,8 @@ const SettingsPortal: React.FC<SettingsPortalProps> = ({
                     margin: 0
                   }}>
                     {(selectedPlan === 'free' 
-                      ? ['基本カテゴリーの単語へアクセス', 'お気に入り6個まで', '発音チェックゲーム']
-                      : ['お気に入り無制限', 'モード切り替え (ノーマルモード・学習)', 'note 教科書自動更新', 'テキストOCR', '発音チェック', '発音チェックゲーム', '全カテゴリーの単語へアクセス', '音声速度調整', '広告なし']
+                      ? ['基本カテゴリーの単語へアクセス', 'お気に入り登録 6個まで保存', 'ノーマルモードのみ', 'OCR→音声生成1000文字/10回まで', '通訳100回まで']
+                      : ['お気に入り登録 無制限', 'ノーマル/学習モード切り替え 可能', 'note 教科書の自動追加', 'OCR→音声生成 無制限', '全カテゴリーの単語にアクセス', '音声速度調整 可能（0.5x〜2.0x）', '通訳回数 無制限']
                     ).map((benefit, idx) => (
                       <li key={benefit} style={{
                         display: 'flex',
@@ -1622,7 +1622,7 @@ const SettingsPortal: React.FC<SettingsPortalProps> = ({
                   ? 'お気に入りは6個までに制限されます'
                   : selectedPlan === 'subscription' 
                   ? 'いつでもキャンセル可能です' 
-                  : '一度のお支払いで永久に使用できます'}
+                  : '年間一括でお得にご利用いただけます'}
               </div>
             </div>
           </div>

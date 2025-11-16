@@ -114,8 +114,11 @@ export async function POST(request: NextRequest) {
           expiresAt = expiresDate.toISOString();
           updateData.subscription_expires_at = expiresAt;
         } else if (plan === 'lifetime') {
-          expiresAt = null;
-          updateData.subscription_expires_at = null;
+          // ゴールド会員（年間一括割引）: 1年後
+          const expiresDate = new Date();
+          expiresDate.setFullYear(expiresDate.getFullYear() + 1);
+          expiresAt = expiresDate.toISOString();
+          updateData.subscription_expires_at = expiresAt;
         }
 
         console.log('📝 Updating user membership from payment_intent:', {
@@ -238,8 +241,11 @@ export async function POST(request: NextRequest) {
                   expiresAt = expiresDate.toISOString();
                   updateData.subscription_expires_at = expiresAt;
                 } else if (plan === 'lifetime') {
-                  expiresAt = null;
-                  updateData.subscription_expires_at = null;
+                  // ゴールド会員（年間一括割引）: 1年後
+                  const expiresDate = new Date();
+                  expiresDate.setFullYear(expiresDate.getFullYear() + 1);
+                  expiresAt = expiresDate.toISOString();
+                  updateData.subscription_expires_at = expiresAt;
                 }
 
                 console.log('📝 Updating user membership from payment_intent (found via session search):', {
@@ -364,9 +370,11 @@ export async function POST(request: NextRequest) {
         expiresAt = expiresDate.toISOString();
         updateData.subscription_expires_at = expiresAt;
       } else if (plan === 'lifetime') {
-        // lifetimeプランの場合はsubscription_expires_atをnullに設定（期限なし）
-        expiresAt = null;
-        updateData.subscription_expires_at = null;
+        // ゴールド会員（年間一括割引）: 1年後
+        const expiresDate = new Date();
+        expiresDate.setFullYear(expiresDate.getFullYear() + 1);
+        expiresAt = expiresDate.toISOString();
+        updateData.subscription_expires_at = expiresAt;
       }
 
       console.log('📝 Updating user membership:', {
