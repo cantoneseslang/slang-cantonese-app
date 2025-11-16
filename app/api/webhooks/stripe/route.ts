@@ -583,11 +583,13 @@ export async function POST(request: NextRequest) {
           expiresAt: expiresAt.toISOString()
         });
 
-        // 1. user_metadataを更新
+        // 1. user_metadataを更新（サブスクリプション削除時はブロンズに変更し、Stripe IDをクリア）
         const { data: userData, error: userError } = await supabase.auth.admin.updateUserById(userId, {
           user_metadata: {
-            membership_type: 'subscription',
-            subscription_expires_at: expiresAt.toISOString()
+            membership_type: 'free', // ブロンズに変更
+            subscription_expires_at: null, // 有効期限をクリア
+            stripe_subscription_id: null, // サブスクリプションIDをクリア
+            stripe_customer_id: null // カスタマーIDをクリア
           }
         });
 
@@ -600,12 +602,12 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        // 2. usersテーブルも更新
+        // 2. usersテーブルも更新（サブスクリプション削除時）
         const { data: dbData, error: dbError } = await supabase
           .from('users')
           .update({
-            membership_type: 'subscription',
-            subscription_expires_at: expiresAt.toISOString(),
+            membership_type: 'free', // ブロンズに変更
+            subscription_expires_at: null, // 有効期限をクリア
             updated_at: new Date().toISOString()
           })
           .eq('id', userId)

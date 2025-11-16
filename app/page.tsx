@@ -3627,35 +3627,66 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   const handleStripeCheckout = async (plan: 'free' | 'subscription' | 'lifetime') => {
     if (plan === 'free') {
     try {
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          membership_type: plan,
-          stripe_subscription_id: null, // サブスクリプションIDをクリア
-          stripe_customer_id: null // カスタマーIDをクリア
+      // 既存のサブスクリプションを確認
+      const existingSubscriptionId = user?.user_metadata?.stripe_subscription_id;
+      
+      if (existingSubscriptionId) {
+        // サブスクリプションをキャンセル（期間終了時に自動キャンセル）
+        const response = await fetch('/api/stripe/cancel-subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subscriptionId: existingSubscriptionId,
+            userId: user.id
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'サブスクリプションのキャンセルに失敗しました');
         }
-      });
 
-      if (error) throw error;
-
-      const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
-      
-      if (getUserError) {
-        console.error('ユーザー情報の再取得エラー:', getUserError);
-      } else if (updatedUser) {
-        setUser(updatedUser);
-        setMembershipType(plan);
+        const { expiresAt } = await response.json();
+        
+        setShowPricingModal(false);
+        setSelectedPlan(null);
+        setIsDowngrade(false);
+        setCouponCode('');
+        
+        const expiresDate = new Date(expiresAt);
+        const formattedDate = `${expiresDate.getFullYear()}年${expiresDate.getMonth() + 1}月${expiresDate.getDate()}日`;
+        alert(`サブスクリプションをキャンセルしました。\n${formattedDate}までは現在のプランをご利用いただけます。`);
       } else {
-        setMembershipType(plan);
-      }
+        // サブスクリプションがない場合は即座にブロンズに変更
+        const { error } = await supabase.auth.updateUser({
+          data: {
+            membership_type: plan
+          }
+        });
 
-      setShowPricingModal(false);
-      setSelectedPlan(null);
-      setIsDowngrade(false);
-      setCouponCode(''); // クーポンコードをリセット
-      
+        if (error) throw error;
+
+        const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
+        
+        if (getUserError) {
+          console.error('ユーザー情報の再取得エラー:', getUserError);
+        } else if (updatedUser) {
+          setUser(updatedUser);
+          setMembershipType(plan);
+        } else {
+          setMembershipType(plan);
+        }
+
+        setShowPricingModal(false);
+        setSelectedPlan(null);
+        setIsDowngrade(false);
+        setCouponCode('');
+        
         alert('ブロンズ会員に変更しました！');
+      }
     } catch (err: any) {
       alert('エラーが発生しました: ' + err.message);
+      setShowPricingModal(true);
     }
       return;
     }
