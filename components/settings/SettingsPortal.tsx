@@ -1242,29 +1242,33 @@ const SettingsPortal: React.FC<SettingsPortalProps> = ({
                   >
                     {isClickSoundEnabled ? '🔊 クリック音オン' : '🔇 クリック音オフ'}
                   </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleLearningMode();
-                    }}
-                    style={{ 
-                      height: 36, 
-                      borderRadius: 8, 
-                      border: '1px solid #e5e7eb', 
-                      background: isLearningMode ? '#eff6ff' : '#f9fafb', 
-                      cursor: 'pointer', 
-                      fontWeight: 600,
-                      fontSize: 13,
-                      color: '#374151',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 6,
-                      marginTop: '0.5rem'
-                    }}
-                  >
-                    {isLearningMode ? '📚 学習モード' : '🎵 ノーマルモード'}
-                  </button>
+                  
+                  {/* 学習モード切り替え（シルバー・ゴールド会員のみ） */}
+                  {membershipType !== 'free' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleLearningMode();
+                      }}
+                      style={{ 
+                        height: 36, 
+                        borderRadius: 8, 
+                        border: '1px solid #e5e7eb', 
+                        background: isLearningMode ? '#eff6ff' : '#f9fafb', 
+                        cursor: 'pointer', 
+                        fontWeight: 600,
+                        fontSize: 13,
+                        color: '#374151',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        marginTop: '0.5rem'
+                      }}
+                    >
+                      {isLearningMode ? '📚 学習モード' : '🎵 ノーマルモード'}
+                    </button>
+                  )}
 
                   {isPremiumMember ? (
                     <div style={{
