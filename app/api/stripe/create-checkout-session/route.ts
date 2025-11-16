@@ -46,22 +46,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // プランの価格ID設定（Stripeで作成済みの価格IDを使用）
-    // 通貨に応じて適切な価格IDを選択
+    // Supabaseから価格設定を取得
     const selectedCurrency = (currency === 'hkd' ? 'hkd' : 'jpy') as 'jpy' | 'hkd';
-    const priceIdMap: Record<string, Record<string, string>> = {
-      subscription: {
-        jpy: process.env.STRIPE_PRICE_ID_SUBSCRIPTION_JPY || 'price_1SQildLopXhymmb3EAPe789Q', // シルバー会員（月額）- JPY
-        hkd: process.env.STRIPE_PRICE_ID_SUBSCRIPTION_HKD || 'price_1SQildLopXhymmb3EAPe789Q', // シルバー会員（月額）- HKD（同じ価格IDを使用）
-      },
-      lifetime: {
-        jpy: process.env.STRIPE_PRICE_ID_LIFETIME_JPY || 'price_1SQiVQLopXhymmb32pf7GnDc', // ゴールド会員（買い切り）- JPY
-        hkd: process.env.STRIPE_PRICE_ID_LIFETIME_HKD || 'price_1SQiS1LopXhymmb3dZDWJV73', // ゴールド会員（買い切り）- HKD
-      },
-    };
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+    
+    const { data: pricingConfig, error: pricingError } = await supabase
+      .from('stripe_pricing_config')
+      .select('stripe_price_id, unit_amount, display_price')
+      .eq('plan_type', plan)
+      .eq('currency', selectedCurrency)
+      .eq('is_active', true)
+      .single();
 
-    // 選択された通貨に応じて価格IDを取得
-    const priceId = priceIdMap[plan]?.[selectedCurrency];
+    if (pricingError || !pricingConfig) {
+      console.error('Failed to fetch pricing config:', pricingError);
+      return NextResponse.json(
+        { error: 'Pricing configuration not found', details: pricingError?.message },
+        { status: 500 }
+      );
+    }
+
+    const priceId = pricingConfig.stripe_price_id;
+    const unitAmount = pricingConfig.unit_amount;
     
     // 成功時のリダイレクトURLとキャンセル時のリダイレクトURL
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -87,9 +93,7 @@ export async function POST(request: NextRequest) {
                     ? '月額サブスクリプション（自動更新）' 
                     : '年額サブスクリプション（自動更新）',
                 },
-                unit_amount: plan === 'subscription' 
-                  ? (selectedCurrency === 'hkd' ? 10000 : 1980) // HKD: $100 (10000 cents), JPY: ¥1,980
-                  : (selectedCurrency === 'hkd' ? 100000 : 19800), // HKD: $1,000 (100,000 cents), JPY: ¥19,800
+                unit_amount: unitAmount, // Supabaseから取得した金額
                 recurring: plan === 'subscription' 
                   ? { interval: 'month' } 
                   : { interval: 'year' },
