@@ -3765,6 +3765,14 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   const [interpreterUsageLimit, setInterpreterUsageLimit] = useState<number>(100);
   const [isCheckingQuota, setIsCheckingQuota] = useState(false);
   const lastImportWasOcrRef = useRef(false);
+  
+  // 会員別のOCR文字数制限
+  const getMaxTextLength = () => {
+    if (membershipType === 'free') {
+      return 1000; // ブロンズ会員: 1000文字まで
+    }
+    return 999999; // シルバー/ゴールド会員: 実質無制限
+  };
 
   const Spinner = ({
     size = isMobile ? 18 : 20,
@@ -4381,7 +4389,9 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         // エンコーディング変換に失敗した場合は元のテキストを使用
         console.warn('エンコーディング変換エラー:', e);
       }
-      return text.length > 4000 ? text.slice(0, 4000) : text;
+      // 会員別の文字数制限を適用
+      const maxLength = getMaxTextLength();
+      return text.length > maxLength ? text.slice(0, maxLength) : text;
     } catch (error) {
       await worker.terminate();
       throw error;
@@ -7121,16 +7131,18 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               type="text"
                 placeholder="こちらに広東語、日本語を入力する"
               value={searchQuery}
-                maxLength={1000}
+                maxLength={getMaxTextLength()}
                 onChange={(e) => {
                   const newValue = e.target.value;
-                  // 最大文字数制限（1000文字）
-                  if (newValue.length <= 1000) {
+                  const maxLength = getMaxTextLength();
+                  // 会員別の最大文字数制限
+                  if (newValue.length <= maxLength) {
                     setSearchQuery(newValue);
                   } else {
                     // 制限を超えた場合は警告を表示（ただし、コピペなどで一気に入力された場合）
-                    alert(`入力できる文字数は最大1,000文字です。現在の文字数: ${newValue.length}`);
-                    setSearchQuery(newValue.substring(0, 1000));
+                    const limitText = membershipType === 'free' ? '1,000文字' : '無制限';
+                    alert(`入力できる文字数は最大${limitText}です。現在の文字数: ${newValue.length}`);
+                    setSearchQuery(newValue.substring(0, maxLength));
                   }
                 }}
                 onKeyDown={async (e) => {
