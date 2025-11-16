@@ -8062,8 +8062,8 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 </div>
               )}
 
-              {/* 例文音声プレーヤー */}
-              {shouldShowExampleAudio && (
+              {/* 例文音声プレーヤー（学習モードのみ表示） */}
+              {isLearningMode && shouldShowExampleAudio && (
                 <div style={{ marginTop: '0.5rem' }}>
                   <div style={{ fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>例文音声：</div>
                   <div style={{ fontSize: isMobile ? '0.875rem' : '1rem', marginBottom: '0.25rem', lineHeight: 1.6 }}>
