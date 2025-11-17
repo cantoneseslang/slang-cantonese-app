@@ -8,46 +8,12 @@ export const size = {
 
 export const contentType = 'image/png';
 
+// 静的レンダリングを強制
+export const dynamic = 'force-static';
+export const runtime = 'edge';
+
 export default async function Image() {
-  // 画像のURLを構築（絶対URLが必要）
-  const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.NEXT_PUBLIC_SITE_URL || 'https://slang-cantonese-app.vercel.app';
-  const imageUrl = `${baseUrl}/og-image.png`;
-
-  console.log('🖼️ OG Image URL:', imageUrl);
-
-  // 画像をfetchで読み込んでBase64エンコード
-  let imageDataUrl: string | null = null;
-  try {
-    const response = await fetch(imageUrl, {
-      cache: 'no-store' // キャッシュを無効化して最新の画像を取得
-    });
-    console.log('🖼️ Image fetch response:', response.status, response.ok);
-    
-    if (response.ok) {
-      const arrayBuffer = await response.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      console.log('🖼️ Image size:', uint8Array.length, 'bytes');
-      
-      // Base64エンコード（エッジランタイム対応、チャンク処理）
-      const chunkSize = 8192;
-      let binaryString = '';
-      for (let i = 0; i < uint8Array.length; i += chunkSize) {
-        const chunk = uint8Array.slice(i, i + chunkSize);
-        binaryString += String.fromCharCode(...chunk);
-      }
-      const base64 = btoa(binaryString);
-      imageDataUrl = `data:image/png;base64,${base64}`;
-      console.log('✅ Image Base64 encoded, length:', base64.length);
-    } else {
-      console.error('❌ Failed to fetch image:', response.status, response.statusText);
-    }
-  } catch (error) {
-    console.error('❌ Failed to load image:', error);
-  }
-
+  // 静的レンダリング対応: <img>タグを使わず、テキストと絵文字のみを使用
   return new ImageResponse(
     (
       <div
@@ -112,7 +78,7 @@ export default async function Image() {
           </div>
         </div>
 
-        {/* 右側: 写真 */}
+        {/* 右側: 絵文字アイコン（静的レンダリング対応） */}
         <div
           style={{
             display: 'flex',
@@ -121,38 +87,13 @@ export default async function Image() {
             width: '400px',
             height: '470px',
             borderRadius: '20px',
-            overflow: 'hidden',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
             border: '4px solid rgba(255, 255, 255, 0.3)',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            fontSize: '200px',
           }}
         >
-          {imageDataUrl ? (
-            <img
-              src={imageDataUrl}
-              alt="カントン語音れん"
-              width={400}
-              height={470}
-              style={{
-                objectFit: 'cover',
-                width: '100%',
-                height: '100%',
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: '100%',
-                height: '100%',
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '48px',
-              }}
-            >
-              🇭🇰
-            </div>
-          )}
+          🇭🇰
         </div>
       </div>
     ),

@@ -66,8 +66,8 @@ export async function POST(request: NextRequest) {
 
     const voiceParams: VoiceConfig = selectedVoice ?? defaultVoice;
     
-    // 「一」の発音問題対策: モバイルではSSMLを使わず、テキストをそのまま送信
-    // GASではシンプルにテキストをそのまま送信していたため、同じアプローチを採用
+    // 「一」の発音問題対策: モバイルではテキストの前に全角スペースを追加
+    // GASではシンプルにテキストをそのまま送信していたが、モバイルでは冒頭が切れるため対策が必要
     let finalText = text;
     let useSSML = false;
     
@@ -81,10 +81,11 @@ export async function POST(request: NextRequest) {
     // 「一」または特定の数字で始まる場合の処理
     if (text === '一' || text.startsWith('一百') || text.startsWith('一千') || text.startsWith('一萬') || cantoneseNumberRegex.test(text)) {
       if (isMobile) {
-        // モバイルではSSMLを使わず、テキストをそのまま送信（GASと同じアプローチ）
-        finalText = text;
+        // モバイルではテキストの前に全角スペースを追加して冒頭を保護
+        // 全角スペースは発音されないが、音声の冒頭を保護する効果がある
+        finalText = `　${text}`;
         useSSML = false;
-        console.log('🔧 モバイル: テキストをそのまま送信（GAS方式）:', { originalText: text, finalText });
+        console.log('🔧 モバイル: 全角スペースを追加:', { originalText: text, finalText });
       } else {
         // PCではSSMLで無音を追加して頭切れを防ぐ
         finalText = `<speak><break time="50ms"/>${text}</speak>`;
@@ -104,7 +105,11 @@ export async function POST(request: NextRequest) {
       audioConfig: { 
         audioEncoding: 'MP3',
         // 音声の品質を上げる（頭切れ対策）
-        sampleRateHertz: 24000
+        sampleRateHertz: 24000,
+        // モバイルで「一」の発音が抜け落ちる問題対策: 話速を少し遅くする
+        ...(isMobile && (text === '一' || text.startsWith('一百') || text.startsWith('一千') || text.startsWith('一萬') || cantoneseNumberRegex.test(text)) 
+          ? { speakingRate: 0.95 } // 5%遅くすることで冒頭の発音を保護
+          : {})
       }
     };
 
