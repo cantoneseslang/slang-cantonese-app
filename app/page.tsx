@@ -3718,10 +3718,37 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Checkout session creation failed');
+        throw new Error(errorData.error || errorData.details || 'Checkout session creation failed');
       }
 
-      const { url } = await response.json();
+      const data = await response.json();
+
+      // サブスクリプションが更新された場合（新規作成ではなく更新）
+      if (data.updated) {
+        console.log('✅ サブスクリプションが更新されました:', data);
+        
+        // ユーザー情報を再取得してUIを更新
+        const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
+        
+        if (getUserError) {
+          console.error('ユーザー情報の再取得エラー:', getUserError);
+        } else if (updatedUser) {
+          setUser(updatedUser);
+          const newMembershipType = updatedUser.user_metadata?.membership_type || 'free';
+          setMembershipType(newMembershipType);
+        }
+
+        setShowPricingModal(false);
+        setSelectedPlan(null);
+        setIsDowngrade(false);
+        setCouponCode('');
+        
+        alert(data.message || 'サブスクリプションを更新しました。');
+        return;
+      }
+
+      // 新規作成の場合、Checkout URLにリダイレクト
+      const { url } = data;
 
       if (url) {
         window.location.href = url;

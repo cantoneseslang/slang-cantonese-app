@@ -62,26 +62,84 @@ export async function POST(request: NextRequest) {
       requestedPlan: plan
     });
 
-    // 既存のサブスクリプションがある場合、二重課金を防ぐため処理をスキップ
+    // 既存のサブスクリプションがある場合、プラン変更を処理
     if (existingSubscriptionId) {
       try {
         const existingSubscription = await stripe.subscriptions.retrieve(existingSubscriptionId);
         if (existingSubscription.status === 'active' || existingSubscription.status === 'trialing') {
-          console.warn('⚠️ アクティブなサブスクリプションが既に存在します:', {
+          console.log('🔄 既存のアクティブなサブスクリプションを更新します:', {
             subscriptionId: existingSubscriptionId,
-            status: existingSubscription.status
+            status: existingSubscription.status,
+            requestedPlan: plan
           });
-          return NextResponse.json(
-            { 
-              error: 'Active subscription already exists', 
-              details: 'サブスクリプションが既に存在します。プラン変更はお問い合わせください。',
-              subscriptionId: existingSubscriptionId
+
+          // 既存のサブスクリプションの現在のプランを確認
+          const currentPriceId = existingSubscription.items.data[0]?.price.id;
+          
+          // Supabaseから価格設定を取得
+          const selectedCurrency = (currency === 'hkd' ? 'hkd' : 'jpy') as 'jpy' | 'hkd';
+          
+          const { data: pricingConfig, error: pricingError } = await supabase
+            .from('stripe_pricing_config')
+            .select('stripe_price_id, unit_amount, display_price')
+            .eq('plan_type', plan)
+            .eq('currency', selectedCurrency)
+            .eq('is_active', true)
+            .single();
+
+          if (pricingError || !pricingConfig) {
+            console.error('Failed to fetch pricing config:', pricingError);
+            return NextResponse.json(
+              { error: 'Pricing configuration not found', details: pricingError?.message },
+              { status: 500 }
+            );
+          }
+
+          const newPriceId = pricingConfig.stripe_price_id;
+
+          // 同じプランの場合はエラーを返す
+          if (currentPriceId === newPriceId) {
+            return NextResponse.json(
+              { 
+                error: 'Same plan already active', 
+                details: '既に同じプランが有効です。',
+                subscriptionId: existingSubscriptionId
+              },
+              { status: 400 }
+            );
+          }
+
+          // サブスクリプションを更新（プラン変更）
+          const updatedSubscription = await stripe.subscriptions.update(existingSubscriptionId, {
+            items: [{
+              id: existingSubscription.items.data[0].id,
+              price: newPriceId || undefined,
+            }],
+            metadata: {
+              user_id: userId,
+              plan: plan,
             },
-            { status: 400 }
-          );
+            proration_behavior: 'always_invoice', // 即座に請求（比例配分）
+          });
+
+          console.log('✅ サブスクリプションを更新しました:', {
+            subscriptionId: updatedSubscription.id,
+            oldPriceId: currentPriceId,
+            newPriceId: newPriceId,
+            plan: plan
+          });
+
+          // 更新されたサブスクリプションの情報を返す
+          return NextResponse.json({
+            success: true,
+            subscriptionId: updatedSubscription.id,
+            message: 'サブスクリプションを更新しました。',
+            updated: true
+          });
         }
-      } catch (err) {
-        console.log('ℹ️ 既存サブスクリプションが見つからないか無効です。新規作成します。');
+      } catch (err: any) {
+        console.log('ℹ️ 既存サブスクリプションの更新に失敗。新規作成します。', err.message);
+        // エラーが発生した場合は新規作成を続行
       }
     }
 
@@ -180,12 +238,12 @@ export async function POST(request: NextRequest) {
       discounts: couponCode ? [{ coupon: couponCode }] : undefined,
       // Stripe Checkoutページでプロモーションコード入力欄を表示
       allow_promotion_codes: true,
-      subscription_data: plan === 'subscription' ? {
+      subscription_data: {
         metadata: {
           user_id: userId,
           plan: plan,
         },
-      } : undefined,
+      },
       // lifetimeプランの場合、payment_intentのmetadataにもuser_idとplanを設定
       // また、checkout_session_idも設定して、payment_intent.succeededイベントでセッションを取得できるようにする
       payment_intent_data: plan === 'lifetime' ? {

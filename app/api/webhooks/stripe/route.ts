@@ -534,18 +534,67 @@ export async function POST(request: NextRequest) {
             });
           }
         } else if (subscription.status === 'active') {
-          // アクティブな場合、次の請求日の1ヶ月後を有効期限として設定
+          // アクティブな場合、プラン変更を検出してmembership_typeを更新
+          const currentPriceId = subscription.items.data[0]?.price.id;
+          const planFromMetadata = subscription.metadata?.plan as 'subscription' | 'lifetime' | undefined;
+          
+          // 価格IDからプランタイプを取得
+          let detectedPlan: 'subscription' | 'lifetime' | null = null;
+          if (currentPriceId) {
+            const { data: pricingConfig } = await supabase
+              .from('stripe_pricing_config')
+              .select('plan_type')
+              .eq('stripe_price_id', currentPriceId)
+              .eq('is_active', true)
+              .single();
+            
+            if (pricingConfig?.plan_type) {
+              detectedPlan = pricingConfig.plan_type as 'subscription' | 'lifetime';
+            }
+          }
+
+          // プランタイプを決定（metadata > 価格IDから検出 > デフォルト: subscription）
+          const finalPlan = planFromMetadata || detectedPlan || 'subscription';
+
+          console.log('📝 Detecting plan from subscription update:', {
+            subscriptionId: subscription.id,
+            userId,
+            currentPriceId,
+            planFromMetadata,
+            detectedPlan,
+            finalPlan
+          });
+
+          // 現在の期間終了日を有効期限として設定
           const currentPeriodEnd = subscriptionAny.current_period_end 
             ? new Date(subscriptionAny.current_period_end * 1000)
             : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // フォールバック: 30日後
-          const expiresAt = new Date(currentPeriodEnd);
-          expiresAt.setMonth(expiresAt.getMonth() + 1);
+          
+          let expiresAt: Date;
+          if (finalPlan === 'subscription') {
+            // シルバー会員: 現在の期間終了日の1ヶ月後
+            expiresAt = new Date(currentPeriodEnd);
+            expiresAt.setMonth(expiresAt.getMonth() + 1);
+          } else if (finalPlan === 'lifetime') {
+            // ゴールド会員: 現在の期間終了日の1年後
+            expiresAt = new Date(currentPeriodEnd);
+            expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+          } else {
+            // デフォルト: 現在の期間終了日の1ヶ月後
+            expiresAt = new Date(currentPeriodEnd);
+            expiresAt.setMonth(expiresAt.getMonth() + 1);
+          }
 
+          const updateData: any = {
+            membership_type: finalPlan,
+            subscription_expires_at: expiresAt.toISOString(),
+            stripe_subscription_id: subscription.id,
+            stripe_customer_id: subscription.customer as string
+          };
+
+          // 1. user_metadataを更新
           const { data: userData, error: userError } = await supabase.auth.admin.updateUserById(userId, {
-            user_metadata: {
-              membership_type: 'subscription',
-              subscription_expires_at: expiresAt.toISOString()
-            }
+            user_metadata: updateData
           });
 
           if (userError) {
@@ -553,7 +602,33 @@ export async function POST(request: NextRequest) {
           } else {
             console.log('✅ User metadata updated (subscription active):', {
               userId: userData?.user?.id,
+              membershipType: finalPlan,
               expiresAt: expiresAt.toISOString()
+            });
+          }
+
+          // 2. usersテーブルも更新
+          const { data: dbData, error: dbError } = await supabase
+            .from('users')
+            .update({
+              membership_type: finalPlan,
+              subscription_expires_at: expiresAt.toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId)
+            .select();
+
+          if (dbError) {
+            if (dbError.code === 'PGRST116' || dbError.message.includes('relation') || dbError.message.includes('does not exist')) {
+              console.warn('⚠️ usersテーブルが存在しないため、user_metadataのみ更新しました（subscription active）');
+            } else {
+              console.error('❌ Failed to update users table (subscription active):', dbError);
+            }
+          } else {
+            console.log('✅ Users table updated (subscription active):', {
+              userId,
+              membershipType: finalPlan,
+              updatedRows: dbData?.length || 0
             });
           }
         }
