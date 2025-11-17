@@ -293,12 +293,14 @@ const convertNumberToCantoneseReading = (raw: string): string => {
         zeroPending = false;
       }
 
+      // 「十」の前の「一」だけを省略（例：10 → 十、11 → 十一）
+      // ただし、他の単位（百、千、萬など）の前の「一」は省略しない
       const isLeadingTen =
         digit === 1 &&
-        unitIndex === 1 &&
-        result === '' &&
-        digits.slice(0, i).every((d) => d === '0') &&
-        length === 2;
+        unitIndex === 1 && // 「十」の単位
+        result === '' && // まだ何も追加されていない
+        i === 0 && // 最初の桁（10-19の場合は最初の桁が1）
+        length === 2; // 2桁の数字（10-19）
 
       if (!isLeadingTen) {
         result += digitMap[ch] ?? ch;
