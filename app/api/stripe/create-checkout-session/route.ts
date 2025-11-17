@@ -148,14 +148,109 @@ export async function POST(request: NextRequest) {
             });
           }
 
-          // ⚠️ 重要: プランが異なる場合は、決済をスキップせずCheckout Sessionを作成
-          // サブスクリプション更新は決済完了後にWebhookで処理される
-          console.log('⚠️ プラン変更が検出されました。決済画面にリダイレクトします:', {
+          // ⚠️ 重要: プランが異なる場合は、既存サブスクリプションを更新
+          // Stripeが自動的にデフォルトの支払い方法を使用して比例配分で請求
+          console.log('🔄 プラン変更が検出されました。既存サブスクリプションを更新します:', {
+            subscriptionId: existingSubscriptionId,
             currentPriceId,
             newPriceId,
             plan
           });
-          // この時点では何もせず、下のCheckout Session作成処理に進む
+
+          try {
+            // 既存サブスクリプションを更新（比例配分で請求）
+            const updatedSubscription = await stripe.subscriptions.update(existingSubscriptionId, {
+              items: [{
+                id: existingSubscription.items.data[0].id,
+                price: newPriceId,
+              }],
+              metadata: {
+                user_id: userId,
+                plan: plan,
+              },
+              proration_behavior: 'always_invoice', // 即座に請求（比例配分）
+            });
+
+            console.log('✅ サブスクリプションを更新しました:', {
+              subscriptionId: updatedSubscription.id,
+              oldPriceId: currentPriceId,
+              newPriceId: newPriceId,
+              plan: plan,
+              status: updatedSubscription.status
+            });
+
+            // 有効期限を計算
+            const subscriptionAny = updatedSubscription as any;
+            const currentPeriodEnd = subscriptionAny.current_period_end 
+              ? new Date(subscriptionAny.current_period_end * 1000)
+              : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            
+            let expiresAt: Date;
+            if (plan === 'subscription') {
+              // シルバー会員: 現在の期間終了日の1ヶ月後
+              expiresAt = new Date(currentPeriodEnd);
+              expiresAt.setMonth(expiresAt.getMonth() + 1);
+            } else if (plan === 'lifetime') {
+              // ゴールド会員: 現在の期間終了日の1年後
+              expiresAt = new Date(currentPeriodEnd);
+              expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+            } else {
+              expiresAt = new Date(currentPeriodEnd);
+              expiresAt.setMonth(expiresAt.getMonth() + 1);
+            }
+
+            // user_metadataを更新（Webhookでも更新されるが、即座に反映させる）
+            const updateData: any = {
+              membership_type: plan,
+              subscription_expires_at: expiresAt.toISOString(),
+              stripe_subscription_id: updatedSubscription.id,
+              stripe_customer_id: updatedSubscription.customer as string
+            };
+
+            const { error: userError } = await supabase.auth.admin.updateUserById(userId, {
+              user_metadata: {
+                ...existingUser?.user_metadata,
+                ...updateData
+              }
+            });
+
+            if (userError) {
+              console.error('❌ Failed to update user metadata:', userError);
+            } else {
+              console.log('✅ User metadata updated:', {
+                userId,
+                membershipType: plan,
+                expiresAt: expiresAt.toISOString()
+              });
+            }
+
+            // usersテーブルも更新
+            const { error: dbError } = await supabase
+              .from('users')
+              .update({
+                membership_type: plan,
+                subscription_expires_at: expiresAt.toISOString(),
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', userId);
+
+            if (dbError) {
+              console.error('❌ Failed to update users table:', dbError);
+            }
+
+            // 更新成功を返す（決済はStripeが自動的に処理）
+            return NextResponse.json({
+              success: true,
+              subscriptionId: updatedSubscription.id,
+              message: 'サブスクリプションを更新しました。決済は自動的に処理されます。',
+              updated: true,
+              plan: plan
+            });
+          } catch (updateError: any) {
+            console.error('❌ サブスクリプション更新エラー:', updateError);
+            // エラーが発生した場合は新規作成を続行
+            console.log('ℹ️ サブスクリプション更新に失敗。新規作成を続行します。');
+          }
         }
       } catch (err: any) {
         console.log('ℹ️ 既存サブスクリプションの確認に失敗。新規作成します。', err.message);
@@ -256,14 +351,109 @@ export async function POST(request: NextRequest) {
                     });
                   }
 
-                  // ⚠️ 重要: プランが異なる場合は、決済をスキップせずCheckout Sessionを作成
-                  // サブスクリプション更新は決済完了後にWebhookで処理される
-                  console.log('⚠️ プラン変更が検出されました（メールアドレスから発見）。決済画面にリダイレクトします:', {
+                  // ⚠️ 重要: プランが異なる場合は、既存サブスクリプションを更新
+                  // Stripeが自動的にデフォルトの支払い方法を使用して比例配分で請求
+                  console.log('🔄 プラン変更が検出されました（メールアドレスから発見）。既存サブスクリプションを更新します:', {
+                    subscriptionId: existingSubscriptionId,
                     currentPriceId,
                     newPriceId,
                     plan
                   });
-                  // この時点では何もせず、下のCheckout Session作成処理に進む
+
+                  try {
+                    // 既存サブスクリプションを更新（比例配分で請求）
+                    const updatedSubscription = await stripe.subscriptions.update(existingSubscriptionId, {
+                      items: [{
+                        id: foundSubscription.items.data[0].id,
+                        price: newPriceId,
+                      }],
+                      metadata: {
+                        user_id: userId,
+                        plan: plan,
+                      },
+                      proration_behavior: 'always_invoice', // 即座に請求（比例配分）
+                    });
+
+                    console.log('✅ サブスクリプションを更新しました（メールアドレスから発見）:', {
+                      subscriptionId: updatedSubscription.id,
+                      oldPriceId: currentPriceId,
+                      newPriceId: newPriceId,
+                      plan: plan,
+                      status: updatedSubscription.status
+                    });
+
+                    // 有効期限を計算
+                    const subscriptionAny = updatedSubscription as any;
+                    const currentPeriodEnd = subscriptionAny.current_period_end 
+                      ? new Date(subscriptionAny.current_period_end * 1000)
+                      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+                    
+                    let expiresAt: Date;
+                    if (plan === 'subscription') {
+                      // シルバー会員: 現在の期間終了日の1ヶ月後
+                      expiresAt = new Date(currentPeriodEnd);
+                      expiresAt.setMonth(expiresAt.getMonth() + 1);
+                    } else if (plan === 'lifetime') {
+                      // ゴールド会員: 現在の期間終了日の1年後
+                      expiresAt = new Date(currentPeriodEnd);
+                      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+                    } else {
+                      expiresAt = new Date(currentPeriodEnd);
+                      expiresAt.setMonth(expiresAt.getMonth() + 1);
+                    }
+
+                    // user_metadataを更新（Webhookでも更新されるが、即座に反映させる）
+                    const updateData: any = {
+                      membership_type: plan,
+                      subscription_expires_at: expiresAt.toISOString(),
+                      stripe_subscription_id: updatedSubscription.id,
+                      stripe_customer_id: updatedSubscription.customer as string
+                    };
+
+                    const { error: userError } = await supabase.auth.admin.updateUserById(userId, {
+                      user_metadata: {
+                        ...existingUser?.user_metadata,
+                        ...updateData
+                      }
+                    });
+
+                    if (userError) {
+                      console.error('❌ Failed to update user metadata:', userError);
+                    } else {
+                      console.log('✅ User metadata updated (from email):', {
+                        userId,
+                        membershipType: plan,
+                        expiresAt: expiresAt.toISOString()
+                      });
+                    }
+
+                    // usersテーブルも更新
+                    const { error: dbError } = await supabase
+                      .from('users')
+                      .update({
+                        membership_type: plan,
+                        subscription_expires_at: expiresAt.toISOString(),
+                        updated_at: new Date().toISOString()
+                      })
+                      .eq('id', userId);
+
+                    if (dbError) {
+                      console.error('❌ Failed to update users table:', dbError);
+                    }
+
+                    // 更新成功を返す（決済はStripeが自動的に処理）
+                    return NextResponse.json({
+                      success: true,
+                      subscriptionId: updatedSubscription.id,
+                      message: 'サブスクリプションを更新しました。決済は自動的に処理されます。',
+                      updated: true,
+                      plan: plan
+                    });
+                  } catch (updateError: any) {
+                    console.error('❌ サブスクリプション更新エラー（メールアドレスから発見）:', updateError);
+                    // エラーが発生した場合は新規作成を続行
+                    console.log('ℹ️ サブスクリプション更新に失敗。新規作成を続行します。');
+                  }
                 }
               }
             } catch (err: any) {
