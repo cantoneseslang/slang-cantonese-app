@@ -18,50 +18,85 @@ export default async function Image() {
           width: '100%',
           height: '100%',
           display: 'flex',
-          flexDirection: 'column',
+          flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'space-between',
+          padding: '80px',
           color: 'white',
           fontFamily: 'system-ui',
         }}
       >
+        {/* 左側: テキストコンテンツ */}
         <div
           style={{
-            fontSize: 72,
-            fontWeight: 'bold',
-            marginBottom: 20,
-            textAlign: 'center',
-          }}
-        >
-          スラング式カントン語音れん
-        </div>
-        <div
-          style={{
-            fontSize: 36,
-            marginBottom: 40,
-            textAlign: 'center',
-            opacity: 0.9,
-          }}
-        >
-          広東語万能辞書
-        </div>
-        <div
-          style={{
-            fontSize: 28,
             display: 'flex',
-            gap: 20,
-            flexWrap: 'wrap',
+            flexDirection: 'column',
             justifyContent: 'center',
-            opacity: 0.8,
+            flex: 1,
+            paddingRight: '40px',
           }}
         >
-          <span>粤ピン</span>
-          <span>•</span>
-          <span>スラング式カタカナ</span>
-          <span>•</span>
-          <span>音声検索</span>
-          <span>•</span>
-          <span>日本語翻訳</span>
+          <div
+            style={{
+              fontSize: 72,
+              fontWeight: 'bold',
+              marginBottom: 20,
+            }}
+          >
+            スラング式カントン語音れん
+          </div>
+          <div
+            style={{
+              fontSize: 36,
+              marginBottom: 40,
+              opacity: 0.9,
+            }}
+          >
+            広東語万能辞書
+          </div>
+          <div
+            style={{
+              fontSize: 28,
+              display: 'flex',
+              gap: 20,
+              flexWrap: 'wrap',
+              opacity: 0.8,
+            }}
+          >
+            <span>粤ピン</span>
+            <span>•</span>
+            <span>スラング式カタカナ</span>
+            <span>•</span>
+            <span>音声検索</span>
+            <span>•</span>
+            <span>日本語翻訳</span>
+          </div>
+        </div>
+
+        {/* 右側: 画像またはアイコン */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '300px',
+            height: '300px',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            borderRadius: '20px',
+            border: '4px solid rgba(255, 255, 255, 0.2)',
+          }}
+        >
+          {/* 絵文字またはアイコンを表示 */}
+          <div
+            style={{
+              fontSize: '180px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            🇭🇰
+          </div>
         </div>
       </div>
     ),
