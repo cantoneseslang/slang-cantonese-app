@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import OG_IMAGE_BASE64 from '@/lib/og-image-base64';
 
 export const alt = 'スラング式カントン語音れん - 広東語万能辞書';
 export const size = {
@@ -9,11 +10,8 @@ export const size = {
 export const contentType = 'image/png';
 
 export default async function Image() {
-  // 画像のURLを取得（本番環境と開発環境の両方に対応）
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.NEXT_PUBLIC_SITE_URL || 'https://slang-cantonese-app.vercel.app';
-  const imageUrl = `${baseUrl}/og-image.png`;
+  // Base64エンコードされた画像のdata URL
+  const imageUrl = `data:image/png;base64,${OG_IMAGE_BASE64}`;
 
   return new ImageResponse(
     (
