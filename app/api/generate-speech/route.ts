@@ -141,8 +141,22 @@ export async function POST(request: NextRequest) {
       console.log('✅ 音声生成API成功:', { 
         audioContentLength: json.audioContent?.length || 0,
         requestedText: text,
-        languageCode: voiceParams.languageCode
+        finalText: finalText,
+        languageCode: voiceParams.languageCode,
+        userAgent: request.headers.get('user-agent')?.substring(0, 100)
       });
+      
+      // デバッグ用: 「一」の音声データをログ出力
+      if (text === '一' || finalText.includes('一')) {
+        console.log('🐛 「一」の音声データ詳細:', {
+          originalText: text,
+          finalText: finalText,
+          audioLength: json.audioContent?.length || 0,
+          audioPreview: json.audioContent?.substring(0, 50),
+          isMobile: /Mobile|Android|iPhone/i.test(request.headers.get('user-agent') || '')
+        });
+      }
+      
       return NextResponse.json({
         audioContent: json.audioContent
       });
