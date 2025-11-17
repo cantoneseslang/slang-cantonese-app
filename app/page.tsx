@@ -1506,10 +1506,22 @@ export default function Home() {
       if (hasPlayed) return;
       hasPlayed = true;
       
-      // モバイル対応: 再生前に少し待機してからcurrentTimeを0にリセット
-      // これにより、音声データが完全にデコードされてから再生開始
+      console.log(`${logPrefix}: oncanplaythrough発火`, {
+        currentTime: audio.currentTime,
+        duration: audio.duration,
+        readyState: audio.readyState
+      });
+      
+      // モバイル対応: 再生前に待機を増やし、確実にデコード完了を待つ
+      // 「一」の頭切れ対策として300msに延長
       setTimeout(() => {
+        // 再生位置を明示的に0にリセット
         audio.currentTime = 0;
+        
+        console.log(`${logPrefix}: 再生開始（300ms待機後）`, {
+          currentTime: audio.currentTime,
+          duration: audio.duration
+        });
         
         const playPromise = audio.play();
         if (playPromise !== undefined) {
@@ -1525,7 +1537,7 @@ export default function Home() {
               console.error(`${logPrefix}: 音声再生失敗`, e);
             });
         }
-      }, 100); // 100ms待機してから再生
+      }, 300); // 300ms待機してから再生（100ms→300msに延長）
     };
     
     audio.onerror = (event) => {
