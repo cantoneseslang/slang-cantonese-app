@@ -66,16 +66,31 @@ export async function POST(request: NextRequest) {
 
     const voiceParams: VoiceConfig = selectedVoice ?? defaultVoice;
     
-    // 「一」の発音問題対策: SSMLで短い無音を追加
+    // 「一」の発音問題対策: モバイルではSSMLを使わず、テキストをそのまま送信
+    // GASではシンプルにテキストをそのまま送信していたため、同じアプローチを採用
     let finalText = text;
     let useSSML = false;
     
-    // 「一」または「一」で始まる数字の場合、SSMLで短い無音を追加
-    if (text === '一' || text.startsWith('一百') || text.startsWith('一千') || text.startsWith('一萬')) {
-      // 前に20msの短い無音を追加（プツッという音は小さいが「一」は発音される）
-      finalText = `<speak><break time="20ms"/>${text}</speak>`;
-      useSSML = true;
-      console.log('🔧 「一」対策: SSML（20ms break）を使用', { originalText: text, ssmlText: finalText });
+    // 広東語の数字に関連する文字が含まれているかチェックする正規表現
+    const cantoneseNumberRegex = /^[一二三四五六七八九十百千萬億兆]+$/;
+    
+    // モバイルかどうかを判定
+    const userAgent = request.headers.get('user-agent') || '';
+    const isMobile = /Mobile|Android|iPhone|iPad|iPod/i.test(userAgent);
+    
+    // 「一」または特定の数字で始まる場合の処理
+    if (text === '一' || text.startsWith('一百') || text.startsWith('一千') || text.startsWith('一萬') || cantoneseNumberRegex.test(text)) {
+      if (isMobile) {
+        // モバイルではSSMLを使わず、テキストをそのまま送信（GASと同じアプローチ）
+        finalText = text;
+        useSSML = false;
+        console.log('🔧 モバイル: テキストをそのまま送信（GAS方式）:', { originalText: text, finalText });
+      } else {
+        // PCではSSMLで無音を追加して頭切れを防ぐ
+        finalText = `<speak><break time="50ms"/>${text}</speak>`;
+        useSSML = true;
+        console.log('🔧 PC: SSML（50ms break）を使用:', { originalText: text, ssmlText: finalText });
+      }
     }
     
     const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`;
