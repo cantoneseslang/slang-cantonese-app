@@ -79,8 +79,11 @@ export async function POST(request: NextRequest) {
 
     console.log('🔊 音声生成API呼び出し開始:', {
       text: text.substring(0, 50),
+      fullText: text,
+      textLength: text.length,
       languageCode: voiceParams.languageCode,
       voice: voiceParams.name ?? 'default',
+      ssmlGender: voiceParams.ssmlGender
     });
 
     // タイムアウト付きfetch（8秒でタイムアウト）
@@ -119,7 +122,11 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      console.log('✅ 音声生成API成功:', { audioContentLength: json.audioContent?.length || 0 });
+      console.log('✅ 音声生成API成功:', { 
+        audioContentLength: json.audioContent?.length || 0,
+        requestedText: text,
+        languageCode: voiceParams.languageCode
+      });
       return NextResponse.json({
         audioContent: json.audioContent
       });

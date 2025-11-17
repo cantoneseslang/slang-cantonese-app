@@ -5554,7 +5554,16 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       
       // 単語の音声のみを生成して再生
       try {
-        console.log('ノーマルモード: API呼び出し開始', { text: word.chinese });
+        console.log('ノーマルモード: API呼び出し開始', { 
+          text: word.chinese,
+          japanese: word.japanese,
+          categoryId: selectedCategory
+        });
+        
+        // デバッグ用: モバイルで「一」の発音を確認
+        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && word.chinese === '一') {
+          alert(`[単語ボタン]\n中国語: ${word.chinese}\n日本語: ${word.japanese}\n送信テキスト: ${word.chinese}`);
+        }
         
         const audioResponse = await fetch('/api/generate-speech', {
           method: 'POST',
@@ -5566,7 +5575,8 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         
         console.log('ノーマルモード: APIレスポンス受信', { 
           ok: audioResponse.ok, 
-          status: audioResponse.status 
+          status: audioResponse.status,
+          text: word.chinese
         });
         
         if (audioResponse.ok) {
@@ -5575,6 +5585,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           console.log('ノーマルモード: 音声データ取得', { 
             hasAudioContent: !!audioBase64,
             audioLength: audioBase64?.length,
+            text: word.chinese
           });
 
           if (audioBase64) {
