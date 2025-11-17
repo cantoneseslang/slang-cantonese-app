@@ -95,12 +95,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 既存のサブスクリプションがある場合、プラン変更を処理
+    // 既存のサブスクリプションがある場合、同じプランかどうかを確認
+    // ⚠️ 重要: プラン変更時は決済をスキップせず、常にCheckout Sessionを作成して決済画面にリダイレクト
     if (existingSubscriptionId) {
       try {
         const existingSubscription = await stripe.subscriptions.retrieve(existingSubscriptionId);
         if (existingSubscription.status === 'active' || existingSubscription.status === 'trialing') {
-          console.log('🔄 既存のアクティブなサブスクリプションを更新します:', {
+          console.log('🔄 既存のアクティブなサブスクリプションを確認:', {
             subscriptionId: existingSubscriptionId,
             status: existingSubscription.status,
             requestedPlan: plan
@@ -147,96 +148,17 @@ export async function POST(request: NextRequest) {
             });
           }
 
-          // サブスクリプションを更新（プラン変更）
-          const updatedSubscription = await stripe.subscriptions.update(existingSubscriptionId, {
-            items: [{
-              id: existingSubscription.items.data[0].id,
-              price: newPriceId || undefined,
-            }],
-            metadata: {
-              user_id: userId,
-              plan: plan,
-            },
-            proration_behavior: 'always_invoice', // 即座に請求（比例配分）
+          // ⚠️ 重要: プランが異なる場合は、決済をスキップせずCheckout Sessionを作成
+          // サブスクリプション更新は決済完了後にWebhookで処理される
+          console.log('⚠️ プラン変更が検出されました。決済画面にリダイレクトします:', {
+            currentPriceId,
+            newPriceId,
+            plan
           });
-
-          console.log('✅ サブスクリプションを更新しました:', {
-            subscriptionId: updatedSubscription.id,
-            oldPriceId: currentPriceId,
-            newPriceId: newPriceId,
-            plan: plan
-          });
-
-          // 有効期限を計算（型エラー回避のためanyにキャスト）
-          const subscriptionAny = updatedSubscription as any;
-          const currentPeriodEnd = subscriptionAny.current_period_end 
-            ? new Date(subscriptionAny.current_period_end * 1000)
-            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-          
-          let expiresAt: Date;
-          if (plan === 'subscription') {
-            // シルバー会員: 現在の期間終了日の1ヶ月後
-            expiresAt = new Date(currentPeriodEnd);
-            expiresAt.setMonth(expiresAt.getMonth() + 1);
-          } else if (plan === 'lifetime') {
-            // ゴールド会員: 現在の期間終了日の1年後
-            expiresAt = new Date(currentPeriodEnd);
-            expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-          } else {
-            expiresAt = new Date(currentPeriodEnd);
-            expiresAt.setMonth(expiresAt.getMonth() + 1);
-          }
-
-          // user_metadataを更新（決済完了前に会員種別を保存）
-          const updateData: any = {
-            membership_type: plan,
-            subscription_expires_at: expiresAt.toISOString(),
-            stripe_subscription_id: updatedSubscription.id,
-            stripe_customer_id: updatedSubscription.customer as string
-          };
-
-          const { error: userError } = await supabase.auth.admin.updateUserById(userId, {
-            user_metadata: {
-              ...existingUser?.user_metadata,
-              ...updateData
-            }
-          });
-
-          if (userError) {
-            console.error('❌ Failed to update user metadata:', userError);
-          } else {
-            console.log('✅ User metadata updated:', {
-              userId,
-              membershipType: plan,
-              expiresAt: expiresAt.toISOString()
-            });
-          }
-
-          // usersテーブルも更新
-          const { error: dbError } = await supabase
-            .from('users')
-            .update({
-              membership_type: plan,
-              subscription_expires_at: expiresAt.toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', userId);
-
-          if (dbError) {
-            console.error('❌ Failed to update users table:', dbError);
-          }
-
-          // 更新されたサブスクリプションの情報を返す
-          return NextResponse.json({
-            success: true,
-            subscriptionId: updatedSubscription.id,
-            message: 'サブスクリプションを更新しました。',
-            updated: true,
-            plan: plan
-          });
+          // この時点では何もせず、下のCheckout Session作成処理に進む
         }
       } catch (err: any) {
-        console.log('ℹ️ 既存サブスクリプションの更新に失敗。新規作成します。', err.message);
+        console.log('ℹ️ 既存サブスクリプションの確認に失敗。新規作成します。', err.message);
         // エラーが発生した場合は新規作成を続行
       }
     }
@@ -285,12 +207,13 @@ export async function POST(request: NextRequest) {
             }
           });
 
-          // サブスクリプションが見つかった場合、プラン変更処理を実行
+          // サブスクリプションが見つかった場合、同じプランかどうかを確認
+          // ⚠️ 重要: プラン変更時は決済をスキップせず、常にCheckout Sessionを作成して決済画面にリダイレクト
           if (existingSubscriptionId) {
             try {
               const foundSubscription = await stripe.subscriptions.retrieve(existingSubscriptionId);
               if (foundSubscription.status === 'active' || foundSubscription.status === 'trialing') {
-                console.log('🔄 メールアドレスから発見したアクティブなサブスクリプションを更新します:', {
+                console.log('🔄 メールアドレスから発見したアクティブなサブスクリプションを確認:', {
                   subscriptionId: existingSubscriptionId,
                   status: foundSubscription.status,
                   requestedPlan: plan
@@ -316,109 +239,35 @@ export async function POST(request: NextRequest) {
                 } else {
                   const newPriceId = pricingConfig.stripe_price_id;
 
-                  // 同じプランの場合はエラーを返す
+                  // 同じプランの場合は、既に有効であることを通知
                   if (currentPriceId === newPriceId) {
-                    return NextResponse.json(
-                      { 
-                        error: 'Same plan already active', 
-                        details: '既に同じプランが有効です。',
-                        subscriptionId: existingSubscriptionId
-                      },
-                      { status: 400 }
-                    );
-                  }
-
-                  // サブスクリプションを更新（プラン変更）
-                  const updatedSubscription = await stripe.subscriptions.update(existingSubscriptionId, {
-                    items: [{
-                      id: foundSubscription.items.data[0].id,
-                      price: newPriceId || undefined,
-                    }],
-                    metadata: {
-                      user_id: userId,
+                    console.log('ℹ️ 既に同じプランが有効です（メールアドレスから発見）:', {
+                      subscriptionId: existingSubscriptionId,
                       plan: plan,
-                    },
-                    proration_behavior: 'always_invoice', // 即座に請求（比例配分）
-                  });
-
-                  console.log('✅ サブスクリプションを更新しました（メールアドレスから発見）:', {
-                    subscriptionId: updatedSubscription.id,
-                    oldPriceId: currentPriceId,
-                    newPriceId: newPriceId,
-                    plan: plan
-                  });
-
-                  // 有効期限を計算（型エラー回避のためanyにキャスト）
-                  const subscriptionAny = updatedSubscription as any;
-                  const currentPeriodEnd = subscriptionAny.current_period_end 
-                    ? new Date(subscriptionAny.current_period_end * 1000)
-                    : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-                  
-                  let expiresAt: Date;
-                  if (plan === 'subscription') {
-                    // シルバー会員: 現在の期間終了日の1ヶ月後
-                    expiresAt = new Date(currentPeriodEnd);
-                    expiresAt.setMonth(expiresAt.getMonth() + 1);
-                  } else if (plan === 'lifetime') {
-                    // ゴールド会員: 現在の期間終了日の1年後
-                    expiresAt = new Date(currentPeriodEnd);
-                    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-                  } else {
-                    expiresAt = new Date(currentPeriodEnd);
-                    expiresAt.setMonth(expiresAt.getMonth() + 1);
-                  }
-
-                  // user_metadataを更新（決済完了前に会員種別を保存）
-                  const updateData: any = {
-                    membership_type: plan,
-                    subscription_expires_at: expiresAt.toISOString(),
-                    stripe_subscription_id: updatedSubscription.id,
-                    stripe_customer_id: updatedSubscription.customer as string
-                  };
-
-                  const { error: userError } = await supabase.auth.admin.updateUserById(userId, {
-                    user_metadata: {
-                      ...existingUser?.user_metadata,
-                      ...updateData
-                    }
-                  });
-
-                  if (userError) {
-                    console.error('❌ Failed to update user metadata:', userError);
-                  } else {
-                    console.log('✅ User metadata updated (from email):', {
-                      userId,
-                      membershipType: plan,
-                      expiresAt: expiresAt.toISOString()
+                      priceId: currentPriceId
+                    });
+                    
+                    return NextResponse.json({
+                      success: true,
+                      subscriptionId: existingSubscriptionId,
+                      message: '既に同じプランが有効です。',
+                      alreadyActive: true,
+                      plan: plan
                     });
                   }
 
-                  // usersテーブルも更新
-                  const { error: dbError } = await supabase
-                    .from('users')
-                    .update({
-                      membership_type: plan,
-                      subscription_expires_at: expiresAt.toISOString(),
-                      updated_at: new Date().toISOString()
-                    })
-                    .eq('id', userId);
-
-                  if (dbError) {
-                    console.error('❌ Failed to update users table:', dbError);
-                  }
-
-                  // 更新されたサブスクリプションの情報を返す
-                  return NextResponse.json({
-                    success: true,
-                    subscriptionId: updatedSubscription.id,
-                    message: 'サブスクリプションを更新しました。',
-                    updated: true,
-                    plan: plan
+                  // ⚠️ 重要: プランが異なる場合は、決済をスキップせずCheckout Sessionを作成
+                  // サブスクリプション更新は決済完了後にWebhookで処理される
+                  console.log('⚠️ プラン変更が検出されました（メールアドレスから発見）。決済画面にリダイレクトします:', {
+                    currentPriceId,
+                    newPriceId,
+                    plan
                   });
+                  // この時点では何もせず、下のCheckout Session作成処理に進む
                 }
               }
             } catch (err: any) {
-              console.log('ℹ️ メールアドレスから発見したサブスクリプションの更新に失敗。新規作成します。', err.message);
+              console.log('ℹ️ メールアドレスから発見したサブスクリプションの確認に失敗。新規作成します。', err.message);
               // エラーが発生した場合は新規作成を続行
             }
           }
