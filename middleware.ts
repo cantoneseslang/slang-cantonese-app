@@ -35,8 +35,11 @@ export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith('/login') || 
       request.nextUrl.pathname.startsWith('/auth') ||
       request.nextUrl.pathname.startsWith('/api/auth') ||
+      request.nextUrl.pathname.startsWith('/api/webhooks') || // Webhookエンドポイントは認証不要（Stripeから呼ばれる）
       request.nextUrl.pathname.startsWith('/api/contact') ||
       request.nextUrl.pathname.startsWith('/api/translate') ||
+      request.nextUrl.pathname.startsWith('/api/health-check') || // ヘルスチェックエンドポイントも認証不要
+      request.nextUrl.pathname.startsWith('/api/test') || // テストエンドポイントも認証不要
       request.nextUrl.pathname.startsWith('/_next')) {
     return supabaseResponse
   }
