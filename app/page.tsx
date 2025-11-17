@@ -1484,40 +1484,59 @@ export default function Home() {
     }
 
     const dataUrl = `data:audio/mp3;base64,${audioBase64}`;
-    audio.onloadeddata = () => {
+    
+    // モバイル対応: canplaythroughを使用して、十分なデータが読み込まれてから再生
+    // onloadeddataではなくcanplaythroughを使用することで、音声の頭切れを防ぐ
+    let hasPlayed = false;
+    
+    audio.oncanplaythrough = () => {
+      // 重複再生を防ぐ
+      if (hasPlayed) return;
+      hasPlayed = true;
+      
+      // currentTimeを0にリセット（念のため）
+      audio.currentTime = 0;
+      
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise
           .then(() => {
-            console.log(`${logPrefix}: 音声再生成功`, { useWebAudioAPI });
+            console.log(`${logPrefix}: 音声再生成功`, { 
+              useWebAudioAPI,
+              currentTime: audio.currentTime,
+              duration: audio.duration
+            });
           })
           .catch((e) => {
             console.error(`${logPrefix}: 音声再生失敗`, e);
           });
       }
     };
+    
     audio.onerror = (event) => {
       if (audio.src === dataUrl) {
         console.error(`${logPrefix}: 音声ロードエラー`, event);
       }
       audio.onended = null;
-      audio.onloadeddata = null;
+      audio.oncanplaythrough = null;
       audio.onerror = null;
       if (onEnded) {
         onEnded();
       }
     };
+    
     audio.onended = () => {
       if (clearActiveOnEnd && !isLearningMode) {
         setActiveWordId(null);
       }
       audio.onended = null;
-      audio.onloadeddata = null;
+      audio.oncanplaythrough = null;
       audio.onerror = null;
       if (onEnded) {
         onEnded();
       }
     };
+    
     audio.src = dataUrl;
     try {
       audio.load();
