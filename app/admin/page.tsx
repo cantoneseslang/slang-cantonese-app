@@ -316,8 +316,82 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* 統計情報 */}
+        <div style={{
+          marginTop: '2rem',
+          padding: '1.5rem',
+          backgroundColor: '#f9fafb',
+          borderRadius: '12px'
+        }}>
+          <h3 style={{
+            fontSize: '1.25rem',
+            fontWeight: '600',
+            marginBottom: '1rem'
+          }}>
+            📊 統計情報
+          </h3>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '1rem'
+          }}>
+            <div style={{
+              padding: '1rem',
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              border: '1px solid #e5e7eb'
+            }}>
+              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+                総ユーザー数
+              </div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937' }}>
+                {users.length}
+              </div>
+            </div>
+            <div style={{
+              padding: '1rem',
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              border: '1px solid #e5e7eb'
+            }}>
+              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+                ブロンズ会員
+              </div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937' }}>
+                {users.filter(u => u.membership_type === 'free' || !u.membership_type).length}
+              </div>
+            </div>
+            <div style={{
+              padding: '1rem',
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              border: '1px solid #e5e7eb'
+            }}>
+              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+                シルバー会員
+              </div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937' }}>
+                {users.filter(u => u.membership_type === 'subscription').length}
+              </div>
+            </div>
+            <div style={{
+              padding: '1rem',
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              border: '1px solid #e5e7eb'
+            }}>
+              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+                ゴールド会員
+              </div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937' }}>
+                {users.filter(u => u.membership_type === 'lifetime').length}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* 会員情報一覧 */}
-        <div>
+        <div style={{ marginTop: '2rem' }}>
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -669,80 +743,6 @@ export default function AdminPage() {
               </table>
             </div>
           )}
-        </div>
-
-        {/* 統計情報 */}
-        <div style={{
-          marginTop: '3rem',
-          padding: '1.5rem',
-          backgroundColor: '#f9fafb',
-          borderRadius: '12px'
-        }}>
-          <h3 style={{
-            fontSize: '1.25rem',
-            fontWeight: '600',
-            marginBottom: '1rem'
-          }}>
-            📊 統計情報
-          </h3>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '1rem'
-          }}>
-            <div style={{
-              padding: '1rem',
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              border: '1px solid #e5e7eb'
-            }}>
-              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
-                総ユーザー数
-              </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937' }}>
-                {users.length}
-              </div>
-            </div>
-            <div style={{
-              padding: '1rem',
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              border: '1px solid #e5e7eb'
-            }}>
-              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
-                ブロンズ会員
-              </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937' }}>
-                {users.filter(u => u.membership_type === 'free' || !u.membership_type).length}
-              </div>
-            </div>
-            <div style={{
-              padding: '1rem',
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              border: '1px solid #e5e7eb'
-            }}>
-              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
-                シルバー会員
-              </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937' }}>
-                {users.filter(u => u.membership_type === 'subscription').length}
-              </div>
-            </div>
-            <div style={{
-              padding: '1rem',
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              border: '1px solid #e5e7eb'
-            }}>
-              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
-                ゴールド会員
-              </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937' }}>
-                {users.filter(u => u.membership_type === 'lifetime').length}
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* 月別会員登録数・売上分析 */}

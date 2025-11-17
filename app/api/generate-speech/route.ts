@@ -66,25 +66,17 @@ export async function POST(request: NextRequest) {
 
     const voiceParams: VoiceConfig = selectedVoice ?? defaultVoice;
     
-    // 「一」の発音問題対策: スペースを追加して自然なポーズを作る
+    // 「一」の発音問題対策: 「一」単独の場合のみスペースを追加
     let finalText = text;
     let useSSML = false;
     
-    // 「一」で始まるテキストの場合、スペースを追加
+    // 「一」単独の場合のみスペースを追加（100, 1000, 10000は問題ないのでそのまま）
     if (text === '一') {
       // 「一」単独の場合は前後にスペース
       finalText = ' 一 ';
       console.log('🔧 「一」対策: スペース追加', { originalText: text, modifiedText: finalText });
-    } else if (text === '一百') {
-      finalText = '一 百';
-      console.log('🔧 「一百」対策: スペース追加', { originalText: text, modifiedText: finalText });
-    } else if (text === '一千') {
-      finalText = '一 千';
-      console.log('🔧 「一千」対策: スペース追加', { originalText: text, modifiedText: finalText });
-    } else if (text === '一萬') {
-      finalText = '一 萬';
-      console.log('🔧 「一萬」対策: スペース追加', { originalText: text, modifiedText: finalText });
     }
+    // 一百、一千、一萬はそのまま（問題なし）
     
     const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`;
     const payload = {
