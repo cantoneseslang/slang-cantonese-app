@@ -66,25 +66,18 @@ export async function POST(request: NextRequest) {
 
     const voiceParams: VoiceConfig = selectedVoice ?? defaultVoice;
     
-    // 「一」の発音問題対策: 複数の戦略を試す
+    // 「一」の発音問題対策: 発話速度を遅くして頭切れを防ぐ
     let finalText = text;
     let useSSML = false;
     
-    // 戦略1: 「一」で始まるテキストの場合、SSMLで無音を前後に追加して発音を強制
+    // 「一」で始まるテキストの場合、SSMLで発話速度を遅くして頭切れを防ぐ
     if (text === '一' || text.startsWith('一百') || text.startsWith('一千') || text.startsWith('一萬')) {
-      // SSML形式で、「一」の前後に短い無音を追加して頭切れを防ぐ
-      // break timeで50msの無音を追加
-      finalText = `<speak><break time="50ms"/><prosody rate="0.9" pitch="+0st">${text}</prosody><break time="50ms"/></speak>`;
+      // SSML形式で、発話速度を遅くして「一」を明瞭に発音
+      // breakを使わず、rateとpitchのみで調整（プツッという音を防ぐ）
+      finalText = `<speak><prosody rate="0.85" pitch="+0st">${text}</prosody></speak>`;
       useSSML = true;
-      console.log('🔧 「一」対策: SSML形式（無音追加）を使用', { originalText: text, ssmlText: finalText });
+      console.log('🔧 「一」対策: SSML形式（速度調整）を使用', { originalText: text, ssmlText: finalText });
     }
-    
-    // デバッグ用: アラビア数字を試す場合のログ
-    // if (text === '一百') {
-    //   finalText = '100';
-    //   useSSML = false;
-    //   console.log('🧪 テスト: アラビア数字を使用', { originalText: text, arabicNumber: finalText });
-    // }
     
     const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`;
     const payload = {
