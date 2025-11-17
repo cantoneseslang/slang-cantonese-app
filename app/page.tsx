@@ -5588,16 +5588,8 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       
       // 単語の音声のみを生成して再生
       try {
-        // モバイル対策: 「一」の場合は二重にスペースを追加
-        let textForSpeech = word.chinese;
-        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && word.chinese === '一') {
-          textForSpeech = '  一  '; // 前後に2つのスペース
-          console.log('📱 モバイル「一」対策: スペースを追加', { original: word.chinese, modified: textForSpeech });
-        }
-        
         console.log('ノーマルモード: API呼び出し開始', { 
           text: word.chinese,
-          textForSpeech: textForSpeech,
           japanese: word.japanese,
           categoryId: selectedCategory
         });
@@ -5607,7 +5599,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ text: textForSpeech }),
+          body: JSON.stringify({ text: word.chinese }),
         });
         
         console.log('ノーマルモード: APIレスポンス受信', { 
