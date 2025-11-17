@@ -1383,26 +1383,38 @@ export default function Home() {
       await setAudioOutputDevice(currentAudioOutputDevice, audio);
     }
     
-    audio.onloadeddata = () => {
+    // モバイル対応: canplaythroughを使用して、十分なデータが読み込まれてから再生
+    let hasPlayed = false;
+    
+    audio.oncanplaythrough = () => {
+      if (hasPlayed) return;
+      hasPlayed = true;
+      
+      // currentTimeを0にリセット（念のため）
+      audio.currentTime = 0;
+      
       audio
         .play()
         .catch((e) => {
           console.error(`${errorLabel}:`, e);
         });
     };
+    
     audio.onerror = (event) => {
       if (audio.src === dataUrl) {
         console.error('音声ロードエラー:', event);
       }
     };
+    
     audio.onended = () => {
       audio.onended = null;
-      audio.onloadeddata = null;
+      audio.oncanplaythrough = null;
       audio.onerror = null;
       if (onEnded) {
         onEnded();
       }
     };
+    
     audio.src = dataUrl;
     try {
       audio.load();
