@@ -52,6 +52,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" style={{ colorScheme: 'light' }}>
+      <head>
+        {/* モバイルデバッグ用: Erudaコンソール（開発環境のみ） */}
+        {process.env.NODE_ENV === 'development' && (
+          <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+        )}
+        {process.env.NODE_ENV === 'development' && (
+          <script dangerouslySetInnerHTML={{ __html: 'eruda.init();' }} />
+        )}
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
