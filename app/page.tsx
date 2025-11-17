@@ -1539,6 +1539,10 @@ export default function Home() {
       const primaryValueRaw = displayInfo.primaryValue?.replace(/[^\d.\-]/g, '');
       if (primaryValueRaw) {
         numericForSpeech = convertNumberToCantoneseReading(primaryValueRaw);
+        console.log('🔊 数字変換（primaryValue）:', {
+          input: primaryValueRaw,
+          output: numericForSpeech
+        });
     }
 
       if (displayInfo.primaryLabel) {
@@ -1549,6 +1553,10 @@ export default function Home() {
         const sanitizedCalculatorValue = calculatorDisplay.replace(/,/g, '');
         const fallbackNumeric = sanitizedCalculatorValue.replace(/[^\d.\-]/g, '') || '0';
         numericForSpeech = convertNumberToCantoneseReading(fallbackNumeric);
+        console.log('🔊 数字変換（fallback）:', {
+          input: fallbackNumeric,
+          output: numericForSpeech
+        });
       }
 
     if (!numericForSpeech) {
@@ -1556,6 +1564,13 @@ export default function Home() {
     }
 
     const speechText = unitForSpeech ? `${numericForSpeech} ${unitForSpeech}` : numericForSpeech;
+    console.log('🔊 音声生成リクエスト:', {
+      speechText,
+      numericForSpeech,
+      unitForSpeech,
+      calculatorDisplay,
+      isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    });
 
     try {
       const response = await fetch('/api/generate-speech', {
@@ -1566,17 +1581,29 @@ export default function Home() {
         body: JSON.stringify({ text: speechText, language }),
       });
 
+      console.log('🔊 音声生成APIレスポンス:', {
+        status: response.status,
+        ok: response.ok
+      });
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ 音声生成APIエラー:', errorText);
         throw new Error(`音声生成に失敗しました: ${response.status}`);
       }
 
       const audioData = await response.json();
+      console.log('🔊 音声データ受信:', {
+        hasAudioContent: !!audioData?.audioContent,
+        audioContentLength: audioData?.audioContent?.length || 0
+      });
+      
       if (audioData?.audioContent) {
         playNormalModeAudio(audioData.audioContent, { logPrefix: '数字ツール' });
         setCalculatorError(null);
       }
     } catch (error) {
-      console.error('計算結果の読み上げエラー:', error);
+      console.error('❌ 計算結果の読み上げエラー:', error);
       setCalculatorError('音声生成に失敗しました');
     }
   }, [activeConversionPanel, calculatorDisplay, calculatorError, displayInfo, playNormalModeAudio]);
