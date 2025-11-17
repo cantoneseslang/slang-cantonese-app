@@ -2946,8 +2946,12 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         console.error('OCR利用回数取得エラー:', err);
       }
       
-      // デフォルトカテゴリーの設定
-      if (user.user_metadata?.default_category_id) {
+      // デフォルトカテゴリーの設定（シルバー・ゴールド会員のみ保存可能）
+      // ブロンズ会員の場合は常にデフォルト値を使用
+      if (membershipType === 'free') {
+        console.log('📋 ブロンズ会員のため、デフォルト値（pronunciation）を使用');
+        setDefaultCategoryId('pronunciation');
+      } else if (user.user_metadata?.default_category_id) {
         console.log('📋 デフォルトカテゴリーを読み込み:', user.user_metadata.default_category_id);
         setDefaultCategoryId(user.user_metadata.default_category_id);
       } else {
@@ -4764,8 +4768,19 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       alert('ログインが必要です。');
       return;
     }
+
+    // シルバー・ゴールド会員のみ保存可能
+    if (membershipType === 'free') {
+      alert('ブロンズ会員はデフォルトカテゴリーの変更ができません。');
+      return;
+    }
     
-    console.log('💾 デフォルトカテゴリー保存開始:', { newCategoryId, currentDefaultCategoryId: defaultCategoryId });
+    console.log('💾 デフォルトカテゴリー保存開始:', { 
+      newCategoryId, 
+      currentDefaultCategoryId: defaultCategoryId,
+      membershipType,
+      userId: user.id
+    });
     
     setIsSavingDefaultCategory(true);
     try {
@@ -4773,7 +4788,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       const currentMetadata = user.user_metadata || {};
       const updatedMetadata = {
         ...currentMetadata,
-          default_category_id: newCategoryId
+        default_category_id: newCategoryId
       };
       
       console.log('💾 メタデータ更新:', {
@@ -4782,6 +4797,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         newCategoryId
       });
       
+      // Supabaseに保存
       const { data, error } = await supabase.auth.updateUser({
         data: updatedMetadata
       });
@@ -4793,7 +4809,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         return;
       }
 
-      console.log('✅ デフォルトカテゴリー保存成功:', { 
+      console.log('✅ updateUser成功:', { 
         newCategoryId, 
         updatedUser: data.user,
         savedMetadata: data.user?.user_metadata
@@ -4803,8 +4819,10 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       setDefaultCategoryId(newCategoryId);
       setShowCategoryPicker(false);
       
-      // ユーザー情報を再取得して最新の状態を反映（セッションを更新）
+      // ユーザー情報を再取得して最新の状態を反映（少し待ってから再取得）
+      await new Promise(resolve => setTimeout(resolve, 500));
       const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
+      
       if (getUserError) {
         console.error('❌ ユーザー情報再取得エラー:', getUserError);
         // エラーでもdata.userから直接更新を試みる
@@ -4825,19 +4843,36 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         
         // 保存された値が正しいか確認
         if (updatedUser.user_metadata?.default_category_id !== newCategoryId) {
-          console.warn('⚠️ 保存された値が一致しません:', {
+          console.warn('⚠️ 保存された値が一致しません。再試行します:', {
             expected: newCategoryId,
             actual: updatedUser.user_metadata?.default_category_id
           });
-          // 再試行（念のため）
-          console.log('🔄 再試行中...');
+          
+          // 再試行（user_metadata全体を更新）
           const retryMetadata = {
             ...updatedUser.user_metadata,
             default_category_id: newCategoryId
           };
-          await supabase.auth.updateUser({
+          const { data: retryData, error: retryError } = await supabase.auth.updateUser({
             data: retryMetadata
           });
+          
+          if (retryError) {
+            console.error('❌ 再試行エラー:', retryError);
+            alert(`デフォルトカテゴリーの保存に失敗しました: ${retryError.message}`);
+            setIsSavingDefaultCategory(false);
+            return;
+          }
+          
+          // 再取得
+          const { data: { user: retryUpdatedUser } } = await supabase.auth.getUser();
+          if (retryUpdatedUser) {
+            setUser(retryUpdatedUser);
+            setDefaultCategoryId(retryUpdatedUser.user_metadata?.default_category_id || newCategoryId);
+            console.log('✅ 再試行成功:', {
+              default_category_id: retryUpdatedUser.user_metadata?.default_category_id
+            });
+          }
         } else {
           console.log('✅ 保存確認完了: 値が正しく保存されています');
         }
@@ -4862,7 +4897,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         alert(`カテゴリー「${newCategoryId}」が見つかりません。`);
       }
       
-      alert('デフォルトカテゴリーを保存しました。');
+      alert('デフォルトカテゴリーを保存しました。次回のログイン時から適用されます。');
     } catch (err) {
       console.error('❌ デフォルトカテゴリー保存失敗:', err);
       alert(`デフォルトカテゴリーの保存に失敗しました: ${err instanceof Error ? err.message : '不明なエラー'}`);
