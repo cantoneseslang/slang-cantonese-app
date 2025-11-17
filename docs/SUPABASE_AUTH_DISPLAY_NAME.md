@@ -5,7 +5,9 @@ Googleログイン時に「qdmvituurfevyibtzwsb.supabase.co/」に移動とい�
 
 ## 解決方法
 
-### 方法1: Supabaseダッシュボードでサイト名を変更（推奨）
+**重要：** 表示名を変更するには、**Supabaseダッシュボードでの設定が最も簡単で確実な方法**です。Google Cloud Consoleは、Supabaseが独自のOAuthアプリケーションを使用している場合のみ関係します。
+
+### 方法1: Supabaseダッシュボードでサイト名を変更（推奨・最も簡単）
 
 1. **Supabaseダッシュボードにアクセス**
    - https://supabase.com/dashboard
@@ -35,11 +37,19 @@ Supabaseの認証をカスタムドメインで提供する場合：
 2. **環境変数を更新**
    - `NEXT_PUBLIC_SUPABASE_URL` をカスタムドメインに変更
 
-### 方法3: Google OAuth設定でアプリ名を変更
+### 方法3: Google Cloud Consoleでアプリ名を変更（Supabaseが独自のOAuthアプリを使用している場合のみ）
 
+**注意：** この方法は、Supabaseが独自のGoogle Cloud Consoleプロジェクトを使用している場合のみ有効です。SupabaseがデフォルトのOAuthアプリを使用している場合は、この方法では変更できません。
+
+**確認方法：**
+1. Supabaseダッシュボード → 「Authentication」→「Providers」→「Google」
+2. 「Client ID」と「Client Secret」が設定されているか確認
+3. 設定されている場合のみ、以下の手順を実行
+
+**手順：**
 1. **Google Cloud Consoleにアクセス**
    - https://console.cloud.google.com/
-   - プロジェクトを選択
+   - Supabaseで使用しているプロジェクトを選択（通常はSupabaseが自動的に作成）
 
 2. **OAuth同意画面を編集**
    - 「APIとサービス」→「OAuth同意画面」
