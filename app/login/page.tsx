@@ -304,12 +304,6 @@ function LoginForm() {
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback?survey=true`,
-          queryParams: {
-            // アプリ名を指定（Google OAuth画面での表示名に影響する可能性）
-            hd: window.location.hostname, // ホスト名を指定
-          },
-          // スコープを明示的に指定
-          scopes: 'email profile',
         },
       });
 
