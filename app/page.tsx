@@ -1577,7 +1577,7 @@ export default function Home() {
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && calculatorDisplay === '1') {
       const debugMsg = `[${deviceType}]\n入力: ${calculatorDisplay}\n変換: ${numericForSpeech}\n送信: ${speechText}`;
       console.log('🐛 デバッグ情報:', debugMsg);
-      // alert(debugMsg); // 必要に応じてコメント解除
+      alert(debugMsg); // デバッグ用アラート表示
     }
 
     try {
