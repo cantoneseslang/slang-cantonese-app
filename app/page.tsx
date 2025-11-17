@@ -3642,11 +3642,23 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'サブスクリプションのキャンセルに失敗しました');
+          let errorMessage = 'サブスクリプションのキャンセルに失敗しました';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorData.details || errorMessage;
+          } catch (e) {
+            // JSON解析に失敗した場合はデフォルトメッセージを使用
+            errorMessage = `エラー: ${response.status} ${response.statusText}`;
+          }
+          throw new Error(errorMessage);
         }
 
-        const { expiresAt } = await response.json();
+        const result = await response.json();
+        const expiresAt = result.expiresAt || result.currentPeriodEnd;
+        
+        if (!expiresAt) {
+          throw new Error('有効期限の取得に失敗しました');
+        }
         
         setShowPricingModal(false);
         setSelectedPlan(null);
@@ -3688,6 +3700,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         alert('ブロンズ会員に変更しました！');
       }
     } catch (err: any) {
+      console.error('ダウングレードエラー:', err);
       alert('エラーが発生しました: ' + err.message);
       setShowPricingModal(true);
     }
@@ -3697,6 +3710,26 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     if (!user) {
       alert('ログインが必要です。');
       return;
+    }
+
+    // アップグレードの場合は確認ダイアログを表示
+    const isUpgrade = (
+      (membershipType === 'free' && (plan === 'subscription' || plan === 'lifetime')) ||
+      (membershipType === 'subscription' && plan === 'lifetime')
+    );
+
+    if (isUpgrade) {
+      const planName = plan === 'subscription' ? 'シルバー会員' : plan === 'lifetime' ? 'ゴールド会員' : 'ブロンズ会員';
+      const currentPlanName = membershipType === 'free' ? 'ブロンズ会員' : membershipType === 'subscription' ? 'シルバー会員' : 'ゴールド会員';
+      
+      const confirmed = confirm(
+        `${currentPlanName}から${planName}にアップグレードしますか？\n\n` +
+        `この操作により、決済画面に移動します。`
+      );
+      
+      if (!confirmed) {
+        return; // キャンセルされた場合は処理を中断
+      }
     }
 
     try {
