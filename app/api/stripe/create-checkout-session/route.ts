@@ -167,9 +167,10 @@ export async function POST(request: NextRequest) {
             plan: plan
           });
 
-          // 有効期限を計算
-          const currentPeriodEnd = updatedSubscription.current_period_end 
-            ? new Date(updatedSubscription.current_period_end * 1000)
+          // 有効期限を計算（型エラー回避のためanyにキャスト）
+          const subscriptionAny = updatedSubscription as any;
+          const currentPeriodEnd = subscriptionAny.current_period_end 
+            ? new Date(subscriptionAny.current_period_end * 1000)
             : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
           
           let expiresAt: Date;
@@ -347,9 +348,10 @@ export async function POST(request: NextRequest) {
                     plan: plan
                   });
 
-                  // 有効期限を計算
-                  const currentPeriodEnd = updatedSubscription.current_period_end 
-                    ? new Date(updatedSubscription.current_period_end * 1000)
+                  // 有効期限を計算（型エラー回避のためanyにキャスト）
+                  const subscriptionAny = updatedSubscription as any;
+                  const currentPeriodEnd = subscriptionAny.current_period_end 
+                    ? new Date(subscriptionAny.current_period_end * 1000)
                     : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
                   
                   let expiresAt: Date;
