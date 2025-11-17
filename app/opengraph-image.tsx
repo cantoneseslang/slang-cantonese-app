@@ -1,5 +1,4 @@
 import { ImageResponse } from 'next/og';
-import OG_IMAGE_BASE64 from '@/lib/og-image-base64';
 
 export const alt = 'スラング式カントン語音れん - 広東語万能辞書';
 export const size = {
@@ -10,8 +9,26 @@ export const size = {
 export const contentType = 'image/png';
 
 export default async function Image() {
-  // Base64エンコードされた画像のdata URL
-  const imageUrl = `data:image/png;base64,${OG_IMAGE_BASE64}`;
+  // 画像のURLを取得（本番環境と開発環境の両方に対応）
+  const baseUrl = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : process.env.NEXT_PUBLIC_SITE_URL || 'https://slang-cantonese-app.vercel.app';
+  const imageUrl = `${baseUrl}/og-image.png`;
+
+  // 画像をfetchで読み込んでBase64エンコード
+  let imageDataUrl: string | null = null;
+  try {
+    const response = await fetch(imageUrl);
+    if (response.ok) {
+      const arrayBuffer = await response.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      // Base64エンコード（エッジランタイム対応）
+      const base64 = btoa(String.fromCharCode(...uint8Array));
+      imageDataUrl = `data:image/png;base64,${base64}`;
+    }
+  } catch (error) {
+    console.error('Failed to load image:', error);
+  }
 
   return new ImageResponse(
     (
@@ -91,17 +108,33 @@ export default async function Image() {
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
           }}
         >
-          <img
-            src={imageUrl}
-            alt="カントン語音れん"
-            width={400}
-            height={470}
-            style={{
-              objectFit: 'cover',
-              width: '100%',
-              height: '100%',
-            }}
-          />
+          {imageDataUrl ? (
+            <img
+              src={imageDataUrl}
+              alt="カントン語音れん"
+              width={400}
+              height={470}
+              style={{
+                objectFit: 'cover',
+                width: '100%',
+                height: '100%',
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '48px',
+              }}
+            >
+              🇭🇰
+            </div>
+          )}
         </div>
       </div>
     ),
