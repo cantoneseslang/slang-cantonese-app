@@ -1564,6 +1564,7 @@ export default function Home() {
     }
 
     const speechText = unitForSpeech ? `${numericForSpeech} ${unitForSpeech}` : numericForSpeech;
+    const deviceType = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? 'モバイル' : 'PC';
     console.log('🔊 音声生成リクエスト:', {
       speechText,
       numericForSpeech,
@@ -1571,6 +1572,13 @@ export default function Home() {
       calculatorDisplay,
       isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
     });
+    
+    // デバッグ用: モバイルで発音テキストを確認（一時的）
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && calculatorDisplay === '1') {
+      const debugMsg = `[${deviceType}]\n入力: ${calculatorDisplay}\n変換: ${numericForSpeech}\n送信: ${speechText}`;
+      console.log('🐛 デバッグ情報:', debugMsg);
+      // alert(debugMsg); // 必要に応じてコメント解除
+    }
 
     try {
       const response = await fetch('/api/generate-speech', {
