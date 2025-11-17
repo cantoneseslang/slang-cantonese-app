@@ -9,6 +9,12 @@ export const size = {
 export const contentType = 'image/png';
 
 export default async function Image() {
+  // 画像のURLを取得（本番環境と開発環境の両方に対応）
+  const baseUrl = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : process.env.NEXT_PUBLIC_SITE_URL || 'https://slang-cantonese-app.vercel.app';
+  const imageUrl = `${baseUrl}/og-image.png`;
+
   return new ImageResponse(
     (
       <div
@@ -73,30 +79,31 @@ export default async function Image() {
           </div>
         </div>
 
-        {/* 右側: 画像またはアイコン */}
+        {/* 右側: 写真 */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '300px',
-            height: '300px',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            width: '400px',
+            height: '470px',
             borderRadius: '20px',
-            border: '4px solid rgba(255, 255, 255, 0.2)',
+            overflow: 'hidden',
+            border: '4px solid rgba(255, 255, 255, 0.3)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
           }}
         >
-          {/* 絵文字またはアイコンを表示 */}
-          <div
+          <img
+            src={imageUrl}
+            alt="カントン語音れん"
+            width={400}
+            height={470}
             style={{
-              fontSize: '180px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              objectFit: 'cover',
+              width: '100%',
+              height: '100%',
             }}
-          >
-            🇭🇰
-          </div>
+          />
         </div>
       </div>
     ),
