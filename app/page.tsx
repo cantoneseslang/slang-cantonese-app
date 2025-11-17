@@ -3723,9 +3723,9 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
 
       const data = await response.json();
 
-      // サブスクリプションが更新された場合（新規作成ではなく更新）
-      if (data.updated) {
-        console.log('✅ サブスクリプションが更新されました:', data);
+      // サブスクリプションが更新された場合、または既に同じプランが有効な場合
+      if (data.updated || data.alreadyActive) {
+        console.log('✅ サブスクリプション情報:', data);
         
         // ユーザー情報を再取得してUIを更新
         const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
@@ -3743,7 +3743,13 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         setIsDowngrade(false);
         setCouponCode('');
         
-        alert(data.message || 'サブスクリプションを更新しました。');
+        // 既に同じプランが有効な場合のメッセージ
+        if (data.alreadyActive) {
+          const planName = data.plan === 'subscription' ? 'シルバー会員' : data.plan === 'lifetime' ? 'ゴールド会員' : 'ブロンズ会員';
+          alert(`既に${planName}プランが有効です。`);
+        } else {
+          alert(data.message || 'サブスクリプションを更新しました。');
+        }
         return;
       }
 

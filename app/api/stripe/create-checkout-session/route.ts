@@ -130,16 +130,21 @@ export async function POST(request: NextRequest) {
 
           const newPriceId = pricingConfig.stripe_price_id;
 
-          // 同じプランの場合はエラーを返す
+          // 同じプランの場合は、既に有効であることを通知（エラーではなく成功として扱う）
           if (currentPriceId === newPriceId) {
-            return NextResponse.json(
-              { 
-                error: 'Same plan already active', 
-                details: '既に同じプランが有効です。',
-                subscriptionId: existingSubscriptionId
-              },
-              { status: 400 }
-            );
+            console.log('ℹ️ 既に同じプランが有効です:', {
+              subscriptionId: existingSubscriptionId,
+              plan: plan,
+              priceId: currentPriceId
+            });
+            
+            return NextResponse.json({
+              success: true,
+              subscriptionId: existingSubscriptionId,
+              message: '既に同じプランが有効です。',
+              alreadyActive: true,
+              plan: plan
+            });
           }
 
           // サブスクリプションを更新（プラン変更）
