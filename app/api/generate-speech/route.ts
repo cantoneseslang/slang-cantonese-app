@@ -66,15 +66,16 @@ export async function POST(request: NextRequest) {
 
     const voiceParams: VoiceConfig = selectedVoice ?? defaultVoice;
     
-    // 「一」の発音問題対策: 「一」を「壹」（大字）に置換
+    // 「一」の発音問題対策: SSMLで短い無音を追加
     let finalText = text;
     let useSSML = false;
     
-    // 「一」を含むテキストの場合、「壹」（大字）に置換
-    // Google TTSが「壹」を正しく「イー」と発音し、頭切れの問題が解決される
-    if (text.includes('一')) {
-      finalText = text.replace(/一/g, '壹');
-      console.log('🔧 「一」対策: 大字「壹」に置換', { originalText: text, modifiedText: finalText });
+    // 「一」または「一」で始まる数字の場合、SSMLで短い無音を追加
+    if (text === '一' || text.startsWith('一百') || text.startsWith('一千') || text.startsWith('一萬')) {
+      // 前に20msの短い無音を追加（プツッという音は小さいが「一」は発音される）
+      finalText = `<speak><break time="20ms"/>${text}</speak>`;
+      useSSML = true;
+      console.log('🔧 「一」対策: SSML（20ms break）を使用', { originalText: text, ssmlText: finalText });
     }
     
     const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`;
