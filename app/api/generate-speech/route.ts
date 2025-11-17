@@ -66,17 +66,24 @@ export async function POST(request: NextRequest) {
 
     const voiceParams: VoiceConfig = selectedVoice ?? defaultVoice;
     
-    // 「一」の発音問題対策: テキストの前に句点を追加して頭切れを防ぐ
+    // 「一」の発音問題対策: アラビア数字を使用
     let finalText = text;
     let useSSML = false;
     
-    // 「一」で始まるテキストの場合、前に句点を追加して頭切れを防ぐ
-    // SSMLを使わず、通常のテキストとして送信（プツッという音を防ぐ）
-    if (text === '一' || text.startsWith('一百') || text.startsWith('一千') || text.startsWith('一萬')) {
-      // 句点（。）を前に追加して、Google TTSに「一」を明瞭に発音させる
-      finalText = `。${text}`;
-      useSSML = false;
-      console.log('🔧 「一」対策: 句点を前に追加', { originalText: text, modifiedText: finalText });
+    // 「一」で始まるテキストの場合、アラビア数字に変換して送信
+    // Google TTS APIが数字を広東語で正しく読み上げる
+    if (text === '一') {
+      finalText = '1';
+      console.log('🔧 「一」対策: アラビア数字を使用', { originalText: text, arabicNumber: finalText });
+    } else if (text === '一百') {
+      finalText = '100';
+      console.log('🔧 「一百」対策: アラビア数字を使用', { originalText: text, arabicNumber: finalText });
+    } else if (text === '一千') {
+      finalText = '1000';
+      console.log('🔧 「一千」対策: アラビア数字を使用', { originalText: text, arabicNumber: finalText });
+    } else if (text === '一萬') {
+      finalText = '10000';
+      console.log('🔧 「一萬」対策: アラビア数字を使用', { originalText: text, arabicNumber: finalText });
     }
     
     const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`;
