@@ -348,6 +348,7 @@ export async function POST(request: NextRequest) {
       // 現在の会員種別を取得（lifetime会員のダウングレードを防止するため）
       const { data: { user: currentUser } } = await supabase.auth.admin.getUserById(userId);
       const currentMembershipType = currentUser?.user_metadata?.membership_type || currentUser?.app_metadata?.membership_type;
+      const existingSubscriptionId = currentUser?.user_metadata?.stripe_subscription_id;
       
       // ゴールド会員（lifetime）は永久会員のため、ダウングレードを防止
       if (currentMembershipType === 'lifetime' && plan !== 'lifetime') {
@@ -364,23 +365,83 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      // ⚠️ 重要: 既存サブスクリプションがある場合、新しいサブスクリプションを作成する前に既存のものをキャンセル
+      // これにより、2つのサブスクリプションが存在することを防ぐ
+      if (existingSubscriptionId && existingSubscriptionId !== session.subscription) {
+        try {
+          console.log('🔄 既存サブスクリプションをキャンセルします:', {
+            existingSubscriptionId,
+            newSubscriptionId: session.subscription
+          });
+          
+          // 既存サブスクリプションをキャンセル（期間終了時に自動キャンセル）
+          await stripe.subscriptions.update(existingSubscriptionId, {
+            cancel_at_period_end: true
+          });
+          
+          console.log('✅ 既存サブスクリプションを期間終了時にキャンセルするように設定しました');
+        } catch (cancelError: any) {
+          console.error('❌ 既存サブスクリプションのキャンセルに失敗:', cancelError);
+          // エラーが発生しても処理を続行（新しいサブスクリプションは作成済み）
+        }
+      }
+
       // ユーザーの会員種別を更新
       const updateData: any = {
         membership_type: plan,
       };
 
-      // サブスクリプションの場合は有効期限を設定、lifetimeの場合はnullに設定
+      // サブスクリプションの実際の期間終了日を取得して有効期限を設定
       let expiresAt: string | null = null;
-      if (plan === 'subscription') {
-        const expiresDate = new Date();
-        expiresDate.setMonth(expiresDate.getMonth() + 1);
-        expiresAt = expiresDate.toISOString();
-        updateData.subscription_expires_at = expiresAt;
-      } else if (plan === 'lifetime') {
-        // ゴールド会員（年間一括割引）: 1年後
-        const expiresDate = new Date();
-        expiresDate.setFullYear(expiresDate.getFullYear() + 1);
-        expiresAt = expiresDate.toISOString();
+      if (session.subscription) {
+        try {
+          // サブスクリプション情報を取得して期間終了日を確認
+          const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+          const subscriptionAny = subscription as any;
+          const currentPeriodEnd = subscriptionAny.current_period_end 
+            ? new Date(subscriptionAny.current_period_end * 1000)
+            : null;
+          
+          if (currentPeriodEnd) {
+            if (plan === 'subscription') {
+              // シルバー会員: 現在の期間終了日の1ヶ月後
+              const expiresDate = new Date(currentPeriodEnd);
+              expiresDate.setMonth(expiresDate.getMonth() + 1);
+              expiresAt = expiresDate.toISOString();
+            } else if (plan === 'lifetime') {
+              // ゴールド会員: 現在の期間終了日の1年後
+              const expiresDate = new Date(currentPeriodEnd);
+              expiresDate.setFullYear(expiresDate.getFullYear() + 1);
+              expiresAt = expiresDate.toISOString();
+            }
+          }
+        } catch (subError: any) {
+          console.error('❌ サブスクリプション情報の取得に失敗:', subError);
+          // フォールバック: 固定の日付を使用
+          if (plan === 'subscription') {
+            const expiresDate = new Date();
+            expiresDate.setMonth(expiresDate.getMonth() + 1);
+            expiresAt = expiresDate.toISOString();
+          } else if (plan === 'lifetime') {
+            const expiresDate = new Date();
+            expiresDate.setFullYear(expiresDate.getFullYear() + 1);
+            expiresAt = expiresDate.toISOString();
+          }
+        }
+      } else {
+        // サブスクリプションIDがない場合（lifetimeプランの場合など）
+        if (plan === 'subscription') {
+          const expiresDate = new Date();
+          expiresDate.setMonth(expiresDate.getMonth() + 1);
+          expiresAt = expiresDate.toISOString();
+        } else if (plan === 'lifetime') {
+          const expiresDate = new Date();
+          expiresDate.setFullYear(expiresDate.getFullYear() + 1);
+          expiresAt = expiresDate.toISOString();
+        }
+      }
+      
+      if (expiresAt) {
         updateData.subscription_expires_at = expiresAt;
       }
 

@@ -3756,32 +3756,20 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
 
       const data = await response.json();
 
-      // 既に同じプランが有効な場合、または既存サブスクリプションが更新された場合
-      if (data.alreadyActive || data.updated) {
-        console.log('✅ サブスクリプション情報:', data);
+      // 既に同じプランが有効な場合のみ処理
+      // プラン変更の場合は、必ずCheckout Sessionを作成して決済画面にリダイレクト
+      if (data.alreadyActive) {
+        console.log('✅ 既に同じプランが有効です:', data);
         
         // ユーザー情報を再取得してUIを更新
         const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
         
         if (getUserError) {
           console.error('ユーザー情報の再取得エラー:', getUserError);
-          // エラーが発生した場合でも、APIから返されたplanを使用
-          if (data.plan) {
-            setMembershipType(data.plan);
-          }
         } else if (updatedUser) {
           setUser(updatedUser);
-          // APIから返されたplanとuser_metadataの両方を確認
           const newMembershipType = updatedUser.user_metadata?.membership_type || data.plan || 'free';
           setMembershipType(newMembershipType);
-          console.log('✅ 会員種別を更新しました:', {
-            fromAPI: data.plan,
-            fromMetadata: updatedUser.user_metadata?.membership_type,
-            final: newMembershipType
-          });
-        } else if (data.plan) {
-          // ユーザー情報が取得できない場合でも、APIから返されたplanを使用
-          setMembershipType(data.plan);
         }
 
         setShowPricingModal(false);
@@ -3789,13 +3777,8 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         setIsDowngrade(false);
         setCouponCode('');
         
-        if (data.alreadyActive) {
-          const planName = data.plan === 'subscription' ? 'シルバー会員' : data.plan === 'lifetime' ? 'ゴールド会員' : 'ブロンズ会員';
-          alert(`既に${planName}プランが有効です。`);
-        } else if (data.updated) {
-          const planName = data.plan === 'subscription' ? 'シルバー会員' : data.plan === 'lifetime' ? 'ゴールド会員' : 'ブロンズ会員';
-          alert(`${planName}にアップグレードしました！\n決済は自動的に処理されます。`);
-        }
+        const planName = data.plan === 'subscription' ? 'シルバー会員' : data.plan === 'lifetime' ? 'ゴールド会員' : 'ブロンズ会員';
+        alert(`既に${planName}プランが有効です。`);
         return;
       }
 
