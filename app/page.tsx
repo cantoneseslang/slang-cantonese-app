@@ -4932,11 +4932,14 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   // ユーザー情報とデフォルトカテゴリーが読み込まれた後にカテゴリーを適用（初回ロード時のみ）
   const hasAppliedDefaultCategory = useRef(false);
   
-  // userが変更されたらリセット（ログアウト/ログイン時）
+  // userまたはdefaultCategoryIdが変更されたらリセット
   useEffect(() => {
     hasAppliedDefaultCategory.current = false;
-    console.log('🔄 ユーザー変更検知、デフォルトカテゴリー適用をリセット');
-  }, [user?.id]);
+    console.log('🔄 ユーザーまたはデフォルトカテゴリー変更検知、適用をリセット', {
+      userId: user?.id,
+      defaultCategoryId
+    });
+  }, [user?.id, defaultCategoryId]);
   
   useEffect(() => {
     // カテゴリーが読み込まれていない場合は待機
@@ -4945,9 +4948,20 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       return;
     }
     
+    // ユーザー情報が読み込まれるまで待機（ログインしている場合）
+    if (user && !defaultCategoryId) {
+      console.log('⏳ デフォルトカテゴリーID読み込み待機中:', { 
+        hasUser: !!user, 
+        defaultCategoryId 
+      });
+      return;
+    }
+    
     // 既にデフォルトカテゴリーを適用済みの場合はスキップ（ユーザーが手動でカテゴリーを選択した場合）
     if (hasAppliedDefaultCategory.current) {
-      console.log('✅ デフォルトカテゴリーは既に適用済み、スキップ');
+      console.log('✅ デフォルトカテゴリーは既に適用済み、スキップ', {
+        currentSelectedCategory: selectedCategory
+      });
       return;
     }
     
@@ -4957,19 +4971,27 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       // ユーザーがログインしている場合はdefaultCategoryIdを使用、そうでなければpronunciationを使用
       const targetCategoryId = user ? defaultCategoryId : 'pronunciation';
       const defaultCategory = regularCategories.find(c => c.id === targetCategoryId) || regularCategories.find(c => c.id === 'pronunciation') || regularCategories[0];
+      
       console.log('🎯 デフォルトカテゴリーを適用:', { 
-        defaultCategoryId: targetCategoryId, 
+        targetCategoryId, 
+        foundCategoryId: defaultCategory.id,
         categoryName: defaultCategory.name,
-        categoryId: defaultCategory.id,
         hasUser: !!user,
-        userMetadata: user?.user_metadata
+        savedDefaultCategoryId: user?.user_metadata?.default_category_id,
+        allUserMetadata: user?.user_metadata
       });
+      
       setSelectedCategory(defaultCategory.id);
       setCurrentCategory(defaultCategory);
       setCurrentWords(defaultCategory.words || []);
       hasAppliedDefaultCategory.current = true;
+      
+      console.log('✅ カテゴリー適用完了:', {
+        selectedCategory: defaultCategory.id,
+        wordsCount: defaultCategory.words?.length || 0
+      });
     }
-  }, [user, defaultCategoryId, categories]);
+  }, [user, defaultCategoryId, categories, selectedCategory]);
   
   // Noteサブカテゴリーバーのスクロール状態を初期化
   useEffect(() => {
