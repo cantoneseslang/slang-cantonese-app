@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || 'AIzaSyBqgtrVVZ3LV3vMD-XHqe_HCHq3ojvDsfk';
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+
+if (!GOOGLE_API_KEY) {
+  console.error('GOOGLE_API_KEY is not configured. Please set GOOGLE_API_KEY in environment variables.');
+}
 
 type VoiceConfig = {
   languageCode: string;
@@ -33,6 +37,13 @@ const PREMIUM_VOICE_MAP: Record<string, VoiceConfig> = {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!GOOGLE_API_KEY) {
+      return NextResponse.json(
+        { error: 'Google API key is not configured' },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json();
     const { text, language, voiceKey } = body;
     
