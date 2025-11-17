@@ -1513,14 +1513,18 @@ export default function Home() {
       });
       
       // モバイル対応: 再生前に待機を増やし、確実にデコード完了を待つ
-      // 「一」の頭切れ対策として300msに延長
+      // 「一」の頭切れ対策として、モバイルでは500ms、PCでは300ms待機
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const waitTime = isMobile ? 500 : 300; // モバイルではより長く待機
+      
       setTimeout(() => {
         // 再生位置を明示的に0にリセット
         audio.currentTime = 0;
         
-        console.log(`${logPrefix}: 再生開始（300ms待機後）`, {
+        console.log(`${logPrefix}: 再生開始（${waitTime}ms待機後）`, {
           currentTime: audio.currentTime,
-          duration: audio.duration
+          duration: audio.duration,
+          isMobile
         });
         
         const playPromise = audio.play();
@@ -1530,14 +1534,15 @@ export default function Home() {
               console.log(`${logPrefix}: 音声再生成功`, { 
                 useWebAudioAPI,
                 currentTime: audio.currentTime,
-                duration: audio.duration
+                duration: audio.duration,
+                isMobile
               });
             })
             .catch((e) => {
               console.error(`${logPrefix}: 音声再生失敗`, e);
             });
         }
-      }, 300); // 300ms待機してから再生（100ms→300msに延長）
+      }, waitTime);
     };
     
     audio.onerror = (event) => {

@@ -66,8 +66,8 @@ export async function POST(request: NextRequest) {
 
     const voiceParams: VoiceConfig = selectedVoice ?? defaultVoice;
     
-    // 「一」の発音問題対策: モバイルではテキストの前に全角スペースを追加
-    // GASではシンプルにテキストをそのまま送信していたが、モバイルでは冒頭が切れるため対策が必要
+    // 「一」の発音問題対策: PCとモバイルの両方でSSMLを使用
+    // PCでは50msのbreakが機能しているため、モバイルでも同じ方法を採用
     let finalText = text;
     let useSSML = false;
     
@@ -80,18 +80,12 @@ export async function POST(request: NextRequest) {
     
     // 「一」または特定の数字で始まる場合の処理
     if (text === '一' || text.startsWith('一百') || text.startsWith('一千') || text.startsWith('一萬') || cantoneseNumberRegex.test(text)) {
-      if (isMobile) {
-        // モバイルではテキストの前に全角スペースを追加して冒頭を保護
-        // 全角スペースは発音されないが、音声の冒頭を保護する効果がある
-        finalText = `　${text}`;
-        useSSML = false;
-        console.log('🔧 モバイル: 全角スペースを追加:', { originalText: text, finalText });
-      } else {
-        // PCではSSMLで無音を追加して頭切れを防ぐ
-        finalText = `<speak><break time="50ms"/>${text}</speak>`;
-        useSSML = true;
-        console.log('🔧 PC: SSML（50ms break）を使用:', { originalText: text, ssmlText: finalText });
-      }
+      // PCとモバイルの両方でSSMLを使用（PCで機能している方法をモバイルにも適用）
+      // モバイルではより長いbreak時間を使用して冒頭を保護
+      const breakTime = isMobile ? '100ms' : '50ms';
+      finalText = `<speak><break time="${breakTime}"/>${text}</speak>`;
+      useSSML = true;
+      console.log(`🔧 ${isMobile ? 'モバイル' : 'PC'}: SSML（${breakTime} break）を使用:`, { originalText: text, ssmlText: finalText });
     }
     
     const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`;
