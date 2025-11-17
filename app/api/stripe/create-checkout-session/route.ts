@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     
     // 既存のサブスクリプションとカスタマーIDを確認
     const { data: { user: existingUser } } = await supabase.auth.admin.getUserById(userId);
-    const existingSubscriptionId = existingUser?.user_metadata?.stripe_subscription_id;
+    let existingSubscriptionId = existingUser?.user_metadata?.stripe_subscription_id;
     let customerId = existingUser?.user_metadata?.stripe_customer_id;
 
     console.log('💳 既存サブスクリプション確認:', {
@@ -61,6 +61,39 @@ export async function POST(request: NextRequest) {
       existingCustomerId: customerId,
       requestedPlan: plan
     });
+
+    // user_metadataにサブスクリプションIDがない場合、カスタマーIDから検索
+    if (!existingSubscriptionId && customerId) {
+      try {
+        console.log('🔍 カスタマーIDからアクティブなサブスクリプションを検索:', customerId);
+        const subscriptions = await stripe.subscriptions.list({
+          customer: customerId,
+          status: 'active',
+          limit: 1,
+        });
+
+        if (subscriptions.data.length > 0) {
+          const activeSubscription = subscriptions.data[0];
+          existingSubscriptionId = activeSubscription.id;
+          
+          console.log('✅ カスタマーIDからアクティブなサブスクリプションを発見:', {
+            subscriptionId: existingSubscriptionId,
+            status: activeSubscription.status
+          });
+
+          // user_metadataに保存して、次回から確実に検出できるようにする
+          await supabase.auth.admin.updateUserById(userId, {
+            user_metadata: {
+              ...existingUser?.user_metadata,
+              stripe_subscription_id: existingSubscriptionId,
+              stripe_customer_id: customerId
+            }
+          });
+        }
+      } catch (err: any) {
+        console.log('ℹ️ カスタマーIDからのサブスクリプション検索に失敗:', err.message);
+      }
+    }
 
     // 既存のサブスクリプションがある場合、プラン変更を処理
     if (existingSubscriptionId) {
@@ -154,12 +187,116 @@ export async function POST(request: NextRequest) {
           customerId = customers.data[0].id;
           console.log('✅ 既存の顧客を発見:', { customerId, email: body.email });
           
-          // 顧客IDをuser_metadataに保存
+          // このカスタマーのアクティブなサブスクリプションも検索
+          if (!existingSubscriptionId) {
+            try {
+              console.log('🔍 メールアドレスから発見したカスタマーのアクティブなサブスクリプションを検索:', customerId);
+              const subscriptions = await stripe.subscriptions.list({
+                customer: customerId,
+                status: 'active',
+                limit: 1,
+              });
+
+              if (subscriptions.data.length > 0) {
+                const activeSubscription = subscriptions.data[0];
+                existingSubscriptionId = activeSubscription.id;
+                
+                console.log('✅ メールアドレスから発見したカスタマーのアクティブなサブスクリプションを発見:', {
+                  subscriptionId: existingSubscriptionId,
+                  status: activeSubscription.status
+                });
+              }
+            } catch (err: any) {
+              console.log('ℹ️ カスタマーのサブスクリプション検索に失敗:', err.message);
+            }
+          }
+          
+          // 顧客IDとサブスクリプションIDをuser_metadataに保存
           await supabase.auth.admin.updateUserById(userId, {
             user_metadata: {
-              stripe_customer_id: customerId
+              ...existingUser?.user_metadata,
+              stripe_customer_id: customerId,
+              ...(existingSubscriptionId && { stripe_subscription_id: existingSubscriptionId })
             }
           });
+
+          // サブスクリプションが見つかった場合、プラン変更処理を実行
+          if (existingSubscriptionId) {
+            try {
+              const foundSubscription = await stripe.subscriptions.retrieve(existingSubscriptionId);
+              if (foundSubscription.status === 'active' || foundSubscription.status === 'trialing') {
+                console.log('🔄 メールアドレスから発見したアクティブなサブスクリプションを更新します:', {
+                  subscriptionId: existingSubscriptionId,
+                  status: foundSubscription.status,
+                  requestedPlan: plan
+                });
+
+                // 既存のサブスクリプションの現在のプランを確認
+                const currentPriceId = foundSubscription.items.data[0]?.price.id;
+                
+                // Supabaseから価格設定を取得
+                const selectedCurrency = (currency === 'hkd' ? 'hkd' : 'jpy') as 'jpy' | 'hkd';
+                
+                const { data: pricingConfig, error: pricingError } = await supabase
+                  .from('stripe_pricing_config')
+                  .select('stripe_price_id, unit_amount, display_price')
+                  .eq('plan_type', plan)
+                  .eq('currency', selectedCurrency)
+                  .eq('is_active', true)
+                  .single();
+
+                if (pricingError || !pricingConfig) {
+                  console.error('Failed to fetch pricing config:', pricingError);
+                  // エラーが発生した場合は新規作成を続行
+                } else {
+                  const newPriceId = pricingConfig.stripe_price_id;
+
+                  // 同じプランの場合はエラーを返す
+                  if (currentPriceId === newPriceId) {
+                    return NextResponse.json(
+                      { 
+                        error: 'Same plan already active', 
+                        details: '既に同じプランが有効です。',
+                        subscriptionId: existingSubscriptionId
+                      },
+                      { status: 400 }
+                    );
+                  }
+
+                  // サブスクリプションを更新（プラン変更）
+                  const updatedSubscription = await stripe.subscriptions.update(existingSubscriptionId, {
+                    items: [{
+                      id: foundSubscription.items.data[0].id,
+                      price: newPriceId || undefined,
+                    }],
+                    metadata: {
+                      user_id: userId,
+                      plan: plan,
+                    },
+                    proration_behavior: 'always_invoice', // 即座に請求（比例配分）
+                  });
+
+                  console.log('✅ サブスクリプションを更新しました（メールアドレスから発見）:', {
+                    subscriptionId: updatedSubscription.id,
+                    oldPriceId: currentPriceId,
+                    newPriceId: newPriceId,
+                    plan: plan
+                  });
+
+                  // 更新されたサブスクリプションの情報を返す
+                  return NextResponse.json({
+                    success: true,
+                    subscriptionId: updatedSubscription.id,
+                    message: 'サブスクリプションを更新しました。',
+                    updated: true
+                  });
+                }
+              }
+            } catch (err: any) {
+              console.log('ℹ️ メールアドレスから発見したサブスクリプションの更新に失敗。新規作成します。', err.message);
+              // エラーが発生した場合は新規作成を続行
+            }
+          }
         }
       } catch (err) {
         console.log('ℹ️ 既存顧客の検索に失敗。新規作成します。', err);
