@@ -73,16 +73,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('✅ デフォルトカテゴリー保存成功（Admin API）:', {
-      userId: user.id,
-      default_category_id: default_category_id,
-      updatedMetadata: adminData.user?.user_metadata
-    });
+    // 保存が成功したら、実際にSupabaseから取得して確認
+    const { data: verifyData, error: verifyError } = await supabaseAdmin.auth.admin.getUserById(user.id);
+    
+    if (verifyError) {
+      console.error('❌ 保存確認エラー:', verifyError);
+    } else {
+      const savedCategoryId = verifyData.user?.user_metadata?.default_category_id;
+      console.log('✅ デフォルトカテゴリー保存成功（Admin API）:', {
+        userId: user.id,
+        requestedCategoryId: default_category_id,
+        savedCategoryId: savedCategoryId,
+        isMatch: savedCategoryId === default_category_id,
+        allMetadata: verifyData.user?.user_metadata
+      });
+      
+      // 保存が正しく行われているか確認
+      if (savedCategoryId !== default_category_id) {
+        console.error('❌ 保存された値が要求された値と一致しません:', {
+          requested: default_category_id,
+          saved: savedCategoryId
+        });
+        return NextResponse.json(
+          { error: 'デフォルトカテゴリーの保存に失敗しました（値の不一致）' },
+          { status: 500 }
+        );
+      }
+    }
 
     return NextResponse.json({
       success: true,
       default_category_id: default_category_id,
-      user_metadata: adminData.user?.user_metadata
+      user_metadata: verifyData?.user?.user_metadata || adminData.user?.user_metadata,
+      verified: !verifyError && verifyData?.user?.user_metadata?.default_category_id === default_category_id
     });
   } catch (error: any) {
     console.error('❌ デフォルトカテゴリー保存エラー:', error);
