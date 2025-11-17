@@ -16,19 +16,32 @@ export const metadata: Metadata = {
   title: "スラング式カントン語音れん - 広東語万能辞書",
   description: "粤ピン/スラング式カタカナ/音声検索/日本語翻訳",
   icons: {
-    icon: '/favicon.ico',
-    apple: '/favicon.ico',
+    icon: [
+      { url: '/icon.png', sizes: '120x120', type: 'image/png' },
+      { url: '/favicon.ico' }
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '120x120', type: 'image/png' }
+    ],
   },
   openGraph: {
     title: "スラング式カントン語音れん - 広東語万能辞書",
     description: "粤ピン/スラング式カタカナ/音声検索/日本語翻訳",
     type: "website",
     siteName: "スラング式カントン語音れん",
+    images: [
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+      }
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: "スラング式カントン語音れん - 広東語万能辞書",
     description: "粤ピン/スラング式カタカナ/音声検索/日本語翻訳",
+    images: ['/opengraph-image'],
   },
 };
 

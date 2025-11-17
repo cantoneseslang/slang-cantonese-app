@@ -9,19 +9,28 @@ export const size = {
 export const contentType = 'image/png';
 
 export default async function Image() {
-  // 画像のURLを取得（本番環境と開発環境の両方に対応）
+  // 画像のURLを構築（絶対URLが必要）
+  const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
   const baseUrl = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : process.env.NEXT_PUBLIC_SITE_URL || 'https://slang-cantonese-app.vercel.app';
   const imageUrl = `${baseUrl}/og-image.png`;
 
+  console.log('🖼️ OG Image URL:', imageUrl);
+
   // 画像をfetchで読み込んでBase64エンコード
   let imageDataUrl: string | null = null;
   try {
-    const response = await fetch(imageUrl);
+    const response = await fetch(imageUrl, {
+      cache: 'no-store' // キャッシュを無効化して最新の画像を取得
+    });
+    console.log('🖼️ Image fetch response:', response.status, response.ok);
+    
     if (response.ok) {
       const arrayBuffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
+      console.log('🖼️ Image size:', uint8Array.length, 'bytes');
+      
       // Base64エンコード（エッジランタイム対応、チャンク処理）
       const chunkSize = 8192;
       let binaryString = '';
@@ -31,9 +40,12 @@ export default async function Image() {
       }
       const base64 = btoa(binaryString);
       imageDataUrl = `data:image/png;base64,${base64}`;
+      console.log('✅ Image Base64 encoded, length:', base64.length);
+    } else {
+      console.error('❌ Failed to fetch image:', response.status, response.statusText);
     }
   } catch (error) {
-    console.error('Failed to load image:', error);
+    console.error('❌ Failed to load image:', error);
   }
 
   return new ImageResponse(
