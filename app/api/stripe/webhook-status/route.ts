@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+// ビルド時に環境変数が設定されていない場合でもエラーにならないようにする
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, {
   apiVersion: '2025-10-29.clover',
-});
+}) : null;
 
 export async function GET(request: NextRequest) {
   try {
+    if (!stripe) {
+      return NextResponse.json(
+        { error: 'Stripe is not configured' },
+        { status: 500 }
+      );
+    }
+    
     // 最近のWebhookイベントを取得（最大10件）
     const events = await stripe.events.list({
       limit: 10,

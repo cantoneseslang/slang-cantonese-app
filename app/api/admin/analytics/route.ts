@@ -3,9 +3,11 @@ import { createClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+// ビルド時に環境変数が設定されていない場合でもエラーにならないようにする
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, {
   apiVersion: '2025-10-29.clover',
-});
+}) : null;
 
 export async function GET(request: NextRequest) {
   try {
@@ -79,67 +81,71 @@ export async function GET(request: NextRequest) {
     console.log(`✅ 有効なStripe顧客ID数: ${validStripeCustomerIds.size}`, Array.from(validStripeCustomerIds));
 
     // Stripeの支払いデータを取得（過去12ヶ月）
-    try {
-      const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-      
-      // PaymentIntentsを使用（より正確な支払いデータ）
-      const paymentIntents = await stripe.paymentIntents.list({
+    if (!stripe) {
+      console.warn('Stripe is not configured. Skipping revenue data.');
+    } else {
+      try {
+        const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+        
+        // PaymentIntentsを使用（より正確な支払いデータ）
+        const paymentIntents = await stripe.paymentIntents.list({
         created: {
           gte: Math.floor(twelveMonthsAgo.getTime() / 1000),
         },
         limit: 100,
       });
 
-      console.log(`📊 取得したPaymentIntents数: ${paymentIntents.data.length}`);
+        console.log(`📊 取得したPaymentIntents数: ${paymentIntents.data.length}`);
 
-      let totalRevenueJPY = 0;
-      let totalRevenueHKD = 0;
-      let validPaymentCount = 0;
-      let skippedPaymentCount = 0;
+        let totalRevenueJPY = 0;
+        let totalRevenueHKD = 0;
+        let validPaymentCount = 0;
+        let skippedPaymentCount = 0;
 
-      // 支払いを月別に集計（実際のユーザーの決済のみ）
-      paymentIntents.data.forEach((pi) => {
-        if (pi.status === 'succeeded' && pi.amount > 0) {
-          // 実際のユーザーの決済のみをカウント
-          if (!pi.customer || !validStripeCustomerIds.has(pi.customer as string)) {
-            console.log(`⏭️ スキップ（テスト決済）: ${pi.id}, customer: ${pi.customer || 'なし'}`);
-            skippedPaymentCount++;
-            return;
-          }
-
-          const piDate = new Date(pi.created * 1000);
-          const key = `${piDate.getFullYear()}-${String(piDate.getMonth() + 1).padStart(2, '0')}`;
-          
-          if (monthlyData[key] !== undefined) {
-            // 通貨ごとに別々に集計
-            if (pi.currency === 'jpy') {
-              // JPYはそのまま
-              const amountJPY = pi.amount;
-              monthlyData[key].revenueJPY += amountJPY;
-              totalRevenueJPY += amountJPY;
-              console.log(`💴 JPY決済: ${pi.id}, customer: ${pi.customer}, ¥${amountJPY}, 日付: ${piDate.toLocaleDateString('ja-JP')}`);
-            } else if (pi.currency === 'hkd') {
-              // HKDはセント単位なので100で割る
-              const amountHKD = pi.amount / 100;
-              monthlyData[key].revenueHKD += amountHKD;
-              totalRevenueHKD += amountHKD;
-              console.log(`💵 HKD決済: ${pi.id}, customer: ${pi.customer}, HK$${amountHKD}, 日付: ${piDate.toLocaleDateString('ja-JP')}`);
-            } else {
-              console.log(`⚠️ 未対応通貨: ${pi.currency}, ${pi.id}`);
+        // 支払いを月別に集計（実際のユーザーの決済のみ）
+        paymentIntents.data.forEach((pi) => {
+          if (pi.status === 'succeeded' && pi.amount > 0) {
+            // 実際のユーザーの決済のみをカウント
+            if (!pi.customer || !validStripeCustomerIds.has(pi.customer as string)) {
+              console.log(`⏭️ スキップ（テスト決済）: ${pi.id}, customer: ${pi.customer || 'なし'}`);
+              skippedPaymentCount++;
+              return;
             }
+
+            const piDate = new Date(pi.created * 1000);
+            const key = `${piDate.getFullYear()}-${String(piDate.getMonth() + 1).padStart(2, '0')}`;
             
-            validPaymentCount++;
+            if (monthlyData[key] !== undefined) {
+              // 通貨ごとに別々に集計
+              if (pi.currency === 'jpy') {
+                // JPYはそのまま
+                const amountJPY = pi.amount;
+                monthlyData[key].revenueJPY += amountJPY;
+                totalRevenueJPY += amountJPY;
+                console.log(`💴 JPY決済: ${pi.id}, customer: ${pi.customer}, ¥${amountJPY}, 日付: ${piDate.toLocaleDateString('ja-JP')}`);
+              } else if (pi.currency === 'hkd') {
+                // HKDはセント単位なので100で割る
+                const amountHKD = pi.amount / 100;
+                monthlyData[key].revenueHKD += amountHKD;
+                totalRevenueHKD += amountHKD;
+                console.log(`💵 HKD決済: ${pi.id}, customer: ${pi.customer}, HK$${amountHKD}, 日付: ${piDate.toLocaleDateString('ja-JP')}`);
+              } else {
+                console.log(`⚠️ 未対応通貨: ${pi.currency}, ${pi.id}`);
+              }
+              
+              validPaymentCount++;
+            }
           }
-        }
-      });
-      
-      console.log(`📈 集計結果: 有効な決済 ${validPaymentCount}件, スキップ ${skippedPaymentCount}件`);
-      console.log(`💴 JPY合計: ¥${totalRevenueJPY}`);
-      console.log(`💵 HKD合計: HK$${totalRevenueHKD}`);
-      console.log('📈 月別売上データ:', monthlyData);
-    } catch (stripeError) {
-      console.error('Stripe data fetch error:', stripeError);
-      // Stripeエラーは無視して続行
+        });
+        
+        console.log(`📈 集計結果: 有効な決済 ${validPaymentCount}件, スキップ ${skippedPaymentCount}件`);
+        console.log(`💴 JPY合計: ¥${totalRevenueJPY}`);
+        console.log(`💵 HKD合計: HK$${totalRevenueHKD}`);
+        console.log('📈 月別売上データ:', monthlyData);
+      } catch (stripeError) {
+        console.error('Stripe data fetch error:', stripeError);
+        // Stripeエラーは無視して続行
+      }
     }
 
     // データを配列に変換

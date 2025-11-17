@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+// ビルド時に環境変数が設定されていない場合でもエラーにならないようにする
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, {
   apiVersion: '2025-10-29.clover',
-});
+}) : null;
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -12,6 +14,14 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export async function POST(request: NextRequest) {
+  if (!stripe) {
+    console.error('❌ Stripe is not configured');
+    return NextResponse.json(
+      { error: 'Stripe is not configured' },
+      { status: 500 }
+    );
+  }
+  
   const body = await request.text();
   const signature = request.headers.get('stripe-signature')!;
 
