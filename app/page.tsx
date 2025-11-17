@@ -1513,9 +1513,9 @@ export default function Home() {
       });
       
       // モバイル対応: 再生前に待機を増やし、確実にデコード完了を待つ
-      // 「一」の頭切れ対策として、モバイルでは500ms、PCでは300ms待機
+      // 「一」の頭切れ対策として、モバイルでは800ms、PCでは300ms待機
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const waitTime = isMobile ? 500 : 300; // モバイルではより長く待機
+      const waitTime = isMobile ? 800 : 300; // モバイルではより長く待機
       
       setTimeout(() => {
         // 再生位置を明示的に0にリセット

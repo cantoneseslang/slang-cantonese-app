@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     if (text === '一' || text.startsWith('一百') || text.startsWith('一千') || text.startsWith('一萬') || cantoneseNumberRegex.test(text)) {
       // PCとモバイルの両方でSSMLを使用（PCで機能している方法をモバイルにも適用）
       // モバイルではより長いbreak時間を使用して冒頭を保護
-      const breakTime = isMobile ? '100ms' : '50ms';
+      const breakTime = isMobile ? '200ms' : '50ms';
       finalText = `<speak><break time="${breakTime}"/>${text}</speak>`;
       useSSML = true;
       console.log(`🔧 ${isMobile ? 'モバイル' : 'PC'}: SSML（${breakTime} break）を使用:`, { originalText: text, ssmlText: finalText });
