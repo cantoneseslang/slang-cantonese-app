@@ -538,6 +538,25 @@ function LoginForm() {
           </div>
         )}
 
+        <div style={{
+          padding: '0.75rem',
+          backgroundColor: '#eff6ff',
+          border: '1px solid #3b82f6',
+          borderRadius: '6px',
+          marginBottom: '1rem',
+          fontSize: '0.875rem',
+          color: '#1e40af'
+        }}>
+          <p style={{ margin: 0, marginBottom: '0.5rem', fontWeight: '500' }}>
+            ℹ️ Googleログインについて
+          </p>
+          <p style={{ margin: 0, fontSize: '0.8125rem', lineHeight: '1.5' }}>
+            Googleログイン時に「qdmvituurfevyibtzwsb.supabase.co」に移動と表示されますが、
+            これは安全な認証プロセスの一部です。Supabase（認証サービス）を経由して
+            安全にログイン処理を行います。心配ありません。
+          </p>
+        </div>
+
         <button
           onClick={handleGoogleAuth}
           disabled={loading}
