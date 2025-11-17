@@ -66,25 +66,17 @@ export async function POST(request: NextRequest) {
 
     const voiceParams: VoiceConfig = selectedVoice ?? defaultVoice;
     
-    // 「一」の発音問題対策: アラビア数字を使用
+    // 「一」の発音問題対策: 「一」単独の場合のみアラビア数字を使用
     let finalText = text;
     let useSSML = false;
     
-    // 「一」で始まるテキストの場合、アラビア数字に変換して送信
+    // 「一」単独の場合のみアラビア数字「1」に変換
     // Google TTS APIが数字を広東語で正しく読み上げる
     if (text === '一') {
       finalText = '1';
       console.log('🔧 「一」対策: アラビア数字を使用', { originalText: text, arabicNumber: finalText });
-    } else if (text === '一百') {
-      finalText = '100';
-      console.log('🔧 「一百」対策: アラビア数字を使用', { originalText: text, arabicNumber: finalText });
-    } else if (text === '一千') {
-      finalText = '1000';
-      console.log('🔧 「一千」対策: アラビア数字を使用', { originalText: text, arabicNumber: finalText });
-    } else if (text === '一萬') {
-      finalText = '10000';
-      console.log('🔧 「一萬」対策: アラビア数字を使用', { originalText: text, arabicNumber: finalText });
     }
+    // 一百、一千、一萬はそのまま漢字で送信（問題なし）
     
     const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`;
     const payload = {
