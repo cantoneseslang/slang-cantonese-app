@@ -66,18 +66,25 @@ export async function POST(request: NextRequest) {
 
     const voiceParams: VoiceConfig = selectedVoice ?? defaultVoice;
     
-    // 「一」の発音問題対策: SSML形式を使用して明示的に発音を指示
-    // Google TTS APIが「一」を正しく発音しない問題への対処
+    // 「一」の発音問題対策: 複数の戦略を試す
     let finalText = text;
     let useSSML = false;
     
-    // 「一」で始まるテキストの場合、SSMLで発音を明示
+    // 戦略1: 「一」で始まるテキストの場合、SSMLで無音を前後に追加して発音を強制
     if (text === '一' || text.startsWith('一百') || text.startsWith('一千') || text.startsWith('一萬')) {
-      // SSML形式で、「一」の発音を強制
-      finalText = `<speak><prosody rate="0.95" pitch="+0st">${text}</prosody></speak>`;
+      // SSML形式で、「一」の前後に短い無音を追加して頭切れを防ぐ
+      // break timeで50msの無音を追加
+      finalText = `<speak><break time="50ms"/><prosody rate="0.9" pitch="+0st">${text}</prosody><break time="50ms"/></speak>`;
       useSSML = true;
-      console.log('🔧 「一」対策: SSML形式を使用', { originalText: text, ssmlText: finalText });
+      console.log('🔧 「一」対策: SSML形式（無音追加）を使用', { originalText: text, ssmlText: finalText });
     }
+    
+    // デバッグ用: アラビア数字を試す場合のログ
+    // if (text === '一百') {
+    //   finalText = '100';
+    //   useSSML = false;
+    //   console.log('🧪 テスト: アラビア数字を使用', { originalText: text, arabicNumber: finalText });
+    // }
     
     const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`;
     const payload = {
