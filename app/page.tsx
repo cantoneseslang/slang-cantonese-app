@@ -1506,23 +1506,26 @@ export default function Home() {
       if (hasPlayed) return;
       hasPlayed = true;
       
-      // currentTimeを0にリセット（念のため）
-      audio.currentTime = 0;
-      
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            console.log(`${logPrefix}: 音声再生成功`, { 
-              useWebAudioAPI,
-              currentTime: audio.currentTime,
-              duration: audio.duration
+      // モバイル対応: 再生前に少し待機してからcurrentTimeを0にリセット
+      // これにより、音声データが完全にデコードされてから再生開始
+      setTimeout(() => {
+        audio.currentTime = 0;
+        
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              console.log(`${logPrefix}: 音声再生成功`, { 
+                useWebAudioAPI,
+                currentTime: audio.currentTime,
+                duration: audio.duration
+              });
+            })
+            .catch((e) => {
+              console.error(`${logPrefix}: 音声再生失敗`, e);
             });
-          })
-          .catch((e) => {
-            console.error(`${logPrefix}: 音声再生失敗`, e);
-          });
-      }
+        }
+      }, 100); // 100ms待機してから再生
     };
     
     audio.onerror = (event) => {
