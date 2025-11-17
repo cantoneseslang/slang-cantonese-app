@@ -4814,36 +4814,84 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       const result = await response.json();
       console.log('✅ デフォルトカテゴリー保存成功:', result);
 
-      // 状態を更新
-      setDefaultCategoryId(newCategoryId);
-      setShowCategoryPicker(false);
-      
-      // Admin APIで更新した後、セッションをリフレッシュして最新の状態を取得
-      // 少し待ってから再取得（Supabaseの同期を待つ）
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // セッションをリフレッシュしてからユーザー情報を再取得
-      const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError) {
-        console.warn('⚠️ セッションリフレッシュエラー（続行します）:', refreshError);
+      // サーバー側の保存を確認
+      if (!result.verified) {
+        console.warn('⚠️ サーバー側の保存確認ができませんでした');
       }
       
-      // ユーザー情報を再取得して最新の状態を反映
-      const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
+      // 状態を更新
+      setShowCategoryPicker(false);
       
-      if (getUserError) {
-        console.error('❌ ユーザー情報再取得エラー:', getUserError);
-      } else if (updatedUser) {
-        setUser(updatedUser);
-        console.log('✅ ユーザー情報を再取得完了:', {
-          default_category_id: updatedUser.user_metadata?.default_category_id,
-          newCategoryId,
-          allMetadata: updatedUser.user_metadata
-        });
+      // 🔄 リトライロジックでセッションをリフレッシュして最新の状態を取得
+      let retryCount = 0;
+      let finalUser = null;
+      const maxRetries = 5; // 最大5回リトライ
+      
+      while (retryCount < maxRetries && !finalUser) {
+        console.log(`🔄 ユーザー情報取得試行 ${retryCount + 1}/${maxRetries}...`);
         
-        // デフォルトカテゴリーIDも確実に更新
-        if (updatedUser.user_metadata?.default_category_id) {
-          setDefaultCategoryId(updatedUser.user_metadata.default_category_id);
+        // セッションをリフレッシュ
+        const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          console.warn(`⚠️ セッションリフレッシュエラー（試行 ${retryCount + 1}/${maxRetries}）:`, refreshError);
+        } else {
+          console.log(`✅ セッションリフレッシュ成功（試行 ${retryCount + 1}/${maxRetries}）`);
+        }
+        
+        // ユーザー情報を再取得
+        const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
+        
+        if (getUserError) {
+          console.error(`❌ ユーザー情報再取得エラー（試行 ${retryCount + 1}/${maxRetries}）:`, getUserError);
+        } else if (updatedUser) {
+          const savedCategoryId = updatedUser.user_metadata?.default_category_id;
+          console.log(`📋 ユーザー情報取得（試行 ${retryCount + 1}/${maxRetries}）:`, {
+            default_category_id: savedCategoryId,
+            newCategoryId,
+            isMatch: savedCategoryId === newCategoryId,
+            allMetadata: updatedUser.user_metadata
+          });
+          
+          // 保存された値が要求値と一致するか確認
+          if (savedCategoryId === newCategoryId) {
+            finalUser = updatedUser;
+            console.log(`✅ デフォルトカテゴリーが正しく保存されていることを確認（試行 ${retryCount + 1}/${maxRetries}）`);
+            break;
+          } else {
+            console.log(`⏳ デフォルトカテゴリーの反映を待機中（試行 ${retryCount + 1}/${maxRetries}）...`);
+          }
+        }
+        
+        retryCount++;
+        
+        // 次のリトライまで待機（指数バックオフ）
+        if (retryCount < maxRetries) {
+          const waitTime = Math.min(500 * Math.pow(1.5, retryCount), 2000); // 最大2秒
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+      }
+      
+      if (!finalUser) {
+        // リトライが尽きた場合、最後にもう一度取得
+        const { data: { user: lastUser }, error: lastError } = await supabase.auth.getUser();
+        finalUser = lastUser;
+        console.warn('⚠️ リトライが尽きました。最後のユーザー情報:', {
+          default_category_id: finalUser?.user_metadata?.default_category_id,
+          newCategoryId
+        });
+      }
+      
+      if (finalUser) {
+        setUser(finalUser);
+        // デフォルトカテゴリーIDを確実に更新
+        const savedCategoryId = finalUser.user_metadata?.default_category_id;
+        if (savedCategoryId) {
+          setDefaultCategoryId(savedCategoryId);
+          console.log('✅ デフォルトカテゴリーID更新完了:', savedCategoryId);
+        } else {
+          // フォールバック: APIレスポンスから取得
+          setDefaultCategoryId(newCategoryId);
+          console.warn('⚠️ メタデータから取得できないため、リクエスト値を使用:', newCategoryId);
         }
       }
       
