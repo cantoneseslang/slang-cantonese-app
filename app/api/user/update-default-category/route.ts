@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,6 +35,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Service Role Keyを使用してAdmin APIで確実に更新
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!serviceRoleKey) {
+      console.error('❌ SUPABASE_SERVICE_ROLE_KEYが設定されていません');
+      return NextResponse.json(
+        { error: 'サーバー設定エラー' },
+        { status: 500 }
+      );
+    }
+
+    const supabaseAdmin = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      serviceRoleKey
+    );
+
     // 既存のuser_metadataを取得してマージ
     const currentMetadata = user.user_metadata || {};
     const updatedMetadata = {
@@ -41,29 +57,32 @@ export async function POST(request: NextRequest) {
       default_category_id: default_category_id
     };
 
-    // user_metadataを更新
-    const { data, error } = await supabase.auth.updateUser({
-      data: updatedMetadata
-    });
+    // Admin APIを使用してuser_metadataを更新（確実に保存される）
+    const { data: adminData, error: adminError } = await supabaseAdmin.auth.admin.updateUserById(
+      user.id,
+      {
+        user_metadata: updatedMetadata
+      }
+    );
 
-    if (error) {
-      console.error('❌ デフォルトカテゴリー保存エラー:', error);
+    if (adminError) {
+      console.error('❌ デフォルトカテゴリー保存エラー（Admin API）:', adminError);
       return NextResponse.json(
-        { error: 'デフォルトカテゴリーの保存に失敗しました', details: error.message },
+        { error: 'デフォルトカテゴリーの保存に失敗しました', details: adminError.message },
         { status: 500 }
       );
     }
 
-    console.log('✅ デフォルトカテゴリー保存成功:', {
+    console.log('✅ デフォルトカテゴリー保存成功（Admin API）:', {
       userId: user.id,
       default_category_id: default_category_id,
-      updatedMetadata: data.user?.user_metadata
+      updatedMetadata: adminData.user?.user_metadata
     });
 
     return NextResponse.json({
       success: true,
       default_category_id: default_category_id,
-      user_metadata: data.user?.user_metadata
+      user_metadata: adminData.user?.user_metadata
     });
   } catch (error: any) {
     console.error('❌ デフォルトカテゴリー保存エラー:', error);

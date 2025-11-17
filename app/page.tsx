@@ -2950,15 +2950,24 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       
       // デフォルトカテゴリーの設定（シルバー・ゴールド会員のみ保存可能）
       // ブロンズ会員の場合は常にデフォルト値を使用
-      if (membershipType === 'free') {
+      const currentMembershipType = user.user_metadata?.membership_type || 'free';
+      if (currentMembershipType === 'free') {
         console.log('📋 ブロンズ会員のため、デフォルト値（pronunciation）を使用');
         setDefaultCategoryId('pronunciation');
       } else if (user.user_metadata?.default_category_id) {
-        console.log('📋 デフォルトカテゴリーを読み込み:', user.user_metadata.default_category_id);
-        setDefaultCategoryId(user.user_metadata.default_category_id);
+        const savedCategoryId = user.user_metadata.default_category_id;
+        console.log('📋 デフォルトカテゴリーを読み込み:', {
+          default_category_id: savedCategoryId,
+          membershipType: currentMembershipType,
+          allMetadata: user.user_metadata
+        });
+        setDefaultCategoryId(savedCategoryId);
       } else {
         // デフォルトカテゴリーがない場合、デフォルト値（pronunciation）を設定
-        console.log('📋 デフォルトカテゴリーが未設定、デフォルト値（pronunciation）を使用');
+        console.log('📋 デフォルトカテゴリーが未設定、デフォルト値（pronunciation）を使用', {
+          membershipType: currentMembershipType,
+          allMetadata: user.user_metadata
+        });
         setDefaultCategoryId('pronunciation');
       }
 
@@ -4809,6 +4818,16 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       setDefaultCategoryId(newCategoryId);
       setShowCategoryPicker(false);
       
+      // Admin APIで更新した後、セッションをリフレッシュして最新の状態を取得
+      // 少し待ってから再取得（Supabaseの同期を待つ）
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // セッションをリフレッシュしてからユーザー情報を再取得
+      const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        console.warn('⚠️ セッションリフレッシュエラー（続行します）:', refreshError);
+      }
+      
       // ユーザー情報を再取得して最新の状態を反映
       const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
       
@@ -4818,8 +4837,14 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         setUser(updatedUser);
         console.log('✅ ユーザー情報を再取得完了:', {
           default_category_id: updatedUser.user_metadata?.default_category_id,
-          newCategoryId
+          newCategoryId,
+          allMetadata: updatedUser.user_metadata
         });
+        
+        // デフォルトカテゴリーIDも確実に更新
+        if (updatedUser.user_metadata?.default_category_id) {
+          setDefaultCategoryId(updatedUser.user_metadata.default_category_id);
+        }
       }
       
       // 現在選択中のカテゴリーがデフォルトカテゴリーでない場合、デフォルトカテゴリーに切り替え
