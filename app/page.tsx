@@ -3760,15 +3760,40 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       if (data.updated || data.alreadyActive) {
         console.log('✅ サブスクリプション情報:', data);
         
-        // ユーザー情報を再取得してUIを更新
-        const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
-        
-        if (getUserError) {
-          console.error('ユーザー情報の再取得エラー:', getUserError);
-        } else if (updatedUser) {
-          setUser(updatedUser);
-          const newMembershipType = updatedUser.user_metadata?.membership_type || 'free';
-          setMembershipType(newMembershipType);
+        // APIから返されたplanを使用して会員種別を更新（APIで既にuser_metadataを更新済み）
+        if (data.plan) {
+          // ユーザー情報を再取得してUIを更新
+          const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
+          
+          if (getUserError) {
+            console.error('ユーザー情報の再取得エラー:', getUserError);
+            // エラーが発生した場合でも、APIから返されたplanを使用
+            setMembershipType(data.plan);
+          } else if (updatedUser) {
+            setUser(updatedUser);
+            // APIから返されたplanとuser_metadataの両方を確認
+            const newMembershipType = updatedUser.user_metadata?.membership_type || data.plan || 'free';
+            setMembershipType(newMembershipType);
+            console.log('✅ 会員種別を更新しました:', {
+              fromAPI: data.plan,
+              fromMetadata: updatedUser.user_metadata?.membership_type,
+              final: newMembershipType
+            });
+          } else {
+            // ユーザー情報が取得できない場合でも、APIから返されたplanを使用
+            setMembershipType(data.plan);
+          }
+        } else {
+          // planが返されていない場合、ユーザー情報を再取得
+          const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
+          
+          if (getUserError) {
+            console.error('ユーザー情報の再取得エラー:', getUserError);
+          } else if (updatedUser) {
+            setUser(updatedUser);
+            const newMembershipType = updatedUser.user_metadata?.membership_type || 'free';
+            setMembershipType(newMembershipType);
+          }
         }
 
         setShowPricingModal(false);
@@ -3781,7 +3806,8 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           const planName = data.plan === 'subscription' ? 'シルバー会員' : data.plan === 'lifetime' ? 'ゴールド会員' : 'ブロンズ会員';
           alert(`既に${planName}プランが有効です。`);
         } else {
-          alert(data.message || 'サブスクリプションを更新しました。');
+          const planName = data.plan === 'subscription' ? 'シルバー会員' : data.plan === 'lifetime' ? 'ゴールド会員' : 'ブロンズ会員';
+          alert(`${planName}にアップグレードしました！`);
         }
         return;
       }

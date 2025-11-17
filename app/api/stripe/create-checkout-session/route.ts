@@ -167,12 +167,71 @@ export async function POST(request: NextRequest) {
             plan: plan
           });
 
+          // 有効期限を計算
+          const currentPeriodEnd = updatedSubscription.current_period_end 
+            ? new Date(updatedSubscription.current_period_end * 1000)
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+          
+          let expiresAt: Date;
+          if (plan === 'subscription') {
+            // シルバー会員: 現在の期間終了日の1ヶ月後
+            expiresAt = new Date(currentPeriodEnd);
+            expiresAt.setMonth(expiresAt.getMonth() + 1);
+          } else if (plan === 'lifetime') {
+            // ゴールド会員: 現在の期間終了日の1年後
+            expiresAt = new Date(currentPeriodEnd);
+            expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+          } else {
+            expiresAt = new Date(currentPeriodEnd);
+            expiresAt.setMonth(expiresAt.getMonth() + 1);
+          }
+
+          // user_metadataを更新（決済完了前に会員種別を保存）
+          const updateData: any = {
+            membership_type: plan,
+            subscription_expires_at: expiresAt.toISOString(),
+            stripe_subscription_id: updatedSubscription.id,
+            stripe_customer_id: updatedSubscription.customer as string
+          };
+
+          const { error: userError } = await supabase.auth.admin.updateUserById(userId, {
+            user_metadata: {
+              ...existingUser?.user_metadata,
+              ...updateData
+            }
+          });
+
+          if (userError) {
+            console.error('❌ Failed to update user metadata:', userError);
+          } else {
+            console.log('✅ User metadata updated:', {
+              userId,
+              membershipType: plan,
+              expiresAt: expiresAt.toISOString()
+            });
+          }
+
+          // usersテーブルも更新
+          const { error: dbError } = await supabase
+            .from('users')
+            .update({
+              membership_type: plan,
+              subscription_expires_at: expiresAt.toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+
+          if (dbError) {
+            console.error('❌ Failed to update users table:', dbError);
+          }
+
           // 更新されたサブスクリプションの情報を返す
           return NextResponse.json({
             success: true,
             subscriptionId: updatedSubscription.id,
             message: 'サブスクリプションを更新しました。',
-            updated: true
+            updated: true,
+            plan: plan
           });
         }
       } catch (err: any) {
@@ -288,12 +347,71 @@ export async function POST(request: NextRequest) {
                     plan: plan
                   });
 
+                  // 有効期限を計算
+                  const currentPeriodEnd = updatedSubscription.current_period_end 
+                    ? new Date(updatedSubscription.current_period_end * 1000)
+                    : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+                  
+                  let expiresAt: Date;
+                  if (plan === 'subscription') {
+                    // シルバー会員: 現在の期間終了日の1ヶ月後
+                    expiresAt = new Date(currentPeriodEnd);
+                    expiresAt.setMonth(expiresAt.getMonth() + 1);
+                  } else if (plan === 'lifetime') {
+                    // ゴールド会員: 現在の期間終了日の1年後
+                    expiresAt = new Date(currentPeriodEnd);
+                    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+                  } else {
+                    expiresAt = new Date(currentPeriodEnd);
+                    expiresAt.setMonth(expiresAt.getMonth() + 1);
+                  }
+
+                  // user_metadataを更新（決済完了前に会員種別を保存）
+                  const updateData: any = {
+                    membership_type: plan,
+                    subscription_expires_at: expiresAt.toISOString(),
+                    stripe_subscription_id: updatedSubscription.id,
+                    stripe_customer_id: updatedSubscription.customer as string
+                  };
+
+                  const { error: userError } = await supabase.auth.admin.updateUserById(userId, {
+                    user_metadata: {
+                      ...existingUser?.user_metadata,
+                      ...updateData
+                    }
+                  });
+
+                  if (userError) {
+                    console.error('❌ Failed to update user metadata:', userError);
+                  } else {
+                    console.log('✅ User metadata updated (from email):', {
+                      userId,
+                      membershipType: plan,
+                      expiresAt: expiresAt.toISOString()
+                    });
+                  }
+
+                  // usersテーブルも更新
+                  const { error: dbError } = await supabase
+                    .from('users')
+                    .update({
+                      membership_type: plan,
+                      subscription_expires_at: expiresAt.toISOString(),
+                      updated_at: new Date().toISOString()
+                    })
+                    .eq('id', userId);
+
+                  if (dbError) {
+                    console.error('❌ Failed to update users table:', dbError);
+                  }
+
                   // 更新されたサブスクリプションの情報を返す
                   return NextResponse.json({
                     success: true,
                     subscriptionId: updatedSubscription.id,
                     message: 'サブスクリプションを更新しました。',
-                    updated: true
+                    updated: true,
+                    plan: plan
                   });
                 }
               }
