@@ -4931,6 +4931,13 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
 
   // ユーザー情報とデフォルトカテゴリーが読み込まれた後にカテゴリーを適用（初回ロード時のみ）
   const hasAppliedDefaultCategory = useRef(false);
+  
+  // userが変更されたらリセット（ログアウト/ログイン時）
+  useEffect(() => {
+    hasAppliedDefaultCategory.current = false;
+    console.log('🔄 ユーザー変更検知、デフォルトカテゴリー適用をリセット');
+  }, [user?.id]);
+  
   useEffect(() => {
     // カテゴリーが読み込まれていない場合は待機
     if (categories.length === 0) {
@@ -4944,13 +4951,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       return;
     }
     
-    // 既にカテゴリーが選択されている場合はスキップ
-    if (selectedCategory) {
-      console.log('✅ カテゴリーは既に選択済み:', selectedCategory);
-      hasAppliedDefaultCategory.current = true;
-      return;
-    }
-    
     // デフォルトカテゴリーを適用（ユーザー設定がある場合はそれを使用、なければpronunciation）
     const regularCategories = categories.filter(c => !c.id.startsWith('note_'));
     if (regularCategories.length > 0) {
@@ -4961,14 +4961,15 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         defaultCategoryId: targetCategoryId, 
         categoryName: defaultCategory.name,
         categoryId: defaultCategory.id,
-        hasUser: !!user
+        hasUser: !!user,
+        userMetadata: user?.user_metadata
       });
       setSelectedCategory(defaultCategory.id);
       setCurrentCategory(defaultCategory);
       setCurrentWords(defaultCategory.words || []);
       hasAppliedDefaultCategory.current = true;
     }
-  }, [user, defaultCategoryId, categories, selectedCategory]);
+  }, [user, defaultCategoryId, categories]);
   
   // Noteサブカテゴリーバーのスクロール状態を初期化
   useEffect(() => {
