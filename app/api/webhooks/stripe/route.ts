@@ -68,12 +68,13 @@ export async function POST(request: NextRequest) {
       });
 
       // payment_intentのmetadataにuser_idとplanがない場合、checkout_session_idから取得を試みる
+      let session: Stripe.Checkout.Session | null = null;
       if ((!userId || !plan) && paymentIntent.metadata?.checkout_session_id) {
         try {
           const checkoutSessionId = paymentIntent.metadata.checkout_session_id;
           console.log('📋 checkout_session_idからセッション情報を取得:', checkoutSessionId);
           
-          const session = await stripe.checkout.sessions.retrieve(checkoutSessionId);
+          session = await stripe.checkout.sessions.retrieve(checkoutSessionId);
           userId = session.metadata?.user_id || userId;
           plan = (session.metadata?.plan as 'subscription' | 'lifetime') || plan;
           
@@ -131,8 +132,11 @@ export async function POST(request: NextRequest) {
         });
 
         // 1. user_metadataを更新（サブスクリプションIDとカスタマーIDも保存）
-        updateData.stripe_subscription_id = session.subscription;
-        updateData.stripe_customer_id = session.customer;
+        // sessionが存在する場合のみ設定
+        if (session) {
+          updateData.stripe_subscription_id = session.subscription;
+          updateData.stripe_customer_id = session.customer;
+        }
         
         const { data: userData, error: userError } = await supabase.auth.admin.updateUserById(
           userId,
