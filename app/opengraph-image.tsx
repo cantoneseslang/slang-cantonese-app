@@ -22,8 +22,14 @@ export default async function Image() {
     if (response.ok) {
       const arrayBuffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
-      // Base64エンコード（エッジランタイム対応）
-      const base64 = btoa(String.fromCharCode(...uint8Array));
+      // Base64エンコード（エッジランタイム対応、チャンク処理）
+      const chunkSize = 8192;
+      let binaryString = '';
+      for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.slice(i, i + chunkSize);
+        binaryString += String.fromCharCode(...chunk);
+      }
+      const base64 = btoa(binaryString);
       imageDataUrl = `data:image/png;base64,${base64}`;
     }
   } catch (error) {
