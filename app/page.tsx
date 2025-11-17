@@ -4784,98 +4784,40 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     
     setIsSavingDefaultCategory(true);
     try {
-      // 既存のuser_metadataを取得してマージ（他の設定を保持）
-      const currentMetadata = user.user_metadata || {};
-      const updatedMetadata = {
-        ...currentMetadata,
-        default_category_id: newCategoryId
-      };
-      
-      console.log('💾 メタデータ更新:', {
-        currentMetadata,
-        updatedMetadata,
-        newCategoryId
-      });
-      
-      // Supabaseに保存
-      const { data, error } = await supabase.auth.updateUser({
-        data: updatedMetadata
+      // APIルートを使用してサーバー側で保存
+      const response = await fetch('/api/user/update-default-category', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          default_category_id: newCategoryId
+        })
       });
 
-      if (error) {
-        console.error('❌ デフォルトカテゴリー保存エラー:', error);
-        alert(`デフォルトカテゴリーの保存に失敗しました: ${error.message}`);
-        setIsSavingDefaultCategory(false);
-        return;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.details || 'デフォルトカテゴリーの保存に失敗しました');
       }
 
-      console.log('✅ updateUser成功:', { 
-        newCategoryId, 
-        updatedUser: data.user,
-        savedMetadata: data.user?.user_metadata
-      });
+      const result = await response.json();
+      console.log('✅ デフォルトカテゴリー保存成功:', result);
 
       // 状態を更新
       setDefaultCategoryId(newCategoryId);
       setShowCategoryPicker(false);
       
-      // ユーザー情報を再取得して最新の状態を反映（少し待ってから再取得）
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // ユーザー情報を再取得して最新の状態を反映
       const { data: { user: updatedUser }, error: getUserError } = await supabase.auth.getUser();
       
       if (getUserError) {
         console.error('❌ ユーザー情報再取得エラー:', getUserError);
-        // エラーでもdata.userから直接更新を試みる
-        if (data.user) {
-          setUser(data.user);
-          console.log('✅ data.userから直接更新:', {
-            default_category_id: data.user.user_metadata?.default_category_id,
-            newCategoryId
-          });
-        }
       } else if (updatedUser) {
         setUser(updatedUser);
         console.log('✅ ユーザー情報を再取得完了:', {
           default_category_id: updatedUser.user_metadata?.default_category_id,
-          newCategoryId,
-          allMetadata: updatedUser.user_metadata
+          newCategoryId
         });
-        
-        // 保存された値が正しいか確認
-        if (updatedUser.user_metadata?.default_category_id !== newCategoryId) {
-          console.warn('⚠️ 保存された値が一致しません。再試行します:', {
-            expected: newCategoryId,
-            actual: updatedUser.user_metadata?.default_category_id
-          });
-          
-          // 再試行（user_metadata全体を更新）
-          const retryMetadata = {
-            ...updatedUser.user_metadata,
-            default_category_id: newCategoryId
-          };
-          const { data: retryData, error: retryError } = await supabase.auth.updateUser({
-            data: retryMetadata
-          });
-          
-          if (retryError) {
-            console.error('❌ 再試行エラー:', retryError);
-            alert(`デフォルトカテゴリーの保存に失敗しました: ${retryError.message}`);
-            setIsSavingDefaultCategory(false);
-            return;
-          }
-          
-          // 再取得
-          const { data: { user: retryUpdatedUser } } = await supabase.auth.getUser();
-          if (retryUpdatedUser) {
-            setUser(retryUpdatedUser);
-            setDefaultCategoryId(retryUpdatedUser.user_metadata?.default_category_id || newCategoryId);
-            console.log('✅ 再試行成功:', {
-              default_category_id: retryUpdatedUser.user_metadata?.default_category_id
-            });
-          }
-        } else {
-          console.log('✅ 保存確認完了: 値が正しく保存されています');
-        }
       }
       
       // 現在選択中のカテゴリーがデフォルトカテゴリーでない場合、デフォルトカテゴリーに切り替え
