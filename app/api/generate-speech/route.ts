@@ -66,15 +66,32 @@ export async function POST(request: NextRequest) {
 
     const voiceParams: VoiceConfig = selectedVoice ?? defaultVoice;
     
+    // 「一」の発音問題対策: SSML形式を使用して明示的に発音を指示
+    // Google TTS APIが「一」を正しく発音しない問題への対処
+    let finalText = text;
+    let useSSML = false;
+    
+    // 「一」で始まるテキストの場合、SSMLで発音を明示
+    if (text === '一' || text.startsWith('一百') || text.startsWith('一千') || text.startsWith('一萬')) {
+      // SSML形式で、「一」の発音を強制
+      finalText = `<speak><prosody rate="0.95" pitch="+0st">${text}</prosody></speak>`;
+      useSSML = true;
+      console.log('🔧 「一」対策: SSML形式を使用', { originalText: text, ssmlText: finalText });
+    }
+    
     const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`;
     const payload = {
-      input: { text: text },
+      input: useSSML ? { ssml: finalText } : { text: finalText },
       voice: {
         languageCode: voiceParams.languageCode,
         ssmlGender: voiceParams.ssmlGender,
         ...(voiceParams.name ? { name: voiceParams.name } : {}),
       },
-      audioConfig: { audioEncoding: 'MP3' }
+      audioConfig: { 
+        audioEncoding: 'MP3',
+        // 音声の品質を上げる（頭切れ対策）
+        sampleRateHertz: 24000
+      }
     };
 
     console.log('🔊 音声生成API呼び出し開始:', {
