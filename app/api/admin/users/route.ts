@@ -42,34 +42,46 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // デバッグ: 最初のユーザーのオブジェクト構造を確認（ゴールド会員が含まれる場合）
-    const goldUser = (authUsers || []).find((u: any) => 
-      u.email === 'bestinksalesman@gmail.com' || u.email === 'm.sakonhk@gmail.com'
-    );
-    if (goldUser) {
-      console.log('🔍 ゴールド会員のオブジェクト構造:', {
-        email: goldUser.email,
-        keys: Object.keys(goldUser),
-        user_metadata: goldUser.user_metadata,
-        raw_user_meta_data: goldUser.raw_user_meta_data,
-        app_metadata: goldUser.app_metadata,
-        full_object: JSON.stringify(goldUser, null, 2).substring(0, 1000) // 最初の1000文字
+    // public.usersテーブルからmembership_typeを取得（データベースの実際のデータを反映）
+    const { data: publicUsers, error: publicUsersError } = await supabaseAdmin
+      .from('users')
+      .select('id, membership_type');
+    
+    // membership_typeのマップを作成（idをキーとして）
+    const membershipTypeMap: Record<string, string> = {};
+    if (publicUsers && !publicUsersError) {
+      publicUsers.forEach((u: any) => {
+        if (u.membership_type) {
+          membershipTypeMap[u.id] = u.membership_type;
+        }
+      });
+    }
+
+    // デバッグ: ゴールド会員のデータを確認
+    const goldUserIds = Object.keys(membershipTypeMap).filter(id => membershipTypeMap[id] === 'lifetime');
+    if (goldUserIds.length > 0) {
+      console.log('🔍 ゴールド会員検出（public.usersテーブルから）:', {
+        count: goldUserIds.length,
+        user_ids: goldUserIds
       });
     }
 
     // ユーザー情報をフォーマット
-    // Supabase JS SDKのlistUsers()が返すオブジェクトの構造を確認
     const formattedUsers = (authUsers || []).map((u: any) => {
-      // Supabase JS SDKでは、user_metadataにraw_user_meta_dataの内容がマッピングされる
-      // しかし、念のため両方を確認
       const userMeta = u.user_metadata || {};
       
+      // public.usersテーブルから取得したmembership_typeを優先
+      // なければuser_metadataから取得、それもなければ'free'
+      const membershipType = membershipTypeMap[u.id] || userMeta.membership_type || 'free';
+      
       // デバッグ用: ゴールド会員のデータを確認
-      if (userMeta.membership_type === 'lifetime') {
-        console.log('🔍 ゴールド会員検出:', {
+      if (membershipType === 'lifetime') {
+        console.log('🔍 ゴールド会員検出（最終）:', {
           email: u.email,
-          membership_type: userMeta.membership_type,
-          full_user_metadata: userMeta
+          id: u.id,
+          membership_type_from_public: membershipTypeMap[u.id],
+          membership_type_from_metadata: userMeta.membership_type,
+          final_membership_type: membershipType
         });
       }
       
@@ -77,7 +89,7 @@ export async function GET(request: NextRequest) {
         id: u.id,
         email: u.email,
         username: userMeta.username || null,
-        membership_type: userMeta.membership_type || 'free',
+        membership_type: membershipType,
         subscription_expires_at: userMeta.subscription_expires_at || null,
         has_password: !!u.encrypted_password,
         last_sign_in_at: u.last_sign_in_at,
