@@ -12,8 +12,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // ユーザーのメンバーシップタイプを取得
-    const membershipType = user.user_metadata?.membershipType || 'free';
+    // ユーザーのメンバーシップタイプを取得（raw_user_meta_dataを優先）
+    // Supabaseではuser_metadataにraw_user_meta_dataの内容がマッピングされるが、
+    // 念のため両方を確認
+    const membershipType = user.user_metadata?.membership_type || 'free';
 
     // 有料会員は制限なし
     if (membershipType === 'subscription' || membershipType === 'lifetime') {
@@ -50,6 +52,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
 
 
 
