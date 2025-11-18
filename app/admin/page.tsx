@@ -105,8 +105,34 @@ export default function AdminPage() {
       const response = await fetch('/api/admin/users');
       const data = await response.json();
       
+      console.log('📊 APIレスポンス:', {
+        success: data.success,
+        usersCount: data.users?.length || 0,
+        sampleUsers: data.users?.slice(0, 3),
+        allUsers: data.users
+      });
+      
       if (data.success) {
-        setUsers(data.users || []);
+        const fetchedUsers = data.users || [];
+        
+        // デバッグ: 会員種別の集計
+        const lifetimeCount = fetchedUsers.filter((u: User) => u.membership_type === 'lifetime').length;
+        const subscriptionCount = fetchedUsers.filter((u: User) => u.membership_type === 'subscription').length;
+        const freeCount = fetchedUsers.filter((u: User) => u.membership_type === 'free' || !u.membership_type).length;
+        
+        console.log('📊 フロントエンドでの会員種別集計:', {
+          lifetime: lifetimeCount,
+          subscription: subscriptionCount,
+          free: freeCount,
+          total: fetchedUsers.length,
+          lifetimeUsers: fetchedUsers.filter((u: User) => u.membership_type === 'lifetime').map((u: User) => ({
+            id: u.id,
+            email: u.email,
+            membership_type: u.membership_type
+          }))
+        });
+        
+        setUsers(fetchedUsers);
       } else {
         console.error('ユーザー取得エラー:', data);
         // 詳細なエラー情報を表示
