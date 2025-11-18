@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
     let allAuthUsers: any[] = [];
     let page = 1;
     let hasMore = true;
+    let paginationError: any = null;
     
     while (hasMore) {
       const { data: { users: pageUsers }, error: pageError } = await supabaseAdmin.auth.admin.listUsers({
@@ -45,6 +46,7 @@ export async function GET(request: NextRequest) {
       
       if (pageError) {
         console.error(`Error fetching users page ${page}:`, pageError);
+        paginationError = pageError;
         break;
       }
       
@@ -60,21 +62,20 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    const authUsers = allAuthUsers;
-    const authError = null;
-    
     console.log('📊 Admin API listUsers結果:', {
       totalPages: page - 1,
       totalUsers: allAuthUsers.length
     });
 
-    if (authError) {
-      console.error('Error fetching users from auth:', authError);
+    if (paginationError) {
+      console.error('Error fetching users from auth:', paginationError);
       return NextResponse.json(
-        { success: false, error: 'Failed to fetch users', details: authError.message },
+        { success: false, error: 'Failed to fetch users', details: paginationError.message },
         { status: 500 }
       );
     }
+    
+    const authUsers = allAuthUsers;
 
     // auth.usersテーブルから直接raw_user_meta_dataを取得（データベースの実際のデータを反映）
     // Supabase Admin APIのlistUsers()ではuser_metadataにraw_user_meta_dataがマッピングされない場合があるため、
