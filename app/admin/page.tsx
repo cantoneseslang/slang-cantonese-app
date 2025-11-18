@@ -416,6 +416,103 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* 月別会員登録数・売上分析 */}
+        <div style={{
+          marginTop: '2rem',
+          padding: '1.5rem',
+          backgroundColor: '#f9fafb',
+          borderRadius: '12px'
+        }}>
+          <h3 style={{
+            fontSize: '1.25rem',
+            fontWeight: '600',
+            marginBottom: '1.5rem',
+            color: '#1f2937'
+          }}>
+            📈 月別会員登録数・売上分析
+          </h3>
+          {analyticsLoading ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '2rem',
+              color: '#6b7280'
+            }}>
+              読み込み中...
+            </div>
+          ) : analyticsData.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '2rem',
+              color: '#6b7280'
+            }}>
+              データがありません
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={400}>
+              <ComposedChart data={analyticsData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="month" 
+                  style={{ fontSize: '0.75rem' }}
+                />
+                <YAxis 
+                  yAxisId="left"
+                  style={{ fontSize: '0.75rem' }}
+                  label={{ value: '会員登録数（人）', angle: -90, position: 'insideLeft' }}
+                />
+                <YAxis 
+                  yAxisId="right"
+                  orientation="right"
+                  style={{ fontSize: '0.75rem' }}
+                  label={{ value: '売上（円/HKD）', angle: 90, position: 'insideRight' }}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem'
+                  }}
+                  formatter={(value: number, name: string) => {
+                    if (name === '売上 (JPY)') {
+                      return [`¥${value.toLocaleString()}`, name];
+                    }
+                    if (name === '売上 (HKD)') {
+                      return [`HK$${value.toLocaleString()}`, name];
+                    }
+                    return [`${value}人`, name];
+                  }}
+                />
+                <Legend />
+                <Bar 
+                  yAxisId="right"
+                  dataKey="revenueJPY" 
+                  fill="#8b5cf6" 
+                  name="売上 (JPY)"
+                  radius={[8, 8, 0, 0]}
+                />
+                <Bar 
+                  yAxisId="right"
+                  dataKey="revenueHKD" 
+                  fill="#10b981" 
+                  name="売上 (HKD)"
+                  radius={[8, 8, 0, 0]}
+                />
+                <Line 
+                  yAxisId="left"
+                  type="monotone" 
+                  dataKey="registrations" 
+                  stroke="#3b82f6" 
+                  strokeWidth={3}
+                  name="会員登録数"
+                  dot={{ fill: '#3b82f6', r: 5 }}
+                  activeDot={{ r: 7 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
         {/* 会員情報一覧 */}
         <div style={{ marginTop: '2rem' }}>
           <div style={{
@@ -768,103 +865,6 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
-
-        {/* 月別会員登録数・売上分析 */}
-        <div style={{
-          marginTop: '2rem',
-          padding: '1.5rem',
-          backgroundColor: '#f9fafb',
-          borderRadius: '12px'
-        }}>
-          <h3 style={{
-            fontSize: '1.25rem',
-            fontWeight: '600',
-            marginBottom: '1.5rem',
-            color: '#1f2937'
-          }}>
-            📈 月別会員登録数・売上分析
-          </h3>
-          {analyticsLoading ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '2rem',
-              color: '#6b7280'
-            }}>
-              読み込み中...
-            </div>
-          ) : analyticsData.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '2rem',
-              color: '#6b7280'
-            }}>
-              データがありません
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={400}>
-              <ComposedChart data={analyticsData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="month" 
-                  style={{ fontSize: '0.75rem' }}
-                />
-                <YAxis 
-                  yAxisId="left"
-                  style={{ fontSize: '0.75rem' }}
-                  label={{ value: '会員登録数（人）', angle: -90, position: 'insideLeft' }}
-                />
-                <YAxis 
-                  yAxisId="right"
-                  orientation="right"
-                  style={{ fontSize: '0.75rem' }}
-                  label={{ value: '売上（円/HKD）', angle: 90, position: 'insideRight' }}
-                />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    fontSize: '0.875rem'
-                  }}
-                  formatter={(value: number, name: string) => {
-                    if (name === '売上 (JPY)') {
-                      return [`¥${value.toLocaleString()}`, name];
-                    }
-                    if (name === '売上 (HKD)') {
-                      return [`HK$${value.toLocaleString()}`, name];
-                    }
-                    return [`${value}人`, name];
-                  }}
-                />
-                <Legend />
-                <Bar 
-                  yAxisId="right"
-                  dataKey="revenueJPY" 
-                  fill="#8b5cf6" 
-                  name="売上 (JPY)"
-                  radius={[8, 8, 0, 0]}
-                />
-                <Bar 
-                  yAxisId="right"
-                  dataKey="revenueHKD" 
-                  fill="#10b981" 
-                  name="売上 (HKD)"
-                  radius={[8, 8, 0, 0]}
-                />
-                <Line 
-                  yAxisId="left"
-                  type="monotone" 
-                  dataKey="registrations" 
-                  stroke="#3b82f6" 
-                  strokeWidth={3}
-                  name="会員登録数"
-                  dot={{ fill: '#3b82f6', r: 5 }}
-                  activeDot={{ r: 7 }}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
           )}
         </div>
 
