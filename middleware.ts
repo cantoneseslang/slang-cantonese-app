@@ -32,6 +32,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // ログインページ、認証関連ページ、APIルートは認証不要
+  // 注意: /api/stripe/* は各エンドポイント内で認証チェックを行うため、middlewareではスキップしない
   if (request.nextUrl.pathname.startsWith('/login') || 
       request.nextUrl.pathname.startsWith('/auth') ||
       request.nextUrl.pathname.startsWith('/api/auth') ||
