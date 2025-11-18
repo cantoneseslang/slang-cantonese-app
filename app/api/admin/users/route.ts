@@ -31,8 +31,42 @@ export async function GET(request: NextRequest) {
       serviceRoleKey
     );
 
-    // Admin APIで全ユーザーを取得
-    const { data: { users: authUsers }, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+    // Admin APIで全ユーザーを取得（ページネーション対応）
+    // listUsers()はデフォルトで最大50件しか返さないため、全ユーザーを取得する
+    let allAuthUsers: any[] = [];
+    let page = 1;
+    let hasMore = true;
+    
+    while (hasMore) {
+      const { data: { users: pageUsers }, error: pageError } = await supabaseAdmin.auth.admin.listUsers({
+        page,
+        perPage: 1000 // 最大1000件まで一度に取得
+      });
+      
+      if (pageError) {
+        console.error(`Error fetching users page ${page}:`, pageError);
+        break;
+      }
+      
+      if (pageUsers && pageUsers.length > 0) {
+        allAuthUsers = [...allAuthUsers, ...pageUsers];
+        page++;
+        // 1000件未満の場合は最終ページ
+        if (pageUsers.length < 1000) {
+          hasMore = false;
+        }
+      } else {
+        hasMore = false;
+      }
+    }
+    
+    const authUsers = allAuthUsers;
+    const authError = null;
+    
+    console.log('📊 Admin API listUsers結果:', {
+      totalPages: page - 1,
+      totalUsers: allAuthUsers.length
+    });
 
     if (authError) {
       console.error('Error fetching users from auth:', authError);
