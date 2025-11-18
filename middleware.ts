@@ -32,11 +32,12 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // ログインページ、認証関連ページ、APIルートは認証不要
-  // 注意: /api/stripe/* は各エンドポイント内で認証チェックを行うため、middlewareではスキップしない
+  // 注意: /api/stripe/* の一部は認証が必要だが、get-eventは管理者用のため認証不要（後で認証チェックを追加）
   if (request.nextUrl.pathname.startsWith('/login') || 
       request.nextUrl.pathname.startsWith('/auth') ||
       request.nextUrl.pathname.startsWith('/api/auth') ||
       request.nextUrl.pathname.startsWith('/api/webhooks') || // Webhookエンドポイントは認証不要（Stripeから呼ばれる）
+      request.nextUrl.pathname.startsWith('/api/stripe/get-event') || // イベント詳細取得（管理者用、後で認証チェックを追加）
       request.nextUrl.pathname.startsWith('/api/contact') ||
       request.nextUrl.pathname.startsWith('/api/translate') ||
       request.nextUrl.pathname.startsWith('/api/health-check') || // ヘルスチェックエンドポイントも認証不要
