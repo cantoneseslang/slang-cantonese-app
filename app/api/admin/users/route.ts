@@ -47,6 +47,22 @@ export async function GET(request: NextRequest) {
     // PostgreSQL関数を使用して直接取得する
     const { data: rawUsersData, error: rawUsersError } = await supabaseAdmin.rpc('get_user_metadata');
     
+    // エラーハンドリングとデバッグログ
+    if (rawUsersError) {
+      console.error('❌ Error fetching raw user metadata:', {
+        error: rawUsersError,
+        message: rawUsersError.message,
+        details: rawUsersError.details,
+        hint: rawUsersError.hint
+      });
+    }
+    
+    console.log('📊 Raw users data fetched:', {
+      count: rawUsersData?.length || 0,
+      hasError: !!rawUsersError,
+      sample: rawUsersData?.slice(0, 3)
+    });
+    
     // membership_typeのマップを作成（idをキーとして）
     const membershipTypeMap: Record<string, any> = {};
     if (rawUsersData && !rawUsersError) {
@@ -64,20 +80,28 @@ export async function GET(request: NextRequest) {
           };
         }
       });
-    } else if (rawUsersError) {
-      console.error('Error fetching raw user metadata:', rawUsersError);
+      
+      console.log('📊 Membership type map created:', {
+        totalUsers: Object.keys(membershipTypeMap).length,
+        lifetimeCount: Object.values(membershipTypeMap).filter((m: any) => m.membership_type === 'lifetime').length,
+        subscriptionCount: Object.values(membershipTypeMap).filter((m: any) => m.membership_type === 'subscription').length,
+        freeCount: Object.values(membershipTypeMap).filter((m: any) => m.membership_type === 'free' || !m.membership_type).length
+      });
     }
 
     // デバッグ: ゴールド会員のデータを確認
     const goldUserIds = Object.keys(membershipTypeMap).filter(id => 
       membershipTypeMap[id]?.membership_type === 'lifetime'
     );
-    if (goldUserIds.length > 0) {
-      console.log('🔍 ゴールド会員検出（raw_user_meta_dataから）:', {
-        count: goldUserIds.length,
-        user_ids: goldUserIds
-      });
-    }
+    console.log('🔍 ゴールド会員検出（raw_user_meta_dataから）:', {
+      count: goldUserIds.length,
+      user_ids: goldUserIds,
+      details: goldUserIds.map(id => ({
+        id,
+        email: authUsers?.find((u: any) => u.id === id)?.email,
+        membership_type: membershipTypeMap[id]?.membership_type
+      }))
+    });
 
     // ユーザー情報をフォーマット
     const formattedUsers = (authUsers || []).map((u: any) => {
@@ -95,7 +119,9 @@ export async function GET(request: NextRequest) {
           id: u.id,
           membership_type_from_raw: rawMeta.membership_type,
           membership_type_from_metadata: userMeta.membership_type,
-          final_membership_type: membershipType
+          final_membership_type: membershipType,
+          hasRawMeta: !!rawMeta.membership_type,
+          hasUserMeta: !!userMeta.membership_type
         });
       }
       
@@ -115,6 +141,18 @@ export async function GET(request: NextRequest) {
         survey_cantonese_level: rawMeta.survey_cantonese_level || userMeta.survey_cantonese_level || null,
         survey_completed: rawMeta.survey_completed !== undefined ? rawMeta.survey_completed : (userMeta.survey_completed || false),
       };
+    });
+
+    // 最終的な集計をログに出力
+    const finalLifetimeCount = formattedUsers.filter(u => u.membership_type === 'lifetime').length;
+    const finalSubscriptionCount = formattedUsers.filter(u => u.membership_type === 'subscription').length;
+    const finalFreeCount = formattedUsers.filter(u => u.membership_type === 'free' || !u.membership_type).length;
+    
+    console.log('📊 最終的な会員種別集計:', {
+      lifetime: finalLifetimeCount,
+      subscription: finalSubscriptionCount,
+      free: finalFreeCount,
+      total: formattedUsers.length
     });
 
     return NextResponse.json({ success: true, users: formattedUsers });
