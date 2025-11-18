@@ -38,16 +38,51 @@ export async function GET(request: NextRequest) {
       serviceRoleKey
     );
 
-    // 全ユーザーを取得
-    const { data: { users: authUsers }, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-
-    if (authError) {
-      console.error('Error fetching users from auth:', authError);
+    // 全ユーザーを取得（ページネーション対応）
+    // listUsers()はデフォルトで最大50件しか返さないため、全ユーザーを取得する
+    let allAuthUsers: any[] = [];
+    let page = 1;
+    let hasMore = true;
+    let paginationError: any = null;
+    
+    while (hasMore) {
+      const { data: { users: pageUsers }, error: pageError } = await supabaseAdmin.auth.admin.listUsers({
+        page,
+        perPage: 1000 // 最大1000件まで一度に取得
+      });
+      
+      if (pageError) {
+        console.error(`Error fetching users page ${page}:`, pageError);
+        paginationError = pageError;
+        break;
+      }
+      
+      if (pageUsers && pageUsers.length > 0) {
+        allAuthUsers = [...allAuthUsers, ...pageUsers];
+        page++;
+        // 1000件未満の場合は最終ページ
+        if (pageUsers.length < 1000) {
+          hasMore = false;
+        }
+      } else {
+        hasMore = false;
+      }
+    }
+    
+    console.log('📊 Analytics - Admin API listUsers結果:', {
+      totalPages: page - 1,
+      totalUsers: allAuthUsers.length
+    });
+    
+    if (paginationError) {
+      console.error('Error fetching users from auth:', paginationError);
       return NextResponse.json(
-        { success: false, error: 'Failed to fetch users', details: authError.message },
+        { success: false, error: 'Failed to fetch users', details: paginationError.message },
         { status: 500 }
       );
     }
+    
+    const authUsers = allAuthUsers;
 
     // 月別の会員登録数を集計（過去12ヶ月）
     const now = new Date();
