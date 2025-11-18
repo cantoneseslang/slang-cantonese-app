@@ -42,39 +42,52 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // デバッグ: 最初のユーザーのオブジェクト構造を確認（ゴールド会員が含まれる場合）
+    const goldUser = (authUsers || []).find((u: any) => 
+      u.email === 'bestinksalesman@gmail.com' || u.email === 'm.sakonhk@gmail.com'
+    );
+    if (goldUser) {
+      console.log('🔍 ゴールド会員のオブジェクト構造:', {
+        email: goldUser.email,
+        keys: Object.keys(goldUser),
+        user_metadata: goldUser.user_metadata,
+        raw_user_meta_data: goldUser.raw_user_meta_data,
+        app_metadata: goldUser.app_metadata,
+        full_object: JSON.stringify(goldUser, null, 2).substring(0, 1000) // 最初の1000文字
+      });
+    }
+
     // ユーザー情報をフォーマット
-    // user_metadataとraw_user_meta_dataの両方を確認（raw_user_meta_dataが優先）
+    // Supabase JS SDKのlistUsers()が返すオブジェクトの構造を確認
     const formattedUsers = (authUsers || []).map((u: any) => {
-      // raw_user_meta_dataを優先し、なければuser_metadataを使用
-      const rawMeta = u.raw_user_meta_data || {};
+      // Supabase JS SDKでは、user_metadataにraw_user_meta_dataの内容がマッピングされる
+      // しかし、念のため両方を確認
       const userMeta = u.user_metadata || {};
       
       // デバッグ用: ゴールド会員のデータを確認
-      if (rawMeta.membership_type === 'lifetime' || userMeta.membership_type === 'lifetime') {
+      if (userMeta.membership_type === 'lifetime') {
         console.log('🔍 ゴールド会員検出:', {
           email: u.email,
-          raw_user_meta_data: rawMeta.membership_type,
-          user_metadata: userMeta.membership_type,
-          full_raw: rawMeta,
-          full_user: userMeta
+          membership_type: userMeta.membership_type,
+          full_user_metadata: userMeta
         });
       }
       
       return {
         id: u.id,
         email: u.email,
-        username: rawMeta.username || userMeta.username || null,
-        membership_type: rawMeta.membership_type || userMeta.membership_type || 'free',
-        subscription_expires_at: rawMeta.subscription_expires_at || userMeta.subscription_expires_at || null,
+        username: userMeta.username || null,
+        membership_type: userMeta.membership_type || 'free',
+        subscription_expires_at: userMeta.subscription_expires_at || null,
         has_password: !!u.encrypted_password,
         last_sign_in_at: u.last_sign_in_at,
         created_at: u.created_at,
         updated_at: u.updated_at,
-        survey_gender: rawMeta.survey_gender || userMeta.survey_gender || null,
-        survey_residence: rawMeta.survey_residence || userMeta.survey_residence || null,
-        survey_residence_other: rawMeta.survey_residence_other || userMeta.survey_residence_other || null,
-        survey_cantonese_level: rawMeta.survey_cantonese_level || userMeta.survey_cantonese_level || null,
-        survey_completed: rawMeta.survey_completed !== undefined ? rawMeta.survey_completed : (userMeta.survey_completed || false),
+        survey_gender: userMeta.survey_gender || null,
+        survey_residence: userMeta.survey_residence || null,
+        survey_residence_other: userMeta.survey_residence_other || null,
+        survey_cantonese_level: userMeta.survey_cantonese_level || null,
+        survey_completed: userMeta.survey_completed || false,
       };
     });
 
