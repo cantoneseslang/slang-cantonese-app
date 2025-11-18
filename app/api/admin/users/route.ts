@@ -42,25 +42,38 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // public.usersテーブルからmembership_typeを取得（データベースの実際のデータを反映）
-    const { data: publicUsers, error: publicUsersError } = await supabaseAdmin
-      .from('users')
-      .select('id, membership_type');
+    // auth.usersテーブルから直接raw_user_meta_dataを取得（データベースの実際のデータを反映）
+    // Supabase Admin APIのlistUsers()ではuser_metadataにraw_user_meta_dataがマッピングされない場合があるため、
+    // PostgreSQL関数を使用して直接取得する
+    const { data: rawUsersData, error: rawUsersError } = await supabaseAdmin.rpc('get_user_metadata');
     
     // membership_typeのマップを作成（idをキーとして）
-    const membershipTypeMap: Record<string, string> = {};
-    if (publicUsers && !publicUsersError) {
-      publicUsers.forEach((u: any) => {
-        if (u.membership_type) {
-          membershipTypeMap[u.id] = u.membership_type;
+    const membershipTypeMap: Record<string, any> = {};
+    if (rawUsersData && !rawUsersError) {
+      rawUsersData.forEach((u: any) => {
+        if (u.id) {
+          membershipTypeMap[u.id] = {
+            membership_type: u.membership_type || null,
+            username: u.username || null,
+            subscription_expires_at: u.subscription_expires_at || null,
+            survey_gender: u.survey_gender || null,
+            survey_residence: u.survey_residence || null,
+            survey_residence_other: u.survey_residence_other || null,
+            survey_cantonese_level: u.survey_cantonese_level || null,
+            survey_completed: u.survey_completed || false,
+          };
         }
       });
+    } else if (rawUsersError) {
+      console.error('Error fetching raw user metadata:', rawUsersError);
     }
 
     // デバッグ: ゴールド会員のデータを確認
-    const goldUserIds = Object.keys(membershipTypeMap).filter(id => membershipTypeMap[id] === 'lifetime');
+    const goldUserIds = Object.keys(membershipTypeMap).filter(id => 
+      membershipTypeMap[id]?.membership_type === 'lifetime'
+    );
     if (goldUserIds.length > 0) {
-      console.log('🔍 ゴールド会員検出（public.usersテーブルから）:', {
+      console.log('🔍 ゴールド会員検出（raw_user_meta_dataから）:', {
         count: goldUserIds.length,
         user_ids: goldUserIds
       });
@@ -69,17 +82,18 @@ export async function GET(request: NextRequest) {
     // ユーザー情報をフォーマット
     const formattedUsers = (authUsers || []).map((u: any) => {
       const userMeta = u.user_metadata || {};
+      const rawMeta = membershipTypeMap[u.id] || {};
       
-      // public.usersテーブルから取得したmembership_typeを優先
-      // なければuser_metadataから取得、それもなければ'free'
-      const membershipType = membershipTypeMap[u.id] || userMeta.membership_type || 'free';
+      // raw_user_meta_dataから取得したデータを優先
+      // なければuser_metadataから取得、それもなければデフォルト値
+      const membershipType = rawMeta.membership_type || userMeta.membership_type || 'free';
       
       // デバッグ用: ゴールド会員のデータを確認
       if (membershipType === 'lifetime') {
         console.log('🔍 ゴールド会員検出（最終）:', {
           email: u.email,
           id: u.id,
-          membership_type_from_public: membershipTypeMap[u.id],
+          membership_type_from_raw: rawMeta.membership_type,
           membership_type_from_metadata: userMeta.membership_type,
           final_membership_type: membershipType
         });
@@ -88,18 +102,18 @@ export async function GET(request: NextRequest) {
       return {
         id: u.id,
         email: u.email,
-        username: userMeta.username || null,
+        username: rawMeta.username || userMeta.username || null,
         membership_type: membershipType,
-        subscription_expires_at: userMeta.subscription_expires_at || null,
+        subscription_expires_at: rawMeta.subscription_expires_at || userMeta.subscription_expires_at || null,
         has_password: !!u.encrypted_password,
         last_sign_in_at: u.last_sign_in_at,
         created_at: u.created_at,
         updated_at: u.updated_at,
-        survey_gender: userMeta.survey_gender || null,
-        survey_residence: userMeta.survey_residence || null,
-        survey_residence_other: userMeta.survey_residence_other || null,
-        survey_cantonese_level: userMeta.survey_cantonese_level || null,
-        survey_completed: userMeta.survey_completed || false,
+        survey_gender: rawMeta.survey_gender || userMeta.survey_gender || null,
+        survey_residence: rawMeta.survey_residence || userMeta.survey_residence || null,
+        survey_residence_other: rawMeta.survey_residence_other || userMeta.survey_residence_other || null,
+        survey_cantonese_level: rawMeta.survey_cantonese_level || userMeta.survey_cantonese_level || null,
+        survey_completed: rawMeta.survey_completed !== undefined ? rawMeta.survey_completed : (userMeta.survey_completed || false),
       };
     });
 
