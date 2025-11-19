@@ -116,3 +116,6 @@ GROUP BY COALESCE(raw_user_meta_data->>'membership_type', 'free');
 - [Supabase Auth Admin API](https://supabase.com/docs/reference/javascript/auth-admin-listusers)
 - [Supabase User Metadata](https://supabase.com/docs/guides/auth/users/user-metadata)
 
+
+
+

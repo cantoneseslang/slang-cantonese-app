@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
           expiresAt = expiresDate.toISOString();
           updateData.subscription_expires_at = expiresAt;
         } else if (plan === 'lifetime') {
-          // ゴールド会員（年間一括割引）: 1年後
+          // ゴールド会員（買い切り）: 購入日から1年後
           const expiresDate = new Date();
           expiresDate.setFullYear(expiresDate.getFullYear() + 1);
           expiresAt = expiresDate.toISOString();
@@ -258,7 +258,7 @@ export async function POST(request: NextRequest) {
                   expiresAt = expiresDate.toISOString();
                   updateData.subscription_expires_at = expiresAt;
                 } else if (plan === 'lifetime') {
-                  // ゴールド会員（年間一括割引）: 1年後
+                  // ゴールド会員（買い切り）: 購入日から1年後
                   const expiresDate = new Date();
                   expiresDate.setFullYear(expiresDate.getFullYear() + 1);
                   expiresAt = expiresDate.toISOString();
@@ -403,7 +403,18 @@ export async function POST(request: NextRequest) {
 
       // サブスクリプションの実際の期間終了日を取得して有効期限を設定
       let expiresAt: string | null = null;
-      if (session.subscription) {
+      
+      // lifetimeプラン（買い切り）の場合は、常に購入日から1年後に設定
+      if (plan === 'lifetime') {
+        const expiresDate = new Date();
+        expiresDate.setFullYear(expiresDate.getFullYear() + 1);
+        expiresAt = expiresDate.toISOString();
+        console.log('✅ ゴールド会員（lifetime）: 購入日から1年後に設定', {
+          expiresAt,
+          purchaseDate: new Date().toISOString()
+        });
+      } else if (session.subscription && plan === 'subscription') {
+        // subscriptionプラン（月額）の場合のみ、サブスクリプション情報を取得
         try {
           // サブスクリプション情報を取得して期間終了日を確認
           const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
@@ -413,42 +424,26 @@ export async function POST(request: NextRequest) {
             : null;
           
           if (currentPeriodEnd) {
-            if (plan === 'subscription') {
-              // シルバー会員: 現在の期間終了日の1ヶ月後
-              const expiresDate = new Date(currentPeriodEnd);
-              expiresDate.setMonth(expiresDate.getMonth() + 1);
-              expiresAt = expiresDate.toISOString();
-            } else if (plan === 'lifetime') {
-              // ゴールド会員: 現在の期間終了日の1年後
-              const expiresDate = new Date(currentPeriodEnd);
-              expiresDate.setFullYear(expiresDate.getFullYear() + 1);
-              expiresAt = expiresDate.toISOString();
-            }
-          }
-        } catch (subError: any) {
-          console.error('❌ サブスクリプション情報の取得に失敗:', subError);
-          // フォールバック: 固定の日付を使用
-          if (plan === 'subscription') {
+            // シルバー会員: 現在の期間終了日
+            expiresAt = currentPeriodEnd.toISOString();
+          } else {
+            // フォールバック: 1ヶ月後
             const expiresDate = new Date();
             expiresDate.setMonth(expiresDate.getMonth() + 1);
             expiresAt = expiresDate.toISOString();
-          } else if (plan === 'lifetime') {
-            const expiresDate = new Date();
-            expiresDate.setFullYear(expiresDate.getFullYear() + 1);
-            expiresAt = expiresDate.toISOString();
           }
-        }
-      } else {
-        // サブスクリプションIDがない場合（lifetimeプランの場合など）
-        if (plan === 'subscription') {
+        } catch (subError: any) {
+          console.error('❌ サブスクリプション情報の取得に失敗:', subError);
+          // フォールバック: 1ヶ月後
           const expiresDate = new Date();
           expiresDate.setMonth(expiresDate.getMonth() + 1);
           expiresAt = expiresDate.toISOString();
-        } else if (plan === 'lifetime') {
-          const expiresDate = new Date();
-          expiresDate.setFullYear(expiresDate.getFullYear() + 1);
-          expiresAt = expiresDate.toISOString();
         }
+      } else if (plan === 'subscription') {
+        // サブスクリプションIDがない場合のフォールバック
+        const expiresDate = new Date();
+        expiresDate.setMonth(expiresDate.getMonth() + 1);
+        expiresAt = expiresDate.toISOString();
       }
       
       if (expiresAt) {
@@ -643,17 +638,16 @@ export async function POST(request: NextRequest) {
           
           let expiresAt: Date;
           if (finalPlan === 'subscription') {
-            // シルバー会員: 現在の期間終了日の1ヶ月後
-            expiresAt = new Date(currentPeriodEnd);
-            expiresAt.setMonth(expiresAt.getMonth() + 1);
+            // シルバー会員: 現在の期間終了日（currentPeriodEndはすでに次の請求日）
+            expiresAt = currentPeriodEnd;
           } else if (finalPlan === 'lifetime') {
-            // ゴールド会員: 現在の期間終了日の1年後
+            // ゴールド会員: lifetimeは本来サブスクリプションではないが、
+            // もし間違ってサブスクリプションとして作成された場合のフォールバック
             expiresAt = new Date(currentPeriodEnd);
             expiresAt.setFullYear(expiresAt.getFullYear() + 1);
           } else {
-            // デフォルト: 現在の期間終了日の1ヶ月後
-            expiresAt = new Date(currentPeriodEnd);
-            expiresAt.setMonth(expiresAt.getMonth() + 1);
+            // デフォルト: 現在の期間終了日
+            expiresAt = currentPeriodEnd;
           }
 
           const updateData: any = {

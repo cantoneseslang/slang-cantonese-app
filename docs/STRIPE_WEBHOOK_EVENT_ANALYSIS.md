@@ -66,3 +66,6 @@ curl "http://localhost:3000/api/stripe/get-event?eventId=evt_1SU7o3LopXhymmb3dzp
 - `app/api/stripe/webhook-status/route.ts`: Webhookステータス確認エンドポイント
 - `middleware.ts`: 認証チェック設定
 
+
+
+

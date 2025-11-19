@@ -113,3 +113,6 @@ PostgreSQL関数`get_user_metadata()`を作成し、`raw_user_meta_data`から�
    - 会員種別による制限の動作をテストする
    - Stripe webhookの動作をテストする
 
+
+
+
