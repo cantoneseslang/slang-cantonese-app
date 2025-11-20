@@ -1141,7 +1141,7 @@ export default function Home() {
       ],
       [
         { key: 'function-clear', type: 'function', action: 'clear', label: clearButtonLabel },
-        { key: 'function-delete', type: 'function', action: 'delete', label: '⌫' },
+        { key: 'function-delete', type: 'function', action: 'delete', label: '⌫', isDeleteButton: true },
           { key: 'function-return', type: 'function', action: 'returnToCalculator', label: '計算機' },
         { key: 'operator-divide', type: 'operator', operator: '÷', label: '÷' },
         { key: 'unit-weight-catty', type: 'conversion', shortcutKey: 'weight-catty' },
@@ -4222,6 +4222,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         variant = 'default',
         disabled = false,
         keyOverride,
+        isDeleteButton = false,
       }: {
         variant?:
           | 'default'
@@ -4236,6 +4237,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           | 'conversionActive';
         disabled?: boolean;
         keyOverride?: string;
+        isDeleteButton?: boolean;
       } = {}
     ) => {
       const palette = {
@@ -4323,7 +4325,9 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
             borderRadius: '999px',
             border: `1px solid ${palette.border}`,
             fontWeight: 700,
-            fontSize: isMobile ? '1.05rem' : '1.15rem',
+            fontSize: isDeleteButton 
+              ? (isMobile ? '1.8rem' : '2rem')
+              : (isMobile ? '1.05rem' : '1.15rem'),
             background: palette.background,
             color: palette.color,
             boxShadow: palette.shadow,
@@ -4500,7 +4504,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     | { key: string; type: 'panel'; panel: ConversionPanel; label: string }
     | { key: string; type: 'cycle'; label: string }
     | { key: string; type: 'close'; label: string }
-    | { key: string; type: 'function'; action: CalculatorFunctionAction; label: string }
+    | { key: string; type: 'function'; action: CalculatorFunctionAction; label: string; isDeleteButton?: boolean }
     | { key: string; type: 'digit'; digit: string }
     | { key: string; type: 'operator'; operator: CalculatorOperator; label: string }
     | { key: string; type: 'decimal'; label: string }
@@ -8387,6 +8391,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                             variant: 'function',
                             keyOverride: key,
                             disabled,
+                            isDeleteButton: item.isDeleteButton,
                           });
                         }
                         case 'digit':
