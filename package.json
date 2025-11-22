@@ -11,6 +11,10 @@
     "check-speech-logs:mobile": "tsx scripts/check-speech-logs.ts --mobile",
     "check-speech-logs:desktop": "tsx scripts/check-speech-logs.ts --desktop",
     "check-speech-logs:compare": "tsx scripts/check-speech-logs.ts --compare",
+    "analyze-interpreter-usage": "tsx scripts/analyze-interpreter-usage.ts",
+    "analyze-interpreter-usage:user": "tsx scripts/analyze-interpreter-usage.ts --user",
+    "analyze-interpreter-usage:daily": "tsx scripts/analyze-interpreter-usage.ts --daily",
+    "analyze-interpreter-usage:hourly": "tsx scripts/analyze-interpreter-usage.ts --hourly",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:speech": "playwright test tests/speech-recognition-e2e.spec.ts"

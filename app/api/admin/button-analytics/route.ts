@@ -90,6 +90,9 @@ export async function GET(request: NextRequest) {
       not_pressed: number;
       favorites_count: number;
       favorite_words: string[];
+      interpreter_cantonese_count: number;
+      interpreter_mandarin_count: number;
+      interpreter_total_count: number;
     }> = [];
 
     if (authUsers) {
@@ -122,6 +125,20 @@ export async function GET(request: NextRequest) {
 
         const favoriteWords = (favorites || []).map((f: any) => f.word_chinese).filter(Boolean);
         const favorites_count = favoriteWords.length;
+
+        // interpreter_usageテーブルから、このユーザーの通訳使用回数を取得
+        const { data: interpreterUsage, error: interpreterError } = await supabaseAdmin
+          .from('interpreter_usage')
+          .select('language')
+          .eq('user_id', u.id);
+
+        if (interpreterError) {
+          console.error(`Error fetching interpreter usage for user ${u.id}:`, interpreterError);
+        }
+
+        const cantoneseCount = (interpreterUsage || []).filter((u: any) => u.language === 'cantonese').length;
+        const mandarinCount = (interpreterUsage || []).filter((u: any) => u.language === 'mandarin').length;
+        const interpreterTotalCount = cantoneseCount + mandarinCount;
         
         users.push({
           user_id: u.id,
@@ -129,7 +146,10 @@ export async function GET(request: NextRequest) {
           pressed,
           not_pressed,
           favorites_count,
-          favorite_words: favoriteWords
+          favorite_words: favoriteWords,
+          interpreter_cantonese_count: cantoneseCount,
+          interpreter_mandarin_count: mandarinCount,
+          interpreter_total_count: interpreterTotalCount
         });
       }
     }

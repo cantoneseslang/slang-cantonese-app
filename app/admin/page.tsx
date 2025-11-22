@@ -52,7 +52,7 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [favoritesCountMap, setFavoritesCountMap] = useState<Record<string, number>>({});
-  const [buttonAnalytics, setButtonAnalytics] = useState<Array<{ user_id: string; email: string; pressed: number; not_pressed: number; favorites_count: number; favorite_words: string[] }>>([]);
+  const [buttonAnalytics, setButtonAnalytics] = useState<Array<{ user_id: string; email: string; pressed: number; not_pressed: number; favorites_count: number; favorite_words: string[]; interpreter_cantonese_count: number; interpreter_mandarin_count: number; interpreter_total_count: number }>>([]);
   const [buttonTotal, setButtonTotal] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<string | null>(null);
@@ -915,6 +915,9 @@ export default function AdminPage() {
                 <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>押した数</th>
                 <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>未押数</th>
                 <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>お気に入り数</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>通訳（カントン語）</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>通訳（中国語）</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>通訳（合計）</th>
                 <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>お気に入り単語</th>
               </tr>
             </thead>
@@ -925,6 +928,15 @@ export default function AdminPage() {
                   <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937' }}>{row.pressed}</td>
                   <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937' }}>{row.not_pressed}</td>
                   <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937' }}>{row.favorites_count || 0}</td>
+                  <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937', fontWeight: row.interpreter_cantonese_count > 0 ? 600 : 400 }}>
+                    {row.interpreter_cantonese_count || 0}
+                  </td>
+                  <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937', fontWeight: row.interpreter_mandarin_count > 0 ? 600 : 400 }}>
+                    {row.interpreter_mandarin_count || 0}
+                  </td>
+                  <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937', fontWeight: row.interpreter_total_count > 0 ? 700 : 400 }}>
+                    {row.interpreter_total_count || 0}
+                  </td>
                   <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.favorite_words?.join(', ') || ''}>
                     {row.favorite_words && row.favorite_words.length > 0 
                       ? row.favorite_words.join(', ') 
