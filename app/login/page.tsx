@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getInAppBrowserBlockMessage } from '@/lib/in-app-browser';
 import { parseResponseJson } from '@/lib/parse-response-json';
+import { canonicalizeEmail, isGmailAddress } from '@/lib/gmail';
 
 function LoginForm() {
   const [username, setUsername] = useState('');
@@ -49,17 +50,20 @@ function LoginForm() {
     }
   }, [redirectMessage]);
 
-  // Google OAuth 完了後: アンケート未回答ならフォームを表示
+  // ログイン済みならホームへ。Google直後で未回答ならアンケートだけ出す
   useEffect(() => {
     const surveyParam = searchParams.get('survey');
-    if (surveyParam !== '1' && surveyParam !== 'true') return;
+    const wantsSurvey = surveyParam === '1' || surveyParam === 'true';
 
     let cancelled = false;
     (async () => {
       const sb = createClient();
       const { data: { user } } = await sb.auth.getUser();
       if (cancelled || !user) return;
-      if (user.user_metadata?.survey_completed === true) return;
+      if (user.user_metadata?.survey_completed === true || !wantsSurvey) {
+        router.replace(redirectPath || '/');
+        return;
+      }
       setSignUpUserId(user.id);
       if (user.email) setEmail(user.email);
       setShowSurvey(true);
@@ -68,7 +72,7 @@ function LoginForm() {
     return () => {
       cancelled = true;
     };
-  }, [searchParams]);
+  }, [searchParams, redirectPath, router]);
 
   // Force light color scheme for this page, even in dark mode browsers
   useEffect(() => {
@@ -206,8 +210,9 @@ function LoginForm() {
           return;
         }
 
+        const signupEmail = canonicalizeEmail(email);
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: signupEmail,
           password,
           options: {
             data: {
@@ -216,7 +221,13 @@ function LoginForm() {
           },
         });
 
-        if (error) throw error;
+        if (error) {
+          const msg = (error.message || '').toLowerCase();
+          if (isGmailAddress(signupEmail) && (msg.includes('already') || msg.includes('registered'))) {
+            throw new Error('このGmailはすでに登録されています。Googleでログインしてください。');
+          }
+          throw error;
+        }
 
         // ユーザーネームテーブルに保存
         if (data.user) {
@@ -227,7 +238,7 @@ function LoginForm() {
               body: JSON.stringify({
                 userId: data.user.id,
                 username: username.trim(),
-                email: email,
+                email: signupEmail,
               }),
             });
           } catch (err) {
@@ -252,12 +263,22 @@ function LoginForm() {
             return;
           }
           loginEmail = foundEmail;
+        } else {
+          loginEmail = canonicalizeEmail(loginEmail);
         }
 
-        const { data, error } = await supabase.auth.signInWithPassword({
+        let { data, error } = await supabase.auth.signInWithPassword({
           email: loginEmail,
           password,
         });
+        if (error && loginEmail !== email.trim().toLowerCase()) {
+          const retry = await supabase.auth.signInWithPassword({
+            email: email.trim(),
+            password,
+          });
+          data = retry.data;
+          error = retry.error;
+        }
 
         if (error) throw error;
 
@@ -283,8 +304,9 @@ function LoginForm() {
     try {
       let resetEmail = resetIdentifier.trim();
       
-      // メールアドレス形式でない場合、ユーザーネームとして扱う
-      if (!resetEmail.includes('@')) {
+      if (resetEmail.includes('@')) {
+        resetEmail = canonicalizeEmail(resetEmail);
+      } else {
         const foundEmail = await findUserByUsername(resetEmail);
         if (!foundEmail) {
           setError('ユーザーネームまたはメールアドレスが見つかりません');
