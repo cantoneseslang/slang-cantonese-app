@@ -3960,7 +3960,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         }
 
         const gainNode = context.createGain();
-        gainNode.gain.value = 0.25;
+        gainNode.gain.value = 0.1;
         source.connect(gainNode);
         gainNode.connect(context.destination);
         
