@@ -705,6 +705,180 @@
     ]
   },
   {
+    "id": "salon",
+    "name": "💇 美容院",
+    "introContent": "<p>カットカルテの用語と、美容院での会話です。</p>",
+    "practiceGroups": [
+      {
+        "name": "レディーススタイル",
+        "words": [
+          { "chinese": "超短", "japanese": "ベリーショート" },
+          { "chinese": "短髮", "japanese": "ショート" },
+          { "chinese": "Bob", "japanese": "ボブ" },
+          { "chinese": "中長", "japanese": "ミディアム" },
+          { "chinese": "中長（肩）", "japanese": "セミロング" },
+          { "chinese": "長髮", "japanese": "ロング" }
+        ]
+      },
+      {
+        "name": "メンズスタイル",
+        "words": [
+          { "chinese": "平頭", "japanese": "ボウズ" },
+          { "chinese": "莫西干 (自然)", "japanese": "ソフトモヒカン" },
+          { "chinese": "超短", "japanese": "ベリーショート" },
+          { "chinese": "短髮", "japanese": "ショート" },
+          { "chinese": "兩側剷青", "japanese": "ツーブロック" },
+          { "chinese": "中長", "japanese": "ミディアム" }
+        ]
+      },
+      {
+        "name": "要望・道具・軸",
+        "words": [
+          { "chinese": "電剪", "japanese": "バリカン（電バリ）" },
+          { "chinese": "照舊", "japanese": "いつも通り" },
+          { "chinese": "想改", "japanese": "変えたい" },
+          { "chinese": "前", "japanese": "前" },
+          { "chinese": "兩側", "japanese": "横" },
+          { "chinese": "後頸", "japanese": "後ろ" },
+          { "chinese": "型", "japanese": "型" }
+        ]
+      },
+      {
+        "name": "前（長さ）",
+        "words": [
+          { "chinese": "大概到眉", "japanese": "眉かかるくらい" },
+          { "chinese": "額頭露一半", "japanese": "おでこ半分" },
+          { "chinese": "貼住髮線", "japanese": "生え際ギリギリ" },
+          { "chinese": "遮到眼", "japanese": "目にかかる" },
+          { "chinese": "眼同眉之間", "japanese": "目と眉の間" },
+          { "chinese": "碰到眉", "japanese": "眉にかかる" },
+          { "chinese": "眉以上", "japanese": "眉より上" }
+        ]
+      },
+      {
+        "name": "横（長さ）",
+        "words": [
+          { "chinese": "遮住耳", "japanese": "耳が隠れる" },
+          { "chinese": "遮住耳一半", "japanese": "耳半分かかる" },
+          { "chinese": "少少遮耳", "japanese": "耳に少しかかる" },
+          { "chinese": "耳仔露出", "japanese": "耳が出る" },
+          { "chinese": "下巴(以上)", "japanese": "顎上" },
+          { "chinese": "到下巴", "japanese": "顎" },
+          { "chinese": "下巴(以下)", "japanese": "顎下" },
+          { "chinese": "膊頭(以上)", "japanese": "肩上" },
+          { "chinese": "到膊頭", "japanese": "肩" },
+          { "chinese": "膊頭(以下)", "japanese": "肩下" },
+          { "chinese": "胸上", "japanese": "胸上" },
+          { "chinese": "胸", "japanese": "胸" },
+          { "chinese": "胸下", "japanese": "胸下" }
+        ]
+      },
+      {
+        "name": "後ろ・型",
+        "words": [
+          { "chinese": "大概到頸一半", "japanese": "首の半分くらい" },
+          { "chinese": "髮線稍下", "japanese": "生え際より少し下" },
+          { "chinese": "唔剷（修短）", "japanese": "刈り上げない程度" },
+          { "chinese": "髮線(直線)", "japanese": "水平" },
+          { "chinese": "U型", "japanese": "U型" },
+          { "chinese": "V型", "japanese": "V型" },
+          { "chinese": "向前斜", "japanese": "前下" },
+          { "chinese": "平線", "japanese": "水平（ボブ）" },
+          { "chinese": "向後斜", "japanese": "前上がり" },
+          { "chinese": "低", "japanese": "低め" },
+          { "chinese": "中", "japanese": "中間" },
+          { "chinese": "高", "japanese": "高め" }
+        ]
+      },
+      {
+        "name": "刈り上げ",
+        "words": [
+          { "chinese": "剷青", "japanese": "刈り上げ（前）" },
+          { "chinese": "唔剷", "japanese": "刈り上げない" },
+          { "chinese": "漸層融入", "japanese": "入れ込む" },
+          { "chinese": "剷兩側", "japanese": "刈り上げ（横）" },
+          { "chinese": "後頸剷青", "japanese": "刈り上げ（後ろ）" },
+          { "chinese": "近似唔剷", "japanese": "刈り上げないくらい" },
+          { "chinese": "剷低", "japanese": "刈り上げ低め" },
+          { "chinese": "剷中", "japanese": "刈り上げ中間" },
+          { "chinese": "剷高", "japanese": "刈り上げ高め" },
+          { "chinese": "剷", "japanese": "刈り上げ" }
+        ]
+      },
+      {
+        "name": "スタイリング",
+        "words": [
+          { "chinese": "造型", "japanese": "スタイリング" },
+          { "chinese": "吹髮", "japanese": "ブロー" },
+          { "chinese": "吹乾", "japanese": "乾かす" },
+          { "chinese": "自己乾", "japanese": "自然乾燥" },
+          { "chinese": "分界", "japanese": "分け目" },
+          { "chinese": "中分", "japanese": "センター分け" },
+          { "chinese": "側分", "japanese": "サイド分け" },
+          { "chinese": "向後梳", "japanese": "後ろに流す" },
+          { "chinese": "劉海", "japanese": "前髪" },
+          { "chinese": "層次", "japanese": "レイヤー" },
+          { "chinese": "碎髮", "japanese": "軽くほぐす／動きを出す" },
+          { "chinese": "捲髮", "japanese": "カール" },
+          { "chinese": "直髮", "japanese": "ストレート" },
+          { "chinese": "電棒", "japanese": "カールアイロン" },
+          { "chinese": "直髮夾", "japanese": "ストレートアイロン" },
+          { "chinese": "髮蠟", "japanese": "ワックス" },
+          { "chinese": "髮泥", "japanese": "ヘアクレイ" },
+          { "chinese": "髮膠", "japanese": "ジェル" },
+          { "chinese": "定型噴霧", "japanese": "スプレー" },
+          { "chinese": "油頭", "japanese": "オールバック" },
+          { "chinese": "蓬鬆", "japanese": "ボリューム" },
+          { "chinese": "服貼", "japanese": "落ち着ける／ねかせる" },
+          { "chinese": "濕啲", "japanese": "ウェット寄りの質感" },
+          { "chinese": "乾爽", "japanese": "ドライな質感" },
+          { "chinese": "染髮", "japanese": "カラー" },
+          { "chinese": "電髮", "japanese": "パーマ" },
+          { "chinese": "護理", "japanese": "トリートメント" }
+        ]
+      },
+      {
+        "name": "会話",
+        "words": [
+          { "chinese": "今日想點剪？", "japanese": "今日はどう切りますか？" },
+          { "chinese": "有無相睇下？", "japanese": "写真はありますか？" },
+          { "chinese": "照舊得喇。", "japanese": "いつも通りでいいです" },
+          { "chinese": "我想改短少少。", "japanese": "少し短く変えたいです" },
+          { "chinese": "我想剪短髮。", "japanese": "ショートにしたいです" },
+          { "chinese": "我想剪Bob。", "japanese": "ボブにしたいです" },
+          { "chinese": "兩側剷青得唔得？", "japanese": "ツーブロックでいいですか？" },
+          { "chinese": "唔好剷得太高。", "japanese": "刈り上げは高くしすぎないでください" },
+          { "chinese": "前劉海遮到眼得喇。", "japanese": "前髪は目にかかるくらいで" },
+          { "chinese": "耳仔露出就得。", "japanese": "耳は出るくらいで" },
+          { "chinese": "後頸唔好剷，修短就得。", "japanese": "後ろは刈り上げず、整えるだけで" },
+          { "chinese": "呢度剪短啲得唔得？", "japanese": "ここ、もう少し短くできますか？" },
+          { "chinese": "兩側再薄少少。", "japanese": "横をもう少し薄くしてください" },
+          { "chinese": "夠喇，唔好再短。", "japanese": "もう十分です、これ以上短くしないで" },
+          { "chinese": "可以再短少少。", "japanese": "もう少し短くして大丈夫です" },
+          { "chinese": "鏡照下先。", "japanese": "先に鏡で見てください" },
+          { "chinese": "滿意唔滿意？", "japanese": "大丈夫ですか？" },
+          { "chinese": "得，多謝。", "japanese": "いいです、ありがとう" },
+          { "chinese": "吹乾定自己乾？", "japanese": "乾かしますか、自然乾燥ですか？" },
+          { "chinese": "今日想點造型？", "japanese": "今日はどうセットしますか？" },
+          { "chinese": "吹乾之後整造型得唔得？", "japanese": "乾かしてからセットしていいですか？" },
+          { "chinese": "我想中分。", "japanese": "センター分けにしたいです" },
+          { "chinese": "我想側分。", "japanese": "サイド分けにしたいです" },
+          { "chinese": "向後梳得喇。", "japanese": "後ろに流してください" },
+          { "chinese": "劉海撥去一邊。", "japanese": "前髪は横に流してください" },
+          { "chinese": "我想蓬鬆少少。", "japanese": "少しボリュームがほしいです" },
+          { "chinese": "唔好太服貼。", "japanese": "ぺたんとしすぎないでください" },
+          { "chinese": "用髮蠟定髮泥？", "japanese": "ワックスとクレイ、どちらにしますか？" },
+          { "chinese": "少少髮蠟就得。", "japanese": "ワックスは少しでいいです" },
+          { "chinese": "噴少少定型噴霧得唔得？", "japanese": "スプレーを少しかけていいですか？" },
+          { "chinese": "我想捲一捲。", "japanese": "軽くカールしたいです" },
+          { "chinese": "我想直啲。", "japanese": "ストレート寄りにしたいです" },
+          { "chinese": "唔好太濕，乾爽少少。", "japanese": "ウェットすぎず、ドライ寄りで" },
+          { "chinese": "返屋企點樣自己整？", "japanese": "家ではどうセットすればいいですか？" }
+        ]
+      }
+    ]
+  },
+  {
     "id": "dont_understand",
     "name": "🤷 分からない",
     "words": [
