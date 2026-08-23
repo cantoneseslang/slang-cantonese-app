@@ -1339,6 +1339,29 @@ export default function Home() {
     }
   };
 
+  const playAudioFromStart = (audio: HTMLAudioElement, onError?: (error: unknown) => void) => {
+    const start = () => {
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          onError?.(error);
+        });
+      }
+    };
+
+    if (audio.currentTime > 0.005) {
+      const onSeeked = () => {
+        audio.removeEventListener('seeked', onSeeked);
+        start();
+      };
+      audio.addEventListener('seeked', onSeeked, { once: true });
+      audio.currentTime = 0;
+      return;
+    }
+
+    start();
+  };
+
   const unlockSimultaneousAudioPlayback = async () => {
     if (isSimultaneousAudioUnlockedRef.current) {
       return;
@@ -1390,14 +1413,9 @@ export default function Home() {
       if (hasPlayed) return;
       hasPlayed = true;
       
-      // currentTimeを0にリセット（念のため）
-      audio.currentTime = 0;
-      
-      audio
-        .play()
-        .catch((e) => {
-          console.error(`${errorLabel}:`, e);
-        });
+      playAudioFromStart(audio, (e) => {
+        console.error(`${errorLabel}:`, e);
+      });
     };
     
     audio.onerror = (event) => {
@@ -1457,9 +1475,11 @@ export default function Home() {
     if (normalModeAudioContextRef.current) {
       try {
         if (normalModeAudioContextRef.current.state === 'suspended') {
-          normalModeAudioContextRef.current
-            .resume()
-            .catch((error) => console.error(`${logPrefix}: AudioContext resumeエラー`, error));
+          try {
+            await normalModeAudioContextRef.current.resume();
+          } catch (error) {
+            console.error(`${logPrefix}: AudioContext resumeエラー`, error);
+          }
         }
 
         if (!normalModeAudioSourceNodeRef.current) {
@@ -1502,47 +1522,12 @@ export default function Home() {
     let hasPlayed = false;
     
     audio.oncanplaythrough = () => {
-      // 重複再生を防ぐ
       if (hasPlayed) return;
       hasPlayed = true;
-      
-      console.log(`${logPrefix}: oncanplaythrough発火`, {
-        currentTime: audio.currentTime,
-        duration: audio.duration,
-        readyState: audio.readyState
+
+      playAudioFromStart(audio, (e) => {
+        console.error(`${logPrefix}: 音声再生失敗`, e);
       });
-      
-      // モバイル対応: 再生前に待機を増やし、確実にデコード完了を待つ
-      // 「一」の頭切れ対策として、モバイルでは800ms、PCでは300ms待機
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const waitTime = isMobile ? 800 : 300; // モバイルではより長く待機
-      
-      setTimeout(() => {
-        // 再生位置を明示的に0にリセット
-        audio.currentTime = 0;
-        
-        console.log(`${logPrefix}: 再生開始（${waitTime}ms待機後）`, {
-          currentTime: audio.currentTime,
-          duration: audio.duration,
-          isMobile
-        });
-        
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              console.log(`${logPrefix}: 音声再生成功`, { 
-                useWebAudioAPI,
-                currentTime: audio.currentTime,
-                duration: audio.duration,
-                isMobile
-              });
-            })
-            .catch((e) => {
-              console.error(`${logPrefix}: 音声再生失敗`, e);
-            });
-        }
-      }, waitTime);
     };
     
     audio.onerror = (event) => {
