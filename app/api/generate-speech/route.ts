@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     const escapeSsml = (value: string) =>
       value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-    const breakTime = isMobile ? (isNumberLike ? '200ms' : '150ms') : '120ms';
+    const breakTime = isMobile ? (isNumberLike ? '60ms' : '50ms') : '40ms';
     const finalText = `<speak><break time="${breakTime}"/>${escapeSsml(text)}</speak>`;
     const useSSML = true;
     

@@ -1355,7 +1355,7 @@ export default function Home() {
 
     audio.addEventListener('seeked', startOnce, { once: true });
     audio.currentTime = 0;
-    window.setTimeout(startOnce, 80);
+    window.setTimeout(startOnce, 40);
   };
 
   const unlockSimultaneousAudioPlayback = async () => {
