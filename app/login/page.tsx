@@ -60,6 +60,8 @@ function LoginForm() {
       const { data: { user } } = await sb.auth.getUser();
       if (cancelled || !user) return;
       if (user.user_metadata?.survey_completed === true) return;
+      setSignUpUserId(user.id);
+      if (user.email) setEmail(user.email);
       setShowSurvey(true);
     })();
 
@@ -381,11 +383,13 @@ function LoginForm() {
           residence: surveyResidence,
           residenceOther: surveyResidence === '海外' ? surveyResidenceOther : null,
           cantoneseLevel: surveyCantoneseLevel,
+          userId: signUpUserId,
+          email: email.trim() || undefined,
         }),
       });
 
-      if (!response.ok) {
-        const data = await parseResponseJson<{ error?: string }>(response);
+      const data = await parseResponseJson<{ success?: boolean; error?: string }>(response);
+      if (!response.ok || !data?.success) {
         throw new Error(
           data?.error ?? `アンケートの保存に失敗しました（${response.status}）`
         );
