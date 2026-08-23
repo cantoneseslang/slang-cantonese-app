@@ -716,7 +716,7 @@
           { "chinese": "短髮", "japanese": "ショート" },
           { "chinese": "Bob", "japanese": "ボブ" },
           { "chinese": "中長", "japanese": "ミディアム" },
-          { "chinese": "中長（肩）", "japanese": "セミロング" },
+          { "chinese": "中長", "japanese": "セミロング" },
           { "chinese": "長髮", "japanese": "ロング" }
         ]
       },
@@ -762,12 +762,12 @@
           { "chinese": "遮住耳一半", "japanese": "耳半分かかる" },
           { "chinese": "少少遮耳", "japanese": "耳に少しかかる" },
           { "chinese": "耳仔露出", "japanese": "耳が出る" },
-          { "chinese": "下巴(以上)", "japanese": "顎上" },
+          { "chinese": "下巴以上", "japanese": "顎上" },
           { "chinese": "到下巴", "japanese": "顎" },
-          { "chinese": "下巴(以下)", "japanese": "顎下" },
+          { "chinese": "下巴以下", "japanese": "顎下" },
           { "chinese": "膊頭(以上)", "japanese": "肩上" },
           { "chinese": "到膊頭", "japanese": "肩" },
-          { "chinese": "膊頭(以下)", "japanese": "肩下" },
+          { "chinese": "膊頭以下", "japanese": "肩下" },
           { "chinese": "胸上", "japanese": "胸上" },
           { "chinese": "胸", "japanese": "胸" },
           { "chinese": "胸下", "japanese": "胸下" }
@@ -778,8 +778,8 @@
         "words": [
           { "chinese": "大概到頸一半", "japanese": "首の半分くらい" },
           { "chinese": "髮線稍下", "japanese": "生え際より少し下" },
-          { "chinese": "唔剷（修短）", "japanese": "刈り上げない程度" },
-          { "chinese": "髮線(直線)", "japanese": "水平" },
+          { "chinese": "唔剷", "japanese": "刈り上げない程度" },
+          { "chinese": "髮線", "japanese": "水平" },
           { "chinese": "U型", "japanese": "U型" },
           { "chinese": "V型", "japanese": "V型" },
           { "chinese": "向前斜", "japanese": "前下" },

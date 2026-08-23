@@ -8749,8 +8749,9 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 }}
               />
               {currentCategory.practiceGroups.map((group, gIdx) => {
-                // 練習⑦（おまけ）の場合は連続発音のみ
+                // 練習⑦（おまけ）と発音以外（美容院など）は見出しなしで全単語を出す
                 const isOmake = group.name === '練習⑦';
+                const showUngroupedWords = isOmake || currentCategory.id !== 'pronunciation';
                 
                 return (
                 <div key={gIdx}>
@@ -8763,18 +8764,9 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     {group.name === '練習⑦' ? 'おまけ' : group.name}
                   </h3>
                   
-                  {/* おまけの場合 */}
-                  {isOmake ? (
+                  {/* おまけ・美容院など：見出しなしで全単語 */}
+                  {showUngroupedWords ? (
                     <>
-                      <div style={{ 
-                        fontSize: isMobile ? '0.875rem' : '1rem',
-                        fontWeight: 'bold',
-                        marginTop: '0.75rem',
-                        marginBottom: '0.5rem',
-                        color: '#374151'
-                      }}>
-                        連続発音
-                      </div>
                       <div style={{ 
                         display: 'grid', 
                         gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
@@ -8875,16 +8867,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   ) : (
                     /* 通常の練習（①-⑥） */
                     <>
-                      {/* 1-6声 */}
-                      <div style={{ 
-                        fontSize: isMobile ? '0.875rem' : '1rem',
-                        fontWeight: 'bold',
-                        marginTop: '0.75rem',
-                        marginBottom: '0.5rem',
-                        color: '#374151'
-                      }}>
-                        1-6声
-                      </div>
                       <div style={{ 
                         display: 'grid', 
                         gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
@@ -8982,16 +8964,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                         })}
                       </div>
 
-                      {/* 入声(p,t,k) */}
-                      <div style={{ 
-                        fontSize: isMobile ? '0.875rem' : '1rem',
-                        fontWeight: 'bold',
-                        marginTop: '0.75rem',
-                        marginBottom: '0.5rem',
-                        color: '#374151'
-                      }}>
-                        入声(p,t,k)
-                      </div>
                       <div style={{ 
                         display: 'grid', 
                         gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
@@ -9089,16 +9061,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                         })}
                       </div>
 
-                      {/* 連続発音 */}
-                      <div style={{ 
-                        fontSize: isMobile ? '0.875rem' : '1rem',
-                        fontWeight: 'bold',
-                        marginTop: '0.75rem',
-                        marginBottom: '0.5rem',
-                        color: '#374151'
-                      }}>
-                        連続発音
-                      </div>
                       <div style={{ 
                         display: 'grid', 
                         gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
