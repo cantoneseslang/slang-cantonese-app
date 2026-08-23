@@ -3959,14 +3959,10 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           };
         }
 
-        if (useGain) {
-          const gainNode = context.createGain();
-        gainNode.gain.value = 1.0;
-          source.connect(gainNode);
-          gainNode.connect(context.destination);
-        } else {
-          source.connect(context.destination);
-        }
+        const gainNode = context.createGain();
+        gainNode.gain.value = 0.64;
+        source.connect(gainNode);
+        gainNode.connect(context.destination);
         
         source.start(0);
       } catch (error) {
@@ -5396,7 +5392,16 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ APIエラー:', { status: response.status, errorText });
-        throw new Error(`検索に失敗しました: ${response.status} ${errorText}`);
+        let message = `検索に失敗しました (${response.status})`;
+        try {
+          const parsed = JSON.parse(errorText);
+          if (parsed?.error && typeof parsed.error === 'string') {
+            message = parsed.error;
+          }
+        } catch {
+          // keep generic message instead of dumping raw JSON
+        }
+        throw new Error(message);
       }
 
       const data = await response.json();

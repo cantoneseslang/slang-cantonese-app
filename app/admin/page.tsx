@@ -20,7 +20,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -54,6 +54,8 @@ export default function AdminPage() {
   const [favoritesCountMap, setFavoritesCountMap] = useState<Record<string, number>>({});
   const [buttonAnalytics, setButtonAnalytics] = useState<Array<{ user_id: string; email: string; pressed: number; not_pressed: number; favorites_count: number; favorite_words: string[]; interpreter_cantonese_count: number; interpreter_mandarin_count: number; interpreter_total_count: number }>>([]);
   const [buttonTotal, setButtonTotal] = useState<number>(0);
+  const [buttonLoading, setButtonLoading] = useState(false);
+  const [buttonError, setButtonError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{ username: string; membership_type: string }>({ username: '', membership_type: 'free' });
@@ -168,14 +170,21 @@ export default function AdminPage() {
 
   const fetchButtonAnalytics = async () => {
     try {
+      setButtonLoading(true);
+      setButtonError(null);
       const res = await fetch('/api/admin/button-analytics');
       const data = await res.json();
       if (data.success) {
         setButtonTotal(data.total_buttons || 0);
         setButtonAnalytics(data.users || []);
+      } else {
+        setButtonError(data.error || '集計に失敗しました');
       }
     } catch (e) {
       console.error('ボタン集計取得エラー', e);
+      setButtonError('集計に失敗しました');
+    } finally {
+      setButtonLoading(false);
     }
   }
 
@@ -249,6 +258,36 @@ export default function AdminPage() {
     }
   };
 
+  const formatCompactDateTime = (iso: string) => {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const memberTh: CSSProperties = {
+    padding: '0.3rem 0.45rem',
+    textAlign: 'left',
+    fontWeight: 600,
+    fontSize: '0.75rem',
+    color: '#374151',
+    whiteSpace: 'nowrap',
+    writingMode: 'horizontal-tb',
+    wordBreak: 'keep-all',
+    overflowWrap: 'normal',
+    lineHeight: 1.25,
+  };
+
+  const memberTd: CSSProperties = {
+    padding: '0.22rem 0.45rem',
+    fontSize: '0.8125rem',
+    lineHeight: 1.25,
+    whiteSpace: 'nowrap',
+    writingMode: 'horizontal-tb',
+    wordBreak: 'keep-all',
+    overflowWrap: 'normal',
+    verticalAlign: 'middle',
+  };
+
   if (!isAdmin) {
     return (
       <div style={{
@@ -270,7 +309,7 @@ export default function AdminPage() {
       padding: '2rem'
     }}>
       <div style={{
-        maxWidth: '1200px',
+        maxWidth: '100%',
         margin: '0 auto',
         backgroundColor: 'white',
         borderRadius: '16px',
@@ -358,8 +397,8 @@ export default function AdminPage() {
           </h3>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '1rem'
+            gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+            gap: '0.75rem'
           }}>
             <div style={{
               padding: '1rem',
@@ -367,7 +406,7 @@ export default function AdminPage() {
               borderRadius: '8px',
               border: '1px solid #e5e7eb'
             }}>
-              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem', whiteSpace: 'nowrap' }}>
                 総ユーザー数
               </div>
               <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937' }}>
@@ -380,7 +419,7 @@ export default function AdminPage() {
               borderRadius: '8px',
               border: '1px solid #e5e7eb'
             }}>
-              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem', whiteSpace: 'nowrap' }}>
                 ブロンズ会員
               </div>
               <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937' }}>
@@ -393,7 +432,7 @@ export default function AdminPage() {
               borderRadius: '8px',
               border: '1px solid #e5e7eb'
             }}>
-              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem', whiteSpace: 'nowrap' }}>
                 シルバー会員
               </div>
               <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937' }}>
@@ -406,7 +445,7 @@ export default function AdminPage() {
               borderRadius: '8px',
               border: '1px solid #e5e7eb'
             }}>
-              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem', whiteSpace: 'nowrap' }}>
                 ゴールド会員
               </div>
               <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937' }}>
@@ -513,13 +552,105 @@ export default function AdminPage() {
           )}
         </div>
 
+      {/* ボタン利用分析 */}
+      <div style={{
+        marginTop: '2rem',
+        padding: '1.5rem',
+        backgroundColor: '#f9fafb',
+        borderRadius: '12px'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '1rem'
+        }}>
+          <h3 style={{
+            fontSize: '1.25rem',
+            fontWeight: '600',
+            marginBottom: 0
+          }}>
+            🧮 ボタン利用分析
+          </h3>
+          <button
+            onClick={fetchButtonAnalytics}
+            disabled={buttonLoading}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: buttonLoading ? '#93c5fd' : '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: buttonLoading ? 'wait' : 'pointer',
+              fontSize: '0.875rem',
+              fontWeight: '600'
+            }}
+          >
+            {buttonLoading ? '集計中...' : '集計更新'}
+          </button>
+        </div>
+        <div style={{ fontSize: '0.875rem', color: '#374151', marginBottom: '0.75rem' }}>
+          総ボタン数: <span style={{ fontWeight: 700 }}>{buttonTotal}</span>
+          {buttonError && (
+            <span style={{ marginLeft: '0.75rem', color: '#ef4444' }}>{buttonError}</span>
+          )}
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{
+            width: 'max-content',
+            minWidth: '100%',
+            borderCollapse: 'collapse',
+            tableLayout: 'auto',
+            fontSize: '0.8125rem',
+            lineHeight: 1.25
+          }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                <th style={memberTh}>Email</th>
+                <th style={memberTh}>押した数</th>
+                <th style={memberTh}>未押数</th>
+                <th style={memberTh}>お気に入り数</th>
+                <th style={memberTh}>通訳（カントン語）</th>
+                <th style={memberTh}>通訳（中国語）</th>
+                <th style={memberTh}>通訳（合計）</th>
+                <th style={memberTh}>お気に入り単語</th>
+              </tr>
+            </thead>
+            <tbody>
+              {buttonAnalytics.map((row, idx) => (
+                <tr key={row.user_id} style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                  <td style={{ ...memberTd, color: '#1f2937' }}>{row.email}</td>
+                  <td style={{ ...memberTd, color: '#1f2937' }}>{row.pressed}</td>
+                  <td style={{ ...memberTd, color: '#1f2937' }}>{row.not_pressed}</td>
+                  <td style={{ ...memberTd, color: '#1f2937' }}>{row.favorites_count || 0}</td>
+                  <td style={{ ...memberTd, color: '#1f2937', fontWeight: row.interpreter_cantonese_count > 0 ? 600 : 400 }}>
+                    {row.interpreter_cantonese_count || 0}
+                  </td>
+                  <td style={{ ...memberTd, color: '#1f2937', fontWeight: row.interpreter_mandarin_count > 0 ? 600 : 400 }}>
+                    {row.interpreter_mandarin_count || 0}
+                  </td>
+                  <td style={{ ...memberTd, color: '#1f2937', fontWeight: row.interpreter_total_count > 0 ? 700 : 400 }}>
+                    {row.interpreter_total_count || 0}
+                  </td>
+                  <td style={{ ...memberTd, color: '#1f2937', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis' }} title={row.favorite_words?.join(', ') || ''}>
+                    {row.favorite_words && row.favorite_words.length > 0 
+                      ? row.favorite_words.join(', ') 
+                      : 'なし'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
         {/* 会員情報一覧 */}
         <div style={{ marginTop: '2rem' }}>
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: '1.5rem'
+            marginBottom: '0.6rem'
           }}>
             <h2 style={{
               fontSize: '1.5rem',
@@ -565,105 +696,31 @@ export default function AdminPage() {
               overflowX: 'auto'
             }}>
               <table style={{
-                width: '100%',
-                borderCollapse: 'collapse'
+                width: 'max-content',
+                minWidth: '100%',
+                borderCollapse: 'collapse',
+                tableLayout: 'auto',
+                fontSize: '0.8125rem',
+                lineHeight: 1.25
               }}>
                 <thead>
                   <tr style={{
                     backgroundColor: '#f9fafb',
-                    borderBottom: '2px solid #e5e7eb'
+                    borderBottom: '1px solid #e5e7eb'
                   }}>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      fontSize: '0.875rem',
-                      color: '#374151'
-                    }}>ID</th>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      fontSize: '0.875rem',
-                      color: '#374151'
-                    }}>Email</th>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      fontSize: '0.875rem',
-                      color: '#374151'
-                    }}>ユーザーネーム</th>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      fontSize: '0.875rem',
-                      color: '#374151'
-                    }}>会員種別</th>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      fontSize: '0.875rem',
-                      color: '#374151'
-                    }}>有効期限</th>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      fontSize: '0.875rem',
-                      color: '#374151'
-                    }}>お気に入り数</th>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      fontSize: '0.875rem',
-                      color: '#374151'
-                    }}>パスワード</th>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      fontSize: '0.875rem',
-                      color: '#374151'
-                    }}>最終ログイン</th>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      fontSize: '0.875rem',
-                      color: '#374151'
-                    }}>登録日</th>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      fontSize: '0.875rem',
-                      color: '#374151'
-                    }}>性別</th>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      fontSize: '0.875rem',
-                      color: '#374151'
-                    }}>居住地</th>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      fontSize: '0.875rem',
-                      color: '#374151'
-                    }}>広東語レベル</th>
-                    <th style={{
-                      padding: '0.75rem',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      fontSize: '0.875rem',
-                      color: '#374151'
-                    }}>操作</th>
+                    <th style={memberTh}>ID</th>
+                    <th style={memberTh}>Email</th>
+                    <th style={memberTh}>ユーザーネーム</th>
+                    <th style={memberTh}>会員種別</th>
+                    <th style={memberTh}>有効期限</th>
+                    <th style={memberTh}>お気に入り数</th>
+                    <th style={memberTh}>パスワード</th>
+                    <th style={memberTh}>最終ログイン</th>
+                    <th style={memberTh}>登録日</th>
+                    <th style={memberTh}>性別</th>
+                    <th style={memberTh}>居住地</th>
+                    <th style={memberTh}>広東語レベル</th>
+                    <th style={memberTh}>操作</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -675,37 +732,25 @@ export default function AdminPage() {
                         borderBottom: '1px solid #e5e7eb'
                       }}
                     >
-                      <td style={{
-                        padding: '0.75rem',
-                        fontSize: '0.875rem',
-                        color: '#6b7280',
-                        fontFamily: 'monospace'
-                      }}>
+                      <td style={{ ...memberTd, color: '#6b7280', fontFamily: 'monospace' }}>
                         {u.id.substring(0, 8)}...
                       </td>
-                      <td style={{
-                        padding: '0.75rem',
-                        fontSize: '0.875rem',
-                        color: '#1f2937'
-                      }}>
+                      <td style={{ ...memberTd, color: '#1f2937' }}>
                         {u.email}
                       </td>
-                      <td style={{
-                        padding: '0.75rem',
-                        fontSize: '0.875rem'
-                      }}>
+                      <td style={memberTd}>
                         {editingUser === u.id ? (
                           <input
                             type="text"
                             value={editForm.username}
                             onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
                             style={{
-                              padding: '0.5rem',
+                              padding: '0.15rem 0.35rem',
                               border: '1px solid #d1d5db',
                               borderRadius: '4px',
                               width: '100%',
                               maxWidth: '200px',
-                              fontSize: '0.875rem'
+                              fontSize: '0.8125rem'
                             }}
                             placeholder="ユーザーネーム"
                           />
@@ -715,19 +760,16 @@ export default function AdminPage() {
                           </span>
                         )}
                       </td>
-                      <td style={{
-                        padding: '0.75rem',
-                        fontSize: '0.875rem'
-                      }}>
+                      <td style={memberTd}>
                         {editingUser === u.id ? (
                           <select
                             value={editForm.membership_type}
                             onChange={(e) => setEditForm({ ...editForm, membership_type: e.target.value })}
                             style={{
-                              padding: '0.5rem',
+                              padding: '0.15rem 0.35rem',
                               border: '1px solid #d1d5db',
                               borderRadius: '4px',
-                              fontSize: '0.875rem'
+                              fontSize: '0.8125rem'
                             }}
                           >
                             <option value="free">ブロンズ会員</option>
@@ -739,8 +781,7 @@ export default function AdminPage() {
                         )}
                       </td>
                       <td style={{
-                        padding: '0.75rem',
-                        fontSize: '0.875rem',
+                        ...memberTd,
                         color: u.subscription_expires_at ? 
                           (new Date(u.subscription_expires_at) < new Date() ? '#ef4444' : '#10b981') 
                           : '#6b7280'
@@ -756,46 +797,32 @@ export default function AdminPage() {
                           '-'
                         )}
                       </td>
-                      <td style={{
-                        padding: '0.75rem',
-                        fontSize: '0.875rem'
-                      }}>
+                      <td style={memberTd}>
                         {favoritesCountMap[u.id] ?? 0}
                       </td>
                       <td style={{
-                        padding: '0.75rem',
-                        fontSize: '0.875rem',
+                        ...memberTd,
                         color: u.has_password ? '#10b981' : '#ef4444'
                       }}>
-                        {u.has_password ? '✅ 設定済み' : '❌ 未設定'}
+                        {u.has_password ? '設定済' : '未設定'}
                       </td>
-                      <td style={{
-                        padding: '0.75rem',
-                        fontSize: '0.875rem',
-                        color: '#6b7280'
-                      }}>
+                      <td style={{ ...memberTd, color: '#6b7280' }}>
                         {u.last_sign_in_at 
-                          ? new Date(u.last_sign_in_at).toLocaleString('ja-JP')
+                          ? formatCompactDateTime(u.last_sign_in_at)
                           : '未ログイン'
                         }
                       </td>
-                      <td style={{
-                        padding: '0.75rem',
-                        fontSize: '0.875rem',
-                        color: '#6b7280'
-                      }}>
+                      <td style={{ ...memberTd, color: '#6b7280' }}>
                         {new Date(u.created_at).toLocaleDateString('ja-JP')}
                       </td>
                       <td style={{
-                        padding: '0.75rem',
-                        fontSize: '0.875rem',
+                        ...memberTd,
                         color: u.survey_gender ? '#1f2937' : '#9ca3af'
                       }}>
                         {u.survey_gender || '未回答'}
                       </td>
                       <td style={{
-                        padding: '0.75rem',
-                        fontSize: '0.875rem',
+                        ...memberTd,
                         color: u.survey_residence ? '#1f2937' : '#9ca3af'
                       }}>
                         {u.survey_residence === '海外' 
@@ -803,15 +830,12 @@ export default function AdminPage() {
                           : (u.survey_residence || '未回答')}
                       </td>
                       <td style={{
-                        padding: '0.75rem',
-                        fontSize: '0.875rem',
+                        ...memberTd,
                         color: u.survey_cantonese_level ? '#1f2937' : '#9ca3af'
                       }}>
                         {u.survey_cantonese_level || '未回答'}
                       </td>
-                      <td style={{
-                        padding: '0.75rem'
-                      }}>
+                      <td style={memberTd}>
                         {editingUser === u.id ? (
                           <div style={{ display: 'flex', gap: '0.5rem' }}>
                             <button
@@ -867,87 +891,6 @@ export default function AdminPage() {
             </div>
           )}
         </div>
-
-      {/* ボタン利用分析 */}
-      <div style={{
-        marginTop: '2rem',
-        padding: '1.5rem',
-        backgroundColor: '#f9fafb',
-        borderRadius: '12px'
-      }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '1rem'
-        }}>
-          <h3 style={{
-            fontSize: '1.25rem',
-            fontWeight: '600',
-            marginBottom: '1rem'
-          }}>
-            🧮 ボタン利用分析
-          </h3>
-          <button
-            onClick={fetchButtonAnalytics}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-              fontWeight: '600'
-            }}
-          >
-            集計更新
-          </button>
-        </div>
-        <div style={{ fontSize: '0.875rem', color: '#374151', marginBottom: '0.75rem' }}>
-          総ボタン数: <span style={{ fontWeight: 700 }}>{buttonTotal}</span>
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
-                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>Email</th>
-                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>押した数</th>
-                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>未押数</th>
-                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>お気に入り数</th>
-                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>通訳（カントン語）</th>
-                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>通訳（中国語）</th>
-                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>通訳（合計）</th>
-                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>お気に入り単語</th>
-              </tr>
-            </thead>
-            <tbody>
-              {buttonAnalytics.map((row, idx) => (
-                <tr key={row.user_id} style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                  <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937' }}>{row.email}</td>
-                  <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937' }}>{row.pressed}</td>
-                  <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937' }}>{row.not_pressed}</td>
-                  <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937' }}>{row.favorites_count || 0}</td>
-                  <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937', fontWeight: row.interpreter_cantonese_count > 0 ? 600 : 400 }}>
-                    {row.interpreter_cantonese_count || 0}
-                  </td>
-                  <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937', fontWeight: row.interpreter_mandarin_count > 0 ? 600 : 400 }}>
-                    {row.interpreter_mandarin_count || 0}
-                  </td>
-                  <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937', fontWeight: row.interpreter_total_count > 0 ? 700 : 400 }}>
-                    {row.interpreter_total_count || 0}
-                  </td>
-                  <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#1f2937', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.favorite_words?.join(', ') || ''}>
-                    {row.favorite_words && row.favorite_words.length > 0 
-                      ? row.favorite_words.join(', ') 
-                      : 'なし'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
       </div>
     </div>
   );

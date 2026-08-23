@@ -1,7 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { createClient as createAdminClient, type SupabaseClient } from '@supabase/supabase-js';
 import { getButtonCounts } from '@/lib/analytics/buttonCounts';
+
+export const maxDuration = 60;
+
+async function fetchAllRows<T>(
+  client: SupabaseClient,
+  table: string,
+  columns: string
+): Promise<T[]> {
+  const pageSize = 1000;
+  const rows: T[] = [];
+  let from = 0;
+
+  while (true) {
+    const { data, error } = await client
+      .from(table)
+      .select(columns)
+      .range(from, from + pageSize - 1);
+
+    if (error) {
+      throw error;
+    }
+    if (!data || data.length === 0) {
+      break;
+    }
+    rows.push(...(data as T[]));
+    if (data.length < pageSize) {
+      break;
+    }
+    from += pageSize;
+  }
+
+  return rows;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,17 +45,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }
 
-    // 管理者チェック
     const adminEmails = ['bestinksalesman@gmail.com'];
     if (!adminEmails.includes(user.email || '')) {
       return NextResponse.json({ success: false, error: 'Not authorized' }, { status: 403 });
     }
 
-    // 総ボタン数を取得
     const counts = getButtonCounts();
     const totalButtons = counts.total;
 
-    // Service Role Keyを使ってAdmin APIでユーザーを取得
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!serviceRoleKey) {
       return NextResponse.json(
@@ -36,29 +66,26 @@ export async function GET(request: NextRequest) {
       serviceRoleKey
     );
 
-    // 全ユーザーを取得（ページネーション対応）
-    // listUsers()はデフォルトで最大50件しか返さないため、全ユーザーを取得する
     let allAuthUsers: any[] = [];
     let page = 1;
     let hasMore = true;
-    let paginationError: any = null;
     
     while (hasMore) {
       const { data: { users: pageUsers }, error: pageError } = await supabaseAdmin.auth.admin.listUsers({
         page,
-        perPage: 1000 // 最大1000件まで一度に取得
+        perPage: 1000
       });
       
       if (pageError) {
-        console.error(`Error fetching users page ${page}:`, pageError);
-        paginationError = pageError;
-        break;
+        return NextResponse.json(
+          { success: false, error: 'Failed to fetch users', details: pageError.message },
+          { status: 500 }
+        );
       }
       
       if (pageUsers && pageUsers.length > 0) {
         allAuthUsers = [...allAuthUsers, ...pageUsers];
         page++;
-        // 1000件未満の場合は最終ページ
         if (pageUsers.length < 1000) {
           hasMore = false;
         }
@@ -66,93 +93,69 @@ export async function GET(request: NextRequest) {
         hasMore = false;
       }
     }
-    
-    console.log('📊 Button Analytics - Admin API listUsers結果:', {
-      totalPages: page - 1,
-      totalUsers: allAuthUsers.length
+
+    const [buttonEvents, favorites, interpreterUsage] = await Promise.all([
+      fetchAllRows<{ user_id: string; button_key: string }>(
+        supabaseAdmin,
+        'user_button_events',
+        'user_id, button_key'
+      ),
+      fetchAllRows<{ user_id: string; word_chinese: string }>(
+        supabaseAdmin,
+        'user_favorites',
+        'user_id, word_chinese'
+      ),
+      fetchAllRows<{ user_id: string; language: string }>(
+        supabaseAdmin,
+        'interpreter_usage',
+        'user_id, language'
+      ),
+    ]);
+
+    const pressedByUser = new Map<string, Set<string>>();
+    for (const event of buttonEvents) {
+      if (!event.user_id || !event.button_key) continue;
+      const keys = pressedByUser.get(event.user_id) ?? new Set<string>();
+      keys.add(event.button_key);
+      pressedByUser.set(event.user_id, keys);
+    }
+
+    const favoritesByUser = new Map<string, string[]>();
+    for (const fav of favorites) {
+      if (!fav.user_id || !fav.word_chinese) continue;
+      const words = favoritesByUser.get(fav.user_id) ?? [];
+      words.push(fav.word_chinese);
+      favoritesByUser.set(fav.user_id, words);
+    }
+
+    const interpreterByUser = new Map<string, { cantonese: number; mandarin: number }>();
+    for (const usage of interpreterUsage) {
+      if (!usage.user_id) continue;
+      const current = interpreterByUser.get(usage.user_id) ?? { cantonese: 0, mandarin: 0 };
+      if (usage.language === 'cantonese') current.cantonese += 1;
+      if (usage.language === 'mandarin') current.mandarin += 1;
+      interpreterByUser.set(usage.user_id, current);
+    }
+
+    const users = allAuthUsers.map((u) => {
+      const pressed = pressedByUser.get(u.id)?.size ?? 0;
+      const favoriteWords = favoritesByUser.get(u.id) ?? [];
+      const interpreter = interpreterByUser.get(u.id) ?? { cantonese: 0, mandarin: 0 };
+      return {
+        user_id: u.id,
+        email: u.email || '',
+        pressed,
+        not_pressed: Math.max(totalButtons - pressed, 0),
+        favorites_count: favoriteWords.length,
+        favorite_words: favoriteWords,
+        interpreter_cantonese_count: interpreter.cantonese,
+        interpreter_mandarin_count: interpreter.mandarin,
+        interpreter_total_count: interpreter.cantonese + interpreter.mandarin,
+      };
+    }).sort((a, b) => {
+      if (b.pressed !== a.pressed) return b.pressed - a.pressed;
+      return b.interpreter_total_count - a.interpreter_total_count;
     });
-    
-    if (paginationError) {
-      console.error('Error fetching users:', paginationError);
-      return NextResponse.json(
-        { success: false, error: 'Failed to fetch users', details: paginationError.message },
-        { status: 500 }
-      );
-    }
-    
-    const authUsers = allAuthUsers;
-
-    // ユーザーごとのボタン押下数とお気に入り情報を取得
-    const users: Array<{ 
-      user_id: string; 
-      email: string; 
-      pressed: number; 
-      not_pressed: number;
-      favorites_count: number;
-      favorite_words: string[];
-      interpreter_cantonese_count: number;
-      interpreter_mandarin_count: number;
-      interpreter_total_count: number;
-    }> = [];
-
-    if (authUsers) {
-      // 各ユーザーの押下数とお気に入り情報を取得
-      for (const u of authUsers) {
-        // user_button_eventsテーブルから、このユーザーが押したボタンのユニーク数を取得
-        const { data: buttonEvents, error: eventsError } = await supabaseAdmin
-          .from('user_button_events')
-          .select('button_key')
-          .eq('user_id', u.id);
-
-        if (eventsError) {
-          console.error(`Error fetching button events for user ${u.id}:`, eventsError);
-        }
-
-        // ユニークなボタンキーの数をカウント
-        const uniqueButtons = new Set(buttonEvents?.map(e => e.button_key) || []);
-        const pressed = uniqueButtons.size;
-        const not_pressed = totalButtons - pressed;
-
-        // user_favoritesテーブルから、このユーザーのお気に入りを取得
-        const { data: favorites, error: favoritesError } = await supabaseAdmin
-          .from('user_favorites')
-          .select('word_chinese')
-          .eq('user_id', u.id);
-
-        if (favoritesError) {
-          console.error(`Error fetching favorites for user ${u.id}:`, favoritesError);
-        }
-
-        const favoriteWords = (favorites || []).map((f: any) => f.word_chinese).filter(Boolean);
-        const favorites_count = favoriteWords.length;
-
-        // interpreter_usageテーブルから、このユーザーの通訳使用回数を取得
-        const { data: interpreterUsage, error: interpreterError } = await supabaseAdmin
-          .from('interpreter_usage')
-          .select('language')
-          .eq('user_id', u.id);
-
-        if (interpreterError) {
-          console.error(`Error fetching interpreter usage for user ${u.id}:`, interpreterError);
-        }
-
-        const cantoneseCount = (interpreterUsage || []).filter((u: any) => u.language === 'cantonese').length;
-        const mandarinCount = (interpreterUsage || []).filter((u: any) => u.language === 'mandarin').length;
-        const interpreterTotalCount = cantoneseCount + mandarinCount;
-        
-        users.push({
-          user_id: u.id,
-          email: u.email || '',
-          pressed,
-          not_pressed,
-          favorites_count,
-          favorite_words: favoriteWords,
-          interpreter_cantonese_count: cantoneseCount,
-          interpreter_mandarin_count: mandarinCount,
-          interpreter_total_count: interpreterTotalCount
-        });
-      }
-    }
 
     return NextResponse.json({
       success: true,

@@ -3,6 +3,8 @@
 import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { getInAppBrowserBlockMessage } from '@/lib/in-app-browser';
+import { parseResponseJson } from '@/lib/parse-response-json';
 
 function LoginForm() {
   const [username, setUsername] = useState('');
@@ -46,6 +48,25 @@ function LoginForm() {
       setMessage(redirectMessage);
     }
   }, [redirectMessage]);
+
+  // Google OAuth 完了後: アンケート未回答ならフォームを表示
+  useEffect(() => {
+    const surveyParam = searchParams.get('survey');
+    if (surveyParam !== '1' && surveyParam !== 'true') return;
+
+    let cancelled = false;
+    (async () => {
+      const sb = createClient();
+      const { data: { user } } = await sb.auth.getUser();
+      if (cancelled || !user) return;
+      if (user.user_metadata?.survey_completed === true) return;
+      setShowSurvey(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams]);
 
   // Force light color scheme for this page, even in dark mode browsers
   useEffect(() => {
@@ -150,8 +171,8 @@ function LoginForm() {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        return data.email;
+        const data = await parseResponseJson<{ email?: string }>(response);
+        return data?.email ?? null;
       }
       return null;
     } catch (err) {
@@ -289,12 +310,10 @@ function LoginForm() {
     setLoading(true);
     setError(null);
 
-    // モバイルXアプリのWebViewを検出
     const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
-    const isTwitterWebView = /Twitter/i.test(userAgent) || /XAndroid/i.test(userAgent) || /X iOS/i.test(userAgent);
-    
-    if (isTwitterWebView) {
-      setError('XアプリのブラウザからはGoogleログインができません。右上の「...」メニューから「ブラウザで開く」を選択して、SafariやChromeなどの標準ブラウザで開いてください。');
+    const inAppBlock = getInAppBrowserBlockMessage(userAgent);
+    if (inAppBlock) {
+      setError(inAppBlock);
       setLoading(false);
       return;
     }
@@ -309,11 +328,18 @@ function LoginForm() {
 
       if (error) throw error;
     } catch (err: any) {
-      // Google OAuthのdisallowed_useragentエラーの場合、より詳しい説明を表示
-      if (err.message && err.message.includes('disallowed_useragent')) {
+      const msg = err?.message ?? '';
+      if (msg.includes('disallowed_useragent')) {
         setError('このブラウザからはGoogleログインができません。標準ブラウザ（Safari、Chromeなど）で開いてください。');
+      } else if (
+        msg.includes('Unexpected end of JSON') ||
+        msg.includes('Unexpected token')
+      ) {
+        setError(
+          '通信に失敗しました。Wi-Fiを切り替えるか、Safari・Chromeなどの標準ブラウザでページを開き直して、再度お試しください。'
+        );
       } else {
-        setError(err.message || 'Google認証でエラーが発生しました');
+        setError(msg || 'Google認証でエラーが発生しました');
       }
       setLoading(false);
     }
@@ -359,19 +385,30 @@ function LoginForm() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'アンケートの保存に失敗しました');
+        const data = await parseResponseJson<{ error?: string }>(response);
+        throw new Error(
+          data?.error ?? `アンケートの保存に失敗しました（${response.status}）`
+        );
       }
 
-      setMessage('確認メールを送信しました。メールボックスを確認してください。');
+      const { data: { user: freshUser } } = await supabase.auth.getUser();
+      const oauthProvider = freshUser?.app_metadata?.provider;
+      const confirmed = !!freshUser?.email_confirmed_at;
+
       setShowSurvey(false);
-      
-      // フォームをリセット
       setSurveyGender('');
       setSurveyResidence('');
       setSurveyResidenceOther('');
       setSurveyCantoneseLevel('');
       setSignUpUserId(null);
+
+      if (oauthProvider === 'google' || confirmed) {
+        setMessage('登録が完了しました。');
+        router.push(redirectPath || '/');
+        router.refresh();
+      } else {
+        setMessage('確認メールを送信しました。メールボックスを確認してください。');
+      }
     } catch (err: any) {
       setError(err.message || 'アンケートの保存に失敗しました');
     } finally {
