@@ -1340,7 +1340,11 @@ export default function Home() {
   };
 
   const playAudioFromStart = (audio: HTMLAudioElement, onError?: (error: unknown) => void) => {
-    const start = () => {
+    let started = false;
+    const startOnce = () => {
+      if (started) return;
+      started = true;
+      audio.removeEventListener('seeked', startOnce);
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch((error) => {
@@ -1349,17 +1353,9 @@ export default function Home() {
       }
     };
 
-    if (audio.currentTime > 0.005) {
-      const onSeeked = () => {
-        audio.removeEventListener('seeked', onSeeked);
-        start();
-      };
-      audio.addEventListener('seeked', onSeeked, { once: true });
-      audio.currentTime = 0;
-      return;
-    }
-
-    start();
+    audio.addEventListener('seeked', startOnce, { once: true });
+    audio.currentTime = 0;
+    window.setTimeout(startOnce, 80);
   };
 
   const unlockSimultaneousAudioPlayback = async () => {

@@ -66,27 +66,22 @@ export async function POST(request: NextRequest) {
 
     const voiceParams: VoiceConfig = selectedVoice ?? defaultVoice;
     
-    // 「一」の発音問題対策: PCとモバイルの両方でSSMLを使用
-    // PCでは50msのbreakが機能しているため、モバイルでも同じ方法を採用
-    let finalText = text;
-    let useSSML = false;
-    
-    // 広東語の数字に関連する文字が含まれているかチェックする正規表現
     const cantoneseNumberRegex = /^[一二三四五六七八九十百千萬億兆]+$/;
-    
-    // モバイルかどうかを判定
     const userAgent = request.headers.get('user-agent') || '';
     const isMobile = /Mobile|Android|iPhone|iPad|iPod/i.test(userAgent);
-    
-    // 「一」または特定の数字で始まる場合の処理
-    if (text === '一' || text.startsWith('一百') || text.startsWith('一千') || text.startsWith('一萬') || cantoneseNumberRegex.test(text)) {
-      // PCとモバイルの両方でSSMLを使用（PCで機能している方法をモバイルにも適用）
-      // モバイルではより長いbreak時間を使用して冒頭を保護
-      const breakTime = isMobile ? '200ms' : '50ms';
-      finalText = `<speak><break time="${breakTime}"/>${text}</speak>`;
-      useSSML = true;
-      console.log(`🔧 ${isMobile ? 'モバイル' : 'PC'}: SSML（${breakTime} break）を使用:`, { originalText: text, ssmlText: finalText });
-    }
+    const isNumberLike =
+      text === '一' ||
+      text.startsWith('一百') ||
+      text.startsWith('一千') ||
+      text.startsWith('一萬') ||
+      cantoneseNumberRegex.test(text);
+
+    const escapeSsml = (value: string) =>
+      value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const breakTime = isMobile ? (isNumberLike ? '200ms' : '150ms') : '120ms';
+    const finalText = `<speak><break time="${breakTime}"/>${escapeSsml(text)}</speak>`;
+    const useSSML = true;
     
     const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`;
     const payload = {
