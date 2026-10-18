@@ -10,6 +10,20 @@ function isSkipped(ch: string) {
   return /\p{P}|\p{S}/u.test(ch);
 }
 
+function kanaParts(kana: string) {
+  return kana.replaceAll('（', '(').replaceAll('）', ')').split(/([()])/);
+}
+
+function Kana({ text }: { text: string }) {
+  return kanaParts(text).map((part, index) =>
+    part === '(' || part === ')' ? (
+      <span key={index} style={{ fontFamily: '"Avenir Next", "Hiragino Sans", "Helvetica Neue", sans-serif' }}>{part}</span>
+    ) : (
+      part
+    )
+  );
+}
+
 export default function SlangKanaPage() {
   const [dict, setDict] = useState<Dict | null>(null);
   const [error, setError] = useState('');
@@ -89,7 +103,7 @@ export default function SlangKanaPage() {
               <div className="chunk" key={`${row.ch}-${index}`}>
                 <div className="unit">
                   <div className="glyph">{row.ch}</div>
-                  <div className={row.missing || row.kana === '未登録' ? 'kana missing' : 'kana'}>{row.kana}</div>
+                  <div className={row.missing || row.kana === '未登録' ? 'kana missing' : 'kana'}><Kana text={row.kana} /></div>
                   <div className="sound">{row.sound}</div>
                 </div>
               </div>
@@ -110,7 +124,7 @@ export default function SlangKanaPage() {
                   {row.readings.map((item) => (
                     <li key={item.jyutping}>
                       <span className="py">{item.jyutping}</span>
-                      <span className={item.kana === '未登録' ? 'missing' : ''}>{item.kana}</span>
+                      <span className={item.kana === '未登録' ? 'missing' : ''}><Kana text={item.kana} /></span>
                     </li>
                   ))}
                 </ul>

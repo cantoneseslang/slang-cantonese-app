@@ -22,6 +22,10 @@ function isSkipped(ch: string) {
   return /\p{P}|\p{S}/u.test(ch);
 }
 
+function kanaParts(kana: string) {
+  return kana.replaceAll('（', '(').replaceAll('）', ')').split(/([()])/);
+}
+
 export default function SlangAlignedReading({ text }: { text: string }) {
   const [dict, setDict] = useState<Dict | null>(null);
 
@@ -68,7 +72,15 @@ export default function SlangAlignedReading({ text }: { text: string }) {
           <div className="chunk" key={`${row.ch}-${index}`}>
             <div className="unit">
               <div className="glyph">{row.ch}</div>
-              <div className="kana">{row.kana}</div>
+              <div className="kana">
+                {kanaParts(row.kana).map((part, partIndex) =>
+                  part === '(' || part === ')' ? (
+                    <span key={partIndex} style={{ fontFamily: '"Avenir Next", "Hiragino Sans", "Helvetica Neue", sans-serif' }}>{part}</span>
+                  ) : (
+                    part
+                  )
+                )}
+              </div>
               <div className="sound">{row.sound}</div>
             </div>
           </div>
