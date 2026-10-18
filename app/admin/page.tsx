@@ -191,6 +191,9 @@ export default function AdminPage() {
   const [editForm, setEditForm] = useState<{ username: string; membership_type: string }>({ username: '', membership_type: 'free' });
   const [analyticsData, setAnalyticsData] = useState<Array<{ month: string; registrations: number; revenueJPY: number; revenueHKD: number }>>([]);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [supportMessages, setSupportMessages] = useState<Array<{ id: string; user_id: string; username: string | null; email: string | null; body: string; direction: 'user' | 'staff'; created_at: string }>>([]);
+  const [supportReplies, setSupportReplies] = useState<Record<string, string>>({});
+  const [supportSending, setSupportSending] = useState<string | null>(null);
 
   useEffect(() => {
     checkAdminAccess();
@@ -225,6 +228,7 @@ export default function AdminPage() {
       fetchFavoritesCount();
       fetchButtonAnalytics();
       fetchAnalytics();
+      fetchSupportMessages();
     } catch (error) {
       console.error('管理者チェックエラー:', error);
       router.push('/login');
@@ -320,6 +324,41 @@ export default function AdminPage() {
       setButtonLoading(false);
     }
   }
+
+  const fetchSupportMessages = async () => {
+    try {
+      const response = await fetch('/api/admin/support-messages');
+      const data = await response.json();
+      if (data.success) setSupportMessages(data.messages || []);
+    } catch (error) {
+      console.error('連絡取得エラー', error);
+    }
+  };
+
+  const sendSupportReply = async (userId: string) => {
+    const message = (supportReplies[userId] || '').trim();
+    if (!message || supportSending) return;
+    setSupportSending(userId);
+    try {
+      const response = await fetch('/api/admin/support-messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, message }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        alert(data.error || '返信できませんでした');
+        return;
+      }
+      setSupportReplies((current) => ({ ...current, [userId]: '' }));
+      await fetchSupportMessages();
+      if (data.mailed === false) alert(data.error || 'メール送信に失敗しました');
+    } catch {
+      alert('返信できませんでした');
+    } finally {
+      setSupportSending(null);
+    }
+  };
 
   const fetchAnalytics = async () => {
     try {
@@ -996,7 +1035,7 @@ export default function AdminPage() {
               会員情報一覧
             </h2>
             <button
-              onClick={() => { fetchUsers(); fetchFavoritesCount(); fetchButtonAnalytics(); fetchAnalytics(); }}
+              onClick={() => { fetchUsers(); fetchFavoritesCount(); fetchButtonAnalytics(); fetchAnalytics(); fetchSupportMessages(); }}
               style={{
                 padding: '0.5rem 1rem',
                 backgroundColor: '#3b82f6',
@@ -1252,6 +1291,54 @@ export default function AdminPage() {
                 onCollapse={() => setMemberListLimit(LIST_PAGE_SIZE)}
               />
             </div>
+          )}
+        </div>
+
+        <div style={{ marginTop: '2rem', padding: '1.5rem', backgroundColor: '#f9fafb', borderRadius: '12px' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: '0 0 1rem' }}>スラング先生へのメール</h2>
+          {supportMessages.length === 0 ? (
+            <div style={{ color: '#6b7280' }}>まだ連絡はありません</div>
+          ) : (
+            Object.values(supportMessages.reduce<Record<string, typeof supportMessages>>((groups, item) => {
+              const list = groups[item.user_id] ?? [];
+              list.push(item);
+              groups[item.user_id] = list;
+              return groups;
+            }, {})).map((thread) => {
+              const latest = thread[0];
+              const ordered = [...thread].reverse();
+              return (
+                <div key={latest.user_id} style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' }}>
+                  <div style={{ fontWeight: 700, marginBottom: '0.75rem' }}>
+                    {latest.username || '未設定'} / {latest.email || 'メールなし'}
+                  </div>
+                  {ordered.map((item) => (
+                    <div key={item.id} style={{ marginBottom: '0.5rem', padding: '0.6rem 0.75rem', borderRadius: '8px', backgroundColor: item.direction === 'staff' ? '#eff6ff' : '#f9fafb', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', marginBottom: '0.2rem' }}>
+                        {item.direction === 'staff' ? '返信' : '受信'} {new Date(item.created_at).toLocaleString('ja-JP', { timeZone: 'Asia/Hong_Kong' })}
+                      </div>
+                      {item.body}
+                    </div>
+                  ))}
+                  <textarea
+                    value={supportReplies[latest.user_id] || ''}
+                    onChange={(event) => setSupportReplies((current) => ({ ...current, [latest.user_id]: event.target.value }))}
+                    rows={3}
+                    maxLength={2000}
+                    placeholder="このユーザーへ返信"
+                    style={{ width: '100%', boxSizing: 'border-box', marginTop: '0.5rem', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '16px', fontFamily: 'inherit' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => sendSupportReply(latest.user_id)}
+                    disabled={supportSending === latest.user_id}
+                    style={{ marginTop: '0.5rem', padding: '0.55rem 1rem', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    {supportSending === latest.user_id ? '送信中...' : '返信を送る'}
+                  </button>
+                </div>
+              );
+            })
           )}
         </div>
       </div>
