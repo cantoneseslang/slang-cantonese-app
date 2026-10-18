@@ -92,12 +92,6 @@ export default function SlangKanaPage() {
                   <div className={row.missing || row.kana === '未登録' ? 'kana missing' : 'kana'}>{row.kana}</div>
                   <div className="sound">{row.sound}</div>
                 </div>
-                {index < rows.length - 1 && (
-                  <div className="dot-col">
-                    <div className="spacer">・</div>
-                    <div className="dot">・</div>
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -173,6 +167,7 @@ export default function SlangKanaPage() {
           display: flex;
           flex-wrap: wrap;
           align-items: flex-start;
+          gap: 0.35rem 0.85rem;
           margin-top: 22px;
         }
         .chunk { display: flex; align-items: flex-start; }
@@ -198,21 +193,6 @@ export default function SlangKanaPage() {
           font-size: 15px;
           line-height: 1.3;
           white-space: nowrap;
-        }
-        .dot-col {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 0 0.08em;
-        }
-        .spacer {
-          font-size: 26px;
-          line-height: 1.3;
-          visibility: hidden;
-        }
-        .dot {
-          font-size: 22px;
-          line-height: 1.4;
         }
         .note {
           margin: 6px 0 0;
