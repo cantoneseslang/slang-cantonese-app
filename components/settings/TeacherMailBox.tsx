@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type MailUser = { id?: string; email?: string; user_metadata?: { username?: string } } | null;
 
@@ -8,7 +8,10 @@ export default function TeacherMailBox({ user }: { user: MailUser }) {
   const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState<Array<{ id: string; body: string; direction: 'user' | 'staff'; created_at: string }>>([]);
   const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false);
   const [notice, setNotice] = useState('');
+  const [noticeOk, setNoticeOk] = useState(false);
+  const noticeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -28,7 +31,8 @@ export default function TeacherMailBox({ user }: { user: MailUser }) {
 
   const send = async () => {
     const message = draft.trim();
-    if (!message || sending) return;
+    if (!message || sendingRef.current) return;
+    sendingRef.current = true;
     setSending(true);
     setNotice('');
     try {
@@ -37,18 +41,23 @@ export default function TeacherMailBox({ user }: { user: MailUser }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message }),
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.success) {
+        setNoticeOk(false);
         setNotice(data.error || '送信できませんでした');
         return;
       }
-      setMessages((current) => [...current, data.message]);
+      if (data.message) setMessages((current) => [...current, data.message]);
       setDraft('');
-      setNotice('送信しました');
+      setNoticeOk(data.mailed !== false);
+      setNotice(data.mailed === false ? (data.error || '画面には残りましたが、メールは届いていません') : '送信しました。info@lifesupporthk.com に届きます');
     } catch {
+      setNoticeOk(false);
       setNotice('送信できませんでした');
     } finally {
+      sendingRef.current = false;
       setSending(false);
+      requestAnimationFrame(() => noticeRef.current?.scrollIntoView({ block: 'nearest' }));
     }
   };
 
@@ -105,7 +114,15 @@ export default function TeacherMailBox({ user }: { user: MailUser }) {
       />
       <button
         type="button"
-        onClick={send}
+        onMouseDown={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void send();
+        }}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
         disabled={sending || draft.trim().length === 0}
         style={{
           marginTop: 6,
@@ -123,7 +140,20 @@ export default function TeacherMailBox({ user }: { user: MailUser }) {
         {sending ? '送信中...' : '送信'}
       </button>
       {notice && (
-        <div style={{ marginTop: 6, fontSize: 12, color: notice === '送信しました' ? '#16a34a' : '#dc2626' }}>
+        <div
+          ref={noticeRef}
+          style={{
+            marginTop: 8,
+            padding: '10px 12px',
+            borderRadius: 8,
+            backgroundColor: noticeOk ? '#dcfce7' : '#fee2e2',
+            border: `1px solid ${noticeOk ? '#86efac' : '#fecaca'}`,
+            color: noticeOk ? '#166534' : '#991b1b',
+            fontSize: 14,
+            fontWeight: 700,
+            lineHeight: 1.5,
+          }}
+        >
           {notice}
         </div>
       )}

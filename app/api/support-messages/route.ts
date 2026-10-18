@@ -82,10 +82,14 @@ export async function POST(request: NextRequest) {
       ].join('\n'),
     });
   } catch (mailError) {
-    await db.from('support_messages').delete().eq('id', saved.id);
     console.error('support mail failed', mailError);
-    return NextResponse.json({ success: false, error: 'メールを送れませんでした' }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      mailed: false,
+      message: saved,
+      error: '画面には残りましたが、メールは届いていません。送信設定のログインが拒否されました。',
+    });
   }
 
-  return NextResponse.json({ success: true, message: saved });
+  return NextResponse.json({ success: true, mailed: true, message: saved });
 }
