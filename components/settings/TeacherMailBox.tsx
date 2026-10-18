@@ -50,7 +50,7 @@ export default function TeacherMailBox({ user }: { user: MailUser }) {
       if (data.message) setMessages((current) => [...current, data.message]);
       setDraft('');
       setNoticeOk(data.mailed !== false);
-      setNotice(data.mailed === false ? (data.error || '画面には残りましたが、メールは届いていません') : '送信しました。info@lifesupporthk.com に届きます');
+      setNotice(data.mailed === false ? (data.error || '画面には残りましたが、メールは届いていません') : '送信しました。');
     } catch {
       setNoticeOk(false);
       setNotice('送信できませんでした');
