@@ -26,7 +26,7 @@ function kanaParts(kana: string) {
   return kana.replaceAll('（', '(').replaceAll('）', ')').split(/([()])/);
 }
 
-export default function SlangAlignedReading({ text }: { text: string }) {
+function useSlangRows(text: string) {
   const [dict, setDict] = useState<Dict | null>(null);
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export default function SlangAlignedReading({ text }: { text: string }) {
     };
   }, []);
 
-  const rows = useMemo(() => {
+  return useMemo(() => {
     if (!dict) return [];
     return Array.from(text.normalize('NFKC'))
       .filter((ch) => !isSkipped(ch))
@@ -61,12 +61,83 @@ export default function SlangAlignedReading({ text }: { text: string }) {
         };
       });
   }, [dict, text]);
+}
+
+export function SlangBookmarkRow({ phrase, translation = '' }: { phrase: string; translation?: string }) {
+  const rows = useSlangRows(phrase);
+
+  return (
+    <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.15rem', width: '100%' }}>
+      <span style={{ fontWeight: 700, fontSize: '1.05rem', lineHeight: 1.4 }}>{phrase}</span>
+      <span
+        style={{
+          fontFamily: '"Iowan Old Style", "Palatino Linotype", Palatino, "Yu Mincho", serif',
+          fontSize: '0.95rem',
+          lineHeight: 1.45,
+          color: '#4b5563',
+        }}
+      >
+        {rows.map((row, index) => (
+          <span key={`${row.ch}-${index}`}>
+            {index > 0 ? ' ' : ''}
+            {kanaParts(row.kana).map((part, partIndex) =>
+              part === '(' || part === ')' ? (
+                <span key={partIndex} style={{ fontFamily: '"Avenir Next", "Hiragino Sans", "Helvetica Neue", sans-serif' }}>{part}</span>
+              ) : (
+                part
+              )
+            )}
+          </span>
+        ))}
+      </span>
+      <span
+        style={{
+          fontFamily: '"Avenir Next", "Hiragino Sans", sans-serif',
+          fontSize: '0.95rem',
+          lineHeight: 1.4,
+          color: '#6b7280',
+        }}
+      >
+        {rows.map((row) => row.sound).join(' ')}
+      </span>
+      {translation ? (
+        <span style={{ fontSize: '0.95rem', lineHeight: 1.5, color: '#1d1d1f' }}>
+          翻訳：{translation}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+export default function SlangAlignedReading({
+  text,
+  bookmarked = false,
+  onToggleBookmark,
+}: {
+  text: string;
+  bookmarked?: boolean;
+  onToggleBookmark?: () => void;
+}) {
+  const rows = useSlangRows(text);
 
   if (!rows.length) return null;
   const varies = rows.some((row) => row.varies);
 
   return (
     <div className="slang-reading">
+      <div className="reading-row">
+        {onToggleBookmark && (
+          <button
+            type="button"
+            className="bookmark-star"
+            aria-pressed={bookmarked}
+            aria-label="ブックマーク"
+            onClick={onToggleBookmark}
+            style={{ color: bookmarked ? '#f5c518' : '#c8c8c8' }}
+          >
+            {bookmarked ? '★' : '☆'}
+          </button>
+        )}
       <div className="aligned">
         {rows.map((row, index) => (
           <div className="chunk" key={`${row.ch}-${index}`}>
@@ -86,8 +157,27 @@ export default function SlangAlignedReading({ text }: { text: string }) {
           </div>
         ))}
       </div>
+      </div>
       {varies && <p className="note">複数読みは先頭を連結しています</p>}
       <style jsx>{`
+        .reading-row {
+          display: flex;
+          align-items: flex-start;
+          gap: 0.15rem;
+        }
+        .bookmark-star {
+          flex: 0 0 auto;
+          width: 1.6rem;
+          height: calc(26px * 1.3);
+          margin: 0;
+          padding: 0;
+          border: none;
+          background: transparent;
+          cursor: pointer;
+          font-size: 22px;
+          line-height: 1;
+          touch-action: manipulation;
+        }
         .slang-reading {
           font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Yu Mincho", serif;
           color: #1c1915;

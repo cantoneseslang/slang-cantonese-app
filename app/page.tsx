@@ -28,7 +28,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import HiddenModeOverlay from '../components/interpreter/HiddenModeOverlay';
 import SettingsPortal from '../components/settings/SettingsPortal';
-import SlangAlignedReading from '../components/SlangAlignedReading';
+import SlangAlignedReading, { SlangBookmarkRow } from '../components/SlangAlignedReading';
 import categoriesData from '@/data/categories.json';
 import noteCategoriesData from '@/data/note-categories.json';
 
@@ -45,6 +45,29 @@ interface SearchResult {
   originalText?: string | null;
   translatedText?: string | null;
   japaneseTranslation?: string | null;
+}
+
+type PhraseBookmark = {
+  phrase: string;
+  source: 'cantonese' | 'japanese';
+  query: string;
+  translation: string;
+};
+
+function bookmarkTranslationText(value: unknown) {
+  if (typeof value !== 'string') return '';
+  const text = value.trim();
+  if (!text || text.includes('翻訳に失敗')) return '';
+  return text;
+}
+
+function normalizePhraseBookmark(item: { phrase?: unknown; source?: unknown; query?: unknown; translation?: unknown } | null): PhraseBookmark | null {
+  if (!item || typeof item.phrase !== 'string') return null;
+  const phrase = item.phrase.trim();
+  if (!phrase) return null;
+  const source = item.source === 'japanese' ? 'japanese' : 'cantonese';
+  const query = typeof item.query === 'string' && item.query.trim() ? item.query.trim() : phrase;
+  return { phrase, source, query, translation: bookmarkTranslationText(item.translation) };
 }
 
 interface Word {
@@ -393,6 +416,8 @@ export default function Home() {
   const [user, setUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [slangReadingText, setSlangReadingText] = useState('');
+  const [phraseBookmarks, setPhraseBookmarks] = useState<PhraseBookmark[]>([]);
+  const [bookmarkReplay, setBookmarkReplay] = useState<{ source: 'cantonese' | 'japanese'; query: string } | null>(null);
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [blueLoading, setBlueLoading] = useState(false);
@@ -3146,6 +3171,76 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     loadFavorites();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const storageKey = `phrase-bookmarks:${user?.id || 'guest'}`;
+    const readLocal = () => {
+      try {
+        const raw = localStorage.getItem(storageKey);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed)
+          ? parsed.map((item) => normalizePhraseBookmark(item)).filter((item): item is PhraseBookmark => item !== null)
+          : [];
+      } catch {
+        return [];
+      }
+    };
+    (async () => {
+      if (!user) {
+        if (!cancelled) setPhraseBookmarks(readLocal());
+        return;
+      }
+      try {
+        const res = await fetch('/api/phrase-bookmarks');
+        const data = await res.json();
+        if (!cancelled && data.authenticated && Array.isArray(data.bookmarks)) {
+          const bookmarks = data.bookmarks
+            .map((item: { phrase?: unknown; source?: unknown; query?: unknown; translation?: unknown }) => normalizePhraseBookmark(item))
+            .filter((item: PhraseBookmark | null): item is PhraseBookmark => item !== null);
+          setPhraseBookmarks(bookmarks);
+          localStorage.setItem(storageKey, JSON.stringify(bookmarks));
+          return;
+        }
+      } catch (error) {
+        console.error('phrase bookmark load failed', error);
+      }
+      if (!cancelled) setPhraseBookmarks(readLocal());
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const togglePhraseBookmark = async () => {
+    const phrase = slangReadingText.trim();
+    if (!phrase) return;
+    const source = bookmarkReplay?.source || 'cantonese';
+    const query = (bookmarkReplay?.query || phrase).trim();
+    const translation = bookmarkTranslationText(result?.translatedText || result?.japaneseTranslation);
+    const storageKey = `phrase-bookmarks:${user?.id || 'guest'}`;
+    const exists = phraseBookmarks.some((item) => item.phrase === phrase);
+    const next = exists
+      ? phraseBookmarks.filter((item) => item.phrase !== phrase)
+      : [{ phrase, source, query, translation }, ...phraseBookmarks];
+    setPhraseBookmarks(next);
+    localStorage.setItem(storageKey, JSON.stringify(next));
+    if (!user) return;
+    try {
+      const res = await fetch('/api/phrase-bookmarks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phrase, source, query, translation }),
+      });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.bookmarks)) {
+        setPhraseBookmarks(data.bookmarks);
+        localStorage.setItem(storageKey, JSON.stringify(data.bookmarks));
+      }
+    } catch (error) {
+      console.error('phrase bookmark save failed', error);
+    }
+  };
   // お気に入りの追加/削除
   const toggleFavorite = async (word: Word, categoryId: string) => {
     if (!user) {
@@ -5083,7 +5178,14 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
   const favoriteWordCategoryMapRef = useRef<Map<string, string>>(new Map());
 
   useEffect(() => {
-    if (selectedCategory === 'favorites') {
+    if (selectedCategory === 'phrase-bookmarks') {
+      setCurrentWords([]);
+      setCurrentCategory({ id: 'phrase-bookmarks', name: 'ブックマーク', words: [] });
+      setResult(null);
+      setError(null);
+      setSearchQuery('');
+      setActiveWordId(null);
+    } else if (selectedCategory === 'favorites') {
       // お気に入りカテゴリーの場合
       if (favorites.size === 0) {
         setCurrentWords([]);
@@ -5346,17 +5448,25 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     }
   }, [showPricingModal, selectedPlan]);
 
-  const handleSearch = async (query: string, options?: { slangReading?: boolean }) => {
+  const handleSearch = async (query: string, options?: { slangReading?: boolean | 'translated' }) => {
     if (!query || query.trim() === '') {
       setError('検索文字を入力してください');
       return;
     }
 
-    if (options?.slangReading) {
+    const alignTranslated = options?.slangReading === 'translated';
+    if (options?.slangReading === true) {
       setSlangReadingText(query);
+      setBookmarkReplay({ source: 'cantonese', query });
       setForceShowResult(true);
     } else {
       setSlangReadingText('');
+      if (alignTranslated) {
+        setBookmarkReplay({ source: 'japanese', query });
+        setForceShowResult(true);
+      } else {
+        setBookmarkReplay(null);
+      }
     }
 
     console.log('🔍 handleSearch開始:', { query, queryLength: query.length });
@@ -5445,6 +5555,9 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       }
 
         setResult(resultData);
+        if (alignTranslated) {
+          setSlangReadingText(data.translatedText || query);
+        }
 
         if (lastImportWasOcrRef.current) {
           setSearchQuery('');
@@ -5656,8 +5769,30 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       return;
     }
 
-    // グリーンボタンも共通の処理を使用（サーバー側で判定/処理）
-    await handleSearch(query);
+    await handleSearch(query, { slangReading: 'translated' });
+  };
+
+  const replayPhraseBookmark = async (item: PhraseBookmark) => {
+    const query = item.query || item.phrase;
+    setSearchQuery(query);
+    playHapticAndSound();
+    if (item.source === 'japanese') {
+      if (greenLoading) return;
+      setGreenLoading(true);
+      try {
+        await handleTranslateAndConvert(query);
+      } finally {
+        setGreenLoading(false);
+      }
+      return;
+    }
+    if (blueLoading) return;
+    setBlueLoading(true);
+    try {
+      await handleSearch(query, { slangReading: true });
+    } finally {
+      setBlueLoading(false);
+    }
   };
 
   // 音声ボタンのクリックハンドラー
@@ -6066,10 +6201,10 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   画面中央の広東語ボタンを押すと発音、音声が自動で表示されます
                 </li>
                 <li style={{ marginBottom: '0.5rem' }}>
-                  広東語の漢字の意味・発音を調べたい時は入力欄に広東語を入れて「広東語発音」を押してください
+                  広東語を入力して「🇭🇰→🇯🇵」を押すと、日本語の発音と翻訳が出ます
                 </li>
                 <li style={{ marginBottom: '0.5rem' }}>
-                  日本語から広東語の文章・意味・発音を調べたい時は入力欄に日本語を入れて「日訳+広東語発音」を押してください
+                  日本語を入力して「🇯🇵→🇭🇰」を押すと、広東語の発音と翻訳が出ます
                 </li>
                 <li style={{ marginBottom: '0.5rem' }}>
                   ジャンル分け(トータル73ジャンル収録)は横スクロールできるカテゴリーバーから選択してください
@@ -6267,11 +6402,21 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           {/* ラベル: カテゴリー選択 */}
           <div style={{
             padding: isMobile ? '0 1rem' : '0 1.5rem',
-            marginBottom: '0.25rem',
-            color: '#6b7280',
-            fontSize: isMobile ? '0.75rem' : '0.875rem',
-            fontWeight: 600
-          }}>カテゴリー選択</div>
+            marginBottom: '0.35rem',
+          }}>
+            <div style={{
+              color: '#6b7280',
+              fontSize: isMobile ? '0.75rem' : '0.875rem',
+              fontWeight: 600
+            }}>カテゴリー選択</div>
+            <div style={{
+              marginTop: '0.15rem',
+              color: '#9ca3af',
+              fontSize: isMobile ? '0.75rem' : '0.8125rem',
+              lineHeight: 1.4,
+              whiteSpace: 'nowrap'
+            }}>右に➡️スライドすると色んなジャンルがあります</div>
+          </div>
 
           {/* 横スクロール可能なカテゴリーバー */}
           <div style={{ 
@@ -6397,6 +6542,38 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     発音表記について
                   </button>
                 )}
+
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    playHapticAndSound();
+                    setSelectedCategory('phrase-bookmarks');
+                    setSelectedNoteCategory(null);
+                    setShowNoteSubCategories(false);
+                  }}
+                  style={{
+                    padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
+                    fontSize: isMobile ? '0.875rem' : '1rem',
+                    fontWeight: '600',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: selectedCategory === 'phrase-bookmarks'
+                      ? 'linear-gradient(145deg, #f5c518, #d4a017)'
+                      : 'linear-gradient(145deg, #ffffff, #f5f5f7)',
+                    color: selectedCategory === 'phrase-bookmarks' ? '#1d1d1f' : '#1d1d1f',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    boxShadow: selectedCategory === 'phrase-bookmarks'
+                      ? '0 4px 12px rgba(245, 197, 24, 0.35), inset 0 1px 0 rgba(255,255,255,0.4)'
+                      : '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
+                    transition: 'all 0.2s',
+                    touchAction: 'manipulation',
+                  }}
+                >
+                  🔖 ブックマーク
+                </button>
                 
                 {/* お気に入りボタン */}
                 {user && (
@@ -6506,45 +6683,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   📝 noteフレーズ
                 </button>
 
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    playHapticAndSound();
-                    router.push('/slang-kana');
-                  }}
-                  style={{
-                    padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
-                    fontSize: isMobile ? '0.875rem' : '1rem',
-                    fontWeight: '600',
-                    borderRadius: '16px',
-                    background: 'linear-gradient(145deg, #ffffff, #f5f5f7)',
-                    color: '#1d1d1f',
-                    border: 'none',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)',
-                    transform: 'scale(1)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)';
-                  }}
-                  onMouseDown={(e) => {
-                    e.currentTarget.style.transform = 'scale(0.98)';
-                  }}
-                  onMouseUp={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
-                  }}
-                >
-                  スラング式カタカナ表示
-                </button>
-                
                 {/* カテゴリーボタン（発音表記についてとNoteカテゴリーを除く） */}
                 {categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_')).map((category) => {
                   return (
@@ -7570,20 +7708,14 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   lineHeight: 1.6,
                 }}
               >
-                <div>・広東語の発音、意味を調べたい時、広東語を入力して🟦ボタン</div>
-                <div>・日本語を広東語に翻訳したい時、日本語を入力して🟩ボタン</div>
                 <div
+                  className="usage-hints"
                   style={{
                     marginTop: '0.35rem',
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    alignItems: isMobile ? 'flex-start' : 'center',
-                    gap: '0.75rem',
                   }}
                 >
                   <div
                     style={{
-                      fontSize: isMobile ? '0.85rem' : '0.8rem',
                       color: membershipType === 'free' && searchQuery.length > 900 ? '#ef4444' : '#9ca3af',
                       fontWeight: membershipType === 'free' && searchQuery.length > 900 ? '600' : '500',
                     }}
@@ -7596,7 +7728,6 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   {membershipType === 'free' && (
                     <div
                       style={{
-                        fontSize: isMobile ? '0.85rem' : '0.8rem',
                         color: ocrUsageCount >= ocrUsageLimit * 0.8 ? '#ef4444' : '#9ca3af',
                         fontWeight: ocrUsageCount >= ocrUsageLimit * 0.8 ? '600' : '500',
                       }}
@@ -7613,13 +7744,38 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               - フォーカス時はboxShadowではなくoutlineを使用する
               - 変更時はdocs/FOLDER_ICON_CENTERING_SOLUTION.mdを参照
             */}
-            <div style={{ 
+            <div className="search-phrase-wrap" style={{ 
               position: 'relative',
               height: isMobile ? '3rem' : '3.5rem'
             }}>
+              <style>{`
+                .usage-hints {
+                  container-type: inline-size;
+                  display: flex;
+                  flex-wrap: nowrap;
+                  align-items: center;
+                  gap: 0.75rem;
+                  white-space: nowrap;
+                  font-size: min(0.85rem, calc((100cqi - 0.75rem) / 40));
+                }
+                .search-phrase-wrap { container-type: inline-size; }
+                .search-phrase-input::placeholder {
+                  font-size: min(1rem, calc((100cqi - 5rem) / 28));
+                }
+                .convert-caption-col { container-type: inline-size; }
+                .convert-caption {
+                  width: 100%;
+                  white-space: nowrap;
+                  text-align: center;
+                  line-height: 1.35;
+                  color: #6b7280;
+                  font-size: min(0.75rem, calc(100cqi / 19));
+                }
+              `}</style>
               <input
               type="text"
-                placeholder="こちらに広東語、日本語を入力する"
+                className="search-phrase-input"
+                placeholder="広東語か日本語を入力して下の変換ボタンを押してください"
               value={searchQuery}
                 maxLength={getMaxTextLength()}
                 onChange={(e) => {
@@ -8002,9 +8158,11 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 </div>
               )}
 
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+              <div className="convert-caption-col" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
               <button
                 type="button"
+                aria-label="広東語入力→日本語発音+翻訳変換"
                 onClick={async () => {
                   if (blueLoading) return;
                   playHapticAndSound();
@@ -8013,9 +8171,9 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 }}
                 disabled={blueLoading}
                 style={{
-                  flex: 1,
-                  padding: isMobile ? '0.875rem 1rem' : '1rem 1.5rem',
-                  fontSize: isMobile ? '0.9375rem' : '1rem',
+                  width: '100%',
+                  padding: isMobile ? '0.75rem 0.5rem' : '0.875rem 0.75rem',
+                  fontSize: isMobile ? '1.25rem' : '1.5rem',
                   borderRadius: '12px',
                   background: blueLoading ? 'linear-gradient(145deg, #d1d5db, #9ca3af)' : 'linear-gradient(145deg, #007AFF, #0051D5)',
                   color: 'white',
@@ -8064,14 +8222,20 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                       trackColor="rgba(255,255,255,0.35)"
                       borderWidth={2}
                     />
-                    <span>音声生成変換中</span>
+                    <span style={{ fontSize: isMobile ? '0.8rem' : '0.9rem' }}>音声生成変換中</span>
                   </span>
                 ) : (
-                  '広東語発音'
+                  '🇭🇰→🇯🇵'
                 )}
               </button>
+              <div className="convert-caption">
+                広東語入力→日本語発音+翻訳変換
+              </div>
+              </div>
+              <div className="convert-caption-col" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
               <button
                 type="button"
+                aria-label="日本語入力→広東語発音+翻訳変換"
                 onClick={async () => {
                   if (greenLoading) return;
                   playHapticAndSound();
@@ -8080,9 +8244,9 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 }}
                 disabled={greenLoading}
                 style={{
-                  flex: 1,
-                  padding: isMobile ? '0.875rem 1rem' : '1rem 1.5rem',
-                  fontSize: isMobile ? '0.9375rem' : '1rem',
+                  width: '100%',
+                  padding: isMobile ? '0.75rem 0.5rem' : '0.875rem 0.75rem',
+                  fontSize: isMobile ? '1.25rem' : '1.5rem',
                   borderRadius: '12px',
                   background: greenLoading ? 'linear-gradient(145deg, #d1d5db, #9ca3af)' : 'linear-gradient(145deg, #34C759, #248A3D)',
                   color: 'white',
@@ -8131,12 +8295,16 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                       trackColor="rgba(255,255,255,0.35)"
                       borderWidth={2}
                     />
-                    <span>音声生成変換中</span>
+                    <span style={{ fontSize: isMobile ? '0.8rem' : '0.9rem' }}>音声生成変換中</span>
                   </span>
                 ) : (
-                  '日訳+広東語発音'
+                  '🇯🇵→🇭🇰'
                 )}
               </button>
+              <div className="convert-caption">
+                日本語入力→広東語発音+翻訳変換
+              </div>
+              </div>
             </div>
           </div>
 
@@ -8509,7 +8677,11 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               {/* 粤ピンとスラング式カタカナ（長文の場合は表示/非表示切り替え可能） */}
               {showPronunciationDetails && (
                 slangReadingText ? (
-                  <SlangAlignedReading text={slangReadingText} />
+                  <SlangAlignedReading
+                    text={slangReadingText}
+                    bookmarked={phraseBookmarks.some((item) => item.phrase === slangReadingText.trim())}
+                    onToggleBookmark={togglePhraseBookmark}
+                  />
                 ) : (
                   result && (
                     <>
@@ -8524,10 +8696,10 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 )
               )}
               
-              {cleanedJapaneseTranslation && (
+              {(result?.translatedText || cleanedJapaneseTranslation) && (
                 <div style={{ fontSize: isMobile ? '0.875rem' : '1rem', marginTop: '0.75rem' }}>
                   <strong style={{ display: 'block', marginBottom: '0.25rem' }}>翻訳：</strong>
-                  <div style={{ lineHeight: 1.6 }}>{cleanedJapaneseTranslation}</div>
+                  <div style={{ lineHeight: 1.6 }}>{result?.translatedText || cleanedJapaneseTranslation}</div>
                 </div>
               )}
               
@@ -8729,6 +8901,44 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                       📋 {copySuccess === '例文' ? 'コピーしました' : 'コピー'}
                     </button>
                   </div>
+                </div>
+              )}
+            </div>
+          )}
+          {selectedCategory === 'phrase-bookmarks' && (
+            <div style={{
+              background: 'white',
+              padding: isMobile ? '1rem' : '1.5rem',
+              borderRadius: '8px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              marginBottom: '1.5rem'
+            }}>
+              <div style={{ fontWeight: 700, marginBottom: '0.75rem' }}>ブックマーク</div>
+              {phraseBookmarks.length === 0 ? (
+                <div style={{ color: '#6b7280' }}>保存した発音はまだありません</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {phraseBookmarks.map((item) => (
+                    <button
+                      key={item.phrase}
+                      type="button"
+                      onClick={() => { void replayPhraseBookmark(item); }}
+                      style={{
+                        containerType: 'inline-size',
+                        display: 'block',
+                        width: '100%',
+                        textAlign: 'left',
+                        background: 'white',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        padding: '0.7rem 0.85rem',
+                        cursor: 'pointer',
+                        touchAction: 'manipulation',
+                      }}
+                    >
+                      <SlangBookmarkRow phrase={item.phrase} translation={item.translation} />
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
