@@ -20,7 +20,7 @@
 
 'use client';
 
-import { useState, useEffect, type CSSProperties } from 'react';
+import { useState, useEffect, useMemo, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -45,6 +45,32 @@ interface User {
   survey_completed: boolean;
 }
 
+type ButtonAnalyticsRow = {
+  user_id: string;
+  email: string;
+  pressed: number;
+  not_pressed: number;
+  favorites_count: number;
+  favorite_words: string[];
+  bookmark_count: number;
+  convert_cantonese_count: number;
+  convert_japanese_count: number;
+  convert_char_count: number;
+  interpreter_cantonese_count: number;
+  interpreter_mandarin_count: number;
+  interpreter_total_count: number;
+};
+
+type ButtonSortKey = 'email' | 'pressed' | 'not_pressed' | 'favorites_count' | 'bookmark_count' | 'convert_cantonese_count' | 'convert_japanese_count' | 'convert_char_count' | 'interpreter_cantonese_count' | 'interpreter_mandarin_count' | 'interpreter_total_count' | 'favorite_words';
+
+const defaultButtonSort: { key: ButtonSortKey | null; dir: 'desc' | 'asc' } = { key: 'pressed', dir: 'desc' };
+
+function buttonSortValue(row: ButtonAnalyticsRow, key: ButtonSortKey): string | number {
+  if (key === 'email') return row.email || '';
+  if (key === 'favorite_words') return row.favorite_words?.length ?? 0;
+  return row[key] || 0;
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -52,7 +78,8 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [favoritesCountMap, setFavoritesCountMap] = useState<Record<string, number>>({});
-  const [buttonAnalytics, setButtonAnalytics] = useState<Array<{ user_id: string; email: string; pressed: number; not_pressed: number; favorites_count: number; favorite_words: string[]; bookmark_count: number; convert_cantonese_count: number; convert_japanese_count: number; convert_char_count: number; interpreter_cantonese_count: number; interpreter_mandarin_count: number; interpreter_total_count: number }>>([]);
+  const [buttonAnalytics, setButtonAnalytics] = useState<ButtonAnalyticsRow[]>([]);
+  const [buttonSort, setButtonSort] = useState(defaultButtonSort);
   const [buttonTotal, setButtonTotal] = useState<number>(0);
   const [buttonLoading, setButtonLoading] = useState(false);
   const [buttonError, setButtonError] = useState<string | null>(null);
@@ -263,6 +290,28 @@ export default function AdminPage() {
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   };
+
+  const cycleButtonSort = (key: ButtonSortKey) => {
+    setButtonSort((current) => {
+      if (current.key !== key) return { key, dir: 'desc' };
+      if (current.dir === 'desc') return { key, dir: 'asc' };
+      return { key: null, dir: 'desc' };
+    });
+  };
+
+  const sortedButtonAnalytics = useMemo(() => {
+    if (!buttonSort.key) return buttonAnalytics;
+    const factor = buttonSort.dir === 'desc' ? -1 : 1;
+    const key = buttonSort.key;
+    return [...buttonAnalytics].sort((a, b) => {
+      const left = buttonSortValue(a, key);
+      const right = buttonSortValue(b, key);
+      if (typeof left === 'string' || typeof right === 'string') {
+        return String(left).localeCompare(String(right), 'ja') * factor;
+      }
+      return (left - right) * factor;
+    });
+  }, [buttonAnalytics, buttonSort]);
 
   const memberTh: CSSProperties = {
     padding: '0.3rem 0.45rem',
@@ -606,22 +655,49 @@ export default function AdminPage() {
           }}>
             <thead>
               <tr style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                <th style={memberTh}>Email</th>
-                <th style={memberTh}>押した数</th>
-                <th style={memberTh}>未押数</th>
-                <th style={memberTh}>お気に入り数</th>
-                <th style={memberTh}>ブックマーク</th>
-                <th style={memberTh}>🇭🇰→🇯🇵</th>
-                <th style={memberTh}>🇯🇵→🇭🇰</th>
-                <th style={memberTh}>翻訳文字数</th>
-                <th style={memberTh}>通訳（カントン語）</th>
-                <th style={memberTh}>通訳（中国語）</th>
-                <th style={memberTh}>通訳（合計）</th>
-                <th style={memberTh}>お気に入り単語</th>
+                {([
+                  ['email', 'Email'],
+                  ['pressed', '押した数'],
+                  ['not_pressed', '未押数'],
+                  ['favorites_count', 'お気に入り数'],
+                  ['bookmark_count', 'ブックマーク'],
+                  ['convert_cantonese_count', '🇭🇰→🇯🇵'],
+                  ['convert_japanese_count', '🇯🇵→🇭🇰'],
+                  ['convert_char_count', '翻訳文字数'],
+                  ['interpreter_cantonese_count', '通訳（カントン語）'],
+                  ['interpreter_mandarin_count', '通訳（中国語）'],
+                  ['interpreter_total_count', '通訳（合計）'],
+                  ['favorite_words', 'お気に入り単語'],
+                ] as Array<[ButtonSortKey, string]>).map(([key, label]) => {
+                  const active = buttonSort.key === key;
+                  const mark = active ? (buttonSort.dir === 'desc' ? '多い' : '少ない') : '';
+                  return (
+                    <th key={key} style={memberTh}>
+                      <button
+                        type="button"
+                        onClick={() => cycleButtonSort(key)}
+                        title="押すたびに 多い → 少ない → リセット"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                          margin: 0,
+                          font: 'inherit',
+                          fontWeight: 600,
+                          color: active ? '#1d4ed8' : '#374151',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {label}{mark ? ` ${mark}` : ''}
+                      </button>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
-              {buttonAnalytics.map((row, idx) => (
+              {sortedButtonAnalytics.map((row, idx) => (
                 <tr key={row.user_id} style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
                   <td style={{ ...memberTd, color: '#1f2937' }}>{row.email}</td>
                   <td style={{ ...memberTd, color: '#1f2937' }}>{row.pressed}</td>
