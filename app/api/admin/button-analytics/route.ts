@@ -95,10 +95,10 @@ export async function GET(request: NextRequest) {
     }
 
     const [buttonEvents, favorites, interpreterUsage, conversionEvents] = await Promise.all([
-      fetchAllRows<{ user_id: string; button_key: string }>(
+      fetchAllRows<{ user_id: string; button_key: string; created_at: string }>(
         supabaseAdmin,
         'user_button_events',
-        'user_id, button_key'
+        'user_id, button_key, created_at'
       ),
       fetchAllRows<{ user_id: string; word_chinese: string; category_id: string }>(
         supabaseAdmin,
@@ -182,10 +182,56 @@ export async function GET(request: NextRequest) {
       return b.interpreter_total_count - a.interpreter_total_count;
     });
 
+    const dayCounts = new Map<string, number>();
+    const buttonCounts = new Map<string, number>();
+    for (const event of buttonEvents) {
+      if (event.button_key) {
+        buttonCounts.set(event.button_key, (buttonCounts.get(event.button_key) ?? 0) + 1);
+      }
+      if (!event.created_at) continue;
+      const day = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Hong_Kong',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date(event.created_at));
+      dayCounts.set(day, (dayCounts.get(day) ?? 0) + 1);
+    }
+
+    const dayKeys = [...dayCounts.keys()].sort();
+    const daily: Array<{ day: string; count: number; cumulative: number }> = [];
+    if (dayKeys.length > 0) {
+      let cumulative = 0;
+      const cursor = new Date(`${dayKeys[0]}T00:00:00+08:00`);
+      const end = new Date(`${dayKeys[dayKeys.length - 1]}T00:00:00+08:00`);
+      while (cursor.getTime() <= end.getTime()) {
+        const day = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Asia/Hong_Kong',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }).format(cursor);
+        const count = dayCounts.get(day) ?? 0;
+        cumulative += count;
+        daily.push({ day, count, cumulative });
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+      }
+    }
+
+    const topButtons = [...buttonCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(([key, count]) => ({
+        label: key.includes(':') ? key.slice(key.indexOf(':') + 1) : key,
+        count,
+      }));
+
     return NextResponse.json({
       success: true,
       total_buttons: totalButtons,
-      users
+      users,
+      daily,
+      top_buttons: topButtons,
     });
   } catch (error: any) {
     console.error('Error fetching button analytics:', error);

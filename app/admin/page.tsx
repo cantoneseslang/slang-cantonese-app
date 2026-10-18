@@ -23,7 +23,7 @@
 import { useState, useEffect, useMemo, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { ComposedChart, Line, Bar, BarChart, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // 管理者ページは認証が必要なため、動的ページとして扱う
 export const dynamic = 'force-dynamic';
@@ -64,11 +64,108 @@ type ButtonAnalyticsRow = {
 type ButtonSortKey = 'email' | 'pressed' | 'not_pressed' | 'favorites_count' | 'bookmark_count' | 'convert_cantonese_count' | 'convert_japanese_count' | 'convert_char_count' | 'interpreter_cantonese_count' | 'interpreter_mandarin_count' | 'interpreter_total_count' | 'favorite_words';
 
 const defaultButtonSort: { key: ButtonSortKey | null; dir: 'desc' | 'asc' } = { key: 'pressed', dir: 'desc' };
+const LIST_PAGE_SIZE = 30;
+
+type MemberSortKey = 'id' | 'email' | 'username' | 'membership_type' | 'subscription_expires_at' | 'favorites' | 'has_password' | 'last_sign_in_at' | 'created_at' | 'survey_gender' | 'survey_residence' | 'survey_cantonese_level';
+const defaultMemberSort: { key: MemberSortKey | null; dir: 'desc' | 'asc' } = { key: 'created_at', dir: 'desc' };
+const memberDateKeys = new Set<MemberSortKey>(['subscription_expires_at', 'last_sign_in_at', 'created_at']);
+const membershipRank: Record<string, number> = { lifetime: 3, subscription: 2, free: 1 };
+const levelRank: Record<string, number> = { 上級者: 3, 中級者: 2, 初心者: 1 };
+const monthColors = ['#2563eb', '#0ea5e9', '#14b8a6', '#22c55e', '#84cc16', '#eab308', '#f97316', '#ef4444', '#ec4899', '#a855f7', '#6366f1', '#64748b'];
+
+function memberSortValue(row: User, key: MemberSortKey, favorites: Record<string, number>): string | number | null {
+  switch (key) {
+    case 'id': return row.id;
+    case 'email': return row.email || '';
+    case 'username': return row.username || '';
+    case 'membership_type': return membershipRank[row.membership_type || 'free'] ?? 0;
+    case 'subscription_expires_at': return row.subscription_expires_at ? new Date(row.subscription_expires_at).getTime() : null;
+    case 'favorites': return favorites[row.id] ?? 0;
+    case 'has_password': return row.has_password ? 1 : 0;
+    case 'last_sign_in_at': return row.last_sign_in_at ? new Date(row.last_sign_in_at).getTime() : null;
+    case 'created_at': return new Date(row.created_at).getTime();
+    case 'survey_gender': return row.survey_gender || '';
+    case 'survey_residence': return row.survey_residence === '海外' ? `海外 ${row.survey_residence_other || ''}` : (row.survey_residence || '');
+    case 'survey_cantonese_level': return levelRank[row.survey_cantonese_level || ''] ?? 0;
+  }
+}
+
+function compareAdminValues(left: string | number | null, right: string | number | null, dir: 'desc' | 'asc') {
+  if (left == null && right == null) return 0;
+  if (left == null) return 1;
+  if (right == null) return -1;
+  const factor = dir === 'desc' ? -1 : 1;
+  if (typeof left === 'string' || typeof right === 'string') {
+    return String(left).localeCompare(String(right), 'ja') * factor;
+  }
+  return (left - right) * factor;
+}
+
+function countNamed(users: User[], pick: (user: User) => string, order: Array<{ name: string; color: string }>) {
+  const counts = new Map(order.map((item) => [item.name, 0]));
+  for (const user of users) {
+    const name = pick(user);
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+  return order
+    .map((item) => ({ ...item, value: counts.get(item.name) ?? 0 }))
+    .filter((item) => item.value > 0);
+}
 
 function buttonSortValue(row: ButtonAnalyticsRow, key: ButtonSortKey): string | number {
   if (key === 'email') return row.email || '';
   if (key === 'favorite_words') return row.favorite_words?.length ?? 0;
   return row[key] || 0;
+}
+
+function SharePie({ title, data }: { title: string; data: Array<{ name: string; value: number; color: string }> }) {
+  return (
+    <div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '1rem' }}>
+      <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: '#1f2937' }}>{title}</div>
+      {data.length === 0 ? (
+        <div style={{ color: '#6b7280', padding: '2rem 0' }}>データがありません</div>
+      ) : (
+        <ResponsiveContainer width="100%" height={220}>
+          <PieChart>
+            <Pie data={data} dataKey="value" nameKey="name" innerRadius={46} outerRadius={78} paddingAngle={2}>
+              {data.map((item) => (
+                <Cell key={item.name} fill={item.color} />
+              ))}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
+function ExpandListButton({ shown, total, onExpand, onCollapse }: { shown: number; total: number; onExpand: () => void; onCollapse: () => void }) {
+  if (total <= LIST_PAGE_SIZE) return null;
+  const remaining = total - shown;
+  return (
+    <div style={{ marginTop: '0.75rem' }}>
+      {remaining > 0 && (
+        <button
+          type="button"
+          onClick={onExpand}
+          style={{ padding: '0.45rem 0.9rem', backgroundColor: 'white', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
+        >
+          {`さらに${Math.min(LIST_PAGE_SIZE, remaining)}人表示（残り${remaining}人）`}
+        </button>
+      )}
+      {shown > LIST_PAGE_SIZE && (
+        <button
+          type="button"
+          onClick={onCollapse}
+          style={{ marginLeft: remaining > 0 ? '0.5rem' : 0, padding: '0.45rem 0.9rem', backgroundColor: 'white', color: '#374151', border: '1px solid #d1d5db', borderRadius: '8px', cursor: 'pointer' }}
+        >
+          30人に戻す
+        </button>
+      )}
+    </div>
+  );
 }
 
 export default function AdminPage() {
@@ -80,6 +177,11 @@ export default function AdminPage() {
   const [favoritesCountMap, setFavoritesCountMap] = useState<Record<string, number>>({});
   const [buttonAnalytics, setButtonAnalytics] = useState<ButtonAnalyticsRow[]>([]);
   const [buttonSort, setButtonSort] = useState(defaultButtonSort);
+  const [buttonDaily, setButtonDaily] = useState<Array<{ day: string; count: number; cumulative: number }>>([]);
+  const [topButtons, setTopButtons] = useState<Array<{ label: string; count: number }>>([]);
+  const [buttonListLimit, setButtonListLimit] = useState(LIST_PAGE_SIZE);
+  const [memberListLimit, setMemberListLimit] = useState(LIST_PAGE_SIZE);
+  const [memberSort, setMemberSort] = useState(defaultMemberSort);
   const [buttonTotal, setButtonTotal] = useState<number>(0);
   const [buttonLoading, setButtonLoading] = useState(false);
   const [buttonError, setButtonError] = useState<string | null>(null);
@@ -204,6 +306,8 @@ export default function AdminPage() {
       if (data.success) {
         setButtonTotal(data.total_buttons || 0);
         setButtonAnalytics(data.users || []);
+        setButtonDaily(data.daily || []);
+        setTopButtons(data.top_buttons || []);
       } else {
         setButtonError(data.error || '集計に失敗しました');
       }
@@ -312,6 +416,56 @@ export default function AdminPage() {
       return (left - right) * factor;
     });
   }, [buttonAnalytics, buttonSort]);
+
+  const cycleMemberSort = (key: MemberSortKey) => {
+    setMemberSort((current) => {
+      if (current.key !== key) return { key, dir: 'desc' };
+      if (current.dir === 'desc') return { key, dir: 'asc' };
+      return { key: null, dir: 'desc' };
+    });
+  };
+
+  const sortedMembers = useMemo(() => {
+    if (!memberSort.key) return users;
+    const key = memberSort.key;
+    return [...users].sort((a, b) => compareAdminValues(
+      memberSortValue(a, key, favoritesCountMap),
+      memberSortValue(b, key, favoritesCountMap),
+      memberSort.dir
+    ));
+  }, [users, memberSort, favoritesCountMap]);
+
+  const genderShares = useMemo(() => countNamed(users, (user) => user.survey_gender || '未回答', [
+    { name: '男性', color: '#2563eb' },
+    { name: '女性', color: '#ec4899' },
+    { name: '答えたくない', color: '#a855f7' },
+    { name: '未回答', color: '#d1d5db' },
+  ]), [users]);
+
+  const levelShares = useMemo(() => countNamed(users, (user) => user.survey_cantonese_level || '未回答', [
+    { name: '初心者', color: '#22c55e' },
+    { name: '中級者', color: '#2563eb' },
+    { name: '上級者', color: '#a855f7' },
+    { name: '未回答', color: '#d1d5db' },
+  ]), [users]);
+
+  const membershipShares = useMemo(() => countNamed(users, (user) => getMembershipLabel(user.membership_type), [
+    { name: 'ブロンズ会員', color: '#b45309' },
+    { name: 'シルバー会員', color: '#64748b' },
+    { name: 'ゴールド会員', color: '#eab308' },
+  ]), [users]);
+
+  const registrationShares = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const user of users) {
+      const date = new Date(user.created_at);
+      const month = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}`;
+      counts.set(month, (counts.get(month) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([name, value], index) => ({ name, value, color: monthColors[index % monthColors.length] }));
+  }, [users]);
 
   const memberTh: CSSProperties = {
     padding: '0.3rem 0.45rem',
@@ -601,6 +755,78 @@ export default function AdminPage() {
           )}
         </div>
 
+      <div style={{
+        marginTop: '2rem',
+        padding: '1.5rem',
+        backgroundColor: '#f9fafb',
+        borderRadius: '12px'
+      }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 600, margin: '0 0 1rem', color: '#1f2937' }}>
+          利用の内訳
+        </h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
+          <SharePie title="男女" data={genderShares} />
+          <SharePie title="広東語レベル" data={levelShares} />
+          <SharePie title="会員種別" data={membershipShares} />
+          <SharePie title="登録月" data={registrationShares} />
+          <div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '1rem' }}>
+            <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: '#1f2937' }}>ブロンズ / シルバー / ゴールド</div>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={membershipShares}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Bar dataKey="value" name="人数">
+                  {membershipShares.map((item) => (
+                    <Cell key={item.name} fill={item.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div style={{ marginTop: '1rem', backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '1rem' }}>
+          <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: '#1f2937' }}>
+            毎日のボタン回数と累計
+          </div>
+          {buttonDaily.length === 0 ? (
+            <div style={{ color: '#6b7280', padding: '1.5rem 0' }}>{buttonLoading ? '読み込み中...' : 'データがありません'}</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <ComposedChart data={buttonDaily}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="day" minTickGap={28} tick={{ fontSize: 11 }} />
+                <YAxis yAxisId="left" allowDecimals={false} tick={{ fontSize: 11 }} />
+                <YAxis yAxisId="right" orientation="right" allowDecimals={false} tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Legend />
+                <Bar yAxisId="left" dataKey="count" name="その日の回数" fill="#93c5fd" />
+                <Line yAxisId="right" dataKey="cumulative" name="累計" stroke="#1d4ed8" dot={false} strokeWidth={2} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+        <div style={{ marginTop: '1rem', backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '1rem' }}>
+          <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: '#1f2937' }}>
+            押された回数が多いボタン
+          </div>
+          {topButtons.length === 0 ? (
+            <div style={{ color: '#6b7280', padding: '1.5rem 0' }}>{buttonLoading ? '読み込み中...' : 'データがありません'}</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={topButtons} layout="vertical" margin={{ left: 16, right: 16 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                <YAxis type="category" dataKey="label" width={88} tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Bar dataKey="count" name="回数" fill="#2563eb" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
       {/* ボタン利用分析 */}
       <div style={{
         marginTop: '2rem',
@@ -697,7 +923,7 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {sortedButtonAnalytics.map((row, idx) => (
+              {sortedButtonAnalytics.slice(0, buttonListLimit).map((row, idx) => (
                 <tr key={row.user_id} style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
                   <td style={{ ...memberTd, color: '#1f2937' }}>{row.email}</td>
                   <td style={{ ...memberTd, color: '#1f2937' }}>{row.pressed}</td>
@@ -725,6 +951,12 @@ export default function AdminPage() {
               ))}
             </tbody>
           </table>
+          <ExpandListButton
+            shown={Math.min(buttonListLimit, sortedButtonAnalytics.length)}
+            total={sortedButtonAnalytics.length}
+            onExpand={() => setButtonListLimit((current) => current + LIST_PAGE_SIZE)}
+            onCollapse={() => setButtonListLimit(LIST_PAGE_SIZE)}
+          />
         </div>
       </div>
 
@@ -792,23 +1024,44 @@ export default function AdminPage() {
                     backgroundColor: '#f9fafb',
                     borderBottom: '1px solid #e5e7eb'
                   }}>
-                    <th style={memberTh}>ID</th>
-                    <th style={memberTh}>Email</th>
-                    <th style={memberTh}>ユーザーネーム</th>
-                    <th style={memberTh}>会員種別</th>
-                    <th style={memberTh}>有効期限</th>
-                    <th style={memberTh}>お気に入り数</th>
-                    <th style={memberTh}>パスワード</th>
-                    <th style={memberTh}>最終ログイン</th>
-                    <th style={memberTh}>登録日</th>
-                    <th style={memberTh}>性別</th>
-                    <th style={memberTh}>居住地</th>
-                    <th style={memberTh}>広東語レベル</th>
+                    {([
+                      ['id', 'ID'],
+                      ['email', 'Email'],
+                      ['username', 'ユーザーネーム'],
+                      ['membership_type', '会員種別'],
+                      ['subscription_expires_at', '有効期限'],
+                      ['favorites', 'お気に入り数'],
+                      ['has_password', 'パスワード'],
+                      ['last_sign_in_at', '最終ログイン'],
+                      ['created_at', '登録日'],
+                      ['survey_gender', '性別'],
+                      ['survey_residence', '居住地'],
+                      ['survey_cantonese_level', '広東語レベル'],
+                    ] as Array<[MemberSortKey, string]>).map(([key, label]) => {
+                      const active = memberSort.key === key;
+                      const mark = !active
+                        ? ''
+                        : memberDateKeys.has(key)
+                          ? (memberSort.dir === 'desc' ? '新しい順' : '古い順')
+                          : (memberSort.dir === 'desc' ? '多い' : '少ない');
+                      return (
+                        <th key={key} style={memberTh}>
+                          <button
+                            type="button"
+                            onClick={() => cycleMemberSort(key)}
+                            title="押すたびに 多い → 少ない → リセット"
+                            style={{ background: 'none', border: 'none', padding: 0, margin: 0, font: 'inherit', fontWeight: 600, color: active ? '#1d4ed8' : '#374151', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                          >
+                            {label}{mark ? ` ${mark}` : ''}
+                          </button>
+                        </th>
+                      );
+                    })}
                     <th style={memberTh}>操作</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((u, index) => (
+                  {sortedMembers.slice(0, memberListLimit).map((u, index) => (
                     <tr
                       key={u.id}
                       style={{
@@ -972,6 +1225,12 @@ export default function AdminPage() {
                   ))}
                 </tbody>
               </table>
+              <ExpandListButton
+                shown={Math.min(memberListLimit, sortedMembers.length)}
+                total={sortedMembers.length}
+                onExpand={() => setMemberListLimit((current) => current + LIST_PAGE_SIZE)}
+                onCollapse={() => setMemberListLimit(LIST_PAGE_SIZE)}
+              />
             </div>
           )}
         </div>
