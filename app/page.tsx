@@ -28,6 +28,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import HiddenModeOverlay from '../components/interpreter/HiddenModeOverlay';
 import SettingsPortal from '../components/settings/SettingsPortal';
+import TeacherMailBox from '../components/settings/TeacherMailBox';
 import SlangAlignedReading, { SlangBookmarkRow } from '../components/SlangAlignedReading';
 import {
   CONVERSION_CHAR_LIMIT,
@@ -7730,6 +7731,8 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                       </div>
                     )}
                   </div>
+
+                  <TeacherMailBox user={user} />
 
                   <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
 
