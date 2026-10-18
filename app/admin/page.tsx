@@ -52,7 +52,7 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [favoritesCountMap, setFavoritesCountMap] = useState<Record<string, number>>({});
-  const [buttonAnalytics, setButtonAnalytics] = useState<Array<{ user_id: string; email: string; pressed: number; not_pressed: number; favorites_count: number; favorite_words: string[]; interpreter_cantonese_count: number; interpreter_mandarin_count: number; interpreter_total_count: number }>>([]);
+  const [buttonAnalytics, setButtonAnalytics] = useState<Array<{ user_id: string; email: string; pressed: number; not_pressed: number; favorites_count: number; favorite_words: string[]; bookmark_count: number; convert_cantonese_count: number; convert_japanese_count: number; convert_char_count: number; interpreter_cantonese_count: number; interpreter_mandarin_count: number; interpreter_total_count: number }>>([]);
   const [buttonTotal, setButtonTotal] = useState<number>(0);
   const [buttonLoading, setButtonLoading] = useState(false);
   const [buttonError, setButtonError] = useState<string | null>(null);
@@ -610,6 +610,10 @@ export default function AdminPage() {
                 <th style={memberTh}>押した数</th>
                 <th style={memberTh}>未押数</th>
                 <th style={memberTh}>お気に入り数</th>
+                <th style={memberTh}>ブックマーク</th>
+                <th style={memberTh}>🇭🇰→🇯🇵</th>
+                <th style={memberTh}>🇯🇵→🇭🇰</th>
+                <th style={memberTh}>翻訳文字数</th>
                 <th style={memberTh}>通訳（カントン語）</th>
                 <th style={memberTh}>通訳（中国語）</th>
                 <th style={memberTh}>通訳（合計）</th>
@@ -623,6 +627,10 @@ export default function AdminPage() {
                   <td style={{ ...memberTd, color: '#1f2937' }}>{row.pressed}</td>
                   <td style={{ ...memberTd, color: '#1f2937' }}>{row.not_pressed}</td>
                   <td style={{ ...memberTd, color: '#1f2937' }}>{row.favorites_count || 0}</td>
+                  <td style={{ ...memberTd, color: '#1f2937' }}>{row.bookmark_count || 0}</td>
+                  <td style={{ ...memberTd, color: '#1f2937' }}>{row.convert_cantonese_count || 0}</td>
+                  <td style={{ ...memberTd, color: '#1f2937' }}>{row.convert_japanese_count || 0}</td>
+                  <td style={{ ...memberTd, color: '#1f2937' }}>{(row.convert_char_count || 0).toLocaleString()}</td>
                   <td style={{ ...memberTd, color: '#1f2937', fontWeight: row.interpreter_cantonese_count > 0 ? 600 : 400 }}>
                     {row.interpreter_cantonese_count || 0}
                   </td>

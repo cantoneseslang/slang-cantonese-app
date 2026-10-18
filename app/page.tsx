@@ -29,6 +29,15 @@ import { createClient } from '@/lib/supabase/client';
 import HiddenModeOverlay from '../components/interpreter/HiddenModeOverlay';
 import SettingsPortal from '../components/settings/SettingsPortal';
 import SlangAlignedReading, { SlangBookmarkRow } from '../components/SlangAlignedReading';
+import {
+  CONVERSION_CHAR_LIMIT,
+  CONVERSION_DAILY_LIMIT,
+  guestUsageToday,
+  readGuestUsage,
+  recordGuestUsage,
+  type ConversionDirection,
+  type ConversionLimitReason,
+} from '@/lib/conversion-limits';
 import categoriesData from '@/data/categories.json';
 import noteCategoriesData from '@/data/note-categories.json';
 
@@ -546,6 +555,8 @@ export default function Home() {
   // 会員種別の状態
   const [membershipType, setMembershipType] = useState<'free' | 'subscription' | 'lifetime'>('free');
   const [showPricingModal, setShowPricingModal] = useState(false);
+  const [upgradeNotice, setUpgradeNotice] = useState('');
+  const [conversionUsage, setConversionUsage] = useState({ chars: 0, daily: 0 });
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'subscription' | 'lifetime' | null>(null);
   const [isDowngrade, setIsDowngrade] = useState(false); // ダウングレードかどうか
   const [selectedCurrency, setSelectedCurrency] = useState<'jpy' | 'hkd'>('jpy'); // 通貨選択（デフォルト: JPY）
@@ -3798,6 +3809,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     // すべての変更で料金モーダルを表示
     setIsDowngrade(isDowngrading);
     setSelectedPlan(newType);
+    setUpgradeNotice('');
     setShowPricingModal(true);
     
     console.log('✅ プラン変更モーダルを表示');
@@ -5449,10 +5461,92 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     }
   }, [showPricingModal, selectedPlan]);
 
+  const promptConversionUpgrade = (reason: ConversionLimitReason) => {
+    setUpgradeNotice(
+      reason === 'chars'
+        ? `翻訳は${CONVERSION_CHAR_LIMIT.toLocaleString()}文字までです。続きはシルバー会員またはゴールド会員でご利用ください。`
+        : `変換ボタンは1日${CONVERSION_DAILY_LIMIT}回までです。続きはシルバー会員またはゴールド会員でご利用ください。`
+    );
+    setSelectedPlan('subscription');
+    setIsDowngrade(false);
+    setShowPricingModal(true);
+  };
+
+  const refreshConversionUsage = async () => {
+    if (!user) {
+      const usage = readGuestUsage();
+      setConversionUsage({ chars: usage.chars, daily: guestUsageToday(usage) });
+      return;
+    }
+    try {
+      const response = await fetch('/api/conversion-usage');
+      const data = await response.json();
+      if (data.success && data.logged) {
+        setConversionUsage({ chars: data.charsUsed || 0, daily: data.dailyCount || 0 });
+      }
+    } catch {
+      // 表示用の残数なので、失敗しても変換自体は次の確認で止める
+    }
+  };
+
+  useEffect(() => {
+    void refreshConversionUsage();
+  }, [user]);
+
+  const reserveConversion = async (direction: ConversionDirection, query: string) => {
+    const charCount = query.trim().length;
+    if (charCount < 1) return true;
+    if (!user) {
+      const result = recordGuestUsage(charCount);
+      const usage = readGuestUsage();
+      setConversionUsage({ chars: usage.chars, daily: guestUsageToday(usage) });
+      if (result !== 'ok') {
+        promptConversionUpgrade(result);
+        return false;
+      }
+      return true;
+    }
+    const limited = membershipType === 'free';
+    try {
+      const response = await fetch('/api/conversion-usage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ direction, charCount }),
+      });
+      const data = await response.json();
+      if (typeof data.charsUsed === 'number') {
+        setConversionUsage({ chars: data.charsUsed, daily: data.dailyCount || 0 });
+      }
+      if (data.allowed === false) {
+        promptConversionUpgrade(data.reason === 'daily' ? 'daily' : 'chars');
+        return false;
+      }
+      if (!response.ok && limited) {
+        setError('利用状況を確認できませんでした');
+        return false;
+      }
+      return true;
+    } catch {
+      if (limited) {
+        setError('利用状況を確認できませんでした');
+        return false;
+      }
+      return true;
+    }
+  };
+
   const handleSearch = async (query: string, options?: { slangReading?: boolean | 'translated' }) => {
     if (!query || query.trim() === '') {
       setError('検索文字を入力してください');
       return;
+    }
+
+    if (options?.slangReading === true || options?.slangReading === 'translated') {
+      const allowed = await reserveConversion(
+        options.slangReading === 'translated' ? 'japanese' : 'cantonese',
+        query
+      );
+      if (!allowed) return;
     }
 
     const alignTranslated = options?.slangReading === 'translated';
@@ -7740,6 +7834,11 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     </div>
                   )}
                 </div>
+                {(!user || membershipType === 'free') && (
+                  <div style={{ marginTop: '0.15rem', color: '#9ca3af', fontWeight: 500 }}>
+                    {`変換 ${conversionUsage.daily} / ${CONVERSION_DAILY_LIMIT}回・翻訳 ${conversionUsage.chars.toLocaleString()} / ${CONVERSION_CHAR_LIMIT.toLocaleString()}文字`}
+                  </div>
+                )}
               </div>
             {/* 
               ⚠️ IMPORTANT: フォルダアイコンの中央配置設定
@@ -9619,6 +9718,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 setShowPricingModal(false);
                 setSelectedPlan(null);
                 setIsDowngrade(false);
+                setUpgradeNotice('');
               }
             }}
             onTouchMove={(e) => {
@@ -9693,6 +9793,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     setShowPricingModal(false);
                     setSelectedPlan(null);
                     setIsDowngrade(false);
+                    setUpgradeNotice('');
                   }}
                   style={{
                     background: 'none',
@@ -9705,6 +9806,20 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   ×
                 </button>
               </div>
+              {upgradeNotice && (
+                <div style={{
+                  margin: '0 1.5rem 0.75rem',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '10px',
+                  background: '#fff7ed',
+                  color: '#9a3412',
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  lineHeight: 1.5,
+                }}>
+                  {upgradeNotice}
+                </div>
+              )}
 
               {/* コンテンツ（スクロール可能） */}
               <div style={{ 

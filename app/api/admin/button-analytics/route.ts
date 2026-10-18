@@ -94,21 +94,26 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const [buttonEvents, favorites, interpreterUsage] = await Promise.all([
+    const [buttonEvents, favorites, interpreterUsage, conversionEvents] = await Promise.all([
       fetchAllRows<{ user_id: string; button_key: string }>(
         supabaseAdmin,
         'user_button_events',
         'user_id, button_key'
       ),
-      fetchAllRows<{ user_id: string; word_chinese: string }>(
+      fetchAllRows<{ user_id: string; word_chinese: string; category_id: string }>(
         supabaseAdmin,
         'user_favorites',
-        'user_id, word_chinese'
+        'user_id, word_chinese, category_id'
       ),
       fetchAllRows<{ user_id: string; language: string }>(
         supabaseAdmin,
         'interpreter_usage',
         'user_id, language'
+      ),
+      fetchAllRows<{ user_id: string; direction: string; char_count: number }>(
+        supabaseAdmin,
+        'conversion_events',
+        'user_id, direction, char_count'
       ),
     ]);
 
@@ -121,11 +126,26 @@ export async function GET(request: NextRequest) {
     }
 
     const favoritesByUser = new Map<string, string[]>();
+    const bookmarksByUser = new Map<string, number>();
     for (const fav of favorites) {
       if (!fav.user_id || !fav.word_chinese) continue;
+      if (fav.category_id === 'phrase-bookmark') {
+        bookmarksByUser.set(fav.user_id, (bookmarksByUser.get(fav.user_id) ?? 0) + 1);
+        continue;
+      }
       const words = favoritesByUser.get(fav.user_id) ?? [];
       words.push(fav.word_chinese);
       favoritesByUser.set(fav.user_id, words);
+    }
+
+    const conversionByUser = new Map<string, { cantonese: number; japanese: number; chars: number }>();
+    for (const event of conversionEvents) {
+      if (!event.user_id) continue;
+      const current = conversionByUser.get(event.user_id) ?? { cantonese: 0, japanese: 0, chars: 0 };
+      if (event.direction === 'cantonese') current.cantonese += 1;
+      if (event.direction === 'japanese') current.japanese += 1;
+      current.chars += event.char_count || 0;
+      conversionByUser.set(event.user_id, current);
     }
 
     const interpreterByUser = new Map<string, { cantonese: number; mandarin: number }>();
@@ -141,6 +161,7 @@ export async function GET(request: NextRequest) {
       const pressed = pressedByUser.get(u.id)?.size ?? 0;
       const favoriteWords = favoritesByUser.get(u.id) ?? [];
       const interpreter = interpreterByUser.get(u.id) ?? { cantonese: 0, mandarin: 0 };
+      const conversion = conversionByUser.get(u.id) ?? { cantonese: 0, japanese: 0, chars: 0 };
       return {
         user_id: u.id,
         email: u.email || '',
@@ -148,6 +169,10 @@ export async function GET(request: NextRequest) {
         not_pressed: Math.max(totalButtons - pressed, 0),
         favorites_count: favoriteWords.length,
         favorite_words: favoriteWords,
+        bookmark_count: bookmarksByUser.get(u.id) ?? 0,
+        convert_cantonese_count: conversion.cantonese,
+        convert_japanese_count: conversion.japanese,
+        convert_char_count: conversion.chars,
         interpreter_cantonese_count: interpreter.cantonese,
         interpreter_mandarin_count: interpreter.mandarin,
         interpreter_total_count: interpreter.cantonese + interpreter.mandarin,
