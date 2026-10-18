@@ -416,6 +416,7 @@ export default function Home() {
   const [user, setUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [slangReadingText, setSlangReadingText] = useState('');
+  const [suppressLegacyReading, setSuppressLegacyReading] = useState(false);
   const [phraseBookmarks, setPhraseBookmarks] = useState<PhraseBookmark[]>([]);
   const [bookmarkReplay, setBookmarkReplay] = useState<{ source: 'cantonese' | 'japanese'; query: string } | null>(null);
   const [result, setResult] = useState<SearchResult | null>(null);
@@ -5456,17 +5457,19 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
 
     const alignTranslated = options?.slangReading === 'translated';
     if (options?.slangReading === true) {
+      setSuppressLegacyReading(true);
       setSlangReadingText(query);
       setBookmarkReplay({ source: 'cantonese', query });
       setForceShowResult(true);
-    } else {
+    } else if (alignTranslated) {
+      setSuppressLegacyReading(true);
       setSlangReadingText('');
-      if (alignTranslated) {
-        setBookmarkReplay({ source: 'japanese', query });
-        setForceShowResult(true);
-      } else {
-        setBookmarkReplay(null);
-      }
+      setBookmarkReplay({ source: 'japanese', query });
+      setForceShowResult(true);
+    } else {
+      setSuppressLegacyReading(false);
+      setSlangReadingText('');
+      setBookmarkReplay(null);
     }
 
     console.log('🔍 handleSearch開始:', { query, queryLength: query.length });
@@ -6484,7 +6487,8 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               <div style={{ 
                 display: 'inline-flex',
                 gap: isMobile ? '0.5rem' : '0.75rem',
-                paddingBottom: '0.25rem'
+                paddingTop: '0.85rem',
+                paddingBottom: '0.85rem'
               }}>
                 {/* 「発音表記について」カテゴリーボタン（最初に表示） */}
                 {categories.find(c => c.id === 'pronunciation') && (
@@ -7803,7 +7807,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               style={{
                 height: isMobile ? '3rem' : '3.5rem',
                 lineHeight: isMobile ? '3rem' : '3.5rem',
-                fontSize: isMobile ? '0.85rem' : '1.125rem',
+                fontSize: isMobile ? '16px' : '1.125rem',
                 width: '100%',
                 maxWidth: '100%',
                 boxSizing: 'border-box',
@@ -8683,7 +8687,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     onToggleBookmark={togglePhraseBookmark}
                   />
                 ) : (
-                  result && (
+                  result && !suppressLegacyReading && (
                     <>
                       <p style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
                         <strong style={{ textDecoration: 'underline' }}>粤ピン： {result.jyutping}</strong>
@@ -8936,7 +8940,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                         touchAction: 'manipulation',
                       }}
                     >
-                      <SlangBookmarkRow phrase={item.phrase} translation={item.translation} />
+                      <SlangBookmarkRow phrase={item.phrase} translation={item.translation} source={item.source} query={item.query} />
                     </button>
                   ))}
                 </div>
