@@ -179,6 +179,7 @@ export default function AdminPage() {
   const [buttonSort, setButtonSort] = useState(defaultButtonSort);
   const [buttonDaily, setButtonDaily] = useState<Array<{ day: string; count: number; cumulative: number }>>([]);
   const [topButtons, setTopButtons] = useState<Array<{ label: string; count: number }>>([]);
+  const [topFavoriteWords, setTopFavoriteWords] = useState<Array<{ word: string; count: number }>>([]);
   const [buttonListLimit, setButtonListLimit] = useState(LIST_PAGE_SIZE);
   const [memberListLimit, setMemberListLimit] = useState(LIST_PAGE_SIZE);
   const [memberSort, setMemberSort] = useState(defaultMemberSort);
@@ -308,6 +309,7 @@ export default function AdminPage() {
         setButtonAnalytics(data.users || []);
         setButtonDaily(data.daily || []);
         setTopButtons(data.top_buttons || []);
+        setTopFavoriteWords(data.top_favorite_words || []);
       } else {
         setButtonError(data.error || '集計に失敗しました');
       }
@@ -821,6 +823,24 @@ export default function AdminPage() {
                 <YAxis type="category" dataKey="label" width={88} tick={{ fontSize: 12 }} />
                 <Tooltip />
                 <Bar dataKey="count" name="回数" fill="#2563eb" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+        <div style={{ marginTop: '1rem', backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '1rem' }}>
+          <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: '#1f2937' }}>
+            お気に入り単語ランキング
+          </div>
+          {topFavoriteWords.length === 0 ? (
+            <div style={{ color: '#6b7280', padding: '1.5rem 0' }}>{buttonLoading ? '読み込み中...' : 'データがありません'}</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={560}>
+              <BarChart data={[...topFavoriteWords].reverse()} layout="vertical" margin={{ left: 8, right: 24 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                <YAxis type="category" dataKey="word" width={220} tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Bar dataKey="count" name="登録数" fill="#d97706" />
               </BarChart>
             </ResponsiveContainer>
           )}

@@ -127,12 +127,14 @@ export async function GET(request: NextRequest) {
 
     const favoritesByUser = new Map<string, string[]>();
     const bookmarksByUser = new Map<string, number>();
+    const favoriteWordCounts = new Map<string, number>();
     for (const fav of favorites) {
       if (!fav.user_id || !fav.word_chinese) continue;
       if (fav.category_id === 'phrase-bookmark') {
         bookmarksByUser.set(fav.user_id, (bookmarksByUser.get(fav.user_id) ?? 0) + 1);
         continue;
       }
+      favoriteWordCounts.set(fav.word_chinese, (favoriteWordCounts.get(fav.word_chinese) ?? 0) + 1);
       const words = favoritesByUser.get(fav.user_id) ?? [];
       words.push(fav.word_chinese);
       favoritesByUser.set(fav.user_id, words);
@@ -232,6 +234,10 @@ export async function GET(request: NextRequest) {
       users,
       daily,
       top_buttons: topButtons,
+      top_favorite_words: [...favoriteWordCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 20)
+        .map(([word, count]) => ({ word, count })),
     });
   } catch (error: any) {
     console.error('Error fetching button analytics:', error);
