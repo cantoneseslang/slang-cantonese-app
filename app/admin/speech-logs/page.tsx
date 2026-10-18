@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
 
 interface LogEntry {
   id: string;
@@ -21,26 +20,14 @@ export default function SpeechLogsPage() {
   const [filter, setFilter] = useState<'all' | 'mobile' | 'desktop'>('all');
   const [autoRefresh, setAutoRefresh] = useState(false);
 
-  const supabase = createClient();
-
   const fetchLogs = async () => {
     try {
-      let query = supabase
-        .from('speech_recognition_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      if (filter === 'mobile') {
-        query = query.eq('device_info->>is_mobile', 'true');
-      } else if (filter === 'desktop') {
-        query = query.eq('device_info->>is_mobile', 'false');
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      setLogs(data || []);
+      const params = new URLSearchParams({ limit: '100' });
+      if (filter !== 'all') params.set('device_type', filter);
+      const response = await fetch(`/api/speech-recognition-logs?${params.toString()}`);
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || '読み込めませんでした');
+      setLogs(data.data || []);
     } catch (error) {
       console.error('ログ取得エラー:', error);
     } finally {
