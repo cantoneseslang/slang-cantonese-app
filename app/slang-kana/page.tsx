@@ -167,7 +167,7 @@ export default function SlangKanaPage() {
           display: flex;
           flex-wrap: wrap;
           align-items: flex-start;
-          gap: 0.35rem 0.85rem;
+          gap: 0.1rem 0.28rem;
           margin-top: 22px;
         }
         .chunk { display: flex; align-items: flex-start; }
@@ -182,8 +182,8 @@ export default function SlangKanaPage() {
           white-space: nowrap;
         }
         .kana {
-          font-size: 22px;
-          line-height: 1.4;
+          font-size: 18px;
+          line-height: 1.25;
           white-space: nowrap;
         }
         .sound {

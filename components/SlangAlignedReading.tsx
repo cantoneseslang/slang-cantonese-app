@@ -84,7 +84,7 @@ export default function SlangAlignedReading({ text }: { text: string }) {
           display: flex;
           flex-wrap: wrap;
           align-items: flex-start;
-          gap: 0.35rem 0.85rem;
+          gap: 0.1rem 0.28rem;
         }
         .chunk { display: flex; align-items: flex-start; }
         .unit {
@@ -98,8 +98,8 @@ export default function SlangAlignedReading({ text }: { text: string }) {
           white-space: nowrap;
         }
         .kana {
-          font-size: 22px;
-          line-height: 1.4;
+          font-size: 18px;
+          line-height: 1.25;
           white-space: nowrap;
         }
         .sound {
