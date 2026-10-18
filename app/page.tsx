@@ -28,6 +28,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import HiddenModeOverlay from '../components/interpreter/HiddenModeOverlay';
 import SettingsPortal from '../components/settings/SettingsPortal';
+import SlangAlignedReading from '../components/SlangAlignedReading';
 import categoriesData from '@/data/categories.json';
 import noteCategoriesData from '@/data/note-categories.json';
 
@@ -391,6 +392,7 @@ export default function Home() {
   const supabase = createClient();
   const [user, setUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [slangReadingText, setSlangReadingText] = useState('');
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [blueLoading, setBlueLoading] = useState(false);
@@ -5344,10 +5346,17 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     }
   }, [showPricingModal, selectedPlan]);
 
-  const handleSearch = async (query: string) => {
+  const handleSearch = async (query: string, options?: { slangReading?: boolean }) => {
     if (!query || query.trim() === '') {
       setError('検索文字を入力してください');
       return;
+    }
+
+    if (options?.slangReading) {
+      setSlangReadingText(query);
+      setForceShowResult(true);
+    } else {
+      setSlangReadingText('');
     }
 
     console.log('🔍 handleSearch開始:', { query, queryLength: query.length });
@@ -6496,6 +6505,45 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 >
                   📝 noteフレーズ
                 </button>
+
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    playHapticAndSound();
+                    router.push('/slang-kana');
+                  }}
+                  style={{
+                    padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
+                    fontSize: isMobile ? '0.875rem' : '1rem',
+                    fontWeight: '600',
+                    borderRadius: '16px',
+                    background: 'linear-gradient(145deg, #ffffff, #f5f5f7)',
+                    color: '#1d1d1f',
+                    border: 'none',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)',
+                    transform: 'scale(1)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)';
+                  }}
+                  onMouseDown={(e) => {
+                    e.currentTarget.style.transform = 'scale(0.98)';
+                  }}
+                  onMouseUp={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                  }}
+                >
+                  スラング式カタカナ表示
+                </button>
                 
                 {/* カテゴリーボタン（発音表記についてとNoteカテゴリーを除く） */}
                 {categories.filter(c => c.id !== 'pronunciation' && !c.id.startsWith('note_')).map((category) => {
@@ -7593,7 +7641,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     e.stopPropagation();
                     if (blueLoading) return;
                     setBlueLoading(true);
-                    try { await handleSearch(searchQuery); } finally { setBlueLoading(false); }
+                    try { await handleSearch(searchQuery, { slangReading: true }); } finally { setBlueLoading(false); }
                   }
                 }}
               style={{
@@ -7961,7 +8009,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   if (blueLoading) return;
                   playHapticAndSound();
                   setBlueLoading(true);
-                  try { await handleSearch(searchQuery); } finally { setBlueLoading(false); }
+                  try { await handleSearch(searchQuery, { slangReading: true }); } finally { setBlueLoading(false); }
                 }}
                 disabled={blueLoading}
                 style={{
@@ -8419,7 +8467,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
             style={{ display: 'none' }}
           />
           {/* 結果エリア（学習モード または 入力欄からの検索時に表示） */}
-          {(result && (isLearningMode || forceShowResult)) && (
+          {((result && (isLearningMode || forceShowResult)) || slangReadingText) && (
             <div style={{ 
               marginBottom: '1rem', 
               padding: isMobile ? '1rem' : '1.5rem', 
@@ -8428,7 +8476,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               background: 'white'
             }}>
               {/* 長文の場合の表示/非表示ボタン */}
-              {((result.translatedText || searchQuery).length > 50) && (
+              {(((result?.translatedText || searchQuery).length > 50)) && (
                 <div style={{ marginBottom: '0.75rem', display: 'flex', justifyContent: 'flex-end' }}>
                   <button
                     onClick={() => setShowPronunciationDetails(!showPronunciationDetails)}
@@ -8460,14 +8508,20 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               
               {/* 粤ピンとスラング式カタカナ（長文の場合は表示/非表示切り替え可能） */}
               {showPronunciationDetails && (
-                <>
-                  <p style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
-                    <strong style={{ textDecoration: 'underline' }}>粤ピン： {result.jyutping}</strong>
-                  </p>
-                  <p style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
-                    <strong style={{ textDecoration: 'underline' }}>スラング式カタカナ： {result.katakana}</strong>
-                  </p>
-                </>
+                slangReadingText ? (
+                  <SlangAlignedReading text={slangReadingText} />
+                ) : (
+                  result && (
+                    <>
+                      <p style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
+                        <strong style={{ textDecoration: 'underline' }}>粤ピン： {result.jyutping}</strong>
+                      </p>
+                      <p style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
+                        <strong style={{ textDecoration: 'underline' }}>スラング式カタカナ： {result.katakana}</strong>
+                      </p>
+                    </>
+                  )
+                )
               )}
               
               {cleanedJapaneseTranslation && (
@@ -8478,7 +8532,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               )}
               
               {/* 単語音声プレーヤー */}
-              {result.audioBase64 && (
+              {result?.audioBase64 && (
                 <div style={{ marginTop: '0.5rem' }}>
                   <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
                     単語音声:
@@ -8594,7 +8648,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                       controls 
                       controlsList="nodownload nofullscreen noremoteplayback"
                       style={{ width: '300px', height: '32px', flexShrink: 0 }}
-                      src={`data:audio/mp3;base64,${result.exampleAudioBase64}`}
+                      src={`data:audio/mp3;base64,${result?.exampleAudioBase64 || ''}`}
                     />
                     {/* 再生速度（シルバー・ゴールド会員のみ） */}
                     {membershipType !== 'free' && (

@@ -43,7 +43,9 @@ export async function middleware(request: NextRequest) {
       request.nextUrl.pathname.startsWith('/api/health-check') || // ヘルスチェックエンドポイントも認証不要
       request.nextUrl.pathname.startsWith('/api/test') || // テストエンドポイントも認証不要
       request.nextUrl.pathname.startsWith('/api/') || // APIは各ルートで認証する（307だと保存成功に見える）
-      request.nextUrl.pathname.startsWith('/_next')) {
+      request.nextUrl.pathname.startsWith('/_next') ||
+      request.nextUrl.pathname.startsWith('/slang-kana') ||
+      request.nextUrl.pathname === '/slang-dict.json') {
     return supabaseResponse
   }
 
