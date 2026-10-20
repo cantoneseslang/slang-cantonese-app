@@ -10,6 +10,10 @@ const GAN6: ContextReading = { jyutping: 'gan6', kana: 'ガン(ヌ)' };
 //   最近嘅地鐵站係邊度？ / 好近 / 近便
 // gan6（時間・このごろ）
 //   我最近好忙 / 最近嘅新聞 / 附近 / 単語の「最近」
+//
+// 同行
+// hang4（一緒に行く）我哋一齊同行 / 同行去旅行
+// hong4（同業者）佢係我同行 / 同行嘅人
 
 const ALWAYS_GAN6 = ['附近', '接近', '近來', '近排', '近日', '近年', '近期', '近況', '近親', '近代'];
 
@@ -29,6 +33,11 @@ const TIME_AFTER_最近 = /^(我|你|佢|哋|大家|都|有|無|冇|唔|成日|�
 const NEAR_AFTER = /^(便|處|处|到|啲|過|住)/;
 const JA_NEAR = /一番近|最寄|いちばん近|いちばんちか|もっと近/;
 const JA_RECENT = /最近|このごろ|近頃|この頃|近ごろ/;
+
+const HANG4: ContextReading = { jyutping: 'hang4', kana: 'ハン(グ)' };
+const HONG4: ContextReading = { jyutping: 'hong4', kana: 'ホーン(グ)' };
+const JA_TOGETHER = /一緒に行|一緒に来|一緒に歩|お供|連れて|同伴|一緒に行く/;
+const JA_TRADE = /同業|業種|同じ業|ライバル|競合|同じ商売/;
 
 function includesAny(text: string, words: string[]) {
   return words.some((word) => text.includes(word));
@@ -66,6 +75,23 @@ function pick近(chars: string[], index: number, text: string, meaningHint = '')
   return null;
 }
 
+function pick同行(chars: string[], index: number, text: string, meaningHint = ''): ContextReading | null {
+  if (chars[index] !== '行' || chars[index - 1] !== '同') return null;
+  const after = chars.slice(index + 1, index + 8).join('');
+
+  if (meaningHint) {
+    if (JA_TRADE.test(meaningHint)) return HONG4;
+    if (JA_TOGETHER.test(meaningHint)) return HANG4;
+  }
+
+  if (/^(去|返|嚟|走|出|入|到|旅行|遊)/.test(after)) return HANG4;
+  if (/^(業|生意|公司)/.test(after)) return HONG4;
+  if (/(一齊|同你|同佢|同我|同佢哋).{0,6}同行/.test(text)) return HANG4;
+  if (/係.{0,8}同行|做同行|呢行|行家/.test(text)) return HONG4;
+  if (/^嘅/.test(after)) return HONG4;
+  return HANG4;
+}
+
 export function pickContextReadings(
   text: string | string[],
   meaningHint = ''
@@ -75,8 +101,12 @@ export function pickContextReadings(
   const picked = new Map<number, ContextReading>();
 
   for (let i = 0; i < chars.length; i += 1) {
-    if (chars[i] !== '近') continue;
-    const reading = pick近(chars, i, joined, meaningHint);
+    const reading =
+      chars[i] === '近'
+        ? pick近(chars, i, joined, meaningHint)
+        : chars[i] === '行'
+          ? pick同行(chars, i, joined, meaningHint)
+          : null;
     if (reading) picked.set(i, reading);
   }
 

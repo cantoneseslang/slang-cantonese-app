@@ -2317,6 +2317,15 @@ const exitHiddenMode = () => {
     reason: 'exit-hidden-mode',
   });
 };
+const enterHiddenMode = () => {
+  isPlayingSoundRef.current = false;
+  setIsHiddenMode(true);
+  isSimultaneousAudioUnlockedRef.current = false;
+  clickCountRef.current = 0;
+  if (clickTimerRef.current) {
+    clearTimeout(clickTimerRef.current);
+  }
+};
 const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') => {
   if (translationLanguage === newLanguage) {
     return;
@@ -4244,6 +4253,22 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     return 999999; // シルバー/ゴールド会員: 実質無制限
   };
 
+  const ConvertButtonIcon = ({ src, alt }: { src: string; alt: string }) => (
+    <img
+      src={src}
+      alt={alt}
+      draggable={false}
+      style={{
+        height: isMobile ? '3.4rem' : '4rem',
+        width: 'auto',
+        maxWidth: '96%',
+        objectFit: 'contain',
+        display: 'block',
+        pointerEvents: 'none',
+      }}
+    />
+  );
+
   const Spinner = ({
     size = isMobile ? 18 : 20,
     borderColor = '#3b82f6',
@@ -5480,10 +5505,38 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       return;
     }
     try {
-      const response = await fetch('/api/conversion-usage');
-      const data = await response.json();
-      if (data.success && data.logged) {
-        setConversionUsage({ chars: data.charsUsed || 0, daily: data.dailyCount || 0 });
+      const [conversionRes, interpreterRes, ocrRes] = await Promise.all([
+        fetch('/api/conversion-usage'),
+        fetch('/api/interpreter/check-quota', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }),
+        fetch('/api/ocr/check-quota', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ]);
+      const conversionData = await conversionRes.json();
+      if (conversionData.success && conversionData.logged) {
+        setConversionUsage({ chars: conversionData.charsUsed || 0, daily: conversionData.dailyCount || 0 });
+      }
+      if (interpreterRes.ok) {
+        const interpreterData = await interpreterRes.json();
+        if (typeof interpreterData.usageCount === 'number' && interpreterData.limit !== -1) {
+          setInterpreterUsageCount(interpreterData.usageCount);
+          if (interpreterData.limit > 0) {
+            setInterpreterUsageLimit(interpreterData.limit);
+          }
+        }
+      }
+      if (ocrRes.ok) {
+        const ocrData = await ocrRes.json();
+        if (typeof ocrData.usageCount === 'number' && ocrData.limit !== -1) {
+          setOcrUsageCount(ocrData.usageCount);
+          if (ocrData.limit > 0) {
+            setOcrUsageLimit(ocrData.limit);
+          }
+        }
       }
     } catch {
       // 表示用の残数なので、失敗しても変換自体は次の確認で止める
@@ -6461,13 +6514,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     isPlayingSoundRef.current = true;
                     
                     const handleHiddenModeStart = () => {
-                        isPlayingSoundRef.current = false;
-                        setIsHiddenMode(true);
-                        isSimultaneousAudioUnlockedRef.current = false;
-                        clickCountRef.current = 0;
-                        if (clickTimerRef.current) {
-                          clearTimeout(clickTimerRef.current);
-                        }
+                        enterHiddenMode();
                       };
                       
                     playClickSound({
@@ -6679,52 +6726,90 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 >
                   🔖 ブックマーク
                 </button>
+
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    playHapticAndSound();
+                    enterHiddenMode();
+                  }}
+                  style={{
+                    padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
+                    fontSize: isMobile ? '0.875rem' : '1rem',
+                    fontWeight: '600',
+                    borderRadius: '16px',
+                    background: 'linear-gradient(145deg, #ffffff, #f5f5f7)',
+                    color: '#1d1d1f',
+                    border: 'none',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)',
+                    transform: 'scale(1)',
+                    touchAction: 'manipulation',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)';
+                  }}
+                  onMouseDown={(e) => {
+                    e.currentTarget.style.transform = 'scale(0.98)';
+                  }}
+                  onMouseUp={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                  }}
+                >
+                  同時通訳🇯🇵→🇭🇰
+                </button>
                 
                 {/* お気に入りボタン */}
-                {user && (
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      playHapticAndSound();
-                      setSelectedCategory('favorites');
-                      setSelectedNoteCategory(null); // Noteカテゴリーを解除
-                      setShowNoteSubCategories(false); // Noteサブカテゴリーを閉じる
-                    }}
-                    style={{
-                      padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
-                      fontSize: isMobile ? '0.875rem' : '1rem',
-                      fontWeight: '600',
-                      borderRadius: '16px',
-                      background: selectedCategory === 'favorites'
-                        ? 'linear-gradient(145deg, #f59e0b, #d97706)'
-                        : 'linear-gradient(145deg, #ffffff, #f5f5f7)',
-                      color: selectedCategory === 'favorites' ? 'white' : '#1d1d1f',
-                      border: 'none',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: selectedCategory === 'favorites'
-                        ? '0 4px 12px rgba(245,158,11,0.4), inset 0 1px 0 rgba(255,255,255,0.2)'
-                        : '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)',
-                      transform: 'scale(1)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'scale(1)';
-                    }}
-                    onMouseDown={(e) => {
-                      e.currentTarget.style.transform = 'scale(0.98)';
-                    }}
-                    onMouseUp={(e) => {
-                      e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
-                    }}
-                  >
-                    ⭐️ お気に入り
-                  </button>
-                )}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    playHapticAndSound();
+                    setSelectedCategory('favorites');
+                    setSelectedNoteCategory(null); // Noteカテゴリーを解除
+                    setShowNoteSubCategories(false); // Noteサブカテゴリーを閉じる
+                  }}
+                  style={{
+                    padding: isMobile ? '0.75rem 1.25rem' : '1rem 1.5rem',
+                    fontSize: isMobile ? '0.875rem' : '1rem',
+                    fontWeight: '600',
+                    borderRadius: '16px',
+                    background: selectedCategory === 'favorites'
+                      ? 'linear-gradient(145deg, #f59e0b, #d97706)'
+                      : 'linear-gradient(145deg, #ffffff, #f5f5f7)',
+                    color: selectedCategory === 'favorites' ? 'white' : '#1d1d1f',
+                    border: 'none',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: selectedCategory === 'favorites'
+                      ? '0 4px 12px rgba(245,158,11,0.4), inset 0 1px 0 rgba(255,255,255,0.2)'
+                      : '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)',
+                    transform: 'scale(1)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                  onMouseDown={(e) => {
+                    e.currentTarget.style.transform = 'scale(0.98)';
+                  }}
+                  onMouseUp={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                  }}
+                >
+                  ⭐️ お気に入り
+                </button>
                 
                 {/* noteフレーズボタン */}
                 <button
@@ -7806,20 +7891,25 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           }}>
             {/* 入力欄の小見出し（説明） */}
               <div
+                className="usage-hints"
                 style={{
                   fontSize: isMobile ? '0.75rem' : '0.875rem',
-                  color: '#6b7280',
+                  color: '#9ca3af',
                   margin: '0 0 0.375rem 0',
                   lineHeight: 1.6,
+                  fontWeight: 500,
                 }}
               >
                 <div
-                  className="usage-hints"
                   style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    gap: '0.35rem 0.75rem',
                     marginTop: '0.35rem',
                   }}
                 >
-                  <div
+                  <span
                     style={{
                       color: membershipType === 'free' && searchQuery.length > 900 ? '#ef4444' : '#9ca3af',
                       fontWeight: membershipType === 'free' && searchQuery.length > 900 ? '600' : '500',
@@ -7829,21 +7919,46 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                       ? `入力可能文字数: ${searchQuery.length} / 1,000文字`
                       : '入力可能文字数: （無制限）'
                     }
-                  </div>
+                  </span>
                   {membershipType === 'free' && (
-                    <div
+                    <span
                       style={{
                         color: ocrUsageCount >= ocrUsageLimit * 0.8 ? '#ef4444' : '#9ca3af',
                         fontWeight: ocrUsageCount >= ocrUsageLimit * 0.8 ? '600' : '500',
                       }}
                     >
                       {`OCR使用回数: ${ocrUsageCount} / ${ocrUsageLimit}回`}
-                    </div>
+                    </span>
                   )}
                 </div>
                 {(!user || membershipType === 'free') && (
-                  <div style={{ marginTop: '0.15rem', color: '#9ca3af', fontWeight: 500 }}>
-                    {`変換 ${conversionUsage.daily} / ${CONVERSION_DAILY_LIMIT}回・翻訳 ${conversionUsage.chars.toLocaleString()} / ${CONVERSION_CHAR_LIMIT.toLocaleString()}文字`}
+                  <div style={{ marginTop: '0.15rem', display: 'flex', flexWrap: 'wrap', gap: '0 0.15rem' }}>
+                    <span
+                      style={{
+                        color: conversionUsage.daily >= CONVERSION_DAILY_LIMIT * 0.8 ? '#ef4444' : '#9ca3af',
+                        fontWeight: conversionUsage.daily >= CONVERSION_DAILY_LIMIT * 0.8 ? 600 : 500,
+                      }}
+                    >
+                      {`変換 ${conversionUsage.daily} / ${CONVERSION_DAILY_LIMIT}回`}
+                    </span>
+                    <span style={{ color: '#9ca3af' }}>・</span>
+                    <span
+                      style={{
+                        color: conversionUsage.chars >= CONVERSION_CHAR_LIMIT * 0.8 ? '#ef4444' : '#9ca3af',
+                        fontWeight: conversionUsage.chars >= CONVERSION_CHAR_LIMIT * 0.8 ? 600 : 500,
+                      }}
+                    >
+                      {`翻訳 ${conversionUsage.chars.toLocaleString()} / ${CONVERSION_CHAR_LIMIT.toLocaleString()}文字`}
+                    </span>
+                    <span style={{ color: '#9ca3af' }}>・</span>
+                    <span
+                      style={{
+                        color: interpreterUsageCount >= interpreterUsageLimit * 0.8 ? '#ef4444' : '#9ca3af',
+                        fontWeight: interpreterUsageCount >= interpreterUsageLimit * 0.8 ? 600 : 500,
+                      }}
+                    >
+                      {`同時通訳 ${interpreterUsageCount} / ${interpreterUsageLimit}回`}
+                    </span>
                   </div>
                 )}
               </div>
@@ -7860,13 +7975,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
             }}>
               <style>{`
                 .usage-hints {
-                  container-type: inline-size;
-                  display: flex;
-                  flex-wrap: nowrap;
-                  align-items: center;
-                  gap: 0.75rem;
-                  white-space: nowrap;
-                  font-size: min(0.85rem, calc((100cqi - 0.75rem) / 40));
+                  font-size: inherit;
                 }
                 .search-phrase-wrap { container-type: inline-size; }
                 .search-phrase-input::placeholder {
@@ -7875,11 +7984,11 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 .convert-caption-col { container-type: inline-size; }
                 .convert-caption {
                   width: 100%;
-                  white-space: nowrap;
+                  white-space: normal;
                   text-align: center;
                   line-height: 1.35;
                   color: #6b7280;
-                  font-size: min(0.75rem, calc(100cqi / 19));
+                  font-size: clamp(0.6rem, calc(100cqi / 14), 0.75rem);
                 }
               `}</style>
               <input
@@ -8268,8 +8377,8 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 </div>
               )}
 
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-              <div className="convert-caption-col" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'nowrap', gap: isMobile ? '0.35rem' : '0.5rem', alignItems: 'flex-start' }}>
+              <div className="convert-caption-col" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
               <button
                 type="button"
                 aria-label="広東語入力→日本語発音+翻訳変換"
@@ -8282,8 +8391,12 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 disabled={blueLoading}
                 style={{
                   width: '100%',
-                  padding: isMobile ? '0.75rem 0.5rem' : '0.875rem 0.75rem',
-                  fontSize: isMobile ? '1.25rem' : '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: isMobile ? '0.45rem 0.2rem' : '0.55rem 0.4rem',
+                  minHeight: isMobile ? '4.3rem' : '5.1rem',
+                  fontSize: isMobile ? '1.05rem' : '1.35rem',
                   borderRadius: '12px',
                   background: blueLoading ? 'linear-gradient(145deg, #d1d5db, #9ca3af)' : 'linear-gradient(145deg, #007AFF, #0051D5)',
                   color: 'white',
@@ -8335,14 +8448,22 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     <span style={{ fontSize: isMobile ? '0.8rem' : '0.9rem' }}>音声生成変換中</span>
                   </span>
                 ) : (
-                  '🇭🇰→🇯🇵'
+                  <ConvertButtonIcon src="/images/convert/hk-to-jp.png?v=2" alt="香港→日本" />
                 )}
               </button>
               <div className="convert-caption">
-                広東語入力→日本語発音+翻訳変換
+                {isMobile ? (
+                  <>
+                    広東語入力→日本語
+                    <br />
+                    発音+翻訳変換
+                  </>
+                ) : (
+                  '広東語入力→日本語発音+翻訳変換'
+                )}
               </div>
               </div>
-              <div className="convert-caption-col" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
+              <div className="convert-caption-col" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
               <button
                 type="button"
                 aria-label="日本語入力→広東語発音+翻訳変換"
@@ -8355,8 +8476,12 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 disabled={greenLoading}
                 style={{
                   width: '100%',
-                  padding: isMobile ? '0.75rem 0.5rem' : '0.875rem 0.75rem',
-                  fontSize: isMobile ? '1.25rem' : '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: isMobile ? '0.45rem 0.2rem' : '0.55rem 0.4rem',
+                  minHeight: isMobile ? '4.3rem' : '5.1rem',
+                  fontSize: isMobile ? '1.05rem' : '1.35rem',
                   borderRadius: '12px',
                   background: greenLoading ? 'linear-gradient(145deg, #d1d5db, #9ca3af)' : 'linear-gradient(145deg, #34C759, #248A3D)',
                   color: 'white',
@@ -8408,11 +8533,70 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     <span style={{ fontSize: isMobile ? '0.8rem' : '0.9rem' }}>音声生成変換中</span>
                   </span>
                 ) : (
-                  '🇯🇵→🇭🇰'
+                  <ConvertButtonIcon src="/images/convert/jp-to-hk.png?v=2" alt="日本→香港" />
                 )}
               </button>
               <div className="convert-caption">
-                日本語入力→広東語発音+翻訳変換
+                {isMobile ? (
+                  <>
+                    日本語入力→広東語
+                    <br />
+                    発音+翻訳変換
+                  </>
+                ) : (
+                  '日本語入力→広東語発音+翻訳変換'
+                )}
+              </div>
+              </div>
+              <div className="convert-caption-col" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
+              <button
+                type="button"
+                aria-label="同時通訳"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  playHapticAndSound();
+                  enterHiddenMode();
+                }}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: isMobile ? '0.45rem 0.2rem' : '0.55rem 0.4rem',
+                  fontSize: isMobile ? '0.95rem' : '1.15rem',
+                  minHeight: isMobile ? '4.3rem' : '5.1rem',
+                  lineHeight: 1,
+                  borderRadius: '12px',
+                  background: 'linear-gradient(145deg, #FF9F0A, #C77700)',
+                  color: 'white',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  boxShadow: '0 4px 12px rgba(255,159,10,0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transform: 'scale(1)',
+                  touchAction: 'manipulation',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.02) translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(255,159,10,0.4), inset 0 1px 0 rgba(255,255,255,0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(255,159,10,0.3), inset 0 1px 0 rgba(255,255,255,0.2)';
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = 'scale(0.98)';
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.02) translateY(-1px)';
+                }}
+              >
+                <ConvertButtonIcon src="/images/convert/interpreter.png?v=2" alt="同時通訳" />
+              </button>
+              <div className="convert-caption">
+                同時通訳
               </div>
               </div>
             </div>

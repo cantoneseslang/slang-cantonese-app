@@ -24,6 +24,25 @@ for (const [text, expect, hint] of cases) {
   console.log(ok ? 'OK' : 'NG', text, '=>', got, 'expected', expect);
 }
 
+const hangCases: Array<[string, string, string?]> = [
+  ['我哋一齊同行', 'hang4'],
+  ['同行去旅行', 'hang4'],
+  ['佢係我同行', 'hong4'],
+  ['同行嘅人', 'hong4'],
+  ['做同行', 'hong4'],
+  ['同行', 'hang4', '一緒に行って'],
+  ['同行', 'hong4', '同業者'],
+];
+
+for (const [text, expect, hint] of hangCases) {
+  const chars = Array.from(text);
+  const index = chars.findIndex((ch, i) => ch === '行' && chars[i - 1] === '同');
+  const got = pickContextReadings(text, hint || '').get(index)?.jyutping;
+  const ok = got === expect;
+  if (!ok) failed += 1;
+  console.log(ok ? 'OK' : 'NG', text, '=>', got, 'expected', expect);
+}
+
 const ssml = buildContextPhonemeSsml('最近嘅地鐵站係邊度？');
 if (!ssml.includes('alphabet="jyutping" ph="kan5"')) {
   failed += 1;
