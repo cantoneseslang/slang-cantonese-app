@@ -5621,7 +5621,10 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text: textForAudio }),
+        body: JSON.stringify({
+          text: textForAudio,
+          meaningHint: data.originalText || data.japaneseTranslation || '',
+        }),
       });
 
       let resultData = { ...data };
@@ -5643,7 +5646,10 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ text: exampleTextForAudio }),
+          body: JSON.stringify({
+            text: exampleTextForAudio,
+            meaningHint: data.originalText || data.japaneseTranslation || '',
+          }),
         });
 
         if (exampleAudioResponse.ok) {

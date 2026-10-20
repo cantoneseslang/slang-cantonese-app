@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { buildContextPhonemeSsml } from '@/lib/slang-context-readings';
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { text, language, voiceKey } = body;
+    const { text, language, voiceKey, meaningHint } = body;
     
     if (!text || text.trim() === '') {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 });
@@ -80,7 +81,11 @@ export async function POST(request: NextRequest) {
       value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
     const breakTime = isMobile ? (isNumberLike ? '100ms' : '90ms') : '80ms';
-    const finalText = `<speak><break time="${breakTime}"/>${escapeSsml(text)}</speak>`;
+    const spokenBody =
+      requestedLanguage === 'mandarin'
+        ? escapeSsml(text)
+        : buildContextPhonemeSsml(text, typeof meaningHint === 'string' ? meaningHint : '');
+    const finalText = `<speak><break time="${breakTime}"/>${spokenBody}</speak>`;
     const useSSML = true;
     
     const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`;

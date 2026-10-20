@@ -82,3 +82,20 @@ export function pickContextReadings(
 
   return picked;
 }
+
+function escapeSsml(value: string) {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+export function buildContextPhonemeSsml(text: string, meaningHint = '') {
+  const chars = Array.from(text.normalize('NFKC'));
+  const readings = pickContextReadings(chars, meaningHint);
+  return chars
+    .map((ch, index) => {
+      const escaped = escapeSsml(ch);
+      const reading = readings.get(index);
+      if (!reading) return escaped;
+      return `<phoneme alphabet="jyutping" ph="${escapeSsml(reading.jyutping)}">${escaped}</phoneme>`;
+    })
+    .join('');
+}

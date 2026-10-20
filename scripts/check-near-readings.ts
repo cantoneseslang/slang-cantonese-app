@@ -1,4 +1,4 @@
-import { pickContextReadings } from '../lib/slang-context-readings';
+import { buildContextPhonemeSsml, pickContextReadings } from '../lib/slang-context-readings';
 
 const cases: Array<[string, string, string?]> = [
   ['最近嘅地鐵站係邊度？', 'kan5'],
@@ -22,6 +22,14 @@ for (const [text, expect, hint] of cases) {
   const ok = got === expect;
   if (!ok) failed += 1;
   console.log(ok ? 'OK' : 'NG', text, '=>', got, 'expected', expect);
+}
+
+const ssml = buildContextPhonemeSsml('最近嘅地鐵站係邊度？');
+if (!ssml.includes('alphabet="jyutping" ph="kan5"')) {
+  failed += 1;
+  console.log('NG ssml missing kan5', ssml);
+} else {
+  console.log('OK ssml', ssml);
 }
 
 process.exit(failed === 0 ? 0 : 1);
