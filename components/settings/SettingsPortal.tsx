@@ -1,6 +1,4 @@
 import React from 'react';
-import TeacherMailBox from './TeacherMailBox';
-
 type MembershipType = 'free' | 'subscription' | 'lifetime';
 type CurrencyCode = 'jpy' | 'hkd';
 type DisplayCurrency = 'JPY' | 'HKD';
@@ -676,8 +674,6 @@ const SettingsPortal: React.FC<SettingsPortalProps> = ({
                     </button>
                   </div>
                 </div>
-
-                <TeacherMailBox user={user} />
 
                 <div style={{ marginBottom: '1rem' }}>
                   <label style={{
