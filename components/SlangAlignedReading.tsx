@@ -206,24 +206,16 @@ export function SlangBookmarkRow({
   source?: 'cantonese' | 'japanese';
   query?: string;
 }) {
-  const fromJapanese = source === 'japanese' && query.trim() && query.trim() !== phrase;
+  const japaneseLine = (source === 'japanese' && query.trim() && query.trim() !== phrase)
+    ? query
+    : translation;
   const textStyle = { fontFamily: bookmarkTextFont, fontSize: '0.95rem', lineHeight: 1.5, color: '#1d1d1f' };
 
   return (
     <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.15rem', width: '100%' }}>
-      {fromJapanese ? (
-        <>
-          <span style={{ ...textStyle, fontWeight: 700, fontSize: '1.05rem', lineHeight: 1.4 }}>{query}</span>
-          <span style={textStyle}>翻訳：{phrase}</span>
-          <BookmarkReadings phrase={phrase} meaningHint={query} />
-        </>
-      ) : (
-        <>
-          <span style={{ ...textStyle, fontWeight: 700, fontSize: '1.05rem', lineHeight: 1.4 }}>{phrase}</span>
-          <BookmarkReadings phrase={phrase} meaningHint={translation} />
-          {translation ? <span style={textStyle}>翻訳：{translation}</span> : null}
-        </>
-      )}
+      <span style={{ ...textStyle, fontWeight: 700, fontSize: '1.05rem', lineHeight: 1.4 }}>{phrase}</span>
+      <BookmarkReadings phrase={phrase} meaningHint={japaneseLine} />
+      {japaneseLine ? <span style={textStyle}>翻訳：{japaneseLine}</span> : null}
     </span>
   );
 }

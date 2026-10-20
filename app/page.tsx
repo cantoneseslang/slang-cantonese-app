@@ -79,13 +79,42 @@ function bookmarkTranslationText(value: unknown) {
   return text;
 }
 
+function looksJapaneseText(text: string) {
+  return /[\u3040-\u309f\u30a0-\u30ff]/.test(text);
+}
+
+function looksCantoneseText(text: string) {
+  return /[\u4e00-\u9fff]/.test(text) && !looksJapaneseText(text);
+}
+
+function canonicalizePhraseBookmark(item: PhraseBookmark): PhraseBookmark {
+  const phrase = item.phrase;
+  const query = item.query;
+  const translation = item.translation;
+  if (looksJapaneseText(phrase) && looksCantoneseText(translation)) {
+    return { phrase: translation, source: 'cantonese', query: translation, translation: phrase };
+  }
+  if (looksCantoneseText(phrase) && looksJapaneseText(query) && query !== phrase) {
+    return { phrase, source: 'cantonese', query: phrase, translation: query };
+  }
+  if (looksCantoneseText(phrase) && looksJapaneseText(translation)) {
+    return { phrase, source: 'cantonese', query: phrase, translation };
+  }
+  return item;
+}
+
 function normalizePhraseBookmark(item: { phrase?: unknown; source?: unknown; query?: unknown; translation?: unknown } | null): PhraseBookmark | null {
   if (!item || typeof item.phrase !== 'string') return null;
   const phrase = item.phrase.trim();
   if (!phrase) return null;
   const source = item.source === 'japanese' ? 'japanese' : 'cantonese';
   const query = typeof item.query === 'string' && item.query.trim() ? item.query.trim() : phrase;
-  return { phrase, source, query, translation: bookmarkTranslationText(item.translation) };
+  return canonicalizePhraseBookmark({
+    phrase,
+    source,
+    query,
+    translation: bookmarkTranslationText(item.translation),
+  });
 }
 
 interface Word {
@@ -2300,6 +2329,41 @@ export default function Home() {
     };
   }, [recognizedTextLines, recognizedText, interimText, isHiddenMode, isMuted, translationLanguage, interpreterDirection, interpreterCantoneseVoice, interpreterMandarinVoice, getInterpreterVoiceKey]);
 
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ source?: string; translation?: string }>).detail || {};
+      const ts = getTimestamp();
+      if (detail.source) {
+        setRecognizedTextLines((prev) => [{ text: detail.source as string, timestamp: ts }, ...prev].slice(0, 80));
+        setRecognizedText(detail.source);
+      }
+      if (detail.translation) {
+        setTranslatedTextLines((prev) => [{ text: detail.translation as string, timestamp: ts }, ...prev].slice(0, 80));
+        setTranslatedText(detail.translation);
+      }
+    };
+    window.addEventListener('slang-interpreter-turn', handler);
+    return () => window.removeEventListener('slang-interpreter-turn', handler);
+  }, []);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') return;
+    if (typeof window === 'undefined') return;
+    if (new URLSearchParams(window.location.search).get('demo') !== 'stack') return;
+    setIsHiddenMode(true);
+    const timer = window.setTimeout(() => {
+      const turns = [
+        { source: '私は日本語を話せません', translation: '我唔識講日文。' },
+        { source: '広東語が分かりますか', translation: '你識唔識講廣東話？' },
+        { source: 'この付近に食堂はありますか', translation: '呢附近有冇有食堂？' },
+      ];
+      for (const turn of turns) {
+        window.dispatchEvent(new CustomEvent('slang-interpreter-turn', { detail: turn }));
+      }
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, []);
+
 const safelyResetRecognitionInstance = (reason: string = 'reset') => {
   if (!recognitionRef.current) {
     return;
@@ -3371,9 +3435,17 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       try {
         const raw = localStorage.getItem(storageKey);
         const parsed = raw ? JSON.parse(raw) : [];
-        return Array.isArray(parsed)
-          ? parsed.map((item) => normalizePhraseBookmark(item)).filter((item): item is PhraseBookmark => item !== null)
-          : [];
+        if (!Array.isArray(parsed)) return [];
+        const seen = new Set<string>();
+        const next: PhraseBookmark[] = [];
+        for (const item of parsed) {
+          const bookmark = normalizePhraseBookmark(item);
+          if (!bookmark || seen.has(bookmark.phrase)) continue;
+          seen.add(bookmark.phrase);
+          next.push(bookmark);
+        }
+        localStorage.setItem(storageKey, JSON.stringify(next));
+        return next;
       } catch {
         return [];
       }
@@ -3387,9 +3459,14 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         const res = await fetch('/api/phrase-bookmarks');
         const data = await res.json();
         if (!cancelled && data.authenticated && Array.isArray(data.bookmarks)) {
-          const bookmarks = data.bookmarks
-            .map((item: { phrase?: unknown; source?: unknown; query?: unknown; translation?: unknown }) => normalizePhraseBookmark(item))
-            .filter((item: PhraseBookmark | null): item is PhraseBookmark => item !== null);
+          const seen = new Set<string>();
+          const bookmarks: PhraseBookmark[] = [];
+          for (const item of data.bookmarks) {
+            const bookmark = normalizePhraseBookmark(item);
+            if (!bookmark || seen.has(bookmark.phrase)) continue;
+            seen.add(bookmark.phrase);
+            bookmarks.push(bookmark);
+          }
           setPhraseBookmarks(bookmarks);
           localStorage.setItem(storageKey, JSON.stringify(bookmarks));
           return;
@@ -3404,17 +3481,14 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     };
   }, [user]);
 
-  const togglePhraseBookmark = async () => {
-    const phrase = slangReadingText.trim();
-    if (!phrase) return;
-    const source = bookmarkReplay?.source || 'cantonese';
-    const query = (bookmarkReplay?.query || phrase).trim();
-    const translation = bookmarkTranslationText(result?.translatedText || result?.japaneseTranslation);
+  const upsertPhraseBookmark = async ({ phrase, source, query, translation }: PhraseBookmark) => {
+    const trimmed = phrase.trim();
+    if (!trimmed) return;
     const storageKey = `phrase-bookmarks:${user?.id || 'guest'}`;
-    const exists = phraseBookmarks.some((item) => item.phrase === phrase);
+    const exists = phraseBookmarks.some((item) => item.phrase === trimmed);
     const next = exists
-      ? phraseBookmarks.filter((item) => item.phrase !== phrase)
-      : [{ phrase, source, query, translation }, ...phraseBookmarks];
+      ? phraseBookmarks.filter((item) => item.phrase !== trimmed)
+      : [{ phrase: trimmed, source, query: query || trimmed, translation }, ...phraseBookmarks];
     setPhraseBookmarks(next);
     localStorage.setItem(storageKey, JSON.stringify(next));
     if (!user) return;
@@ -3422,7 +3496,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       const res = await fetch('/api/phrase-bookmarks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phrase, source, query, translation }),
+        body: JSON.stringify({ phrase: trimmed, source, query: query || trimmed, translation }),
       });
       const data = await res.json();
       if (res.ok && Array.isArray(data.bookmarks)) {
@@ -3432,6 +3506,41 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     } catch (error) {
       console.error('phrase bookmark save failed', error);
     }
+  };
+
+  const togglePhraseBookmark = async () => {
+    const phrase = slangReadingText.trim();
+    if (!phrase) return;
+    await upsertPhraseBookmark({
+      phrase,
+      source: bookmarkReplay?.source || 'cantonese',
+      query: (bookmarkReplay?.query || phrase).trim(),
+      translation: bookmarkTranslationText(result?.translatedText || result?.japaneseTranslation),
+    });
+  };
+
+  const toggleInterpreterBookmark = (spoken: string, translated: string) => {
+    const spokenText = spoken.trim();
+    const translatedText = bookmarkTranslationText(translated);
+    if (interpreterDirection === 'yue-to-ja') {
+      const phrase = spokenText || translatedText;
+      if (!phrase) return;
+      void upsertPhraseBookmark({
+        phrase,
+        source: 'cantonese',
+        query: phrase,
+        translation: translatedText,
+      });
+      return;
+    }
+    const phrase = translatedText;
+    if (!phrase) return;
+    void upsertPhraseBookmark({
+      phrase,
+      source: 'cantonese',
+      query: phrase,
+      translation: spokenText,
+    });
   };
   // お気に入りの追加/削除
   const toggleFavorite = async (word: Word, categoryId: string) => {
@@ -4379,8 +4488,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     }
   }, [isMobile, buttonsAnimated, showButtons, translationLanguage]);
   
-  // モバイル軽量化: データ保持行数を削減（モバイル5行、デスクトップ10行）
-  const MAX_TEXT_LINES = useMemo(() => isMobile ? 5 : 10, [isMobile]);
+  const MAX_TEXT_LINES = 80;
   
   const audioRef = useRef<HTMLAudioElement>(null); // 学習モード用
   const exampleAudioRef = useRef<HTMLAudioElement>(null); // 学習モード用
@@ -6406,6 +6514,8 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           interpreterUsageCount={interpreterUsageCount}
           interpreterUsageLimit={interpreterUsageLimit}
           membershipType={membershipType}
+          bookmarkedPhrases={phraseBookmarks.map((item) => item.phrase)}
+          onToggleInterpreterBookmark={toggleInterpreterBookmark}
             />
       )}
 

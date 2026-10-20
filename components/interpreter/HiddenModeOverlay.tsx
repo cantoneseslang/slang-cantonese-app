@@ -35,6 +35,67 @@ type HiddenModeLine = {
   latency?: number;
 };
 
+type InterpreterTurn = {
+  id: string;
+  source: string;
+  translation: string;
+};
+
+function pairInterpreterTurns(
+  recognized: HiddenModeLine[],
+  translated: HiddenModeLine[]
+): InterpreterTurn[] {
+  const count = Math.max(recognized.length, translated.length);
+  const turns: InterpreterTurn[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const source = recognized[i]?.text || '';
+    const translation = translated[i]?.text || '';
+    if (!source && !translation) continue;
+    turns.push({
+      id: `${recognized[i]?.timestamp || translated[i]?.timestamp || i}-${i}`,
+      source,
+      translation,
+    });
+  }
+  return turns;
+}
+
+function BookmarkStar({
+  bookmarked,
+  onToggle,
+}: {
+  bookmarked: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label="ブックマーク"
+      aria-pressed={bookmarked}
+      onClick={(event) => {
+        event.stopPropagation();
+        onToggle();
+      }}
+      onPointerDown={(event) => event.stopPropagation()}
+      style={{
+        flex: '0 0 auto',
+        width: '1.6rem',
+        height: '1.6rem',
+        margin: 0,
+        padding: 0,
+        border: 'none',
+        background: 'transparent',
+        cursor: 'pointer',
+        fontSize: '22px',
+        lineHeight: 1,
+        color: bookmarked ? '#f5c518' : '#c8c8c8',
+      }}
+    >
+      {bookmarked ? '★' : '☆'}
+    </button>
+  );
+}
+
 type HiddenModeButton = 'hand' | 'mic' | 'mute' | null;
 
 interface HiddenModeOverlayProps {
@@ -71,6 +132,8 @@ interface HiddenModeOverlayProps {
   interpreterUsageCount: number;
   interpreterUsageLimit: number;
   membershipType: string;
+  bookmarkedPhrases: string[];
+  onToggleInterpreterBookmark: (phrase: string, translation: string) => void;
 }
 
 const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
@@ -107,10 +170,18 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
   interpreterUsageCount,
   interpreterUsageLimit,
   membershipType,
+  bookmarkedPhrases,
+  onToggleInterpreterBookmark,
 }) => {
   const translationAreaRef = React.useRef<HTMLDivElement | null>(null);
+  const recognizedFrameRef = React.useRef<HTMLDivElement | null>(null);
   const micButtonRef = React.useRef<HTMLDivElement | null>(null);
   const titleRef = React.useRef<HTMLDivElement | null>(null);
+  const pullStartYRef = React.useRef<number | null>(null);
+  const pullYRef = React.useRef(0);
+  const [pullY, setPullY] = React.useState(0);
+  const [pulling, setPulling] = React.useState(false);
+  const [stackExpanded, setStackExpanded] = React.useState(false);
   const micHelpRef = React.useRef<HTMLDivElement | null>(null);
   const handHelpRef = React.useRef<HTMLDivElement | null>(null);
   const muteHelpRef = React.useRef<HTMLDivElement | null>(null);
@@ -261,6 +332,49 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
   const mobileTopOffset = isMobile ? mobileLayout.top ?? baseMobileTopPx : undefined;
   const mobileBottomOffset = isMobile ? mobileLayout.bottom ?? baseMobileBottomPx : undefined;
   const mobileContentHeight = isMobile ? mobileLayout.height : undefined;
+
+  const turns = pairInterpreterTurns(recognizedTextLines, translatedTextLines);
+  const historyTurns = turns.slice(1);
+  const PULL_THRESHOLD = 72;
+
+  const expandProgress = stackExpanded
+    ? Math.max(0, Math.min(1, 1 + pullY / PULL_THRESHOLD))
+    : Math.max(0, Math.min(1, pullY / PULL_THRESHOLD));
+
+  const beginPull = (clientY: number) => {
+    if (historyTurns.length === 0) return;
+    pullStartYRef.current = clientY;
+    setPulling(true);
+  };
+
+  const movePull = (clientY: number) => {
+    if (pullStartYRef.current == null) return;
+    const dy = clientY - pullStartYRef.current;
+    const next = stackExpanded
+      ? Math.max(-120, Math.min(0, dy))
+      : Math.max(0, Math.min(120, dy));
+    pullYRef.current = next;
+    setPullY(next);
+  };
+
+  const finishPull = () => {
+    if (historyTurns.length > 0) {
+      if (!stackExpanded && pullYRef.current >= PULL_THRESHOLD) {
+        setStackExpanded(true);
+      } else if (stackExpanded && pullYRef.current <= -40) {
+        setStackExpanded(false);
+      }
+    }
+    pullYRef.current = 0;
+    setPullY(0);
+    pullStartYRef.current = null;
+    setPulling(false);
+  };
+
+  const frameTuck = 16 * (1 - expandProgress);
+  const olderPeek = 28 + expandProgress * 110;
+  const olderGap = expandProgress * 10;
+  const olderPile = (1 - expandProgress) * 16;
 
   const desktopButtonGroup = (
     <div
@@ -605,7 +719,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           padding: isMobile ? '1rem' : '1.5rem',
           backgroundColor: 'rgba(255, 255, 255, 0.95)',
           border: '1px solid rgba(0, 0, 0, 0.1)',
-          borderRadius: '12px',
+          borderRadius: '20px',
           animation: isTranslationAreaRotating
             ? translationAreaRotationDirectionRef.current === 'forward'
               ? 'translationAreaRotate 0.6s ease-in-out'
@@ -672,32 +786,49 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
       </div>
 
       <div
+        ref={recognizedFrameRef}
+        onPointerDown={(event) => {
+          if (event.button !== 0) return;
+          beginPull(event.clientY);
+        }}
+        onPointerMove={(event) => movePull(event.clientY)}
+        onPointerUp={finishPull}
+        onPointerCancel={finishPull}
         style={{
           position: 'fixed',
           top: isMobile
             ? `${mobileTopOffset ?? baseMobileTopPx}px`
             : '50%',
           left: '50%',
-          transform: isMobile ? 'translate(-50%, 0)' : 'translate(-50%, -50%)',
+          transform: isMobile
+            ? `translate(-50%, ${pullY * 0.35}px)`
+            : `translate(-50%, calc(-50% + ${pullY * 0.35}px))`,
           width: isMobile ? 'calc(100vw - 2rem)' : '90%',
           maxWidth: isMobile ? 'calc(100vw - 2rem)' : '800px',
-          minHeight: isMobile ? undefined : 'auto',
-          maxHeight: isMobile ? '260px' : '400px',
-          height: isMobile ? 'auto' : (mobileContentHeight !== undefined ? `${mobileContentHeight}px` : 'auto'),
-          padding: isMobile ? '1rem' : '1.75rem',
+          zIndex: 1000,
+          overflow: 'visible',
+          boxSizing: 'border-box',
+        }}
+      >
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 2,
+          padding: isMobile
+            ? (historyTurns.length > 0 ? '0.85rem 1rem 0.45rem' : '1rem')
+            : (historyTurns.length > 0 ? '1.5rem 1.75rem 0.7rem' : '1.75rem'),
           backgroundColor: 'rgba(255, 255, 255, 0.95)',
           border: '1px solid rgba(0, 0, 0, 0.1)',
-          borderRadius: '12px',
+          borderRadius: '20px',
           textAlign: 'center',
           fontSize: isMobile ? '1.35rem' : '2rem',
           lineHeight: '1.8',
           wordBreak: 'break-word',
-          opacity: 1,
-          zIndex: 1000,
           color: '#111827',
           boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
           overflowY: 'auto',
           overflowX: 'hidden',
+          maxHeight: isMobile ? (historyTurns.length > 0 ? '150px' : '260px') : '400px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'flex-start',
@@ -712,7 +843,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             flexDirection: 'column',
               gap: '0.6rem',
             width: '100%',
-              paddingBottom: '0.75rem',
+              paddingBottom: historyTurns.length > 0 ? '0.2rem' : '0.75rem',
               justifyContent: 'flex-start',
             alignItems: 'center',
             minHeight: '100%',
@@ -734,14 +865,24 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
                       lineHeight: '1.8',
                       wordBreak: 'break-word',
                       padding: '0.75rem 1rem',
-                      marginBottom: '0.5rem',
+                      marginBottom: historyTurns.length > 0 ? 0 : '0.5rem',
                       backgroundColor: 'rgba(59, 130, 246, 0.05)',
                       borderRadius: '8px',
                       borderLeft: '3px solid rgba(59, 130, 246, 0.3)',
                       textAlign: 'left',
                     }}
                   >
-                    <div>{normalizeInterpreterTranscript(latestLine.text, interpreterDirection)}</div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.35rem' }}>
+                      <BookmarkStar
+                        bookmarked={bookmarkedPhrases.includes(
+                          interpreterDirection === 'yue-to-ja'
+                            ? latestLine.text.trim()
+                            : (translatedTextLines[0]?.text || latestLine.text).trim()
+                        )}
+                        onToggle={() => onToggleInterpreterBookmark(latestLine.text.trim(), translatedTextLines[0]?.text || '')}
+                      />
+                      <div>{normalizeInterpreterTranscript(latestLine.text, interpreterDirection)}</div>
+                    </div>
                   </div>
                 );
               })()}
@@ -786,6 +927,88 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             </>
           )}
         </div>
+        {historyTurns.length > 0 && pullY > 8 && !stackExpanded && (
+          <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.35rem' }}>
+            {expandProgress >= 1 ? '離すと履歴が開く' : '下に引いて履歴を開く'}
+          </div>
+        )}
+      </div>
+
+      {historyTurns.length > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            marginTop: `-${frameTuck}px`,
+            maxHeight: isMobile ? '34vh' : '40vh',
+            overflowY: stackExpanded ? 'auto' : 'hidden',
+            overflowX: 'hidden',
+            transition: pulling
+              ? 'none'
+              : 'margin-top 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            zIndex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            pointerEvents: 'auto',
+          }}
+        >
+          {historyTurns.map((turn, index) => {
+            const spoken = turn.source.trim();
+            const translated = turn.translation.trim();
+            const storedPhrase = interpreterDirection === 'yue-to-ja' ? spoken || translated : translated || spoken;
+            const isLatestHistory = index === 0;
+            return (
+              <div
+                key={turn.id}
+                style={{
+                  marginTop: isLatestHistory ? 0 : olderGap - (index > 1 ? olderPile : 0),
+                  height: stackExpanded || isLatestHistory ? 'auto' : `${olderPeek}px`,
+                  overflow: 'hidden',
+                  borderRadius: '20px',
+                  display: 'flex',
+                  alignItems: isLatestHistory || stackExpanded ? 'flex-start' : 'flex-end',
+                  zIndex: historyTurns.length - index,
+                  transition: pulling
+                    ? 'none'
+                    : 'height 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), margin-top 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                }}
+              >
+                <div
+                  style={{
+                    width: '100%',
+                    padding: isMobile ? '0.7rem 0.85rem' : '0.85rem 1rem',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid rgba(0, 0, 0, 0.08)',
+                    borderRadius: '20px',
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.35rem' }}>
+                    <BookmarkStar
+                      bookmarked={bookmarkedPhrases.includes(storedPhrase)}
+                      onToggle={() => onToggleInterpreterBookmark(spoken, translated)}
+                    />
+                    <div style={{ minWidth: 0, textAlign: 'left' }}>
+                      {spoken && (
+                        <div style={{ color: '#111827', fontSize: isMobile ? '0.95rem' : '1.05rem', lineHeight: 1.5 }}>
+                          {normalizeInterpreterTranscript(spoken, interpreterDirection)}
+                        </div>
+                      )}
+                      {translated && (
+                        <div style={{ color: '#6b7280', fontSize: isMobile ? '0.85rem' : '0.95rem', lineHeight: 1.45, marginTop: '0.15rem' }}>
+                          {translated}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
       </div>
 
       <button
@@ -803,7 +1026,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           fontSize: '0.875rem',
           animation: 'fadeInUp 0.4s ease-out',
           opacity: 1,
-          zIndex: 1001,
+          zIndex: 1012,
           boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
         }}
       >
