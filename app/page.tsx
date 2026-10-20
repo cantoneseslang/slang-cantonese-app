@@ -8377,7 +8377,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 </div>
               )}
 
-            <div style={{ display: 'flex', flexWrap: 'nowrap', gap: isMobile ? '0.35rem' : '0.5rem', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', flexWrap: 'nowrap', gap: isMobile ? '0.35rem' : '0.5rem', alignItems: 'flex-start', marginTop: isMobile ? '0.75rem' : '0.85rem' }}>
               <div className="convert-caption-col" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
               <button
                 type="button"
