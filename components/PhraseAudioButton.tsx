@@ -21,19 +21,38 @@ export default function PhraseAudioButton({
     audio.playbackRate = playbackRate;
   }, [audioRef, playbackRate, src]);
 
-  const toggle = async () => {
+  const playFromStart = async () => {
     const audio = audioRef.current;
     if (!audio) return;
     audio.playbackRate = playbackRate;
-    if (audio.paused) {
-      try {
-        await audio.play();
-      } catch (error) {
-        console.error('音声再生に失敗しました', error);
+    try {
+      if (!audio.paused) {
+        audio.pause();
       }
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        audio.currentTime = 0;
+      }
+      await audio.play();
+    } catch (error) {
+      try {
+        audio.load();
+        audio.playbackRate = playbackRate;
+        audio.currentTime = 0;
+        await audio.play();
+      } catch (retryError) {
+        console.error('音声再生に失敗しました', retryError || error);
+      }
+    }
+  };
+
+  const toggle = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (!audio.paused && !audio.ended) {
+      audio.pause();
       return;
     }
-    audio.pause();
+    void playFromStart();
   };
 
   return (
@@ -42,10 +61,23 @@ export default function PhraseAudioButton({
         ref={audioRef}
         src={src}
         preload="auto"
-        style={{ display: 'none' }}
+        playsInline
+        style={{
+          position: 'absolute',
+          width: 1,
+          height: 1,
+          opacity: 0,
+          pointerEvents: 'none',
+        }}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
-        onEnded={() => setPlaying(false)}
+        onEnded={() => {
+          const audio = audioRef.current;
+          if (audio && Number.isFinite(audio.duration)) {
+            audio.currentTime = 0;
+          }
+          setPlaying(false);
+        }}
       />
       <button
         type="button"
