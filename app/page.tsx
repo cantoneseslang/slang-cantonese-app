@@ -29,6 +29,7 @@ import { createClient } from '@/lib/supabase/client';
 import HiddenModeOverlay from '../components/interpreter/HiddenModeOverlay';
 import SettingsPortal from '../components/settings/SettingsPortal';
 import TeacherMailBox from '../components/settings/TeacherMailBox';
+import TeacherMailFloat from '../components/settings/TeacherMailFloat';
 import SlangAlignedReading, { SlangBookmarkRow } from '../components/SlangAlignedReading';
 import {
   CONVERSION_CHAR_LIMIT,
@@ -9687,6 +9688,11 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               fontWeight: '500'
             }}>カントン語音れんって何？</a>
             <span style={{ color: '#9ca3af' }}>·</span>
+            <a href="https://x.com/cantonese_slang" target="_blank" rel="noopener noreferrer" style={{
+              textDecoration: 'underline',
+              color: '#3b82f6'
+            }}>X (Twitter)</a>
+            <span style={{ color: '#9ca3af' }}>·</span>
             <a href="/updates" style={{ 
               textDecoration: 'underline', 
               color: '#3b82f6' 
@@ -10324,6 +10330,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
 
 
       </div>
+      {!isHiddenMode && <TeacherMailFloat user={user} />}
     </div>
   );
 }
