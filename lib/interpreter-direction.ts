@@ -14,6 +14,25 @@ export function normalizeInterpreterTranscript(
   return forbidKantoGo(text);
 }
 
+export function mergeInterpreterTranscript(previous: string, incoming: string): string {
+  const prev = previous.trim();
+  const next = incoming.trim();
+  if (!prev) return next;
+  if (!next || next === prev) return prev;
+  if (next.startsWith(prev) || next.replace(/\s+/g, '').startsWith(prev.replace(/\s+/g, ''))) {
+    return next;
+  }
+  if (prev.startsWith(next) || prev.replace(/\s+/g, '').startsWith(next.replace(/\s+/g, ''))) {
+    return prev;
+  }
+  for (let overlap = Math.min(prev.length, next.length); overlap > 0; overlap -= 1) {
+    if (next.startsWith(prev.slice(-overlap))) {
+      return `${prev}${next.slice(overlap)}`;
+    }
+  }
+  return `${prev} ${next}`.replace(/\s+/g, ' ').trim();
+}
+
 const CLAUSE_END_RE = /[。．.！!？?…]$/;
 
 export function isInterpreterClauseReady(text: string): boolean {

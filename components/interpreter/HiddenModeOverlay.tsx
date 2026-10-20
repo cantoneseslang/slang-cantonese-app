@@ -314,6 +314,33 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
 
   const historyTurns = collapseInterpreterTurns(interpreterHistory);
   const expandProgress = stackExpanded ? 1 : 0;
+  const [historyMaxPx, setHistoryMaxPx] = React.useState(220);
+
+  const measureHistoryViewport = React.useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const currentCard = recognizedFrameRef.current?.firstElementChild as HTMLElement | null;
+    const cardBottom = (currentCard ?? recognizedFrameRef.current)?.getBoundingClientRect().bottom;
+    if (!cardBottom) return;
+    const floors = [
+      titleRef.current?.getBoundingClientRect().top,
+      micButtonRef.current?.getBoundingClientRect().top,
+    ].filter((value): value is number => Number.isFinite(value));
+    const viewport = window.visualViewport?.height ?? window.innerHeight;
+    const floor = (floors.length > 0 ? Math.min(...floors) : viewport) - 10;
+    setHistoryMaxPx(Math.max(140, Math.floor(floor - cardBottom)));
+  }, []);
+
+  React.useLayoutEffect(() => {
+    measureHistoryViewport();
+    if (typeof window === 'undefined') return;
+    const handleResize = () => measureHistoryViewport();
+    window.addEventListener('resize', handleResize);
+    window.visualViewport?.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.visualViewport?.removeEventListener('resize', handleResize);
+    };
+  }, [measureHistoryViewport, stackExpanded, historyTurns.length, mobileLayout, showTitle, showButtons]);
 
   React.useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -750,7 +777,6 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
 
       <div
         ref={recognizedFrameRef}
-        onClick={toggleStack}
         style={{
           position: 'fixed',
           top: isMobile
@@ -765,11 +791,11 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           zIndex: 1000,
           overflow: 'visible',
           boxSizing: 'border-box',
-          cursor: historyTurns.length > 0 ? 'pointer' : 'default',
           overscrollBehavior: 'none',
         }}
       >
       <div
+        onClick={toggleStack}
         style={{
           position: 'relative',
           zIndex: 2,
@@ -793,6 +819,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           justifyContent: 'flex-start',
           alignItems: 'stretch',
           boxSizing: 'border-box',
+          cursor: historyTurns.length > 0 ? 'pointer' : 'default',
         }}
       >
         <div
@@ -845,7 +872,8 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
                   </div>
                 );
               })()}
-              {interimText && (
+              {interimText &&
+                !latestLine.text.replace(/\s+/g, '').includes(interimText.trim().replace(/\s+/g, '')) && (
                 <div
                   style={{
                     color: '#6b7280',
@@ -895,24 +923,31 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
 
       {historyTurns.length > 0 && (
         <div
+          onClick={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
           style={{
             position: 'absolute',
             top: '100%',
             left: 0,
             right: 0,
             marginTop: `-${frameTuck}px`,
-            maxHeight: stackExpanded ? (isMobile ? '52vh' : '56vh') : (isMobile ? '34vh' : '40vh'),
-            overflowY: stackExpanded ? 'auto' : 'hidden',
+            height: stackExpanded ? `${historyMaxPx}px` : undefined,
+            maxHeight: stackExpanded ? `${historyMaxPx}px` : `${Math.max(olderPeek + 8, 36)}px`,
+            overflowY: stackExpanded ? 'scroll' : 'hidden',
             overflowX: 'hidden',
             overscrollBehavior: 'contain',
-            transition: 'margin-top 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), max-height 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            WebkitOverflowScrolling: 'touch',
+            touchAction: stackExpanded ? 'pan-y' : 'manipulation',
+            transition: 'margin-top 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), max-height 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), height 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)',
             animation: stackExpanded
               ? 'interpreterStackBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
               : 'none',
             zIndex: 1,
             display: 'flex',
             flexDirection: 'column',
+            flexWrap: 'nowrap',
             pointerEvents: 'auto',
+            paddingBottom: stackExpanded ? '0.75rem' : 0,
           }}
         >
           {historyTurns.map((turn, index) => {
@@ -926,6 +961,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
                 style={{
                   marginTop: isLatestHistory ? 0 : olderGap - (index > 1 ? olderPile : 0),
                   height: stackExpanded || isLatestHistory ? 'auto' : `${olderPeek}px`,
+                  flex: '0 0 auto',
                   overflow: 'hidden',
                   borderRadius: '20px',
                   display: 'flex',

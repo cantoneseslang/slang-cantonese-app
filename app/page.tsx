@@ -45,6 +45,7 @@ import {
   correctInterpreterTranslation,
   getInterpreterAsrLang,
   isInterpreterClauseReady,
+  mergeInterpreterTranscript,
   normalizeInterpreterTranscript,
   unspokenInterpreterTail,
   type InterpreterDirection,
@@ -1323,6 +1324,7 @@ export default function Home() {
   const lastProcessedFinalTextRef = useRef<string>('');
   const recognizedFinalTextRef = useRef<string>('');
   const displayedTranslateSourceRef = useRef<string>('');
+  const applyInterpreterRecognitionRef = useRef<(finalChunk: string, interimChunk: string) => void>(() => {});
   
   // 音声出力デバイスの管理
   const [currentAudioOutputDevice, setCurrentAudioOutputDevice] = useState<string>('');
@@ -2016,54 +2018,12 @@ export default function Home() {
                 interpreterDirectionRef.current
               );
               if (event.results[i].isFinal) {
-                // finalの結果を集約
                 newFinal += transcript;
               } else {
-                // interimは最新のもののみ（上書き）
                 interim = transcript;
               }
             }
-            
-            // interimのテキストを更新
-            setInterimText(interim);
-            
-            if (newFinal) {
-              const trimmed = newFinal.trim();
-              
-              // 直前のfinalテキストと比較（重複チェック - 完全一致のみ）
-              if (trimmed === lastProcessedFinalTextRef.current && trimmed.length > 0) {
-                // 完全に同じテキストの場合のみスキップ
-                setInterimText('');
-                return;
-              }
-              
-              lastProcessedFinalTextRef.current = trimmed;
-              
-              // finalのテキストを追加
-              setFinalText(prev => {
-                const result = prev + trimmed + ' ';
-                return result;
-              });
-
-              recognizedFinalTextRef.current = recognizedFinalTextRef.current
-                ? `${recognizedFinalTextRef.current} ${trimmed}`
-                : trimmed;
-              setRecognizedText(recognizedFinalTextRef.current);
-              setRecognizedTextLines([{ text: recognizedFinalTextRef.current, timestamp: getTimestamp() }]);
-              
-              setInterimText('');
-            } else if (interim) {
-              // interimのみの場合 - 最新のinterimを表示（確定するまで更新）
-              setRecognizedText(prev => {
-                // 既存のfinalText部分を保持し、interim部分を更新
-                const baseText = prev.trim();
-                // interimの最後の部分を上書き（最新のinterimを表示）
-                return baseText + (baseText ? ' ' : '') + interim;
-              });
-              
-              // interimは配列に追加しない（確定後に追加される）
-              // 表示はinterimTextステートで行う
-            }
+            applyInterpreterRecognitionRef.current(newFinal, interim);
           };
 
           recognitionRef.current.onerror = (event: any) => {
@@ -2839,6 +2799,33 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     setRecognizedTextLines([{ text: trimmed, timestamp: getTimestamp() }]);
   };
 
+  const applyInterpreterRecognition = (finalChunk: string, interimChunk: string) => {
+    const incomingFinal = finalChunk.trim();
+    const incomingInterim = interimChunk.trim();
+    if (incomingFinal) {
+      if (incomingFinal === lastProcessedFinalTextRef.current) {
+        setInterimText('');
+        return;
+      }
+      lastProcessedFinalTextRef.current = incomingFinal;
+      recognizedFinalTextRef.current = mergeInterpreterTranscript(
+        recognizedFinalTextRef.current,
+        incomingFinal
+      );
+      setFinalText(recognizedFinalTextRef.current);
+      replaceCurrentRecognizedLine(recognizedFinalTextRef.current);
+      setInterimText('');
+      return;
+    }
+    if (incomingInterim) {
+      setInterimText(incomingInterim);
+      replaceCurrentRecognizedLine(
+        mergeInterpreterTranscript(recognizedFinalTextRef.current, incomingInterim)
+      );
+    }
+  };
+  applyInterpreterRecognitionRef.current = applyInterpreterRecognition;
+
   const replaceCurrentTranslatedLine = (text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -2909,46 +2896,12 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 interpreterDirectionRef.current
               );
                   if (event.results[i].isFinal) {
-                    // final結果を追加（空白で区切る）
                     finalTranscript += (finalTranscript ? ' ' : '') + transcript;
                   } else {
-                    // interim結果は最新のものを保持（上書き）
                     interimTranscript = transcript;
                   }
                 }
-                
-                // interim結果を表示
-                setInterimText(interimTranscript);
-                
-                // final結果がある場合
-                if (finalTranscript) {
-                  const trimmedFinal = finalTranscript.trim();
-                  
-                  // 直前のfinalテキストと完全一致する場合はスキップ
-                  if (trimmedFinal === lastProcessedFinalTextRef.current) {
-                    setInterimText('');
-                    return;
-                  }
-                  
-              lastProcessedFinalTextRef.current = trimmedFinal;
-              
-              // finalTextに追加
-              setFinalText(prev => prev + trimmedFinal + ' ');
-
-              recognizedFinalTextRef.current = recognizedFinalTextRef.current
-                ? `${recognizedFinalTextRef.current} ${trimmedFinal}`
-                : trimmedFinal;
-              replaceCurrentRecognizedLine(recognizedFinalTextRef.current);
-              
-              setInterimText('');
-            } else if (interimTranscript) {
-              // interimのみの場合
-              setRecognizedText(
-                recognizedFinalTextRef.current
-                  ? `${recognizedFinalTextRef.current} ${interimTranscript}`
-                  : interimTranscript
-              );
-            }
+                applyInterpreterRecognitionRef.current(finalTranscript, interimTranscript);
               };
 
           recognitionRef.current.onerror = (event: any) => {
@@ -3012,45 +2965,12 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 interpreterDirectionRef.current
               );
                   if (event.results[i].isFinal) {
-                    // finalの結果は新しいもののみ追加
                     newFinal += transcript;
                   } else {
-                    // interimは常に最新のものを表示
                     interim = transcript;
                   }
                 }
-                
-                // interimのテキストを更新
-                setInterimText(interim);
-                
-                if (newFinal) {
-                  const trimmed = newFinal.trim();
-                  
-                  // 直前のfinalテキストと比較（重複チェック）
-                  if (trimmed === lastProcessedFinalTextRef.current && trimmed.length > 0) {
-                    setInterimText('');
-                    return;
-                  }
-                  
-                  lastProcessedFinalTextRef.current = trimmed;
-                  
-                  // finalのテキストを追加
-                  setFinalText(prev => prev + trimmed + ' ');
-                  
-                  recognizedFinalTextRef.current = recognizedFinalTextRef.current
-                    ? `${recognizedFinalTextRef.current} ${trimmed}`
-                    : trimmed;
-                  replaceCurrentRecognizedLine(recognizedFinalTextRef.current);
-                  
-                  setInterimText('');
-                } else if (interim) {
-                  // interimのみの場合
-                  setRecognizedText(
-                    recognizedFinalTextRef.current
-                      ? `${recognizedFinalTextRef.current} ${interim}`
-                      : interim
-                  );
-                }
+                applyInterpreterRecognitionRef.current(newFinal, interim);
               };
               
               recognitionRef.current.onerror = (event: any) => {
@@ -3119,7 +3039,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     }
     
     if (interimText.trim()) {
-      const next = `${recognizedFinalTextRef.current} ${interimText.trim()}`.trim();
+      const next = mergeInterpreterTranscript(recognizedFinalTextRef.current, interimText);
       recognizedFinalTextRef.current = next;
       replaceCurrentRecognizedLine(next);
       setInterimText('');
