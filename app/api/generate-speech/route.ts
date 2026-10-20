@@ -56,7 +56,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { text, language, voiceKey, meaningHint } = body;
+    const { text, language, voiceKey, meaningHint, fast } = body;
+    const isFast = fast === true;
     
     if (!text || text.trim() === '') {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 });
@@ -103,7 +104,9 @@ export async function POST(request: NextRequest) {
       requestedLanguage === 'mandarin' || requestedLanguage === 'japanese'
         ? escapeSsml(text)
         : buildContextPhonemeSsml(text, typeof meaningHint === 'string' ? meaningHint : '');
-    const finalText = `<speak><break time="${breakTime}"/>${spokenBody}</speak>`;
+    const finalText = isFast
+      ? `<speak>${spokenBody}</speak>`
+      : `<speak><break time="${breakTime}"/>${spokenBody}</speak>`;
     const useSSML = true;
     
     const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`;
@@ -189,6 +192,16 @@ export async function POST(request: NextRequest) {
         });
       }
       
+      if (isFast) {
+        return new NextResponse(Uint8Array.from(Buffer.from(json.audioContent, 'base64')), {
+          status: 200,
+          headers: {
+            'Content-Type': 'audio/mpeg',
+            'Cache-Control': 'no-store',
+          },
+        });
+      }
+
       return NextResponse.json({
         audioContent: json.audioContent
       });

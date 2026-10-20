@@ -42,7 +42,9 @@ import {
 } from '@/lib/conversion-limits';
 import {
   getInterpreterAsrLang,
+  isInterpreterClauseReady,
   normalizeInterpreterTranscript,
+  unspokenInterpreterTail,
   type InterpreterDirection,
 } from '@/lib/interpreter-direction';
 import categoriesData from '@/data/categories.json';
@@ -1275,6 +1277,10 @@ export default function Home() {
   
   // 同時通訳モード用の音声再生とミュート状態
   const simultaneousModeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const interpreterAudioUrlRef = useRef<string | null>(null);
+  const spokenInterpreterSourcesRef = useRef<Set<string>>(new Set());
+  const interpreterSpeakQueueRef = useRef<string[]>([]);
+  const interpreterSpeakBusyRef = useRef(false);
   const isSimultaneousAudioUnlockedRef = useRef(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
@@ -1440,7 +1446,8 @@ export default function Home() {
     audio: HTMLAudioElement | null,
     dataUrl: string,
     errorLabel: string,
-    onEnded?: () => void
+    onEnded?: () => void,
+    options?: { eager?: boolean }
   ) => {
     if (!audio) return;
     resetAudioElement(audio);
@@ -1450,17 +1457,20 @@ export default function Home() {
       await setAudioOutputDevice(currentAudioOutputDevice, audio);
     }
     
-    // モバイル対応: canplaythroughを使用して、十分なデータが読み込まれてから再生
     let hasPlayed = false;
-    
-    audio.oncanplaythrough = () => {
+    const playNow = () => {
       if (hasPlayed) return;
       hasPlayed = true;
-      
       playAudioFromStart(audio, (e) => {
         console.error(`${errorLabel}:`, e);
       });
     };
+
+    if (options?.eager) {
+      audio.oncanplay = playNow;
+    } else {
+      audio.oncanplaythrough = playNow;
+    }
     
     audio.onerror = (event) => {
       if (audio.src === dataUrl) {
@@ -1470,6 +1480,7 @@ export default function Home() {
     
     audio.onended = () => {
       audio.onended = null;
+      audio.oncanplay = null;
       audio.oncanplaythrough = null;
       audio.onerror = null;
       if (onEnded) {
@@ -1483,6 +1494,96 @@ export default function Home() {
     } catch (e) {
       console.error('音声ロード失敗:', e);
     }
+  };
+
+  const playInterpreterSpeech = async (spokenText: string) => {
+    if (!spokenText.trim()) return;
+    try {
+    const speechLanguage = interpreterDirection === 'yue-to-ja' ? 'japanese' : translationLanguage;
+    const voiceKey = interpreterDirection === 'yue-to-ja'
+      ? 'japanese-female'
+      : getInterpreterVoiceKey(translationLanguage);
+    const audioResponse = await fetch('/api/generate-speech', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'audio/mpeg',
+      },
+      body: JSON.stringify({ text: spokenText, language: speechLanguage, voiceKey, fast: true }),
+    });
+
+    if (!audioResponse.ok) {
+      const errorText = await audioResponse.text();
+      console.error('音声生成APIエラー:', audioResponse.status, errorText);
+      return;
+    }
+
+    const audioElement = simultaneousModeAudioRef.current;
+    if (!audioElement) return;
+
+    const contentType = audioResponse.headers.get('content-type') || '';
+    let src: string;
+    if (contentType.includes('audio/')) {
+      const blob = await audioResponse.blob();
+      if (interpreterAudioUrlRef.current) {
+        URL.revokeObjectURL(interpreterAudioUrlRef.current);
+      }
+      src = URL.createObjectURL(blob);
+      interpreterAudioUrlRef.current = src;
+    } else {
+      const audioData = await audioResponse.json();
+      if (!audioData.audioContent) return;
+      src = `data:audio/mp3;base64,${audioData.audioContent}`;
+    }
+
+    await new Promise<void>((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+      const safety = window.setTimeout(finish, 15000);
+      void prepareAudioPlayback(
+        audioElement,
+        src,
+        '同時通訳音声再生エラー',
+        () => {
+          resetAudioElement(audioElement);
+          if (interpreterAudioUrlRef.current) {
+            URL.revokeObjectURL(interpreterAudioUrlRef.current);
+            interpreterAudioUrlRef.current = null;
+          }
+          window.clearTimeout(safety);
+          finish();
+        },
+        { eager: true }
+      );
+      audioElement.volume = 1.0;
+    });
+    } catch (err) {
+      console.error('音声生成エラー:', err);
+    }
+  };
+
+  const enqueueInterpreterSpeech = (spokenText: string) => {
+    if (isMuted || !spokenText.trim()) return;
+    interpreterSpeakQueueRef.current.push(spokenText);
+    const drain = async () => {
+      if (interpreterSpeakBusyRef.current) return;
+      interpreterSpeakBusyRef.current = true;
+      try {
+        while (interpreterSpeakQueueRef.current.length > 0) {
+          const next = interpreterSpeakQueueRef.current.shift();
+          if (next) {
+            await playInterpreterSpeech(next);
+          }
+        }
+      } finally {
+        interpreterSpeakBusyRef.current = false;
+      }
+    };
+    void drain();
   };
 
   const playNormalModeAudio = async (
@@ -1990,6 +2091,8 @@ export default function Home() {
       setTranslatedText('');
       translatedTextSetRef.current.clear();
       translatedInterimSetRef.current.clear();
+      spokenInterpreterSourcesRef.current.clear();
+      interpreterSpeakQueueRef.current = [];
       return;
     }
 
@@ -2044,8 +2147,20 @@ export default function Home() {
                 };
                 return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
               });
-              
-              // interimテキストの音声生成は行わない（確定テキストのみ音声生成）
+
+              if (
+                !isMuted &&
+                isInterpreterClauseReady(interimTextToTranslate)
+              ) {
+                const tail = unspokenInterpreterTail(
+                  interimTextToTranslate,
+                  spokenInterpreterSourcesRef.current
+                );
+                if (tail) {
+                  spokenInterpreterSourcesRef.current.add(interimTextToTranslate);
+                  enqueueInterpreterSpeech(translated);
+                }
+              }
             }
           }
         } catch (error: any) {
@@ -2070,8 +2185,6 @@ export default function Home() {
     // 新しいAbortControllerを作成
     translateAbortControllerRef.current = new AbortController();
 
-    // モバイル軽量化: デバウンス時間を調整（モバイル200ms、デスクトップ150ms）
-    const debounceTime = isMobile ? 200 : 150;
     translateDebounceRef.current = setTimeout(async () => {
       // すべての新しいテキストを順番に翻訳
       for (const textToTranslate of textsToTranslate) {
@@ -2123,42 +2236,44 @@ export default function Home() {
                 return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
               });
               
-              // 音声再生（ミュートされていない場合）
               if (!isMuted && translated) {
-                (async () => {
+                const tail = unspokenInterpreterTail(
+                  textToTranslate,
+                  spokenInterpreterSourcesRef.current
+                );
+                if (tail === textToTranslate) {
+                  spokenInterpreterSourcesRef.current.add(textToTranslate);
+                  enqueueInterpreterSpeech(translated);
+                } else if (tail) {
+                  spokenInterpreterSourcesRef.current.add(textToTranslate);
                   try {
-                    const speechLanguage = interpreterDirection === 'yue-to-ja' ? 'japanese' : translationLanguage;
-                    const voiceKey = interpreterDirection === 'yue-to-ja'
-                      ? 'japanese-female'
-                      : getInterpreterVoiceKey(translationLanguage);
-                    const audioResponse = await fetch('/api/generate-speech', {
+                    const tailResponse = await fetch('/api/translate', {
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json',
+                        Priority: 'high',
                       },
-                      body: JSON.stringify({ text: translated, language: speechLanguage, voiceKey }),
+                      body: JSON.stringify({
+                        text: tail,
+                        language: translationLanguage,
+                        direction: interpreterDirection,
+                      }),
+                      signal: abortController.signal,
+                      keepalive: true,
                     });
-
-                    if (audioResponse.ok) {
-                      const audioData = await audioResponse.json();
-                      const audioBase64 = audioData.audioContent;
-
-                      if (simultaneousModeAudioRef.current && audioBase64) {
-                        const audioElement = simultaneousModeAudioRef.current;
-                        const dataUrl = `data:audio/mp3;base64,${audioBase64}`;
-                        prepareAudioPlayback(audioElement, dataUrl, '同時通訳音声再生エラー', () => {
-                          resetAudioElement(audioElement);
-                        });
-                        audioElement.volume = 1.0;
+                    if (tailResponse.ok) {
+                      const tailData = await tailResponse.json();
+                      const tailTranslated = tailData.translated || tailData.translatedText || '';
+                      if (tailTranslated) {
+                        enqueueInterpreterSpeech(tailTranslated);
                       }
-                    } else {
-                      const errorText = await audioResponse.text();
-                      console.error('音声生成APIエラー:', audioResponse.status, errorText);
                     }
-                  } catch (err) {
-                    console.error('音声生成エラー:', err);
+                  } catch (tailError: any) {
+                    if (tailError?.name !== 'AbortError') {
+                      enqueueInterpreterSpeech(translated);
+                    }
                   }
-                })();
+                }
               }
             }
           } else {
@@ -2173,7 +2288,7 @@ export default function Home() {
       }
       
       translateAbortControllerRef.current = null;
-    }, debounceTime);
+    }, 0);
 
     return () => {
       if (translateDebounceRef.current) {
@@ -2617,43 +2732,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     });
     setTranslatedText(handPhrase);
     
-    // 音声生成（ミュートされていない場合）
-    if (!isMuted && handPhrase) {
-      (async () => {
-        try {
-          const speechLanguage = interpreterDirection === 'yue-to-ja' ? 'japanese' : translationLanguage;
-          const voiceKey = interpreterDirection === 'yue-to-ja'
-            ? 'japanese-female'
-            : getInterpreterVoiceKey(translationLanguage);
-          const audioResponse = await fetch('/api/generate-speech', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ text: handPhrase, language: speechLanguage, voiceKey }),
-          });
-
-          if (audioResponse.ok) {
-            const audioData = await audioResponse.json();
-            const audioBase64 = audioData.audioContent;
-
-            if (simultaneousModeAudioRef.current && audioBase64) {
-              const audioElement = simultaneousModeAudioRef.current;
-              const dataUrl = `data:audio/mp3;base64,${audioBase64}`;
-              prepareAudioPlayback(audioElement, dataUrl, '同時通訳音声再生エラー', () => {
-                resetAudioElement(audioElement);
-              });
-              audioElement.volume = 1.0;
-            }
-          } else {
-            const errorText = await audioResponse.text();
-            console.error('音声生成APIエラー:', audioResponse.status, errorText);
-          }
-        } catch (err) {
-          console.error('音声生成エラー:', err);
-        }
-      })();
-    }
+    enqueueInterpreterSpeech(handPhrase);
   };
   
   // 消音ボタンのハンドラー
