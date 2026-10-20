@@ -873,7 +873,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
                 );
               })()}
               {interimText &&
-                !latestLine.text.replace(/\s+/g, '').includes(interimText.trim().replace(/\s+/g, '')) && (
+                !recognizedTextLines[0].text.replace(/\s+/g, '').includes(interimText.trim().replace(/\s+/g, '')) && (
                 <div
                   style={{
                     color: '#6b7280',
