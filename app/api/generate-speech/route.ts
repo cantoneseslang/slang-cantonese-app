@@ -34,6 +34,16 @@ const PREMIUM_VOICE_MAP: Record<string, VoiceConfig> = {
     name: 'cmn-CN-Standard-D',
     ssmlGender: 'MALE',
   },
+  'japanese-female': {
+    languageCode: 'ja-JP',
+    name: 'ja-JP-Standard-A',
+    ssmlGender: 'FEMALE',
+  },
+  'japanese-male': {
+    languageCode: 'ja-JP',
+    name: 'ja-JP-Standard-C',
+    ssmlGender: 'MALE',
+  },
 };
 
 export async function POST(request: NextRequest) {
@@ -52,13 +62,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 });
     }
     
-    const requestedLanguage: 'cantonese' | 'mandarin' | undefined =
-      language === 'mandarin' ? 'mandarin' : language === 'cantonese' ? 'cantonese' : undefined;
+    const requestedLanguage: 'cantonese' | 'mandarin' | 'japanese' | undefined =
+      language === 'mandarin'
+        ? 'mandarin'
+        : language === 'japanese'
+          ? 'japanese'
+          : language === 'cantonese'
+            ? 'cantonese'
+            : undefined;
 
     const defaultVoice: VoiceConfig =
       requestedLanguage === 'mandarin'
         ? { languageCode: 'zh-CN', ssmlGender: 'NEUTRAL' }
-        : { languageCode: 'yue-Hant-HK', ssmlGender: 'NEUTRAL' };
+        : requestedLanguage === 'japanese'
+          ? { languageCode: 'ja-JP', ssmlGender: 'NEUTRAL' }
+          : { languageCode: 'yue-Hant-HK', ssmlGender: 'NEUTRAL' };
 
     const selectedVoice =
       typeof voiceKey === 'string' && PREMIUM_VOICE_MAP[voiceKey]
@@ -82,7 +100,7 @@ export async function POST(request: NextRequest) {
 
     const breakTime = isMobile ? (isNumberLike ? '100ms' : '90ms') : '80ms';
     const spokenBody =
-      requestedLanguage === 'mandarin'
+      requestedLanguage === 'mandarin' || requestedLanguage === 'japanese'
         ? escapeSsml(text)
         : buildContextPhonemeSsml(text, typeof meaningHint === 'string' ? meaningHint : '');
     const finalText = `<speak><break time="${breakTime}"/>${spokenBody}</speak>`;

@@ -84,7 +84,7 @@ async function activateHiddenMode(page: any) {
     await page.waitForTimeout(2000);
     
     // 隠しモードが起動したか確認（マイクボタンが表示されるまで待機）
-    const micButton = page.locator('img[src*="volume-logo"]').first();
+    const micButton = page.locator('img[src*="mic-yue-to-ja"], img[src*="volume-logo"]').first();
     await micButton.waitFor({ state: 'visible', timeout: 10000 });
     console.log('✅ 隠しモードが起動しました');
   } else {
@@ -95,7 +95,7 @@ async function activateHiddenMode(page: any) {
 // マイクボタンを長押しする関数（デスクトップ用）
 async function pressMicButtonDesktop(page: any, duration: number = 3000) {
   // マイクボタンを探す（ロゴマーク）
-  const micButton = page.locator('img[src*="volume-logo"]').first();
+  const micButton = page.locator('img[src*="mic-yue-to-ja"], img[src*="volume-logo"]').first();
   
   if (await micButton.count() === 0) {
     throw new Error('マイクボタンが見つかりません');
@@ -123,7 +123,7 @@ async function pressMicButtonDesktop(page: any, duration: number = 3000) {
 // マイクボタンを長押しする関数（モバイル用）
 async function pressMicButtonMobile(page: any, duration: number = 3000) {
   // マイクボタンを探す（ロゴマーク）
-  const micButton = page.locator('img[src*="volume-logo"]').first();
+  const micButton = page.locator('img[src*="mic-yue-to-ja"], img[src*="volume-logo"]').first();
   
   if (await micButton.count() === 0) {
     throw new Error('マイクボタンが見つかりません');

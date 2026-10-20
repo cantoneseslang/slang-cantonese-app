@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { text, language } = body;
+    const { text, language, direction } = body;
     
     if (!text || text.trim() === '') {
       return NextResponse.json({ error: 'Text is required' }, { 
@@ -89,12 +89,27 @@ export async function POST(request: NextRequest) {
     
     const normalizedText = normalizeText(text);
     const isMandarin = language === 'mandarin';
+    const isYueToJa = direction === 'yue-to-ja';
     let translated = '';
     let provider = '';
 
     if (DEEPSEEK_API_KEY) {
       try {
-        const messages = isMandarin
+        const messages = isYueToJa
+          ? [
+              {
+                role: 'system',
+                content: `あなたはプロの翻訳者です。以下のルールに従って広東語（口語）を日本語に翻訳してください：
+1. 意味を損なわず自然な口語表現にする
+2. 不要な注釈や説明を追加しない
+3. 訳文のみを簡潔に返す`,
+              },
+              {
+                role: 'user',
+                content: `以下の広東語テキストを自然な日本語に翻訳してください：\n\n${normalizedText}`,
+              },
+            ]
+          : isMandarin
           ? [
               {
                 role: 'system',
@@ -156,8 +171,12 @@ export async function POST(request: NextRequest) {
     }
 
     if (!translated) {
-      const target = isMandarin ? 'zh-CN' : 'yue';
-      translated = await translateWithGoogle(normalizedText, 'ja', target);
+      if (isYueToJa) {
+        translated = await translateWithGoogle(normalizedText, 'yue', 'ja');
+      } else {
+        const target = isMandarin ? 'zh-CN' : 'yue';
+        translated = await translateWithGoogle(normalizedText, 'ja', target);
+      }
       provider = 'google';
     }
 

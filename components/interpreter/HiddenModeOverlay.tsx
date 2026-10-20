@@ -1,5 +1,12 @@
 import React from 'react';
-import { forbidKantoGo } from '@/lib/asr-cantonese-fix';
+import { normalizeInterpreterTranscript } from '@/lib/interpreter-direction';
+import type { InterpreterDirection } from '@/lib/interpreter-direction';
+
+const INTERPRETER_CONTROL_ICONS = {
+  hand: '/images/interpreter/hand-yue-to-ja.png?v=1',
+  mic: '/images/interpreter/mic-yue-to-ja.png?v=1',
+  mute: '/images/interpreter/mute-yue-to-ja.png?v=1',
+} as const;
 
 type HiddenModeLine = {
   text: string;
@@ -12,6 +19,7 @@ type HiddenModeButton = 'hand' | 'mic' | 'mute' | null;
 interface HiddenModeOverlayProps {
   isMobile: boolean;
   translationLanguage: 'cantonese' | 'mandarin';
+  interpreterDirection: InterpreterDirection;
   translatedTextLines: HiddenModeLine[];
   translatedText: string | null;
   recognizedTextLines: HiddenModeLine[];
@@ -47,6 +55,7 @@ interface HiddenModeOverlayProps {
 const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
   isMobile,
   translationLanguage,
+  interpreterDirection,
   translatedTextLines,
   translatedText,
   recognizedTextLines,
@@ -226,7 +235,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
       }
       observers.forEach((observer) => observer.disconnect());
     };
-  }, [isMobile, showHelpPopups, showButtons, showTitle, translationLanguage]);
+  }, [isMobile, showHelpPopups, showButtons, showTitle, translationLanguage, interpreterDirection]);
 
   const mobileTopOffset = isMobile ? mobileLayout.top ?? baseMobileTopPx : undefined;
   const mobileBottomOffset = isMobile ? mobileLayout.bottom ?? baseMobileBottomPx : undefined;
@@ -281,11 +290,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           }}
         >
           <img
-            src={
-              translationLanguage === 'cantonese'
-                ? '/hand-button-1.svg?v=1'
-                : '/hand-button-mandarin-1.svg?v=1'
-            }
+            src={INTERPRETER_CONTROL_ICONS.hand}
             alt="hand button"
             draggable="false"
             style={{
@@ -400,11 +405,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
       >
         <img
           ref={volumeLogoRef}
-          src={
-            translationLanguage === 'cantonese'
-              ? '/volume-logo-1.svg?v=1'
-              : '/volume-logo-mandarin-1.svg?v=1'
-          }
+          src={INTERPRETER_CONTROL_ICONS.mic}
           alt="microphone"
           draggable="false"
           style={{
@@ -504,11 +505,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           }}
         >
           <img
-            src={
-              translationLanguage === 'cantonese'
-                ? '/mute-button-1.svg?v=1'
-                : '/mute-button-mandarin-1.svg?v=1'
-            }
+            src={INTERPRETER_CONTROL_ICONS.mute}
             alt="mute button"
             draggable="false"
             style={{
@@ -606,7 +603,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
         }}
       >
         <div
-          key={`translation-content-${translationLanguage}`}
+          key={`translation-content-${translationLanguage}-${interpreterDirection}`}
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -643,7 +640,9 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             <div style={{ color: '#111827' }}>{translatedText}</div>
           ) : (
             <div style={{ color: '#111827' }}>
-              {translationLanguage === 'cantonese'
+              {interpreterDirection === 'yue-to-ja'
+                ? '日本語翻訳がここに表示されます...'
+                : translationLanguage === 'cantonese'
                 ? '広東語翻訳がここに表示されます...'
                 : '中国語翻訳がここに表示されます...'}
             </div>
@@ -686,7 +685,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
         }}
       >
         <div
-          key={`japanese-content-${translationLanguage}`}
+          key={`japanese-content-${translationLanguage}-${interpreterDirection}`}
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -721,7 +720,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
                       textAlign: 'left',
                     }}
                   >
-                    <div>{forbidKantoGo(latestLine.text)}</div>
+                    <div>{normalizeInterpreterTranscript(latestLine.text, interpreterDirection)}</div>
                   </div>
                 );
               })()}
@@ -739,7 +738,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
                     textAlign: 'left',
                   }}
                 >
-                  {forbidKantoGo(interimText)}
+                  {normalizeInterpreterTranscript(interimText, interpreterDirection)}
                 </div>
               )}
             </>
@@ -753,11 +752,14 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
                   lineHeight: '1.6',
                 }}
               >
-                {forbidKantoGo(recognizedText) || 'マイクボタンを「長押し」しながら日本語を話してください...'}
+                {normalizeInterpreterTranscript(recognizedText, interpreterDirection) ||
+                  (interpreterDirection === 'yue-to-ja'
+                    ? 'マイクボタンを「長押し」しながら広東語を話してください...'
+                    : 'マイクボタンを「長押し」しながら日本語を話してください...')}
               </div>
               {interimText && (
                 <span style={{ color: '#6b7280', fontStyle: 'italic', width: '100%', textAlign: 'left' }}>
-                  {forbidKantoGo(interimText)}
+                  {normalizeInterpreterTranscript(interimText, interpreterDirection)}
                 </span>
               )}
             </>
@@ -793,7 +795,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           ref={titleRef}
           style={{
             position: 'fixed',
-            bottom: isMobile ? 'calc(env(safe-area-inset-bottom) + 1.8rem)' : '3.75rem',
+            bottom: isMobile ? 'calc(env(safe-area-inset-bottom) + 5.2rem)' : '5.5rem',
             left: '50%',
             transform: 'translateX(-50%)',
             textAlign: 'center',
@@ -814,7 +816,11 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
               textShadow: 'none',
             }}
           >
-            {translationLanguage === 'cantonese' ? 'カントン語通訳' : '中国語通訳'}
+            {interpreterDirection === 'yue-to-ja'
+              ? '日本語通訳'
+              : translationLanguage === 'cantonese'
+                ? 'カントン語通訳'
+                : '中国語通訳'}
           </div>
           <div
             style={{
@@ -914,11 +920,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             }}
           >
             <img
-              src={
-                translationLanguage === 'cantonese'
-                  ? '/hand-button-1.svg?v=1'
-                  : '/hand-button-mandarin-1.svg?v=1'
-              }
+              src={INTERPRETER_CONTROL_ICONS.hand}
               alt="hand button"
               draggable="false"
               style={{
@@ -1051,11 +1053,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
         >
           <img
             ref={volumeLogoRef}
-            src={
-              translationLanguage === 'cantonese'
-                ? '/volume-logo-1.svg?v=1'
-                : '/volume-logo-mandarin-1.svg?v=1'
-            }
+            src={INTERPRETER_CONTROL_ICONS.mic}
             alt="microphone"
             draggable="false"
             style={{
@@ -1158,11 +1156,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             }}
           >
             <img
-              src={
-                translationLanguage === 'cantonese'
-                  ? '/mute-button-1.svg?v=1'
-                  : '/mute-button-mandarin-1.svg?v=1'
-              }
+              src={INTERPRETER_CONTROL_ICONS.mute}
               alt="mute button"
               draggable="false"
               style={{

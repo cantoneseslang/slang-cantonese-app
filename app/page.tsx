@@ -29,6 +29,7 @@ import { createClient } from '@/lib/supabase/client';
 import HiddenModeOverlay from '../components/interpreter/HiddenModeOverlay';
 import SettingsPortal from '../components/settings/SettingsPortal';
 import TeacherMailFloat from '../components/settings/TeacherMailFloat';
+import InterpreterDirectionFloat from '../components/interpreter/InterpreterDirectionFloat';
 import SlangAlignedReading, { SlangBookmarkRow } from '../components/SlangAlignedReading';
 import {
   CONVERSION_CHAR_LIMIT,
@@ -39,7 +40,11 @@ import {
   type ConversionDirection,
   type ConversionLimitReason,
 } from '@/lib/conversion-limits';
-import { forbidKantoGo } from '@/lib/asr-cantonese-fix';
+import {
+  getInterpreterAsrLang,
+  normalizeInterpreterTranscript,
+  type InterpreterDirection,
+} from '@/lib/interpreter-direction';
 import categoriesData from '@/data/categories.json';
 import noteCategoriesData from '@/data/note-categories.json';
 
@@ -1243,6 +1248,8 @@ export default function Home() {
   
   // 言語切り替えの状態（'cantonese' | 'mandarin'）
   const [translationLanguage, setTranslationLanguage] = useState<'cantonese' | 'mandarin'>('cantonese');
+  const [interpreterDirection, setInterpreterDirection] = useState<InterpreterDirection>('ja-to-target');
+  const interpreterDirectionRef = useRef<InterpreterDirection>('ja-to-target');
   const titleClickCountRef = useRef(0);
   const titleClickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isButtonRotating, setIsButtonRotating] = useState(false);
@@ -1860,7 +1867,7 @@ export default function Home() {
         
         try {
           recognitionRef.current = new SpeechRecognition();
-          recognitionRef.current.lang = 'ja-JP';
+          recognitionRef.current.lang = getInterpreterAsrLang(interpreterDirectionRef.current);
           recognitionRef.current.continuous = true;
           recognitionRef.current.interimResults = true;
 
@@ -1870,7 +1877,10 @@ export default function Home() {
             
             // resultIndexから新しい結果のみを処理
             for (let i = event.resultIndex; i < event.results.length; i++) {
-              const transcript = forbidKantoGo(event.results[i][0].transcript);
+              const transcript = normalizeInterpreterTranscript(
+                event.results[i][0].transcript,
+                interpreterDirectionRef.current
+              );
               if (event.results[i].isFinal) {
                 // finalの結果を集約
                 newFinal += transcript;
@@ -1986,12 +1996,12 @@ export default function Home() {
     // recognizedTextLinesのすべての新しいテキストを翻訳
     // まだ翻訳されていないテキストのみを翻訳
     const textsToTranslate = recognizedTextLines
-      .map(line => forbidKantoGo(line.text).trim())
+      .map(line => normalizeInterpreterTranscript(line.text, interpreterDirection).trim())
       .filter(text => text && !translatedTextSetRef.current.has(text));
 
     if (textsToTranslate.length === 0) {
       // interimテキストがあれば、それも翻訳対象に
-      const interimTextToTranslate = forbidKantoGo(interimText).trim();
+      const interimTextToTranslate = normalizeInterpreterTranscript(interimText, interpreterDirection).trim();
       if (
         !interimTextToTranslate ||
         translatedTextSetRef.current.has(interimTextToTranslate) ||
@@ -2009,7 +2019,11 @@ export default function Home() {
               'Content-Type': 'application/json',
               'Priority': 'high'
             },
-            body: JSON.stringify({ text: interimTextToTranslate, language: translationLanguage }),
+            body: JSON.stringify({
+              text: interimTextToTranslate,
+              language: translationLanguage,
+              direction: interpreterDirection,
+            }),
             keepalive: true
           });
 
@@ -2078,7 +2092,11 @@ export default function Home() {
               'Content-Type': 'application/json',
               'Priority': 'high'
             },
-            body: JSON.stringify({ text: textToTranslate, language: translationLanguage }),
+            body: JSON.stringify({
+              text: textToTranslate,
+              language: translationLanguage,
+              direction: interpreterDirection,
+            }),
             signal: abortController.signal,
             keepalive: true
           });
@@ -2109,13 +2127,16 @@ export default function Home() {
               if (!isMuted && translated) {
                 (async () => {
                   try {
-                    const voiceKey = getInterpreterVoiceKey(translationLanguage);
+                    const speechLanguage = interpreterDirection === 'yue-to-ja' ? 'japanese' : translationLanguage;
+                    const voiceKey = interpreterDirection === 'yue-to-ja'
+                      ? 'japanese-female'
+                      : getInterpreterVoiceKey(translationLanguage);
                     const audioResponse = await fetch('/api/generate-speech', {
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json',
                       },
-                      body: JSON.stringify({ text: translated, language: translationLanguage, voiceKey }),
+                      body: JSON.stringify({ text: translated, language: speechLanguage, voiceKey }),
                     });
 
                     if (audioResponse.ok) {
@@ -2162,7 +2183,7 @@ export default function Home() {
         translateAbortControllerRef.current.abort();
       }
     };
-  }, [recognizedTextLines, recognizedText, interimText, isHiddenMode, isMuted, translationLanguage, interpreterCantoneseVoice, interpreterMandarinVoice, getInterpreterVoiceKey]);
+  }, [recognizedTextLines, recognizedText, interimText, isHiddenMode, isMuted, translationLanguage, interpreterDirection, interpreterCantoneseVoice, interpreterMandarinVoice, getInterpreterVoiceKey]);
 
 const safelyResetRecognitionInstance = (reason: string = 'reset') => {
   if (!recognitionRef.current) {
@@ -2295,6 +2316,8 @@ const resetInterpreterSession = ({
 
   if (resetLanguage) {
     setTranslationLanguage('cantonese');
+    interpreterDirectionRef.current = 'ja-to-target';
+    setInterpreterDirection('ja-to-target');
     titleClickCountRef.current = 0;
     setIsButtonRotating(false);
     if (titleClickTimeoutRef.current) {
@@ -2344,6 +2367,8 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     reason: `language-change:${newLanguage}`,
   });
 
+  interpreterDirectionRef.current = 'ja-to-target';
+  setInterpreterDirection('ja-to-target');
   setTranslationLanguage(newLanguage);
 
   setShowTitle(false);
@@ -2364,7 +2389,60 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         setButtonsAnimated(true);
       });
     });
-  }
+    }
+  };
+
+  const applyInterpreterDirection = (nextDirection: InterpreterDirection) => {
+    if (interpreterDirection === nextDirection) {
+      return;
+    }
+
+    resetInterpreterSession({
+      resetLanguage: false,
+      resetButtons: false,
+      clearTitle: false,
+      resetTranslationArea: true,
+      resetMute: false,
+      clearHelpPopups: false,
+      reason: `direction-change:${nextDirection}`,
+    });
+
+    interpreterDirectionRef.current = nextDirection;
+    setInterpreterDirection(nextDirection);
+    if (nextDirection === 'yue-to-ja') {
+      setTranslationLanguage('cantonese');
+    }
+
+    setIsButtonRotating(true);
+    setShowTitle(false);
+    setTimeout(() => {
+      setShowTitle(true);
+      if (titleAudioRef.current && !isRecording) {
+        titleAudioRef.current.currentTime = 0;
+        titleAudioRef.current.play().catch((e) => {
+          console.error('タイトル音声再生エラー:', e);
+        });
+      }
+    }, 50);
+
+    if (showButtons) {
+      setButtonsAnimated(false);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setButtonsAnimated(true);
+        });
+      });
+    }
+
+    setTimeout(() => {
+      setIsButtonRotating(false);
+    }, 600);
+  };
+
+  const handleInterpreterDirectionToggle = () => {
+    applyInterpreterDirection(
+      interpreterDirection === 'yue-to-ja' ? 'ja-to-target' : 'yue-to-ja'
+    );
   };
 
   // ESCキーで隠しモード終了
@@ -2519,7 +2597,9 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       setShowHelpPopups(false);
     }
     
-    const handPhrase = translationLanguage === 'cantonese' 
+    const handPhrase = interpreterDirection === 'yue-to-ja'
+      ? '広東語がわからないので、翻訳機を使って話します。'
+      : translationLanguage === 'cantonese' 
       ? '我唔識講廣東話，所以我需要用翻譯機同你溝通'
       : '我不会讲中文，所以我需要使用翻译机跟你沟通。';
     
@@ -2541,13 +2621,16 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     if (!isMuted && handPhrase) {
       (async () => {
         try {
-          const voiceKey = getInterpreterVoiceKey(translationLanguage);
+          const speechLanguage = interpreterDirection === 'yue-to-ja' ? 'japanese' : translationLanguage;
+          const voiceKey = interpreterDirection === 'yue-to-ja'
+            ? 'japanese-female'
+            : getInterpreterVoiceKey(translationLanguage);
           const audioResponse = await fetch('/api/generate-speech', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ text: handPhrase, language: translationLanguage, voiceKey }),
+            body: JSON.stringify({ text: handPhrase, language: speechLanguage, voiceKey }),
           });
 
           if (audioResponse.ok) {
@@ -2616,7 +2699,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
         if (SpeechRecognition) {
           recognitionRef.current = new SpeechRecognition();
-          recognitionRef.current.lang = 'ja-JP';
+          recognitionRef.current.lang = getInterpreterAsrLang(interpreterDirectionRef.current);
           recognitionRef.current.continuous = true;
           recognitionRef.current.interimResults = true;
 
@@ -2626,7 +2709,10 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 
                 // 全ての結果を処理（resultIndexから最後まで）
                 for (let i = event.resultIndex; i < event.results.length; i++) {
-                  const transcript = forbidKantoGo(event.results[i][0].transcript);
+                  const transcript = normalizeInterpreterTranscript(
+                event.results[i][0].transcript,
+                interpreterDirectionRef.current
+              );
                   if (event.results[i].isFinal) {
                     // final結果を追加（空白で区切る）
                     finalTranscript += (finalTranscript ? ' ' : '') + transcript;
@@ -2708,6 +2794,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       // recognitionRef.currentを直接チェック（isRecordingの状態に依存しない）
       if (recognitionRef.current) {
         try {
+          recognitionRef.current.lang = getInterpreterAsrLang(interpreterDirectionRef.current);
           recognitionRef.current.start();
           console.log('音声認識開始成功');
         } catch (e: any) {
@@ -2729,7 +2816,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           if (SpeechRecognition) {
             try {
               recognitionRef.current = new SpeechRecognition();
-              recognitionRef.current.lang = 'ja-JP';
+              recognitionRef.current.lang = getInterpreterAsrLang(interpreterDirectionRef.current);
               recognitionRef.current.continuous = true;
               recognitionRef.current.interimResults = true;
               
@@ -2739,7 +2826,10 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 
                 // resultIndexから新しい結果のみを処理（重複を防ぐ）
                 for (let i = event.resultIndex; i < event.results.length; i++) {
-                  const transcript = forbidKantoGo(event.results[i][0].transcript);
+                  const transcript = normalizeInterpreterTranscript(
+                event.results[i][0].transcript,
+                interpreterDirectionRef.current
+              );
                   if (event.results[i].isFinal) {
                     // finalの結果は新しいもののみ追加
                     newFinal += transcript;
@@ -6206,6 +6296,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         <HiddenModeOverlay
           isMobile={isMobile}
           translationLanguage={translationLanguage}
+          interpreterDirection={interpreterDirection}
           translatedTextLines={translatedTextLines}
           translatedText={translatedText}
           recognizedTextLines={recognizedTextLines}
@@ -10520,6 +10611,12 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
 
       </div>
       {!isHiddenMode && <TeacherMailFloat user={user} />}
+      {isHiddenMode && (
+        <InterpreterDirectionFloat
+          direction={interpreterDirection}
+          onToggle={handleInterpreterDirectionToggle}
+        />
+      )}
     </div>
   );
 }
