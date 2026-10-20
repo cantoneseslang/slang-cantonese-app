@@ -816,7 +816,8 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           ref={titleRef}
           style={{
             position: 'fixed',
-            bottom: isMobile ? 'calc(env(safe-area-inset-bottom) + 5.2rem)' : '5.5rem',
+            // タイトルは下。ボタンを上げて重ねない（ca26eab）。タイトルを上げるな。
+            bottom: isMobile ? 'calc(env(safe-area-inset-bottom) + 1.8rem)' : '3.75rem',
             left: '50%',
             transform: 'translateX(-50%)',
             textAlign: 'center',
@@ -889,6 +890,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
         ref={micButtonRef}
         style={{
           position: 'fixed',
+          // タイトルより上。+3rem は重なり解消の確定値。下げるとタイトルと重なる。
           bottom: isMobile
             ? `calc(env(safe-area-inset-bottom) + ${buttonBottomOffsetRem + 3}rem)`
             : '6rem',
