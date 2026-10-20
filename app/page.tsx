@@ -39,6 +39,7 @@ import {
   type ConversionDirection,
   type ConversionLimitReason,
 } from '@/lib/conversion-limits';
+import { forbidKantoGo } from '@/lib/asr-cantonese-fix';
 import categoriesData from '@/data/categories.json';
 import noteCategoriesData from '@/data/note-categories.json';
 
@@ -1869,7 +1870,7 @@ export default function Home() {
             
             // resultIndexから新しい結果のみを処理
             for (let i = event.resultIndex; i < event.results.length; i++) {
-              const transcript = event.results[i][0].transcript;
+              const transcript = forbidKantoGo(event.results[i][0].transcript);
               if (event.results[i].isFinal) {
                 // finalの結果を集約
                 newFinal += transcript;
@@ -1985,12 +1986,12 @@ export default function Home() {
     // recognizedTextLinesのすべての新しいテキストを翻訳
     // まだ翻訳されていないテキストのみを翻訳
     const textsToTranslate = recognizedTextLines
-      .map(line => line.text.trim())
+      .map(line => forbidKantoGo(line.text).trim())
       .filter(text => text && !translatedTextSetRef.current.has(text));
 
     if (textsToTranslate.length === 0) {
       // interimテキストがあれば、それも翻訳対象に
-      const interimTextToTranslate = interimText.trim();
+      const interimTextToTranslate = forbidKantoGo(interimText).trim();
       if (
         !interimTextToTranslate ||
         translatedTextSetRef.current.has(interimTextToTranslate) ||
@@ -2625,7 +2626,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 
                 // 全ての結果を処理（resultIndexから最後まで）
                 for (let i = event.resultIndex; i < event.results.length; i++) {
-                  const transcript = event.results[i][0].transcript;
+                  const transcript = forbidKantoGo(event.results[i][0].transcript);
                   if (event.results[i].isFinal) {
                     // final結果を追加（空白で区切る）
                     finalTranscript += (finalTranscript ? ' ' : '') + transcript;
@@ -2738,7 +2739,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 
                 // resultIndexから新しい結果のみを処理（重複を防ぐ）
                 for (let i = event.resultIndex; i < event.results.length; i++) {
-                  const transcript = event.results[i][0].transcript;
+                  const transcript = forbidKantoGo(event.results[i][0].transcript);
                   if (event.results[i].isFinal) {
                     // finalの結果は新しいもののみ追加
                     newFinal += transcript;

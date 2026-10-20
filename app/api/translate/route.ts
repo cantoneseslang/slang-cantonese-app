@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { forbidKantoGo } from '@/lib/asr-cantonese-fix';
 
 // DeepSeek を優先。失敗時は Google Cloud Translation にフォールバック
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
@@ -7,10 +8,12 @@ const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 const GOOGLE_TRANSLATE_URL = 'https://translation.googleapis.com/language/translate/v2';
 
 const normalizeText = (text: string): string =>
-  text
-    .normalize('NFC')
-    .replace(/\r\n/g, '\n')
-    .trim();
+  forbidKantoGo(
+    text
+      .normalize('NFC')
+      .replace(/\r\n/g, '\n')
+      .trim()
+  );
 
 function cleanTranslatedText(text: string): string {
   return text

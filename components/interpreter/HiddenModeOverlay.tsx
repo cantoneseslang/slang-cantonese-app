@@ -1,4 +1,5 @@
 import React from 'react';
+import { forbidKantoGo } from '@/lib/asr-cantonese-fix';
 
 type HiddenModeLine = {
   text: string;
@@ -720,7 +721,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
                       textAlign: 'left',
                     }}
                   >
-                    <div>{latestLine.text}</div>
+                    <div>{forbidKantoGo(latestLine.text)}</div>
                   </div>
                 );
               })()}
@@ -738,7 +739,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
                     textAlign: 'left',
                   }}
                 >
-                  {interimText}
+                  {forbidKantoGo(interimText)}
                 </div>
               )}
             </>
@@ -752,11 +753,11 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
                   lineHeight: '1.6',
                 }}
               >
-                {recognizedText || 'マイクボタンを「長押し」しながら日本語を話してください...'}
+                {forbidKantoGo(recognizedText) || 'マイクボタンを「長押し」しながら日本語を話してください...'}
               </div>
               {interimText && (
                 <span style={{ color: '#6b7280', fontStyle: 'italic', width: '100%', textAlign: 'left' }}>
-                  {interimText}
+                  {forbidKantoGo(interimText)}
                 </span>
               )}
             </>
