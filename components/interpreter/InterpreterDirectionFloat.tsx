@@ -26,7 +26,7 @@ export default function InterpreterDirectionFloat({
       type="button"
       data-interpreter-direction-float
       onClick={onToggle}
-      aria-label={reversed ? '日本語入力→広東語通訳' : '広東語入力→日本語通訳'}
+      aria-label={reversed ? '日本語入力→広東語通訳' : '香港→日本 広東語を話して日本語で聞く'}
       style={{
         position: 'fixed',
         left: 16,
@@ -34,22 +34,14 @@ export default function InterpreterDirectionFloat({
         zIndex: 2147483647,
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 8,
+        justifyContent: 'center',
         height: 48,
-        padding: '0 18px 0 12px',
+        padding: '0 16px',
         border: 'none',
         borderRadius: 999,
-        background: reversed
-          ? 'linear-gradient(145deg, #34C759, #248A3D)'
-          : 'linear-gradient(145deg, #007AFF, #0051D5)',
-        color: '#fff',
-        fontSize: 15,
-        fontWeight: 700,
-        letterSpacing: '0.01em',
+        background: '#fff',
         cursor: 'pointer',
-        boxShadow: reversed
-          ? '0 4px 12px rgba(52,199,89,0.3), inset 0 1px 0 rgba(255,255,255,0.2)'
-          : '0 4px 12px rgba(0,122,255,0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.16)',
         touchAction: 'manipulation',
         WebkitTapHighlightColor: 'transparent',
       }}
@@ -57,14 +49,13 @@ export default function InterpreterDirectionFloat({
       <img
         src={
           reversed
-            ? '/images/convert/jp-to-hk.png?v=2'
-            : '/images/interpreter/hk-to-jp.png?v=1'
+            ? '/images/interpreter/float-jp-to-hk.png?v=1'
+            : '/images/interpreter/float-hk-to-jp.png?v=1'
         }
-        alt=""
+        alt={reversed ? '🇯🇵→🇭🇰' : '🇭🇰→🇯🇵'}
         draggable="false"
-        style={{ width: 36, height: 22, objectFit: 'contain' }}
+        style={{ width: 92, height: 32, objectFit: 'contain' }}
       />
-      {reversed ? '🇯🇵→🇭🇰' : '🇭🇰→🇯🇵'}
     </button>,
     document.body
   );

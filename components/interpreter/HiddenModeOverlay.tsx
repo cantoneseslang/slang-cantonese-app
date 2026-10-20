@@ -2,11 +2,32 @@ import React from 'react';
 import { normalizeInterpreterTranscript } from '@/lib/interpreter-direction';
 import type { InterpreterDirection } from '@/lib/interpreter-direction';
 
-const INTERPRETER_CONTROL_ICONS = {
-  hand: '/images/interpreter/hand-yue-to-ja.png?v=1',
-  mic: '/images/interpreter/mic-yue-to-ja.png?v=1',
-  mute: '/images/interpreter/mute-yue-to-ja.png?v=1',
-} as const;
+function interpreterControlIcon(
+  kind: 'hand' | 'mic' | 'mute',
+  translationLanguage: 'cantonese' | 'mandarin',
+  direction: InterpreterDirection
+) {
+  if (direction === 'yue-to-ja') {
+    return {
+      hand: '/images/interpreter/hand-yue-to-ja.png?v=1',
+      mic: '/images/interpreter/mic-yue-to-ja.png?v=1',
+      mute: '/images/interpreter/mute-yue-to-ja.png?v=1',
+    }[kind];
+  }
+  if (kind === 'hand') {
+    return translationLanguage === 'cantonese'
+      ? '/hand-button-1.svg?v=1'
+      : '/hand-button-mandarin-1.svg?v=1';
+  }
+  if (kind === 'mic') {
+    return translationLanguage === 'cantonese'
+      ? '/volume-logo-1.svg?v=1'
+      : '/volume-logo-mandarin-1.svg?v=1';
+  }
+  return translationLanguage === 'cantonese'
+    ? '/mute-button-1.svg?v=1'
+    : '/mute-button-mandarin-1.svg?v=1';
+}
 
 type HiddenModeLine = {
   text: string;
@@ -290,7 +311,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           }}
         >
           <img
-            src={INTERPRETER_CONTROL_ICONS.hand}
+            src={interpreterControlIcon('hand', translationLanguage, interpreterDirection)}
             alt="hand button"
             draggable="false"
             style={{
@@ -405,7 +426,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
       >
         <img
           ref={volumeLogoRef}
-          src={INTERPRETER_CONTROL_ICONS.mic}
+          src={interpreterControlIcon('mic', translationLanguage, interpreterDirection)}
           alt="microphone"
           draggable="false"
           style={{
@@ -505,7 +526,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
           }}
         >
           <img
-            src={INTERPRETER_CONTROL_ICONS.mute}
+            src={interpreterControlIcon('mute', translationLanguage, interpreterDirection)}
             alt="mute button"
             draggable="false"
             style={{
@@ -920,7 +941,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             }}
           >
             <img
-              src={INTERPRETER_CONTROL_ICONS.hand}
+              src={interpreterControlIcon('hand', translationLanguage, interpreterDirection)}
               alt="hand button"
               draggable="false"
               style={{
@@ -1053,7 +1074,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
         >
           <img
             ref={volumeLogoRef}
-            src={INTERPRETER_CONTROL_ICONS.mic}
+            src={interpreterControlIcon('mic', translationLanguage, interpreterDirection)}
             alt="microphone"
             draggable="false"
             style={{
@@ -1156,7 +1177,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             }}
           >
             <img
-              src={INTERPRETER_CONTROL_ICONS.mute}
+              src={interpreterControlIcon('mute', translationLanguage, interpreterDirection)}
               alt="mute button"
               draggable="false"
               style={{
