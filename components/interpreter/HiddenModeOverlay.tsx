@@ -1,5 +1,5 @@
 import React from 'react';
-import { normalizeInterpreterTranscript } from '@/lib/interpreter-direction';
+import { collapseInterpreterTurns, normalizeInterpreterTranscript } from '@/lib/interpreter-direction';
 import type { InterpreterDirection } from '@/lib/interpreter-direction';
 
 function interpreterControlIcon(
@@ -40,25 +40,6 @@ type InterpreterTurn = {
   source: string;
   translation: string;
 };
-
-function pairInterpreterTurns(
-  recognized: HiddenModeLine[],
-  translated: HiddenModeLine[]
-): InterpreterTurn[] {
-  const count = Math.max(recognized.length, translated.length);
-  const turns: InterpreterTurn[] = [];
-  for (let i = 0; i < count; i += 1) {
-    const source = recognized[i]?.text || '';
-    const translation = translated[i]?.text || '';
-    if (!source && !translation) continue;
-    turns.push({
-      id: `${recognized[i]?.timestamp || translated[i]?.timestamp || i}-${i}`,
-      source,
-      translation,
-    });
-  }
-  return turns;
-}
 
 function BookmarkStar({
   bookmarked,
@@ -106,6 +87,7 @@ interface HiddenModeOverlayProps {
   translatedText: string | null;
   recognizedTextLines: HiddenModeLine[];
   recognizedText: string;
+  interpreterHistory: InterpreterTurn[];
   interimText: string | null;
   showTitle: boolean;
   handleTitleClick: () => void;
@@ -144,6 +126,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
   translatedText,
   recognizedTextLines,
   recognizedText,
+  interpreterHistory,
   interimText,
   showTitle,
   handleTitleClick,
@@ -177,10 +160,6 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
   const recognizedFrameRef = React.useRef<HTMLDivElement | null>(null);
   const micButtonRef = React.useRef<HTMLDivElement | null>(null);
   const titleRef = React.useRef<HTMLDivElement | null>(null);
-  const pullStartYRef = React.useRef<number | null>(null);
-  const pullYRef = React.useRef(0);
-  const [pullY, setPullY] = React.useState(0);
-  const [pulling, setPulling] = React.useState(false);
   const [stackExpanded, setStackExpanded] = React.useState(false);
   const micHelpRef = React.useRef<HTMLDivElement | null>(null);
   const handHelpRef = React.useRef<HTMLDivElement | null>(null);
@@ -333,42 +312,26 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
   const mobileBottomOffset = isMobile ? mobileLayout.bottom ?? baseMobileBottomPx : undefined;
   const mobileContentHeight = isMobile ? mobileLayout.height : undefined;
 
-  const turns = pairInterpreterTurns(recognizedTextLines, translatedTextLines);
-  const historyTurns = turns.slice(1);
-  const PULL_THRESHOLD = 72;
+  const historyTurns = collapseInterpreterTurns(interpreterHistory);
+  const expandProgress = stackExpanded ? 1 : 0;
 
-  const expandProgress = stackExpanded
-    ? Math.max(0, Math.min(1, 1 + pullY / PULL_THRESHOLD))
-    : Math.max(0, Math.min(1, pullY / PULL_THRESHOLD));
+  React.useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtml = html.style.overscrollBehaviorY;
+    const prevBody = body.style.overscrollBehaviorY;
+    html.style.overscrollBehaviorY = 'none';
+    body.style.overscrollBehaviorY = 'none';
+    return () => {
+      html.style.overscrollBehaviorY = prevHtml;
+      body.style.overscrollBehaviorY = prevBody;
+    };
+  }, []);
 
-  const beginPull = (clientY: number) => {
+  const toggleStack = () => {
     if (historyTurns.length === 0) return;
-    pullStartYRef.current = clientY;
-    setPulling(true);
-  };
-
-  const movePull = (clientY: number) => {
-    if (pullStartYRef.current == null) return;
-    const dy = clientY - pullStartYRef.current;
-    const next = stackExpanded
-      ? Math.max(-120, Math.min(0, dy))
-      : Math.max(0, Math.min(120, dy));
-    pullYRef.current = next;
-    setPullY(next);
-  };
-
-  const finishPull = () => {
-    if (historyTurns.length > 0) {
-      if (!stackExpanded && pullYRef.current >= PULL_THRESHOLD) {
-        setStackExpanded(true);
-      } else if (stackExpanded && pullYRef.current <= -40) {
-        setStackExpanded(false);
-      }
-    }
-    pullYRef.current = 0;
-    setPullY(0);
-    pullStartYRef.current = null;
-    setPulling(false);
+    setStackExpanded((open) => !open);
   };
 
   const frameTuck = 16 * (1 - expandProgress);
@@ -787,13 +750,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
 
       <div
         ref={recognizedFrameRef}
-        onPointerDown={(event) => {
-          if (event.button !== 0) return;
-          beginPull(event.clientY);
-        }}
-        onPointerMove={(event) => movePull(event.clientY)}
-        onPointerUp={finishPull}
-        onPointerCancel={finishPull}
+        onClick={toggleStack}
         style={{
           position: 'fixed',
           top: isMobile
@@ -801,13 +758,15 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             : '50%',
           left: '50%',
           transform: isMobile
-            ? `translate(-50%, ${pullY * 0.35}px)`
-            : `translate(-50%, calc(-50% + ${pullY * 0.35}px))`,
+            ? 'translate(-50%, 0)'
+            : 'translate(-50%, -50%)',
           width: isMobile ? 'calc(100vw - 2rem)' : '90%',
           maxWidth: isMobile ? 'calc(100vw - 2rem)' : '800px',
           zIndex: 1000,
           overflow: 'visible',
           boxSizing: 'border-box',
+          cursor: historyTurns.length > 0 ? 'pointer' : 'default',
+          overscrollBehavior: 'none',
         }}
       >
       <div
@@ -927,9 +886,9 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             </>
           )}
         </div>
-        {historyTurns.length > 0 && pullY > 8 && !stackExpanded && (
+        {historyTurns.length > 0 && (
           <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.35rem' }}>
-            {expandProgress >= 1 ? '離すと履歴が開く' : '下に引いて履歴を開く'}
+            {stackExpanded ? 'タップで閉じる' : 'タップで会話を表示'}
           </div>
         )}
       </div>
@@ -942,12 +901,14 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
             left: 0,
             right: 0,
             marginTop: `-${frameTuck}px`,
-            maxHeight: isMobile ? '34vh' : '40vh',
+            maxHeight: stackExpanded ? (isMobile ? '52vh' : '56vh') : (isMobile ? '34vh' : '40vh'),
             overflowY: stackExpanded ? 'auto' : 'hidden',
             overflowX: 'hidden',
-            transition: pulling
-              ? 'none'
-              : 'margin-top 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            overscrollBehavior: 'contain',
+            transition: 'margin-top 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), max-height 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            animation: stackExpanded
+              ? 'interpreterStackBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
+              : 'none',
             zIndex: 1,
             display: 'flex',
             flexDirection: 'column',
@@ -970,9 +931,7 @@ const HiddenModeOverlay: React.FC<HiddenModeOverlayProps> = ({
                   display: 'flex',
                   alignItems: isLatestHistory || stackExpanded ? 'flex-start' : 'flex-end',
                   zIndex: historyTurns.length - index,
-                  transition: pulling
-                    ? 'none'
-                    : 'height 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), margin-top 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  transition: 'height 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), margin-top 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)',
                 }}
               >
                 <div

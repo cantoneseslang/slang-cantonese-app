@@ -120,6 +120,18 @@ button[title="カメラ/OCRで読み取り"] svg {
   }
 }
 
+@keyframes interpreterStackBounce {
+  0% {
+    transform: translateY(-12px);
+  }
+  55% {
+    transform: translateY(6px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
 /* 雲ポップアップアニメーション（ニュッと出る） */
 @keyframes cloudPopUp {
   0% {

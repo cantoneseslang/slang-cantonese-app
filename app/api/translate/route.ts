@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { forbidKantoGo } from '@/lib/asr-cantonese-fix';
+import { correctInterpreterTranslation, type InterpreterDirection } from '@/lib/interpreter-direction';
 
 // 通訳は Google と DeepSeek を同時に走らせ、先に返った方を使う
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
@@ -210,7 +211,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const { translated, provider } = await firstNonEmpty(labeled);
+    const { translated: rawTranslated, provider } = await firstNonEmpty(labeled);
+    const translated = correctInterpreterTranslation(
+      normalizedText,
+      rawTranslated,
+      (isYueToJa ? 'yue-to-ja' : 'ja-to-target') as InterpreterDirection,
+      isMandarin ? 'mandarin' : 'cantonese'
+    );
 
     if (!translated) {
       return NextResponse.json(

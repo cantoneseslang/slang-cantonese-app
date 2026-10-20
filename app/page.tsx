@@ -41,6 +41,8 @@ import {
   type ConversionLimitReason,
 } from '@/lib/conversion-limits';
 import {
+  collapseInterpreterTurns,
+  correctInterpreterTranslation,
   getInterpreterAsrLang,
   isInterpreterClauseReady,
   normalizeInterpreterTranscript,
@@ -1299,6 +1301,7 @@ export default function Home() {
   const [translatedText, setTranslatedText] = useState('');
   const [recognizedTextLines, setRecognizedTextLines] = useState<TextLine[]>([]); // タイムスタンプ付きテキスト行
   const [translatedTextLines, setTranslatedTextLines] = useState<TextLine[]>([]); // タイムスタンプ付き広東語翻訳行
+  const [interpreterHistory, setInterpreterHistory] = useState<Array<{ id: string; source: string; translation: string }>>([]);
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<any>(null);
   const translateDebounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -1319,6 +1322,7 @@ export default function Home() {
   const lastTranslatedTextRef = useRef<string>('');
   const lastProcessedFinalTextRef = useRef<string>('');
   const recognizedFinalTextRef = useRef<string>('');
+  const displayedTranslateSourceRef = useRef<string>('');
   
   // 音声出力デバイスの管理
   const [currentAudioOutputDevice, setCurrentAudioOutputDevice] = useState<string>('');
@@ -2040,37 +2044,12 @@ export default function Home() {
                 const result = prev + trimmed + ' ';
                 return result;
               });
-              
-              setRecognizedText(prev => {
-                // 既存のテキストからinterim部分を除去してから追加
-                let baseText = prev;
-                if (interim && baseText.includes(interim)) {
-                  // interim部分を除去（最後の出現のみ）
-                  const lastIndex = baseText.lastIndexOf(interim);
-                  if (lastIndex !== -1) {
-                    baseText = baseText.substring(0, lastIndex) + baseText.substring(lastIndex + interim.length);
-                  }
-                }
-                baseText = baseText.trim();
-                
-                // finalテキストを追加
-                return baseText + (baseText ? ' ' : '') + trimmed;
-              });
-              
-              // finalが確定したら必ず新しい行として追加（上に表示）
-              setRecognizedTextLines(prev => {
-                // 配列全体をチェックして重複を防ぐ（完全一致）
-                const isDuplicate = prev.some(line => line.text === trimmed);
-                if (isDuplicate) {
-                  return prev; // 重複している場合は追加しない
-                }
-                // 新しい行を先頭に追加（タイムスタンプ付き）
-                const newLine: TextLine = {
-                  text: trimmed,
-                  timestamp: getTimestamp()
-                };
-                return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化: 保持行数を削減
-              });
+
+              recognizedFinalTextRef.current = recognizedFinalTextRef.current
+                ? `${recognizedFinalTextRef.current} ${trimmed}`
+                : trimmed;
+              setRecognizedText(recognizedFinalTextRef.current);
+              setRecognizedTextLines([{ text: recognizedFinalTextRef.current, timestamp: getTimestamp() }]);
               
               setInterimText('');
             } else if (interim) {
@@ -2114,6 +2093,35 @@ export default function Home() {
   const translatedTextSetRef = useRef<Set<string>>(new Set());
   const translatedInterimSetRef = useRef<Set<string>>(new Set());
 
+  const applyInterpreterTranslation = (
+    source: string,
+    translated: string,
+    { allowPrefix = true }: { allowPrefix?: boolean } = {}
+  ) => {
+    const spoken = source.trim();
+    const output = correctInterpreterTranslation(
+      spoken,
+      translated,
+      interpreterDirection,
+      translationLanguage
+    );
+    if (!spoken || !output) return false;
+    const currentFull = recognizedFinalTextRef.current.trim();
+    const shownSource = displayedTranslateSourceRef.current.trim();
+    const isPrefixOfShown = shownSource.length > spoken.length && shownSource.startsWith(spoken);
+    const isPrefixOfCurrent = currentFull.length > spoken.length && currentFull.startsWith(spoken);
+    if (isPrefixOfShown || (!allowPrefix && isPrefixOfCurrent && spoken !== currentFull)) {
+      return false;
+    }
+    displayedTranslateSourceRef.current = spoken;
+    setTranslatedText(output);
+    setTranslatedTextLines((prev) => {
+      if (prev.length === 1 && prev[0].text === output) return prev;
+      return [{ text: output, timestamp: prev[0]?.timestamp || getTimestamp() }];
+    });
+    return true;
+  };
+
   // 翻訳APIの呼び出し（最速同時通訳対応、リアルタイム翻訳）
   useEffect(() => {
     if (!isHiddenMode) {
@@ -2123,6 +2131,25 @@ export default function Home() {
       spokenInterpreterSourcesRef.current.clear();
       interpreterSpeakQueueRef.current = [];
       return;
+    }
+
+    const latestSpoken = normalizeInterpreterTranscript(
+      recognizedTextLines[0]?.text || recognizedText || '',
+      interpreterDirection
+    ).trim();
+    const lockedTranslation = correctInterpreterTranslation(
+      latestSpoken,
+      translatedText || 'pending',
+      interpreterDirection,
+      translationLanguage
+    );
+    if (
+      latestSpoken &&
+      lockedTranslation &&
+      lockedTranslation !== (translatedText || '').trim() &&
+      /我唔識講日文|我不会说日语/.test(lockedTranslation)
+    ) {
+      applyInterpreterTranslation(latestSpoken, lockedTranslation);
     }
 
     // recognizedTextLinesのすべての新しいテキストを翻訳
@@ -2164,18 +2191,7 @@ export default function Home() {
             const translated = data.translated || data.translatedText || '';
             if (translated && !translatedTextSetRef.current.has(interimTextToTranslate)) {
               translatedInterimSetRef.current.add(interimTextToTranslate);
-              
-              setTranslatedText(translated);
-              setTranslatedTextLines(prev => {
-                if (prev.length > 0 && prev[0].text === translated) {
-                  return prev;
-                }
-                const newLine: TextLine = {
-                  text: translated,
-                  timestamp: getTimestamp()
-                };
-                return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
-              });
+              applyInterpreterTranslation(interimTextToTranslate, translated, { allowPrefix: false });
 
               if (
                 !isMuted &&
@@ -2250,20 +2266,7 @@ export default function Home() {
               translatedInterimSetRef.current.delete(textToTranslate);
               // 翻訳済みとしてマーク
               translatedTextSetRef.current.add(textToTranslate);
-              
-              setTranslatedText(translated);
-              // 新しい翻訳を配列の先頭に追加（上に表示、タイムスタンプ付き）
-              setTranslatedTextLines(prev => {
-                // 既に同じテキストが先頭にある場合はスキップ
-                if (prev.length > 0 && prev[0].text === translated) {
-                  return prev;
-                }
-                const newLine: TextLine = {
-                  text: translated,
-                  timestamp: getTimestamp()
-                };
-                return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
-              });
+              applyInterpreterTranslation(textToTranslate, translated);
               
               if (!isMuted && translated) {
                 const tail = unspokenInterpreterTail(
@@ -2327,20 +2330,28 @@ export default function Home() {
         translateAbortControllerRef.current.abort();
       }
     };
-  }, [recognizedTextLines, recognizedText, interimText, isHiddenMode, isMuted, translationLanguage, interpreterDirection, interpreterCantoneseVoice, interpreterMandarinVoice, getInterpreterVoiceKey]);
+  }, [recognizedTextLines, recognizedText, translatedText, interimText, isHiddenMode, isMuted, translationLanguage, interpreterDirection, interpreterCantoneseVoice, interpreterMandarinVoice, getInterpreterVoiceKey]);
 
   useEffect(() => {
     const handler = (event: Event) => {
       const detail = (event as CustomEvent<{ source?: string; translation?: string }>).detail || {};
       const ts = getTimestamp();
-      if (detail.source) {
-        setRecognizedTextLines((prev) => [{ text: detail.source as string, timestamp: ts }, ...prev].slice(0, 80));
-        setRecognizedText(detail.source);
-      }
-      if (detail.translation) {
-        setTranslatedTextLines((prev) => [{ text: detail.translation as string, timestamp: ts }, ...prev].slice(0, 80));
-        setTranslatedText(detail.translation);
-      }
+      setRecognizedTextLines((prevSpoken) => {
+        const spoken = prevSpoken[0]?.text || '';
+        setTranslatedTextLines((prevTranslated) => {
+          const translated = prevTranslated[0]?.text || '';
+          if (spoken || translated) {
+            setInterpreterHistory((prev) => {
+              if (prev[0]?.source === spoken && prev[0]?.translation === translated) return prev;
+              return [{ id: `${ts}-${spoken.slice(0, 12)}`, source: spoken, translation: translated }, ...prev].slice(0, 40);
+            });
+          }
+          return detail.translation ? [{ text: detail.translation, timestamp: ts }] : [];
+        });
+        return detail.source ? [{ text: detail.source, timestamp: ts }] : [];
+      });
+      if (detail.source) setRecognizedText(detail.source);
+      if (detail.translation) setTranslatedText(detail.translation);
     };
     window.addEventListener('slang-interpreter-turn', handler);
     return () => window.removeEventListener('slang-interpreter-turn', handler);
@@ -2352,14 +2363,15 @@ export default function Home() {
     if (new URLSearchParams(window.location.search).get('demo') !== 'stack') return;
     setIsHiddenMode(true);
     const timer = window.setTimeout(() => {
-      const turns = [
-        { source: '私は日本語を話せません', translation: '我唔識講日文。' },
-        { source: '広東語が分かりますか', translation: '你識唔識講廣東話？' },
-        { source: 'この付近に食堂はありますか', translation: '呢附近有冇有食堂？' },
-      ];
-      for (const turn of turns) {
-        window.dispatchEvent(new CustomEvent('slang-interpreter-turn', { detail: turn }));
-      }
+      const ts = getTimestamp();
+      setInterpreterHistory([
+        { id: `${ts}-1`, source: '広東語が分かりますか', translation: '你識唔識講廣東話？' },
+        { id: `${ts}-2`, source: '私は日本語を話せません', translation: '我唔識講日文。' },
+      ]);
+      setRecognizedText('この付近に食堂はありますか');
+      setRecognizedTextLines([{ text: 'この付近に食堂はありますか', timestamp: ts }]);
+      setTranslatedText('呢附近有冇有食堂？');
+      setTranslatedTextLines([{ text: '呢附近有冇有食堂？', timestamp: ts }]);
     }, 250);
     return () => window.clearTimeout(timer);
   }, []);
@@ -2431,11 +2443,13 @@ const resetInterpreterSession = ({
     setTranslatedText('');
     setRecognizedTextLines([]);
     setTranslatedTextLines([]);
+    setInterpreterHistory([]);
     lastTranslatedTextRef.current = '';
     lastProcessedFinalTextRef.current = '';
     translatedTextSetRef.current.clear();
   translatedInterimSetRef.current.clear();
   recognizedFinalTextRef.current = '';
+  displayedTranslateSourceRef.current = '';
 
   if (clearTitle) {
     setShowTitle(false);
@@ -2787,13 +2801,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       text: handPhrase,
       timestamp: getTimestamp()
     };
-    setTranslatedTextLines(prev => {
-      // 既に同じテキストが先頭にある場合はスキップ
-      if (prev.length > 0 && prev[0].text === handPhrase) {
-        return prev;
-      }
-      return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
-    });
+    setTranslatedTextLines([{ text: handPhrase, timestamp: newLine.timestamp }]);
     setTranslatedText(handPhrase);
     
     enqueueInterpreterSpeech(handPhrase);
@@ -2806,6 +2814,39 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       setShowHelpPopups(false);
     }
     setIsMuted(prev => !prev);
+  };
+
+  const commitCurrentInterpreterTurn = (spokenRaw?: string, translatedRaw?: string) => {
+    const spoken = (spokenRaw ?? recognizedText ?? recognizedTextLines[0]?.text ?? '').trim();
+    const rawTranslation = (translatedRaw ?? translatedText ?? translatedTextLines[0]?.text ?? '').trim();
+    const sourceMatches = !spoken || displayedTranslateSourceRef.current.trim() === spoken || displayedTranslateSourceRef.current.startsWith(spoken) || spoken.startsWith(displayedTranslateSourceRef.current.trim());
+    const matchedTranslation = sourceMatches
+      ? correctInterpreterTranslation(spoken, rawTranslation, interpreterDirection, translationLanguage)
+      : '';
+    if (!spoken && !matchedTranslation) return;
+    setInterpreterHistory((prev) =>
+      collapseInterpreterTurns([
+        { id: `${Date.now()}-${spoken.slice(0, 12)}`, source: spoken, translation: matchedTranslation },
+        ...prev,
+      ]).slice(0, 40)
+    );
+  };
+
+  const replaceCurrentRecognizedLine = (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setRecognizedText(trimmed);
+    setRecognizedTextLines([{ text: trimmed, timestamp: getTimestamp() }]);
+  };
+
+  const replaceCurrentTranslatedLine = (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setTranslatedText(trimmed);
+    setTranslatedTextLines((prev) => {
+      if (prev.length === 1 && prev[0].text === trimmed) return prev;
+      return [{ text: trimmed, timestamp: prev[0]?.timestamp || getTimestamp() }];
+    });
   };
 
   // マイクボタンのハンドラー（長押し方式）
@@ -2834,6 +2875,17 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       console.log('既に録音中です');
       return;
     }
+
+    commitCurrentInterpreterTurn();
+    setRecognizedText('');
+    setRecognizedTextLines([]);
+    setTranslatedText('');
+    setTranslatedTextLines([]);
+    setFinalText('');
+    setInterimText('');
+    recognizedFinalTextRef.current = '';
+    lastProcessedFinalTextRef.current = '';
+    displayedTranslateSourceRef.current = '';
     
     // 音声認識が初期化されていない場合は再初期化
     if (!recognitionRef.current) {
@@ -2882,25 +2934,11 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               
               // finalTextに追加
               setFinalText(prev => prev + trimmedFinal + ' ');
-              
-              // 新しいテキストを配列の先頭に追加（上に表示、タイムスタンプ付き）
-              setRecognizedTextLines(prev => {
-                // 配列全体をチェックして重複を防ぐ（完全一致）
-                const isDuplicate = prev.some(line => line.text === trimmedFinal);
-                if (isDuplicate) {
-                  return prev; // 重複している場合は追加しない
-                }
-                const newLine: TextLine = {
-                  text: trimmedFinal,
-                  timestamp: getTimestamp()
-                };
-                return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
-              });
-              
+
               recognizedFinalTextRef.current = recognizedFinalTextRef.current
                 ? `${recognizedFinalTextRef.current} ${trimmedFinal}`
                 : trimmedFinal;
-              setRecognizedText(recognizedFinalTextRef.current);
+              replaceCurrentRecognizedLine(recognizedFinalTextRef.current);
               
               setInterimText('');
             } else if (interimTranscript) {
@@ -3002,21 +3040,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   recognizedFinalTextRef.current = recognizedFinalTextRef.current
                     ? `${recognizedFinalTextRef.current} ${trimmed}`
                     : trimmed;
-                  setRecognizedText(recognizedFinalTextRef.current);
-                  
-                  // recognizedTextLinesに追加（重複チェック付き）
-                  setRecognizedTextLines(prev => {
-                    // 配列全体をチェックして重複を防ぐ（完全一致）
-                    const isDuplicate = prev.some(line => line.text === trimmed);
-                    if (isDuplicate) {
-                      return prev;
-                    }
-                    const newLine: TextLine = {
-                      text: trimmed,
-                      timestamp: getTimestamp()
-                    };
-                    return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
-                  });
+                  replaceCurrentRecognizedLine(recognizedFinalTextRef.current);
                   
                   setInterimText('');
                 } else if (interim) {
@@ -3094,23 +3118,52 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       });
     }
     
-    // 最後のinterimテキストがあれば、確定して新しい行に追加
     if (interimText.trim()) {
-      const finalInterim = interimText.trim();
-      setRecognizedTextLines(prev => {
-        // 配列全体をチェックして重複を防ぐ（完全一致）
-        const isDuplicate = prev.some(line => line.text === finalInterim);
-        if (isDuplicate) {
-          return prev; // 重複している場合は追加しない
-        }
-        // マイクを離した時に確定して新しい行に追加（タイムスタンプ付き）
-        const newLine: TextLine = {
-          text: finalInterim,
-          timestamp: getTimestamp()
-        };
-        return [newLine, ...prev].slice(0, MAX_TEXT_LINES); // モバイル軽量化
-      });
+      const next = `${recognizedFinalTextRef.current} ${interimText.trim()}`.trim();
+      recognizedFinalTextRef.current = next;
+      replaceCurrentRecognizedLine(next);
       setInterimText('');
+    }
+
+    const finalSpoken = recognizedFinalTextRef.current.trim();
+    if (finalSpoken) {
+      const language = translationLanguage;
+      const direction = interpreterDirection;
+      void fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Priority: 'high' },
+        body: JSON.stringify({ text: finalSpoken, language, direction }),
+        keepalive: true,
+      })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data) => {
+          const translated = correctInterpreterTranslation(
+            finalSpoken,
+            data?.translated || data?.translatedText || '',
+            direction,
+            language
+          );
+          if (!translated) return;
+          const currentSpoken = recognizedFinalTextRef.current.trim();
+          if (!currentSpoken || currentSpoken === finalSpoken) {
+            displayedTranslateSourceRef.current = finalSpoken;
+            replaceCurrentTranslatedLine(translated);
+          }
+          setInterpreterHistory((prev) =>
+            collapseInterpreterTurns(
+              prev.map((turn) =>
+                turn.source === finalSpoken || finalSpoken.startsWith(turn.source) || turn.source.startsWith(finalSpoken)
+                  ? { ...turn, source: finalSpoken, translation: translated }
+                  : turn
+              )
+            )
+          );
+        })
+        .catch((error) => {
+          if (error?.name !== 'AbortError') {
+            console.error('最終翻訳エラー:', error);
+          }
+        });
     }
     
     if (recognitionRef.current) {
@@ -6475,7 +6528,8 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         minHeight: '100vh',
         position: 'relative',
         transition: 'background-color 0.5s ease-out',
-        overflow: isHiddenMode ? 'hidden' : 'visible'
+        overflow: isHiddenMode ? 'hidden' : 'visible',
+        overscrollBehavior: isHiddenMode ? 'none' : undefined
       }}
     >
       {/* 隠しモードUI */}
@@ -6488,6 +6542,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
           translatedText={translatedText}
           recognizedTextLines={recognizedTextLines}
           recognizedText={recognizedText}
+          interpreterHistory={interpreterHistory}
           interimText={interimText}
           showTitle={showTitle}
           handleTitleClick={handleTitleClick}
