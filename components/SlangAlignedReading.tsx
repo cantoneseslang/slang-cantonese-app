@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { slangWordOverrides } from '../lib/slang-word-overrides';
+import { pickContextReadings } from '../lib/slang-context-readings';
 
 type Reading = { jyutping: string; kana: string };
 type Dict = Record<string, Reading[]>;
@@ -38,7 +39,7 @@ function kanaParts(kana: string) {
   return kana.replaceAll('（', '(').replaceAll('）', ')').split(/([()])/);
 }
 
-function useSlangRows(text: string) {
+function useSlangRows(text: string, meaningHint = '') {
   const [dict, setDict] = useState<Dict | null>(null);
   const [wordReadings, setWordReadings] = useState<WordReadings | null>(null);
 
@@ -93,6 +94,15 @@ function useSlangRows(text: string) {
       return { ch, kana: hit.kana, sound: syllable.replace(/\s+/g, '・'), varies: false };
     };
     const chars = Array.from(text.normalize('NFKC'));
+    const contextReadings = pickContextReadings(chars, meaningHint);
+    const withContext = (
+      index: number,
+      row: { ch: string; kana: string; sound: string; varies: boolean }
+    ) => {
+      const context = contextReadings.get(index);
+      if (!context) return row;
+      return { ch: row.ch, kana: context.kana, sound: context.jyutping, varies: false };
+    };
     const rows: { ch: string; kana: string; sound: string; varies: boolean }[] = [];
     for (let i = 0; i < chars.length; ) {
       if (isSkipped(chars[i])) {
@@ -120,34 +130,34 @@ function useSlangRows(text: string) {
       if (handKey && handLength >= (autoSyllables?.length ?? 0)) {
         const keyChars = Array.from(handKey);
         slangWordOverrides[handKey].forEach((part, index) => {
-          rows.push({
+          rows.push(withContext(i + index, {
             ch: keyChars[index],
             kana: part.kana,
             sound: part.jyutping.replace(/\s+/g, '・'),
             varies: false,
-          });
+          }));
         });
         i += keyChars.length;
         continue;
       }
       if (autoSyllables) {
         autoSyllables.forEach((syllable, index) => {
-          rows.push(readingRow(chars[i + index], syllable));
+          rows.push(withContext(i + index, readingRow(chars[i + index], syllable)));
         });
         i += autoKey.length > 0 ? Array.from(autoKey).length : autoSyllables.length;
         continue;
       }
-      rows.push(charRow(chars[i]));
+      rows.push(withContext(i, charRow(chars[i])));
       i += 1;
     }
     return rows;
-  }, [dict, text, wordIndex, wordReadings]);
+  }, [dict, meaningHint, text, wordIndex, wordReadings]);
 }
 
 const bookmarkTextFont = '"PingFang HK", "Hiragino Sans", "Noto Sans CJK HK", "Noto Sans TC", sans-serif';
 
-function BookmarkReadings({ phrase }: { phrase: string }) {
-  const rows = useSlangRows(phrase);
+function BookmarkReadings({ phrase, meaningHint = '' }: { phrase: string; meaningHint?: string }) {
+  const rows = useSlangRows(phrase, meaningHint);
   return (
     <>
       <span
@@ -205,12 +215,12 @@ export function SlangBookmarkRow({
         <>
           <span style={{ ...textStyle, fontWeight: 700, fontSize: '1.05rem', lineHeight: 1.4 }}>{query}</span>
           <span style={textStyle}>翻訳：{phrase}</span>
-          <BookmarkReadings phrase={phrase} />
+          <BookmarkReadings phrase={phrase} meaningHint={query} />
         </>
       ) : (
         <>
           <span style={{ ...textStyle, fontWeight: 700, fontSize: '1.05rem', lineHeight: 1.4 }}>{phrase}</span>
-          <BookmarkReadings phrase={phrase} />
+          <BookmarkReadings phrase={phrase} meaningHint={translation} />
           {translation ? <span style={textStyle}>翻訳：{translation}</span> : null}
         </>
       )}
@@ -220,14 +230,16 @@ export function SlangBookmarkRow({
 
 export default function SlangAlignedReading({
   text,
+  meaningHint = '',
   bookmarked = false,
   onToggleBookmark,
 }: {
   text: string;
+  meaningHint?: string;
   bookmarked?: boolean;
   onToggleBookmark?: () => void;
 }) {
-  const rows = useSlangRows(text);
+  const rows = useSlangRows(text, meaningHint);
 
   if (!rows.length) return null;
   const varies = rows.some((row) => row.varies);

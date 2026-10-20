@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Papa from 'papaparse';
 import fs from 'fs';
 import path from 'path';
+import { pickContextReadings } from '@/lib/slang-context-readings';
 
 // CSVデータとJSONデータを事前に読み込む
 const jyutpingDataPath = path.join(process.cwd(), 'public/google_drive_data.csv');
@@ -475,6 +476,7 @@ export async function POST(request: NextRequest) {
     }
     
     const results = findAllJyutpingsAndKatakanaForPhrase(cantonesePhrase);
+    const contextReadings = pickContextReadings(cantonesePhrase, originalJapanese || '');
     
     const jyutpingArray: string[] = [];
     const jyutpingMultiArray: string[] = [];
@@ -483,8 +485,15 @@ export async function POST(request: NextRequest) {
     
     for (let i = 0; i < results.length; i++) {
       const result = results[i];
-      const jyutpings = result[1];
-      const katakanas = result[2];
+      let jyutpings = result[1] as string[];
+      let katakanas = result[2] as string[];
+      const context = contextReadings.get(i);
+      if (context) {
+        const tone = context.jyutping.replace(/\D/g, '');
+        const kana = `${context.kana}${tone}`;
+        jyutpings = [context.jyutping, ...jyutpings.filter((item) => item !== context.jyutping)];
+        katakanas = [kana, ...katakanas.filter((item) => item !== kana)];
+      }
       
       jyutpingArray.push(jyutpings[0]);
       jyutpingMultiArray.push(jyutpings.length > 1 ? jyutpings.slice(1).join("・") : "無し");

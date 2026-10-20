@@ -8783,6 +8783,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                 slangReadingText ? (
                   <SlangAlignedReading
                     text={slangReadingText}
+                    meaningHint={result?.japaneseTranslation || result?.originalText || ''}
                     bookmarked={phraseBookmarks.some((item) => item.phrase === slangReadingText.trim())}
                     onToggleBookmark={togglePhraseBookmark}
                   />
