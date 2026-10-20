@@ -31,6 +31,7 @@ import SettingsPortal from '../components/settings/SettingsPortal';
 import TeacherMailFloat from '../components/settings/TeacherMailFloat';
 import InterpreterDirectionFloat from '../components/interpreter/InterpreterDirectionFloat';
 import SlangAlignedReading, { SlangBookmarkRow } from '../components/SlangAlignedReading';
+import PhraseAudioButton from '../components/PhraseAudioButton';
 import {
   CONVERSION_CHAR_LIMIT,
   CONVERSION_DAILY_LIMIT,
@@ -9263,13 +9264,12 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                   <p style={{ fontSize: isMobile ? '0.875rem' : '1rem', marginBottom: '0.5rem' }}>
                     {result.translatedText || searchQuery}
                   </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <audio 
-                      ref={audioRef}
-                      controls 
-                      controlsList="nodownload nofullscreen noremoteplayback"
-                      style={{ width: '300px', height: '32px', flexShrink: 0 }}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'nowrap', width: '100%' }}>
+                    <PhraseAudioButton
+                      audioRef={audioRef}
                       src={`data:audio/mp3;base64,${result.audioBase64}`}
+                      playbackRate={parseFloat(playbackSpeed)}
+                      isMobile={isMobile}
                     />
                     {/* 再生速度（シルバー・ゴールド会員のみ） */}
                     {membershipType !== 'free' && (
@@ -9279,9 +9279,13 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                         value={playbackSpeed}
                         onChange={(e) => setPlaybackSpeed(e.target.value)}
                         style={{ 
-                          padding: isMobile ? '6px 12px' : '8px 16px', 
-                          fontSize: isMobile ? '0.875rem' : '1rem', 
-                          borderRadius: '12px', 
+                          boxSizing: 'border-box',
+                          minHeight: isMobile ? '56px' : '48px',
+                          height: isMobile ? '56px' : '48px',
+                          padding: isMobile ? '0 12px' : '0 16px', 
+                          fontSize: isMobile ? '1rem' : '1.05rem',
+                          fontWeight: 700, 
+                          borderRadius: '16px', 
                           border: '1px solid rgba(0,0,0,0.1)', 
                           background: 'linear-gradient(145deg, #ffffff, #f5f5f7)',
                           boxShadow: '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
@@ -9321,9 +9325,12 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                       }}
                       title="テキストをコピー"
                       style={{
-                        padding: isMobile ? '6px 12px' : '8px 16px',
+                        boxSizing: 'border-box',
+                        minHeight: isMobile ? '56px' : '48px',
+                        height: isMobile ? '56px' : '48px',
+                        padding: isMobile ? '0 12px' : '0 16px',
                         fontSize: isMobile ? '0.875rem' : '1rem',
-                        borderRadius: '12px',
+                        borderRadius: '16px',
                         border: '1px solid rgba(0,0,0,0.1)',
                         background: 'linear-gradient(145deg, #ffffff, #f5f5f7)',
                         boxShadow: '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
@@ -9365,13 +9372,12 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                       <div style={{ lineHeight: 1.6 }}>{exampleJapaneseText}</div>
                     </div>
                   )}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <audio 
-                      ref={exampleAudioRef}
-                      controls 
-                      controlsList="nodownload nofullscreen noremoteplayback"
-                      style={{ width: '300px', height: '32px', flexShrink: 0 }}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'nowrap', width: '100%' }}>
+                    <PhraseAudioButton
+                      audioRef={exampleAudioRef}
                       src={`data:audio/mp3;base64,${result?.exampleAudioBase64 || ''}`}
+                      playbackRate={parseFloat(examplePlaybackSpeed)}
+                      isMobile={isMobile}
                     />
                     {/* 再生速度（シルバー・ゴールド会員のみ） */}
                     {membershipType !== 'free' && (
@@ -9381,9 +9387,13 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                         value={examplePlaybackSpeed}
                         onChange={(e) => setExamplePlaybackSpeed(e.target.value)}
                         style={{ 
-                          padding: isMobile ? '6px 12px' : '8px 16px', 
-                          fontSize: isMobile ? '0.875rem' : '1rem', 
-                          borderRadius: '12px', 
+                          boxSizing: 'border-box',
+                          minHeight: isMobile ? '56px' : '48px',
+                          height: isMobile ? '56px' : '48px',
+                          padding: isMobile ? '0 12px' : '0 16px', 
+                          fontSize: isMobile ? '1rem' : '1.05rem',
+                          fontWeight: 700, 
+                          borderRadius: '16px', 
                           border: '1px solid rgba(0,0,0,0.1)', 
                           background: 'linear-gradient(145deg, #ffffff, #f5f5f7)',
                           boxShadow: '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
@@ -9424,9 +9434,12 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                       }}
                       title="例文をコピー"
                       style={{
-                        padding: isMobile ? '6px 12px' : '8px 16px',
+                        boxSizing: 'border-box',
+                        minHeight: isMobile ? '56px' : '48px',
+                        height: isMobile ? '56px' : '48px',
+                        padding: isMobile ? '0 12px' : '0 16px',
                         fontSize: isMobile ? '0.875rem' : '1rem',
-                        borderRadius: '12px',
+                        borderRadius: '16px',
                         border: '1px solid rgba(0,0,0,0.1)',
                         background: 'linear-gradient(145deg, #ffffff, #f5f5f7)',
                         boxShadow: '0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
