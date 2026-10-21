@@ -225,11 +225,13 @@ export default function SlangAlignedReading({
   meaningHint = '',
   bookmarked = false,
   onToggleBookmark,
+  showVariesNote = true,
 }: {
   text: string;
   meaningHint?: string;
   bookmarked?: boolean;
   onToggleBookmark?: () => void;
+  showVariesNote?: boolean;
 }) {
   const rows = useSlangRows(text, meaningHint);
 
@@ -271,7 +273,7 @@ export default function SlangAlignedReading({
         ))}
       </div>
       </div>
-      {varies && <p className="note">複数読みは先頭を連結しています</p>}
+      {varies && showVariesNote && <p className="note">複数読みは先頭を連結しています</p>}
       <style jsx>{`
         .reading-row {
           display: flex;

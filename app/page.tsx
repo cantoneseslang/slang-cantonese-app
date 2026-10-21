@@ -31,6 +31,7 @@ import SettingsPortal from '../components/settings/SettingsPortal';
 import TeacherMailFloat from '../components/settings/TeacherMailFloat';
 import InterpreterDirectionFloat from '../components/interpreter/InterpreterDirectionFloat';
 import SlangAlignedReading, { SlangBookmarkRow } from '../components/SlangAlignedReading';
+import { forgetLineEntry, readRememberedLineEntry, rememberLineEntry, safeLineEntryPath } from '@/lib/line-entry';
 import PhraseAudioButton from '../components/PhraseAudioButton';
 import {
   CONVERSION_CHAR_LIMIT,
@@ -465,6 +466,8 @@ export default function Home() {
   const router = useRouter();
   const supabase = createClient();
   const [user, setUser] = useState<any>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [lineGuestEntry, setLineGuestEntry] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [slangReadingText, setSlangReadingText] = useState('');
   const [suppressLegacyReading, setSuppressLegacyReading] = useState(false);
@@ -3482,9 +3485,21 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     }
   };
 
+  const openLineRegistration = () => {
+    const params = new URLSearchParams(window.location.search);
+    const q = (params.get('q') || '').trim();
+    if (q) rememberLineEntry(q);
+    const next = safeLineEntryPath(window.location.pathname + window.location.search) || (window.location.pathname + window.location.search);
+    router.push('/login?signup=1&redirect=' + encodeURIComponent(next));
+  };
+
   const togglePhraseBookmark = async () => {
     const phrase = slangReadingText.trim();
     if (!phrase) return;
+    if (lineGuestEntry && !user) {
+      openLineRegistration();
+      return;
+    }
     await upsertPhraseBookmark({
       phrase,
       source: bookmarkReplay?.source || 'cantonese',
@@ -5163,6 +5178,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         console.error('ユーザー取得エラー:', error);
       } else {
         setUser(user);
+        setAuthChecked(true);
         // デバッグ: ユーザー情報を詳細にログ出力
         if (user) {
           console.log('=== 現在のユーザー情報（Supabase） ===');
@@ -5178,7 +5194,7 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
         }
       }
     };
-    getUser();
+    getUser().finally(() => setAuthChecked(true));
   }, []);
 
   useEffect(() => {
@@ -5536,11 +5552,14 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       if (category) {
         setCurrentCategory(category);
         setCurrentWords(category.words || []);
-        // カテゴリーを切り替えた時に検索結果とアクティブな単語をクリア
-        setResult(null);
-        setError(null);
-        setSearchQuery('');
-        setActiveWordId(null);
+        if (preserveLineEntry.current) {
+          preserveLineEntry.current = false;
+        } else {
+          setResult(null);
+          setError(null);
+          setSearchQuery('');
+          setActiveWordId(null);
+        }
       }
     } else if (selectedNoteCategory) {
       // Noteサブカテゴリーが選択された場合
@@ -5987,6 +6006,35 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
       setLoading(false);
     }
   };
+
+  const lineEntryStarted = useRef(false);
+  const preserveLineEntry = useRef(false);
+  useEffect(() => {
+    if (lineEntryStarted.current) return;
+    const params = new URLSearchParams(window.location.search);
+    let q = params.get('entry') === 'line' ? (params.get('q') || '').trim().slice(0, 80) : '';
+    const remembered = readRememberedLineEntry();
+    if (!q && remembered) {
+      q = new URL(remembered, window.location.origin).searchParams.get('q') || '';
+    }
+    if (!q) return;
+    lineEntryStarted.current = true;
+    preserveLineEntry.current = true;
+    setLineGuestEntry(true);
+    rememberLineEntry(q);
+    setSearchQuery(q);
+    void handleSearch(q, { slangReading: true });
+    if (params.get('entry') !== 'line') {
+      router.replace('/?entry=line&q=' + encodeURIComponent(q));
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (!user) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('entry') === 'line' && params.get('q')) forgetLineEntry();
+  }, [user]);
+
   const handleWordClick = async (word: Word) => {
     playHapticAndSound(); // 振動と音を再生
     // すべてのモードで押下ログを送信
@@ -6806,6 +6854,43 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               ボタンを押すだけでスパッと発音！
             </div>
           </div>
+
+          {lineGuestEntry && authChecked && !user && (
+            <div style={{
+              margin: isMobile ? '0 1rem 1rem' : '0 1.5rem 1.25rem',
+              padding: '0.85rem 1rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              background: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.75rem',
+            }}>
+              <div style={{ color: '#111827', fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 600, lineHeight: 1.5 }}>
+                登録すると★でブックマークできます。
+              </div>
+              <button
+                type="button"
+                onClick={openLineRegistration}
+                style={{
+                  flexShrink: 0,
+                  minHeight: '44px',
+                  padding: '0 16px',
+                  border: 'none',
+                  borderRadius: '16px',
+                  background: 'linear-gradient(145deg, #6366f1, #4f46e5)',
+                  color: 'white',
+                  fontWeight: 700,
+                  fontSize: '0.875rem',
+                  cursor: 'pointer',
+                  touchAction: 'manipulation',
+                }}
+              >
+                登録する
+              </button>
+            </div>
+          )}
 
           {/* ラベル: カテゴリー選択 */}
           <div style={{

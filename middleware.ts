@@ -31,6 +31,11 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  const lineLookup =
+    request.nextUrl.pathname === '/' &&
+    request.nextUrl.searchParams.get('entry') === 'line' &&
+    Boolean((request.nextUrl.searchParams.get('q') || '').trim());
+
   // ログインページ、認証関連ページ、APIルートは認証不要
   // 注意: /api/stripe/* の一部は認証が必要だが、get-eventは管理者用のため認証不要（後で認証チェックを追加）
   if (request.nextUrl.pathname.startsWith('/login') || 
@@ -45,7 +50,10 @@ export async function middleware(request: NextRequest) {
       request.nextUrl.pathname.startsWith('/api/') || // APIは各ルートで認証する（307だと保存成功に見える）
       request.nextUrl.pathname.startsWith('/_next') ||
       request.nextUrl.pathname.startsWith('/slang-kana') ||
-      request.nextUrl.pathname === '/slang-dict.json') {
+      request.nextUrl.pathname.startsWith('/listen') ||
+      lineLookup ||
+      request.nextUrl.pathname === '/slang-dict.json' ||
+      (process.env.NODE_ENV === 'development' && request.nextUrl.pathname.startsWith('/dev-audio-player'))) {
     return supabaseResponse
   }
 

@@ -1,5 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { LINE_ENTRY_KEY, safeLineEntryPath } from '@/lib/line-entry'
+
+function rememberedEntry(request: Request) {
+  const cookie = request.headers.get('cookie') || ''
+  const match = cookie.match(new RegExp(`(?:^|; )${LINE_ENTRY_KEY}=([^;]+)`))
+  return safeLineEntryPath(match ? decodeURIComponent(match[1]) : null)
+}
 
 function oauthErrorMessage(error: string, description: string): string {
   const text = `${error} ${description}`.toLowerCase();
@@ -21,8 +28,10 @@ export async function GET(request: Request) {
   const oauthError = requestUrl.searchParams.get('error')
   const errorDescription = requestUrl.searchParams.get('error_description') || ''
 
-  const homeUrl = new URL('/', requestUrl.origin)
+  const entryPath = rememberedEntry(request)
+  const homeUrl = new URL(entryPath || '/', requestUrl.origin)
   const loginUrl = new URL('/login', requestUrl.origin)
+  if (entryPath) loginUrl.searchParams.set('redirect', entryPath)
 
   if (oauthError) {
     loginUrl.searchParams.set('message', oauthErrorMessage(oauthError, errorDescription))
@@ -39,7 +48,9 @@ export async function GET(request: Request) {
 
     const user = data.user
     if (user?.user_metadata?.survey_completed === true) {
-      return NextResponse.redirect(homeUrl)
+      const response = NextResponse.redirect(homeUrl)
+      response.cookies.set(LINE_ENTRY_KEY, '', { path: '/', maxAge: 0 })
+      return response
     }
     if (user) {
       loginUrl.searchParams.set('survey', '1')

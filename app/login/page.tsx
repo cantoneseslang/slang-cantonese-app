@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getInAppBrowserBlockMessage } from '@/lib/in-app-browser';
 import { parseResponseJson } from '@/lib/parse-response-json';
 import { canonicalizeEmail, isGmailAddress } from '@/lib/gmail';
+import TurnstileCheck from '@/components/login/TurnstileCheck';
+import { readRememberedLineEntry, rememberLineEntry, safeLineEntryPath } from '@/lib/line-entry';
 
 function LoginForm() {
   const [username, setUsername] = useState('');
@@ -18,6 +20,8 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState('');
+  const resetCaptchaRef = useRef<(() => void) | null>(null);
   
   // アンケートフォームの状態
   const [showSurvey, setShowSurvey] = useState(false);
@@ -48,7 +52,10 @@ function LoginForm() {
     if (redirectMessage) {
       setMessage(redirectMessage);
     }
-  }, [redirectMessage]);
+    if (searchParams.get('signup') === '1') {
+      setIsSignUp(true);
+    }
+  }, [redirectMessage, searchParams]);
 
   // ログイン済みならホームへ。Google直後で未回答ならアンケートだけ出す
   useEffect(() => {
@@ -61,7 +68,7 @@ function LoginForm() {
       const { data: { user } } = await sb.auth.getUser();
       if (cancelled || !user) return;
       if (user.user_metadata?.survey_completed === true || !wantsSurvey) {
-        router.replace(redirectPath || '/');
+        router.replace(safeLineEntryPath(redirectPath) || readRememberedLineEntry() || redirectPath || '/');
         return;
       }
       setSignUpUserId(user.id);
@@ -194,6 +201,27 @@ function LoginForm() {
     setPasswordError(null);
 
     try {
+      const captchaOn = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
+      if (captchaOn && !captchaToken) {
+        setError('人間検証を完了してください');
+        setLoading(false);
+        return;
+      }
+      if (captchaOn) {
+      const captchaResponse = await fetch('/api/turnstile/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: captchaToken }),
+      });
+      if (!captchaResponse.ok) {
+        setError('人間検証に失敗しました。もう一度お試しください');
+        setCaptchaToken('');
+        resetCaptchaRef.current?.();
+        setLoading(false);
+        return;
+      }
+      }
+
       if (isSignUp) {
         // ユーザーネーム必須チェック
         if (!username.trim()) {
@@ -284,12 +312,14 @@ function LoginForm() {
 
         if (data.user) {
           // リダイレクト先がある場合はそこに、なければホームに
-          router.push(redirectPath || '/');
+          router.push(safeLineEntryPath(redirectPath) || readRememberedLineEntry() || redirectPath || '/');
           router.refresh();
         }
       }
     } catch (err: any) {
       setError(err.message || 'エラーが発生しました');
+      setCaptchaToken('');
+      resetCaptchaRef.current?.();
     } finally {
       setLoading(false);
     }
@@ -343,6 +373,11 @@ function LoginForm() {
     }
 
     try {
+      const remembered = safeLineEntryPath(redirectPath);
+      if (remembered) {
+        const q = new URL(remembered, window.location.origin).searchParams.get('q') || '';
+        if (q) rememberLineEntry(q);
+      }
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -430,7 +465,7 @@ function LoginForm() {
 
       if (oauthProvider === 'google' || confirmed) {
         setMessage('登録が完了しました。');
-        router.push(redirectPath || '/');
+        router.push(safeLineEntryPath(redirectPath) || readRememberedLineEntry() || redirectPath || '/');
         router.refresh();
       } else {
         setMessage('確認メールを送信しました。メールボックスを確認してください。');
@@ -843,21 +878,24 @@ function LoginForm() {
                 6文字以上、英文字・数字・記号のうち少なくとも2種類以上を含む必要があります
               </p>
             )}
+            {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ? (
+              <TurnstileCheck onToken={setCaptchaToken} resetRef={resetCaptchaRef} />
+            ) : null}
           </div>
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) && !captchaToken)}
             style={{
               width: '100%',
               padding: '0.75rem',
-              backgroundColor: loading ? '#9ca3af' : '#10b981',
+              backgroundColor: loading || (Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) && !captchaToken) ? '#9ca3af' : '#10b981',
               color: 'white',
               border: 'none',
               borderRadius: '6px',
               fontSize: '1rem',
               fontWeight: 'bold',
-              cursor: loading ? 'not-allowed' : 'pointer',
+              cursor: loading || (Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) && !captchaToken) ? 'not-allowed' : 'pointer',
               marginBottom: '1rem'
             }}
           >
