@@ -18,6 +18,15 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## Contact form notifications
+
+`POST /api/contact` emails `CONTACT_TO` (default `info@lifesupporthk.com`) via Titan SMTP.
+
+Optional Grok Bot notify paths (failures are logged and do not fail the form success response):
+
+1. **BCC** — each successful mail also goes to `hsakon+otoren@mail.grokbot.com` on the same SMTP send. If Titan rejects BCC, a second identical copy is sent to that address only.
+2. **Webhook** — if `GROK_BOT_WEBHOOK_URL` is set, JSON `{ name, email, message, at, source: "slang-cantonese-contact" }` is POSTed after a successful send. `GROK_BOT_WEBHOOK_KEY` or `GROK_BOT_WEBHOOK_AUTH` is sent as `Authorization` (Bearer for a raw key, or the full header value if it already includes a scheme).
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More
