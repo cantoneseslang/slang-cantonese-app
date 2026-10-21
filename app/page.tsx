@@ -5211,6 +5211,12 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     // localStorageから「ヘルプを表示しない」設定を読み込む
     // クライアント側でのみ実行
     if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const fromLine = params.get('entry') === 'line' && (params.get('q') || '').trim();
+      if (fromLine || readRememberedLineEntry()) {
+        setShowHelpCard(false);
+        return;
+      }
       const savedDontShowHelp = localStorage.getItem('dontShowHelpAgain');
       if (savedDontShowHelp === 'true') {
         // 既に「表示しない」が設定されている場合は表示しない
