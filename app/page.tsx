@@ -6041,6 +6041,48 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
     if (params.get('entry') === 'line' && params.get('q')) forgetLineEntry();
   }, [user]);
 
+  const lineLoginRedirecting = useRef(false);
+  useEffect(() => {
+    if (!lineGuestEntry || !authChecked || user) return;
+    const sendToLogin = () => {
+      if (lineLoginRedirecting.current) return;
+      lineLoginRedirecting.current = true;
+      const params = new URLSearchParams(window.location.search);
+      const q = (params.get('q') || '').trim();
+      if (q) rememberLineEntry(q);
+      const next = safeLineEntryPath(window.location.pathname + window.location.search);
+      if (!next) return;
+      router.push('/login?redirect=' + encodeURIComponent(next));
+    };
+    const blockControl = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest('[data-line-guest-allow]')) return;
+      if (!target.closest('button, [role="button"]')) return;
+      event.preventDefault();
+      event.stopPropagation();
+      sendToLogin();
+    };
+    const blockEnter = (event: KeyboardEvent) => {
+      if (event.key !== 'Enter') return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest('[data-line-guest-allow]')) return;
+      if (!target.closest('input, textarea')) return;
+      event.preventDefault();
+      event.stopPropagation();
+      sendToLogin();
+    };
+    document.addEventListener('click', blockControl, true);
+    document.addEventListener('touchstart', blockControl, true);
+    document.addEventListener('keydown', blockEnter, true);
+    return () => {
+      document.removeEventListener('click', blockControl, true);
+      document.removeEventListener('touchstart', blockControl, true);
+      document.removeEventListener('keydown', blockEnter, true);
+    };
+  }, [lineGuestEntry, authChecked, user, router]);
+
   const handleWordClick = async (word: Word) => {
     playHapticAndSound(); // 振動と音を再生
     // すべてのモードで押下ログを送信
@@ -6873,11 +6915,12 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
               justifyContent: 'space-between',
               gap: '0.75rem',
             }}>
-              <div style={{ color: '#111827', fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 600, lineHeight: 1.5 }}>
-                登録すると★でブックマークできます。
+              <div style={{ flex: '1 1 auto', color: '#111827', fontSize: isMobile ? '0.875rem' : '1rem', fontWeight: 600, lineHeight: 1.5 }}>
+                カントン語音れんに登録しますと検索ワードの音声再生やブックマーク保存できます、是非ご登録お願いします
               </div>
               <button
                 type="button"
+                data-line-guest-allow=""
                 onClick={openLineRegistration}
                 style={{
                   flexShrink: 0,
@@ -8395,13 +8438,15 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
             />
               {/* 右端フォルダアイコン */}
                 <button
+                  type="button"
+                  data-line-guest-allow=""
                   onClick={() => {
                     if (isImporting) return;
                     fileInputRef.current?.click();
                   }}
                   disabled={isImporting}
-                  title="ファイルから読み取り (PDF/TXT)"
-                  aria-label="ファイルから読み取り (PDF/TXT)"
+                  title="写真・PDFを読み取り"
+                  aria-label="写真・PDFを読み取り"
                   style={{
                     position: 'absolute',
                     right: isMobile ? '0.5rem' : '0.75rem',
@@ -8502,8 +8547,9 @@ const handleInterpreterLanguageChange = (newLanguage: 'cantonese' | 'mandarin') 
                     }
                   };
                   
+                  const isPhoto = fileType.startsWith('image/') || /\.(jpe?g|png|gif|webp|bmp|heic|heif)$/i.test(fileName);
                   // 画像ファイルの場合（自動OCR実行）
-                  if (fileType.startsWith('image/')) {
+                  if (isPhoto) {
                     setImportMessage('OCR実行中（広東語）...');
                     const text = await runOcr(file, (p) => setImportProgress(p));
                     const sanitized = sanitizeImportedText(text);

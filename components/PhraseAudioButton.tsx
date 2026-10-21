@@ -81,6 +81,7 @@ export default function PhraseAudioButton({
       />
       <button
         type="button"
+        data-line-guest-allow=""
         aria-label={playing ? '一時停止' : '再生'}
         onClick={() => {
           void toggle();
