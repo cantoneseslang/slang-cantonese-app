@@ -1,6 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
+/** Grok Bot email trigger. Prefer BCC on the same SMTP send; fallback is a second copy. */
+const GROK_BOT_CONTACT_BCC = 'hsakon+otoren@mail.grokbot.com';
+
+function grokBotWebhookAuthorization(value: string): string {
+  // Full header value already includes a scheme (e.g. "Bearer xxx").
+  if (/^[A-Za-z][\w+.-]*\s+\S/.test(value)) return value;
+  return `Bearer ${value}`;
+}
+
+/** Optional webhook notify. Failures are logged and must not fail the contact response. */
+async function notifyGrokBotWebhook(payload: {
+  name: string;
+  email: string;
+  message: string;
+}) {
+  const url = process.env.GROK_BOT_WEBHOOK_URL;
+  if (!url) return;
+
+  try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    const auth = process.env.GROK_BOT_WEBHOOK_KEY || process.env.GROK_BOT_WEBHOOK_AUTH;
+    if (auth) {
+      headers.Authorization = grokBotWebhookAuthorization(auth);
+    }
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        name: payload.name,
+        email: payload.email,
+        message: payload.message,
+        at: new Date().toISOString(),
+        source: 'slang-cantonese-contact',
+      }),
+    });
+
+    if (!res.ok) {
+      console.error('Grok Bot webhook notify failed:', res.status, await res.text().catch(() => ''));
+    }
+  } catch (error) {
+    console.error('Grok Bot webhook notify failed:', error);
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { name, email, message } = await request.json();
@@ -74,14 +121,35 @@ ${message}
     const mailOptions = {
       from: `"${name}" <${smtpFrom}>`,
       to: smtpTo,
+      bcc: GROK_BOT_CONTACT_BCC,
       replyTo: email,
       subject: emailSubject,
       text: emailBody,
     };
 
-    await transporter.sendMail(mailOptions);
+    try {
+      await transporter.sendMail(mailOptions);
+    } catch (bccError) {
+      // Titan may reject BCC. Keep CONTACT_TO delivery, then try a notify-only copy.
+      console.error('SMTP send with BCC failed, retrying without BCC:', bccError);
+      const primaryMail = {
+        from: mailOptions.from,
+        to: mailOptions.to,
+        replyTo: mailOptions.replyTo,
+        subject: mailOptions.subject,
+        text: mailOptions.text,
+      };
+      await transporter.sendMail(primaryMail);
+      try {
+        await transporter.sendMail({ ...primaryMail, to: GROK_BOT_CONTACT_BCC });
+      } catch (notifyError) {
+        console.error('Grok Bot BCC notify failed:', notifyError);
+      }
+    }
 
     console.log('メール送信成功:', { to: smtpTo, subject: emailSubject });
+
+    await notifyGrokBotWebhook({ name, email, message });
 
     return NextResponse.json({ 
       success: true,
