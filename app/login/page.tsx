@@ -674,15 +674,17 @@ function LoginForm() {
             </div>
           )}
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '0.875rem',
-              fontWeight: '500',
-              marginBottom: '0.5rem',
-              color: '#374151'
-            }}>
-              {isSignUp ? 'メールアドレス' : 'ユーザーネームまたはメールアドレス'}
-            </label>
+            {isSignUp && (
+              <label style={{
+                display: 'block',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                marginBottom: '0.5rem',
+                color: '#374151'
+              }}>
+                メールアドレス
+              </label>
+            )}
             <input
               type={isSignUp ? 'email' : 'text'}
               value={email}
