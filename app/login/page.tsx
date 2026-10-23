@@ -487,28 +487,11 @@ function LoginForm() {
         <h1 style={{
           fontSize: '1.5rem',
           fontWeight: 'bold',
-          marginBottom: '0.75rem',
-          textAlign: 'center'
-        }}>
-          歡迎光臨！ようこそ！
-        </h1>
-        <p style={{
-          fontSize: '1rem',
-          color: '#374151',
-          marginBottom: '0.5rem',
-          textAlign: 'center',
-          fontWeight: '500'
-        }}>
-          スラング先生広東語プラットフォームへ🇭🇰
-        </p>
-        <p style={{
-          fontSize: '0.875rem',
-          color: '#6b7280',
           marginBottom: '2rem',
           textAlign: 'center'
         }}>
-          お手数ですがご登録の上ご使用ください。
-        </p>
+          歡迎光臨！音れんへようこそ！
+        </h1>
 
         {error && (
           <div style={{
