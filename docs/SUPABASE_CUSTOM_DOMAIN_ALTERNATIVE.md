@@ -55,23 +55,7 @@ Google OAuthの認証画面で表示されるアプリ名を変更すること�
    - Googleログイン画面の上部に「カントン語音れん」と表示される
    - ただし、「qdmvituurfevyibtzwsb.supabase.co/」に移動という表示は残る
 
-### 代替案2: ログインページに説明を追加
-
-ログインページに、認証フローについての説明を追加することで、ユーザーの不安を軽減できます。
-
-#### 実装例
-
-```tsx
-// app/login/page.tsx に追加
-<div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-  <p className="text-sm text-blue-800">
-    Googleログイン時に「qdmvituurfevyibtzwsb.supabase.co/」に移動と表示されますが、
-    これは安全な認証プロセスの一部です。心配ありません。
-  </p>
-</div>
-```
-
-### 代替案3: Supabaseサポートに問い合わせ
+### 代替案2: Supabaseサポートに問い合わせ
 
 カスタムドメイン機能が利用できない場合、Supabaseサポートに問い合わせて確認してください。
 
